@@ -1,0 +1,282 @@
+/* The section is the scroll track; its sticky stage stays on screen while the
+   airflow plays. Track length = how much scrolling the sequence takes. */
+.hero {
+  --toolbar-gap: 0px;
+  position: relative;
+  height: 280vh;
+  background: var(--c-navy-950);
+}
+
+@supports (height: 100lvh) {
+  .hero {
+    /* Room taken by mobile browser toolbars, so copy never hides under them. */
+    --toolbar-gap: calc(100lvh - 100svh);
+  }
+}
+
+.hero--static {
+  height: auto;
+}
+
+.hero__stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100lvh;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.hero--static .hero__stage {
+  position: relative;
+  height: 100svh;
+  min-height: 560px;
+}
+
+/* ---------- Photo + airflow (scaled together for the push-in) ---------- */
+
+.hero__media {
+  position: absolute;
+  inset: 0;
+  transform: scale(1.03);
+  transform-origin: 50% 35%;
+  will-change: transform;
+}
+
+.hero__photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Light mode: a touch brighter, so the ceiling behind the header reads clean. */
+  filter: brightness(1.06) contrast(0.98);
+}
+
+/* Tones the room down under the air. Light mode keeps the top (behind the
+   header) untouched and only deepens towards the copy at the bottom. */
+.hero__shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(5, 13, 32, 0) 0%, rgba(5, 13, 32, 0.1) 30%, rgba(5, 13, 32, 0.16) 60%, rgba(5, 13, 32, 0.12) 100%);
+}
+
+[data-scheme='dark'] .hero__photo {
+  filter: none;
+}
+
+[data-scheme='dark'] .hero__shade {
+  background: linear-gradient(180deg, rgba(5, 13, 32, 0.34) 0%, rgba(5, 13, 32, 0.2) 45%, rgba(5, 13, 32, 0.12) 100%);
+}
+
+.hero__air {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hero__air-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* Colour grade: calms the very bright photo so the air and the white copy read. */
+.hero__grade {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  /* Light mode: a soft white haze at the top lifts the ceiling behind the
+     header; the bottom stays deep so the white copy keeps its contrast. */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.14) 11%, rgba(255, 255, 255, 0) 22%),
+    linear-gradient(
+      0deg,
+      rgba(4, 11, 28, 0.92) 0%,
+      rgba(4, 11, 28, 0.66) 26%,
+      rgba(4, 11, 28, 0.14) 52%,
+      rgba(4, 11, 28, 0) 66%
+    ),
+    radial-gradient(110% 80% at 0% 100%, rgba(8, 20, 48, 0.5) 0%, rgba(8, 20, 48, 0) 62%);
+}
+
+[data-scheme='dark'] .hero__grade {
+  background:
+    linear-gradient(180deg, rgba(4, 11, 28, 0.5) 0%, rgba(4, 11, 28, 0.12) 20%, rgba(4, 11, 28, 0) 34%),
+    linear-gradient(
+      0deg,
+      rgba(4, 11, 28, 0.92) 0%,
+      rgba(4, 11, 28, 0.66) 26%,
+      rgba(4, 11, 28, 0.14) 52%,
+      rgba(4, 11, 28, 0) 66%
+    ),
+    radial-gradient(110% 80% at 0% 100%, rgba(8, 20, 48, 0.5) 0%, rgba(8, 20, 48, 0) 62%);
+}
+
+.hero__grade::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- Copy ---------- */
+
+.hero__content {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: flex-end;
+  padding: calc(var(--header-top) + var(--header-h) + 2rem) var(--gutter)
+    calc(var(--toolbar-gap) + clamp(3.25rem, 12.5vh, 7.5rem));
+  pointer-events: none;
+}
+
+.hero__content > * {
+  pointer-events: auto;
+}
+
+/* Keep the right-hand column clear of the vertical scroll cue. */
+@media (min-width: 900px) {
+  .hero__content .hero-text__secondary {
+    padding-right: 36px;
+  }
+}
+
+/* ---------- Progress rail ---------- */
+
+.scroll-cue {
+  --progress: 0;
+  --label: 1;
+  position: absolute;
+  top: 50%;
+  right: calc(var(--gutter) - 4px);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  color: rgba(255, 255, 255, 0.82);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.scroll-cue__label,
+.scroll-cue__index {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  text-shadow: 0 1px 12px rgba(4, 11, 28, 0.6);
+}
+
+.scroll-cue__label {
+  opacity: var(--label);
+  transform: translateY(calc((1 - var(--label)) * -8px));
+}
+
+.scroll-cue__index {
+  font-size: 0.625rem;
+  opacity: calc(0.35 + var(--progress) * 0.65);
+}
+
+.scroll-cue__track {
+  position: relative;
+  width: 1px;
+  height: 128px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.scroll-cue__fill {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(169, 203, 245, 0.9);
+  transform: scaleY(var(--progress));
+  transform-origin: top;
+}
+
+/* ---------- Responsive ---------- */
+
+/* Phones and tablets held upright: instead of filling a tall, narrow screen
+   (which shows only a thin vertical slice of the wide photo), the photo is a
+   band across the top — about as tall as the screen is wide — that fades into
+   the navy under the copy. Roughly twice as much of the room is visible, with
+   all three ceiling diffusers; the airflow follows the band (it is sized to
+   .hero__media). */
+.hero__backdrop {
+  display: none;
+}
+
+@media (max-width: 899px) and (orientation: portrait) {
+  .hero__media {
+    bottom: auto;
+    height: clamp(300px, 96vw, 58svh);
+    -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent);
+    mask-image: linear-gradient(180deg, #000 70%, transparent);
+  }
+
+  /* Below the band the photo continues as a deep, blurred glow, so the copy
+     sits on the same room rather than on a flat colour. */
+  .hero__backdrop {
+    position: absolute;
+    inset: 0;
+    display: block;
+    background-position: 50% 30%;
+    background-size: cover;
+    filter: blur(26px) brightness(0.42) saturate(1.15);
+    transform: scale(1.15);
+  }
+
+  /* Legible where the small line above the headline meets the photo. */
+  .hero-text__eyebrow {
+    text-shadow: 0 1px 10px rgba(4, 11, 28, 0.85);
+  }
+}
+
+/* Short upright screens: the copy needs more of the height, so the band is a
+   little shorter and fades out sooner behind it. */
+@media (max-width: 899px) and (orientation: portrait) and (max-height: 760px) {
+  .hero__media {
+    height: clamp(260px, 90vw, 52svh);
+    -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent);
+    mask-image: linear-gradient(180deg, #000 55%, transparent);
+  }
+}
+
+@media (max-width: 899px) {
+  .hero {
+    height: 240vh;
+  }
+
+  .scroll-cue {
+    display: none;
+  }
+
+  .hero__grade {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.12) 12%, rgba(255, 255, 255, 0) 22%),
+      linear-gradient(
+        0deg,
+        rgba(4, 11, 28, 0.94) 0%,
+        rgba(4, 11, 28, 0.78) 34%,
+        rgba(4, 11, 28, 0.2) 60%,
+        rgba(4, 11, 28, 0) 74%
+      );
+  }
+
+  [data-scheme='dark'] .hero__grade {
+    background:
+      linear-gradient(180deg, rgba(4, 11, 28, 0.5) 0%, rgba(4, 11, 28, 0.1) 22%, rgba(4, 11, 28, 0) 32%),
+      linear-gradient(
+        0deg,
+        rgba(4, 11, 28, 0.94) 0%,
+        rgba(4, 11, 28, 0.78) 34%,
+        rgba(4, 11, 28, 0.2) 60%,
+        rgba(4, 11, 28, 0) 74%
+      );
+  }
+}

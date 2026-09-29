@@ -1,0 +1,141 @@
+.footer {
+  padding: clamp(3.5rem, 7vw, 5rem) 0 1.75rem;
+  background: var(--c-navy-950);
+  color: rgba(222, 232, 246, 0.66);
+  font-size: 0.95rem;
+}
+
+/* Navegação and Contato size to their content (the e-mail never gets squeezed
+   into Unidades); brand and Unidades share what is left. */
+.footer__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) auto auto minmax(0, 1.15fr);
+  gap: 2.5rem clamp(2rem, 4.5vw, 4.5rem);
+}
+
+.footer__col a {
+  overflow-wrap: anywhere;
+}
+
+.footer__brand {
+  display: grid;
+  align-content: start;
+  gap: 1.25rem;
+}
+
+.footer__logo {
+  width: auto;
+  height: 44px;
+}
+
+.footer__about {
+  max-width: 24rem;
+  line-height: 1.6;
+}
+
+.footer__brand .social-links {
+  margin-left: -8px;
+}
+
+@media (max-width: 599px) {
+  .footer__brand .social-links {
+    margin-left: 0;
+  }
+
+  /* The last lines of the page stay clear of BAL's corner (the floating assistant). */
+  .footer__bottom p {
+    padding-right: 64px;
+  }
+}
+
+.footer__title {
+  margin-bottom: 1rem;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.footer__col ul {
+  display: grid;
+  gap: 0.65rem;
+  list-style: none;
+}
+
+.footer__col a {
+  transition: color 0.2s var(--ease-out);
+}
+
+.footer__col a:hover {
+  color: #fff;
+}
+
+.footer__review {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.footer__offices a {
+  display: grid;
+  gap: 2px;
+}
+
+.footer__offices strong {
+  color: rgba(234, 241, 251, 0.92);
+  font-weight: 600;
+}
+
+.footer__offices span {
+  font-size: 0.85rem;
+}
+
+.footer__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-top: clamp(2.5rem, 5vw, 4rem);
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.82rem;
+}
+
+/* Developer credit: present but quiet. */
+.footer__credit {
+  color: rgba(222, 232, 246, 0.42);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.footer__credit a {
+  color: rgba(222, 232, 246, 0.62);
+  text-decoration: underline;
+  text-decoration-color: rgba(222, 232, 246, 0.25);
+  text-underline-offset: 3px;
+  transition: color 0.2s var(--ease-out);
+}
+
+.footer__credit a:hover {
+  color: #fff;
+}
+
+@media (max-width: 999px) {
+  .footer__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(2rem, 5vw, 3rem);
+  }
+
+  .footer__brand {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 479px) {
+  .footer__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

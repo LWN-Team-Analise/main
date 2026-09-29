@@ -1,0 +1,95 @@
+.review-qr {
+  padding: 0 0 var(--section-y);
+  background: var(--c-bg);
+}
+
+.review-qr__card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 3vw, 2.25rem) clamp(1.5rem, 4vw, 3rem);
+  border: 1px solid var(--c-line-strong);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(90deg, var(--c-sky-50), var(--c-surface) 60%);
+}
+
+.review-qr__copy {
+  display: grid;
+  justify-items: start;
+  gap: 0.75rem;
+}
+
+.review-qr__title {
+  font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.review-qr__text {
+  margin-bottom: 0.5rem;
+  color: var(--c-text);
+}
+
+/* The QR sits in a viewfinder frame. */
+.review-qr__code {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 18px;
+  border-radius: var(--radius-md);
+  background: #fff;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.3s var(--ease-out);
+}
+
+.review-qr__code:hover {
+  transform: translateY(-2px);
+}
+
+.review-qr__code::before {
+  content: '';
+  position: absolute;
+  inset: 8px 8px 34px;
+  background:
+    linear-gradient(var(--c-blue-600), var(--c-blue-600)) top left / 16px 2px,
+    linear-gradient(var(--c-blue-600), var(--c-blue-600)) top left / 2px 16px,
+    linear-gradient(var(--c-blue-600), var(--c-blue-600)) top right / 16px 2px,
+    linear-gradient(var(--c-blue-600), var(--c-blue-600)) top right / 2px 16px,
+    linear-gradient(var(--c-blue-600), var(--c-blue-600)) bottom left / 16px 2px,
+    linear-gradient(var(--c-blue-600), var(--c-blue-600)) bottom left / 2px 16px,
+    linear-gradient(var(--c-blue-600), var(--c-blue-600)) bottom right / 16px 2px,
+    linear-gradient(var(--c-blue-600), var(--c-blue-600)) bottom right / 2px 16px;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+.review-qr__code img {
+  width: 148px;
+  height: 148px;
+  margin: 8px;
+}
+
+.review-qr__hint {
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 599px) {
+  .review-qr__card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .review-qr__copy {
+    justify-items: center;
+  }
+}

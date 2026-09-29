@@ -1,0 +1,212 @@
+/* The section is a scroll track for the shared globe (GeoStory); its stage,
+   with the copy on the left, stays pinned while the camera visits each office. */
+.locations {
+  position: relative;
+  z-index: 1;
+  height: calc(100vh + 320vh);
+}
+
+.locations__stage {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100svh;
+  padding-top: var(--geo-stage-top);
+  overflow: hidden;
+}
+
+.locations__main {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-areas:
+    'copy .'
+    'list .'
+    '. .';
+  column-gap: clamp(1.5rem, 4vw, 4rem);
+  min-height: 0;
+  padding: 0 var(--geo-inset);
+}
+
+.locations__copy {
+  grid-area: copy;
+  display: grid;
+  gap: 1rem;
+}
+
+.locations__title {
+  color: var(--c-ink);
+  font-size: clamp(2rem, 1.3rem + 2.4vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+}
+
+.locations__text {
+  max-width: 26rem;
+  font-size: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+}
+
+/* No rules between copy, list and globe: the offices are set apart by space alone. */
+.locations__list {
+  display: grid;
+  gap: clamp(0.25rem, 1vh, 0.5rem);
+  grid-area: list;
+  margin-top: clamp(1.25rem, 3.5vh, 2.25rem);
+  list-style: none;
+}
+
+/* One office per row; the one the globe has reached is marked on the left. */
+.office {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: start;
+  margin-left: -0.9rem;
+  padding: clamp(0.7rem, 1.8vh, 1.05rem) 0 clamp(0.7rem, 1.8vh, 1.05rem) 0.9rem;
+  border-left: 2px solid transparent;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  transition:
+    border-color 0.45s var(--ease-out),
+    background-color 0.45s var(--ease-out),
+    opacity 0.45s var(--ease-out);
+}
+
+.office[data-state='next'] {
+  opacity: 0.62;
+}
+
+.office[data-state='active'] {
+  border-left-color: var(--c-blue-600);
+  background: linear-gradient(90deg, rgba(62, 125, 198, 0.1), rgba(62, 125, 198, 0) 85%);
+}
+
+.office__index {
+  padding-top: 0.35rem;
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  transition: color 0.45s var(--ease-out);
+}
+
+.office[data-state='active'] .office__index,
+.office[data-state='past'] .office__index {
+  color: var(--c-blue-600);
+}
+
+.office__city {
+  color: var(--c-ink);
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  transition: color 0.45s var(--ease-out);
+}
+
+.office[data-state='active'] .office__city {
+  color: var(--c-blue-700);
+}
+
+.office__address {
+  margin-top: 0.3rem;
+  color: var(--c-text);
+  font-style: normal;
+  line-height: 1.55;
+}
+
+.office__map {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 0.3rem;
+  padding: 7px 10px;
+  border: 1px solid var(--c-line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  color: var(--c-ink);
+  font-size: 0.85rem;
+  font-weight: 600;
+  pointer-events: auto;
+  transition:
+    background-color 0.25s var(--ease-out),
+    color 0.25s var(--ease-out),
+    border-color 0.25s var(--ease-out);
+}
+
+.office__map:hover {
+  border-color: var(--c-blue-700);
+  background: var(--c-blue-700);
+  color: #fff;
+}
+
+/* ---------- Phone: title above the globe band, offices below it ---------- */
+
+@media (max-width: 899px) {
+  .locations {
+    height: calc(100vh + 270vh);
+  }
+
+  .locations__main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: calc(var(--geo-top) - var(--geo-stage-top)) var(--geo-band) auto;
+    grid-template-areas:
+      'copy'
+      '.'
+      'list';
+  }
+
+  .locations__copy {
+    align-content: start;
+    gap: 0.5rem;
+  }
+
+  .locations__title {
+    font-size: clamp(1.6rem, 1.2rem + 2vw, 2.1rem);
+  }
+
+  .locations__text {
+    display: none;
+  }
+
+  .locations__list {
+    margin-top: 0.5rem;
+  }
+
+  .office {
+    grid-template-columns: 1.75rem minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: center;
+    /* Inside the page margin (no hanging accent bar on a narrow screen). */
+    margin-left: 0;
+    padding: 0.55rem 0 0.55rem 0.75rem;
+  }
+
+  .office__index {
+    padding-top: 0;
+  }
+
+  .office__city {
+    font-size: 1.05rem;
+  }
+
+  /* Only the office in focus shows its address. */
+  .office__address {
+    display: none;
+    font-size: 0.85rem;
+  }
+
+  .office[data-state='active'] .office__address {
+    display: block;
+  }
+
+  .office__map {
+    margin-top: 0;
+    padding: 6px 8px;
+  }
+
+  .office__map-label {
+    display: none;
+  }
+}

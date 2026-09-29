@@ -1,0 +1,167 @@
+.services {
+  padding: var(--section-y) 0;
+  background:
+    linear-gradient(180deg, var(--c-bg-soft) 0%, var(--c-bg) 100%);
+  border-top: 1px solid var(--c-line);
+}
+
+.services__list {
+  display: grid;
+  margin-top: clamp(3rem, 6vw, 4.5rem);
+  border-top: 1px solid var(--c-line-strong);
+}
+
+.service {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr);
+  gap: clamp(2rem, 5vw, 5rem);
+  padding: clamp(2.5rem, 5vw, 3.75rem) 0;
+  border-bottom: 1px solid var(--c-line-strong);
+}
+
+.service__head {
+  position: sticky;
+  top: calc(var(--header-h) + var(--header-top) + 2rem);
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  align-self: start;
+}
+
+.service__index {
+  color: var(--c-blue-600);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.service__title {
+  font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.service__summary {
+  max-width: 30rem;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.service__norms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+}
+
+.service__norms li {
+  padding: 5px 11px;
+  border-radius: 8px;
+  background: var(--c-navy-900);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.service__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: start;
+  padding: 10px 0;
+  border-bottom: 1px solid currentColor;
+  color: var(--c-blue-700);
+  font-weight: 600;
+  transition: gap 0.25s var(--ease-out);
+}
+
+.service__link:hover {
+  gap: 12px;
+}
+
+/* ---------- Items ---------- */
+
+.service__items {
+  display: grid;
+  list-style: none;
+}
+
+.service__item {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1.35rem 0;
+  border-top: 1px solid var(--c-line);
+}
+
+.service__item:first-child {
+  padding-top: 0.35rem;
+  border-top: 0;
+}
+
+.service__item-index {
+  padding-top: 3px;
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.service__item-title {
+  color: var(--c-ink);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.service__item-text {
+  margin-top: 0.3rem;
+  font-size: 0.97rem;
+  line-height: 1.6;
+}
+
+/* ---------- Gases ---------- */
+
+.service__gases {
+  margin-bottom: 1.75rem;
+  padding: 1.25rem;
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+}
+
+.service__caption {
+  margin-bottom: 0.85rem;
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.service__gases ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+}
+
+.service__gases li {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--c-sky-100);
+  color: var(--c-blue-800);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+@media (max-width: 899px) {
+  .service {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.75rem;
+  }
+
+  .service__head {
+    position: static;
+  }
+}

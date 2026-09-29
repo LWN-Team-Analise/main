@@ -1,0 +1,167 @@
+.brazil-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.brazil-map__dots {
+  fill: none;
+  stroke: var(--c-navy-800);
+  stroke-width: 4.6;
+  stroke-linecap: round;
+  opacity: 0.2;
+}
+
+.brazil-map__outline {
+  fill: none;
+  stroke: var(--c-blue-700);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  opacity: 0.35;
+}
+
+/* ---------- Routes (drawn when the map scrolls into view) ---------- */
+
+.brazil-map__route {
+  fill: none;
+  stroke: var(--c-blue-600);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.brazil-map.is-drawn .brazil-map__route {
+  animation: map-draw 1.6s var(--ease-in-out) forwards;
+}
+
+.brazil-map.is-drawn #route-north {
+  animation-delay: 0.9s;
+  animation-duration: 2s;
+}
+
+@keyframes map-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.brazil-map__light {
+  fill: #fff;
+  stroke: var(--c-blue-500);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px rgba(62, 125, 198, 0.9));
+}
+
+/* ---------- Metropolitan inset ---------- */
+
+.brazil-map__leader {
+  stroke: var(--c-blue-700);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  opacity: 0.6;
+}
+
+.brazil-map__cluster {
+  fill: var(--c-blue-600);
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.brazil-map__inset-bg {
+  fill: #fff;
+  filter: drop-shadow(0 10px 22px rgba(8, 22, 52, 0.2));
+}
+
+.brazil-map__inset-dot {
+  fill: var(--c-navy-800);
+  opacity: 0.12;
+}
+
+.brazil-map__inset-ring {
+  fill: none;
+  stroke: var(--c-blue-700);
+  stroke-width: 1.2;
+  opacity: 0.55;
+}
+
+.brazil-map__inset-title {
+  fill: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ---------- Markers ---------- */
+
+.map-marker__dot {
+  fill: var(--c-blue-700);
+  stroke: #fff;
+  stroke-width: 2.5;
+  transition: fill 0.3s var(--ease-out);
+}
+
+.map-marker__halo {
+  fill: var(--c-blue-500);
+  opacity: 0.16;
+  transition:
+    opacity 0.3s var(--ease-out),
+    transform 0.3s var(--ease-out);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.map-marker__pulse {
+  fill: none;
+  stroke: var(--c-blue-500);
+  stroke-width: 1.5;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: map-pulse 2.8s var(--ease-out) infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes map-pulse {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(3.4);
+  }
+}
+
+.map-marker__label {
+  fill: var(--c-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.map-marker.is-active .map-marker__dot {
+  fill: var(--c-blue-500);
+}
+
+.map-marker.is-active .map-marker__halo {
+  opacity: 0.32;
+  transform: scale(1.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brazil-map__route {
+    stroke-dashoffset: 0;
+    animation: none !important;
+  }
+
+  .map-marker__pulse {
+    animation: none;
+  }
+}

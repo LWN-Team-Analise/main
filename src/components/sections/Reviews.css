@@ -1,0 +1,121 @@
+.reviews {
+  padding: calc(var(--section-y) * 0.75) 0 calc(var(--section-y) * 0.6);
+  background: var(--c-bg);
+}
+
+/* Same box as the header bar: max width of the wide container, gutters on small screens. */
+.reviews__inner {
+  width: min(calc(100% - 2 * var(--gutter)), var(--container-wide));
+  margin: 0 auto;
+}
+
+.reviews__head {
+  display: grid;
+  gap: 1rem;
+  padding: 0 clamp(0rem, 1.5vw, 1.25rem);
+}
+
+.reviews__title {
+  font-size: clamp(1.75rem, 1.2rem + 1.9vw, 2.75rem);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.reviews__rail {
+  margin-top: clamp(2.25rem, 4vw, 3.25rem);
+}
+
+.reviews__rail .marquee {
+  --marquee-gap: 18px;
+  padding: 6px 0 18px;
+  /* Softer edge fade than the default, so the cards near the sides stay legible. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+
+.review {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  width: clamp(280px, 30vw, 360px);
+  min-height: 230px;
+  padding: 1.5rem;
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  box-shadow: 0 1px 2px rgba(8, 22, 52, 0.04);
+  transition:
+    border-color 0.3s var(--ease-out),
+    box-shadow 0.3s var(--ease-out);
+}
+
+.review:hover {
+  border-color: var(--c-line-strong);
+  box-shadow: var(--shadow-card);
+}
+
+.review__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.review__avatar {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--c-sky-100);
+}
+
+.review__avatar--initials {
+  display: grid;
+  place-items: center;
+  color: var(--c-blue-700);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.review__who {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.review__name {
+  overflow: hidden;
+  color: var(--c-ink);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.review__date {
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.review__source {
+  flex: none;
+}
+
+.review__stars {
+  display: flex;
+  gap: 2px;
+  color: #d9dee6;
+}
+
+.review__stars .is-on {
+  color: #f5b301;
+  fill: #f5b301;
+}
+
+.review__text {
+  color: var(--c-text);
+  font-size: 0.97rem;
+  line-height: 1.6;
+}

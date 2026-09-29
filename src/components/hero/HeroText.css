@@ -1,0 +1,216 @@
+.hero-text {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  align-items: end;
+  gap: clamp(2rem, 6vw, 6rem);
+  width: 100%;
+  max-width: var(--container-wide);
+  margin: 0 auto;
+  color: #fff;
+}
+
+/* ---------- Headline ---------- */
+
+.hero-text__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1.1rem;
+  color: rgba(226, 236, 250, 0.82);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  animation: hero-rise 1s var(--ease-out) 0.15s both;
+}
+
+.hero-text__eyebrow-mark {
+  width: 28px;
+  height: 1px;
+  background: var(--c-blue-300);
+  box-shadow: 0 0 12px rgba(143, 184, 234, 0.9);
+}
+
+.hero-text__headline {
+  max-width: 17em;
+  color: #fff;
+  font-size: clamp(1.8rem, 1rem + 2.3vw, 3rem);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.028em;
+  animation: hero-rise 1.1s var(--ease-out) 0.25s both;
+}
+
+.hero-text__headline em {
+  color: #a9cbf5;
+  font-style: normal;
+}
+
+/* ---------- Scroll-revealed description ---------- */
+
+.hero-text__secondary {
+  padding-bottom: 0.35rem;
+}
+
+.hero-text__description {
+  max-width: 30rem;
+  font-size: clamp(1rem, 0.92rem + 0.3vw, 1.125rem);
+  line-height: 1.62;
+}
+
+.hero-text__description > [aria-hidden] {
+  color: rgba(222, 232, 246, 0.84);
+}
+
+/* One element per laid-out line: lines rise, brighten and come into focus in
+   sequence (the stepped blur is set from JS, see HeroText.jsx). */
+.hero-text__line {
+  --reveal: 0;
+  display: block;
+  white-space: nowrap;
+  opacity: var(--reveal);
+  transform: translate3d(0, calc((1 - var(--reveal)) * 0.6em), 0);
+  will-change: opacity, transform;
+}
+
+.hero-text__strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ---------- Actions ---------- */
+
+.hero-text__actions {
+  --reveal: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 1.75rem;
+  opacity: var(--reveal);
+  transform: translate3d(0, calc((1 - var(--reveal)) * 14px), 0);
+}
+
+.hero-text__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 22px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  transition:
+    background-color 0.25s var(--ease-out),
+    color 0.25s var(--ease-out),
+    border-color 0.25s var(--ease-out),
+    transform 0.25s var(--ease-out);
+}
+
+.hero-text__button svg {
+  transition: transform 0.25s var(--ease-out);
+}
+
+.hero-text__button--primary {
+  background: #fff;
+  color: var(--c-navy-900);
+}
+
+.hero-text__button--primary:hover {
+  background: var(--c-sky-100);
+}
+
+.hero-text__button--primary:hover svg {
+  transform: translateX(3px);
+}
+
+.hero-text__button--ghost {
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  color: #fff;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.hero-text__button--ghost:hover {
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Reduced motion / no-animation mode shows everything immediately. */
+.hero-text--static .hero-text__line,
+.hero-text--static .hero-text__actions {
+  --reveal: 1;
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 899px) {
+  .hero-text {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+
+  .hero-text__eyebrow {
+    margin-bottom: 0.85rem;
+    font-size: 0.6875rem;
+  }
+
+  .hero-text__description {
+    max-width: 34rem;
+  }
+
+  .hero-text__actions {
+    margin-top: 1.25rem;
+  }
+}
+
+@media (max-width: 479px) {
+  .hero-text {
+    gap: 1rem;
+  }
+
+  .hero-text__eyebrow {
+    margin-bottom: 0.7rem;
+    font-size: 0.625rem;
+  }
+
+  .hero-text__headline {
+    font-size: 1.7rem;
+  }
+
+  .hero-text__description {
+    font-size: 0.95rem;
+    line-height: 1.52;
+  }
+
+  .hero-text__actions {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .hero-text__button {
+    gap: 8px;
+    height: 44px;
+    padding: 0 15px;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 359px) {
+  .hero-text__actions {
+    flex-wrap: wrap;
+  }
+}

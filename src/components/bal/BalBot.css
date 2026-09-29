@@ -1,0 +1,691 @@
+/* ------------------------------------------------------------------
+   BAL — the LWN mascot as a floating assistant (BalBot.jsx).
+   Bottom-right on every page, above the content and below the header
+   (whose mobile menu covers it). Colours come from the site tokens, so
+   light and dark schemes follow on their own.
+------------------------------------------------------------------- */
+
+.bal {
+  --bal-figure: 104px; /* BAL's height; the image is 283 × 440 */
+  --bal-right: max(18px, env(safe-area-inset-right));
+  position: fixed;
+  right: var(--bal-right);
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 90;
+  transition: transform 0.55s var(--ease-out);
+}
+
+/* Tucked aside while a link or button is under his corner (BalBot.jsx): only
+   a sliver of him — his waving hand — stays in view, inside the page margin. */
+.bal[data-tucked] {
+  transform: translateX(calc(100% + var(--bal-right) - 20px));
+}
+
+.bal[data-tucked]:focus-within {
+  transform: none;
+}
+
+@media (hover: hover) {
+  .bal[data-tucked]:hover {
+    transform: none;
+  }
+}
+
+/* ---------- Launcher: BAL himself, with nothing behind him ---------- */
+
+.bal-launcher {
+  position: relative;
+  display: block;
+  width: calc(var(--bal-figure) * 283 / 440);
+  height: var(--bal-figure);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  animation: bal-arrive 0.9s var(--ease-out) 0.6s both;
+}
+
+/* Only the figure's own contact shadow, cast by his shape — no backdrop. */
+.bal-launcher__figure {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 6px 8px rgba(8, 22, 52, 0.3));
+  transform-origin: 50% 100%;
+  transition:
+    transform 0.5s var(--ease-out),
+    filter 0.5s var(--ease-out);
+  pointer-events: none;
+}
+
+/* A small × by his head while the panel is open: the same button closes it. */
+.bal-launcher__x {
+  position: absolute;
+  top: 0;
+  right: -8px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--c-navy-900);
+  color: #fff;
+  box-shadow: 0 4px 10px -4px rgba(8, 22, 52, 0.6);
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 0.25s var(--ease-out),
+    transform 0.35s var(--ease-out);
+}
+
+.bal[data-open] .bal-launcher__x {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* A speech bubble on hover / keyboard focus (pointer devices). */
+.bal-launcher__hint {
+  position: absolute;
+  right: calc(100% + 6px);
+  bottom: 52%;
+  padding: 8px 13px;
+  border: 1px solid var(--c-line);
+  border-radius: 14px 14px 4px 14px;
+  background: var(--c-surface);
+  box-shadow: var(--shadow-card);
+  color: var(--c-ink);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(6px) scale(0.96);
+  transform-origin: 100% 100%;
+  transition:
+    opacity 0.25s var(--ease-out),
+    transform 0.35s var(--ease-out);
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  .bal-launcher:hover .bal-launcher__figure {
+    filter: drop-shadow(0 12px 12px rgba(8, 22, 52, 0.28));
+    transform: translateY(-5px) rotate(-3deg);
+  }
+
+  .bal:not([data-open]) .bal-launcher:hover .bal-launcher__hint {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.bal:not([data-open]) .bal-launcher:focus-visible .bal-launcher__hint {
+  opacity: 1;
+  transform: none;
+}
+
+.bal-launcher:active .bal-launcher__figure {
+  transform: scale(0.96);
+  transition-duration: 0.12s;
+}
+
+/* Keyboard focus only: a ring around him, as on the site's other controls. */
+.bal-launcher:focus-visible {
+  border-radius: 14px;
+  outline: 2px solid var(--c-blue-600);
+  outline-offset: 4px;
+}
+
+/* Arriving on the page: BAL rises gently into place, once. */
+@keyframes bal-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.92);
+  }
+}
+
+/* ---------- Panel ---------- */
+
+.bal-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 14px);
+  display: flex;
+  flex-direction: column;
+  width: min(372px, calc(100vw - 36px));
+  max-height: min(600px, calc(100svh - var(--header-top) - var(--header-h) - 160px));
+  overflow: hidden;
+  border: 1px solid var(--c-line);
+  border-radius: 20px;
+  background: var(--c-surface);
+  box-shadow:
+    0 32px 64px -28px rgba(8, 22, 52, 0.5),
+    0 2px 8px rgba(8, 22, 52, 0.06);
+  color: var(--c-text);
+}
+
+.bal-panel:focus {
+  outline: none;
+}
+
+/* Header in the brand's navy → blue, like the site's dark sections. */
+.bal-panel__head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 14px 14px 16px;
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(62, 125, 198, 0.45), rgba(62, 125, 198, 0) 60%),
+    linear-gradient(135deg, #0d1f45, #1f3c96);
+  color: #fff;
+}
+
+.bal-panel__avatar {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  background: #eaf1fb;
+}
+
+/* His face, framed in the circle. */
+.bal-panel__avatar img {
+  position: absolute;
+  top: -5px;
+  left: -14px;
+  width: auto;
+  max-width: none;
+  height: 92px;
+}
+
+.bal-panel__who {
+  flex: 1;
+  min-width: 0;
+}
+
+.bal-panel__name {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.bal-panel__role {
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.bal-panel__close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.25s var(--ease-out);
+}
+
+.bal-panel__close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.bal-panel__close:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* ---------- Conversation ---------- */
+
+.bal-chat {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.bal-chat--loading {
+  min-height: 280px;
+}
+
+.bal-chat__body {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 14px 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.bal-chat__thread {
+  display: grid;
+  gap: 10px;
+}
+
+.bal-msg {
+  max-width: 94%;
+  padding: 11px 14px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.bal-msg--bot {
+  justify-self: start;
+  border: 1px solid var(--c-line);
+  border-radius: 16px 16px 16px 5px;
+  background: var(--c-bg-soft);
+}
+
+.bal-msg--bot p + p {
+  margin-top: 0.4rem;
+}
+
+.bal-msg--user {
+  justify-self: end;
+  border-radius: 16px 16px 5px 16px;
+  background: #2a52be;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Three dots while BAL "types". */
+.bal-typing {
+  display: flex;
+  gap: 5px;
+  padding: 14px 16px;
+}
+
+.bal-typing span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c-muted);
+  animation: bal-typing 1s ease-in-out infinite;
+}
+
+.bal-typing span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.bal-typing span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes bal-typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: none;
+  }
+
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+/* The topics */
+.bal-topics {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+  list-style: none;
+}
+
+.bal-topic {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--c-line);
+  border-radius: 12px;
+  background: var(--c-surface);
+  color: var(--c-ink);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.25s var(--ease-out),
+    background-color 0.25s var(--ease-out),
+    transform 0.25s var(--ease-out);
+}
+
+.bal-topic:hover {
+  border-color: var(--c-blue-600);
+  background: var(--c-sky-50);
+}
+
+.bal-topic:focus-visible {
+  outline: 2px solid var(--c-blue-600);
+  outline-offset: 2px;
+}
+
+.bal-topic__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--c-sky-100);
+  color: var(--c-blue-700);
+}
+
+.bal-topic__label {
+  flex: 1;
+}
+
+.bal-topic__chevron {
+  flex: none;
+  color: var(--c-muted);
+  transition: transform 0.25s var(--ease-out);
+}
+
+.bal-topic:hover .bal-topic__chevron {
+  transform: translateX(3px);
+}
+
+/* The answers */
+.bal-answer {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.bal-answer p + p {
+  margin-top: 0;
+}
+
+.bal-answer strong {
+  color: var(--c-ink);
+  font-weight: 600;
+}
+
+.bal-answer__list {
+  display: grid;
+  gap: 0.3rem;
+  padding-left: 1.1rem;
+}
+
+.bal-answer__list li::marker {
+  color: var(--c-blue-600);
+}
+
+.bal-answer__timeline {
+  display: grid;
+  gap: 0.45rem;
+  list-style: none;
+}
+
+.bal-answer__timeline li {
+  display: grid;
+  grid-template-columns: 4.6rem minmax(0, 1fr);
+  gap: 0.6rem;
+}
+
+.bal-answer__timeline span {
+  color: var(--c-blue-600);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.9;
+  letter-spacing: 0.04em;
+}
+
+.bal-answer__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+  list-style: none;
+}
+
+.bal-answer__stats li {
+  display: grid;
+  gap: 1px;
+  padding: 8px 10px;
+  border: 1px solid var(--c-line);
+  border-radius: 10px;
+  background: var(--c-surface);
+  font-size: 0.74rem;
+  line-height: 1.3;
+}
+
+.bal-answer__stats strong {
+  color: var(--c-blue-700);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.bal-answer__figure strong {
+  color: var(--c-blue-700);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.bal-answer__groups {
+  display: grid;
+  gap: 0.6rem;
+  list-style: none;
+}
+
+.bal-answer__groups li {
+  display: grid;
+  gap: 2px;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--c-blue-600);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.bal-answer__channels,
+.bal-answer__offices {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+}
+
+.bal-answer__channels a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--c-line);
+  border-radius: 10px;
+  background: var(--c-surface);
+  color: var(--c-ink);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  transition: border-color 0.25s var(--ease-out);
+}
+
+.bal-answer__channels a:hover {
+  border-color: var(--c-blue-600);
+}
+
+.bal-answer__channels svg {
+  flex: none;
+  color: var(--c-blue-600);
+}
+
+.bal-answer__channels small {
+  display: block;
+  color: var(--c-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.bal-answer__offices li {
+  display: flex;
+  gap: 8px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.bal-answer__offices svg {
+  flex: none;
+  margin-top: 3px;
+  color: var(--c-blue-600);
+}
+
+.bal-answer__offices li > span {
+  display: grid;
+}
+
+.bal-answer__offices a {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+  color: var(--c-blue-600);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.bal-answer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 0.2rem;
+}
+
+.bal-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--c-navy-900);
+  color: #fff;
+  font-size: 0.84rem;
+  font-weight: 600;
+  transition: background-color 0.25s var(--ease-out);
+}
+
+.bal-link:hover {
+  background: #1f3c96;
+}
+
+.bal-link svg {
+  transition: transform 0.25s var(--ease-out);
+}
+
+.bal-link:hover svg {
+  transform: translateX(3px);
+}
+
+.bal-chat__foot {
+  flex: none;
+  padding: 10px 14px;
+  border-top: 1px solid var(--c-line);
+}
+
+.bal-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--c-line-strong);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--c-ink);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.25s var(--ease-out);
+}
+
+.bal-back:hover {
+  border-color: var(--c-ink);
+}
+
+.bal-back:focus-visible {
+  outline: 2px solid var(--c-blue-600);
+  outline-offset: 2px;
+}
+
+/* ---------- Dark scheme ---------- */
+
+/* On the navy page his dark legs and backpack keep a faint light edge, and his
+   shadow is deeper — still nothing behind him. */
+[data-scheme='dark'] .bal-launcher__figure {
+  filter: drop-shadow(0 0 1px rgba(200, 220, 255, 0.45)) drop-shadow(0 8px 12px rgba(0, 0, 0, 0.6));
+}
+
+@media (hover: hover) {
+  [data-scheme='dark'] .bal-launcher:hover .bal-launcher__figure {
+    filter: drop-shadow(0 0 1px rgba(200, 220, 255, 0.55)) drop-shadow(0 14px 14px rgba(0, 0, 0, 0.55));
+  }
+}
+
+[data-scheme='dark'] .bal-launcher__x {
+  background: #fff;
+  color: #0d1f45;
+}
+
+[data-scheme='dark'] .bal-panel {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 32px 64px -28px rgba(0, 0, 0, 0.9),
+    0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-scheme='dark'] .bal-link {
+  background: #2a52be;
+}
+
+[data-scheme='dark'] .bal-link:hover {
+  background: #3e7dc6;
+}
+
+[data-scheme='dark'] .bal-msg--user {
+  background: #2a52be;
+}
+
+[data-scheme='dark'] .bal-answer__stats strong,
+[data-scheme='dark'] .bal-answer__figure strong {
+  color: var(--c-blue-800);
+}
+
+/* ---------- Phones ---------- */
+
+@media (max-width: 599px) {
+  .bal {
+    --bal-figure: 86px;
+    --bal-right: max(16px, env(safe-area-inset-right));
+    bottom: max(14px, env(safe-area-inset-bottom));
+  }
+
+  .bal-panel {
+    width: calc(100vw - 32px);
+    max-height: calc(100svh - var(--header-top) - var(--header-h) - 130px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bal {
+    transition: none;
+  }
+
+  .bal-launcher {
+    animation: none;
+  }
+
+  .bal-typing span {
+    animation: none;
+  }
+}

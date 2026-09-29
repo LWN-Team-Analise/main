@@ -1,0 +1,53 @@
+:root {
+  /* Brand — sampled from the LWN logo */
+  --c-blue-800: #172d73;
+  --c-blue-700: #1f3c96;
+  --c-blue-600: #2a52be;
+  --c-blue-500: #3e7dc6;
+  --c-blue-300: #8fb8ea;
+  --c-sky-100: #eaf1fb;
+  --c-sky-50: #f4f8fd;
+
+  /* Neutrals */
+  --c-navy-950: #040b1c;
+  --c-navy-900: #081430;
+  --c-navy-800: #0d1f45;
+  --c-ink: #0b1324;
+  --c-text: #3a475c;
+  --c-muted: #69768b;
+  --c-line: rgba(13, 31, 69, 0.1);
+  --c-line-strong: rgba(13, 31, 69, 0.16);
+  --c-bg: #ffffff;
+  --c-bg-soft: #f5f7fb;
+
+  /* Type */
+  --font-sans: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Layout */
+  --container: 1180px;
+  --container-wide: 1240px;
+  /* Side margin of the page: ~20px on the narrowest phones, 22–24px on common
+     ones, up to 40px on large screens. Every section and component sits inside it. */
+  --gutter: clamp(20px, 5.6vw, 40px);
+  --header-h: 64px;
+  --header-top: 12px;
+  --section-y: clamp(5rem, 11vw, 9rem);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Surfaces */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-card: 0 1px 2px rgba(8, 22, 52, 0.04), 0 18px 40px -26px rgba(8, 22, 52, 0.28);
+}
+
+@media (max-width: 639px) {
+  :root {
+    --header-h: 58px;
+    --header-top: 10px;
+  }
+}

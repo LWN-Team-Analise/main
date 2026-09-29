@@ -1,0 +1,34 @@
+.marquee {
+  --marquee-gap: 48px;
+  overflow: hidden;
+  cursor: grab;
+  /* Horizontal drags belong to the carousel; vertical swipes still scroll the page. */
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+}
+
+.marquee.is-dragging {
+  cursor: grabbing;
+}
+
+.marquee img {
+  -webkit-user-drag: none;
+}
+
+.marquee__track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+}
+
+.marquee__group {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--marquee-gap);
+  /* Trailing gap keeps the spacing identical across the loop seam. */
+  padding-right: var(--marquee-gap);
+}

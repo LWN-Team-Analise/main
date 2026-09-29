@@ -1,0 +1,348 @@
+/* The section is a scroll track for the shared globe (GeoStory); its stage
+   stays pinned while the camera travels to each state LWN serves. The globe
+   itself lives in the GeoStory layer, behind the right-hand column. */
+.clients {
+  position: relative;
+  z-index: 1;
+  height: calc(100vh + 370vh);
+  color: var(--c-text);
+}
+
+.clients__stage {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100svh;
+  padding-top: var(--geo-stage-top);
+  overflow: hidden;
+}
+
+/* Copy on the left, anchored under the header; the right column is the globe's. */
+.clients__main {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-areas:
+    'copy .'
+    'route .'
+    'foot .'
+    '. .';
+  column-gap: clamp(1.5rem, 4vw, 4rem);
+  min-height: 0;
+  padding: 0 var(--geo-inset);
+}
+
+.clients__copy {
+  position: relative;
+  z-index: 1;
+  grid-area: copy;
+  align-self: start;
+  display: grid;
+  gap: 1rem;
+}
+
+.clients__title {
+  color: var(--c-ink);
+  font-size: clamp(2rem, 1.3rem + 2.4vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+}
+
+.clients__text {
+  max-width: 26rem;
+  font-size: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+}
+
+/* Where the camera is: state name and the route as UF chips. */
+.clients__route {
+  position: relative;
+  z-index: 1;
+  grid-area: route;
+  display: grid;
+  justify-items: start;
+  gap: 0.6rem;
+  margin-top: clamp(1.75rem, 5vh, 3rem);
+}
+
+.clients__route-label {
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.clients__route-current {
+  color: var(--c-ink);
+  font-size: clamp(1.5rem, 1.1rem + 1.3vw, 2.25rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  animation: clients-route 0.5s var(--ease-out) both;
+}
+
+.clients__route-current span {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--c-blue-600);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+
+@keyframes clients-route {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.globe-route {
+  display: flex;
+  align-items: center;
+  margin-top: 0.4rem;
+  list-style: none;
+}
+
+.globe-route li {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 2.4rem;
+  height: 1.7rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--c-line-strong);
+  border-radius: 999px;
+  background: var(--c-surface);
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  transition:
+    background-color 0.4s var(--ease-out),
+    border-color 0.4s var(--ease-out),
+    color 0.4s var(--ease-out),
+    transform 0.4s var(--ease-out);
+}
+
+.globe-route li + li {
+  margin-left: 1.1rem;
+}
+
+.globe-route li + li::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  width: calc(1.1rem + 1px);
+  height: 1px;
+  background: var(--c-line-strong);
+  transition: background-color 0.4s var(--ease-out);
+}
+
+.globe-route li[data-state='past'] {
+  border-color: var(--c-blue-600);
+  color: var(--c-blue-700);
+}
+
+.globe-route li[data-state='active'] {
+  border-color: var(--c-blue-600);
+  background: var(--c-blue-600);
+  color: #fff;
+  transform: scale(1.08);
+}
+
+.globe-route li[data-state='past']::before,
+.globe-route li[data-state='active']::before {
+  background: var(--c-blue-600);
+}
+
+[data-scheme='dark'] .globe-route li[data-state='active'] {
+  color: #06102a;
+}
+
+.clients__foot {
+  position: relative;
+  z-index: 1;
+  grid-area: foot;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  margin: clamp(1.5rem, 4vh, 2.25rem) 0 clamp(1.25rem, 4vh, 2.25rem);
+}
+
+.clients__count {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.clients__count strong {
+  color: var(--c-ink);
+  font-weight: 500;
+}
+
+/* Logo wall along the bottom of the stage, exactly as wide as the header bar
+   (same max width, same gutters), so the logos never touch the screen edges. */
+.clients__wall {
+  display: grid;
+  gap: 1rem;
+  min-height: 118px;
+  margin: 0 max(var(--gutter), calc((100% - var(--container-wide)) / 2));
+  padding: 1.1rem 0 1.3rem;
+}
+
+.clients__wall .marquee {
+  --marquee-gap: 52px;
+}
+
+/* The logo files are white marks: on the light stage they read as quiet ink. */
+.client-logo {
+  display: block;
+  flex: none;
+  max-width: none;
+  object-fit: contain;
+  opacity: 0.78;
+  transition: opacity 0.3s var(--ease-out);
+  user-select: none;
+}
+
+.client-logo:hover {
+  opacity: 1;
+}
+
+.clients .client-logo {
+  filter: brightness(0);
+  opacity: 0.55;
+}
+
+.clients .client-logo:hover {
+  opacity: 0.9;
+}
+
+[data-scheme='dark'] .clients .client-logo {
+  filter: none;
+  opacity: 0.78;
+}
+
+[data-scheme='dark'] .clients .client-logo:hover {
+  opacity: 1;
+}
+
+/* Short desktop windows: let the globe keep its room. */
+@media (min-width: 900px) and (max-height: 700px) {
+  .clients__text {
+    display: none;
+  }
+
+  .clients__wall-second {
+    display: none;
+  }
+
+  .clients__wall {
+    min-height: 0;
+  }
+}
+
+/* ---------- Tablet / phone: copy on top, globe in the middle ---------- */
+
+@media (max-width: 899px) {
+  .clients {
+    height: calc(100vh + 310vh);
+  }
+
+  /* Title above the globe band, route and button below it (same geometry as GeoStory). */
+  .clients__main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: calc(var(--geo-top) - var(--geo-stage-top)) var(--geo-band) auto auto;
+    grid-template-areas:
+      'copy'
+      '.'
+      'route'
+      'foot';
+  }
+
+  .clients__copy {
+    align-self: start;
+    gap: 0.5rem;
+  }
+
+  .clients__title {
+    font-size: clamp(1.6rem, 1.2rem + 2vw, 2.1rem);
+  }
+
+  .clients__text {
+    display: none;
+  }
+
+  .clients__route {
+    justify-items: center;
+    gap: 0.35rem;
+    margin-top: 0;
+    text-align: center;
+  }
+
+  .clients__route-label {
+    display: none;
+  }
+
+  .clients__route-current {
+    font-size: 1.3rem;
+  }
+
+  .clients__route-current span {
+    display: inline;
+    margin: 0 0.5rem 0 0;
+  }
+
+  .clients__foot {
+    justify-content: center;
+    gap: 0.5rem 1rem;
+    margin: 0.9rem 0;
+  }
+
+  .clients__count {
+    font-size: 0.72rem;
+  }
+
+  .clients__foot .button {
+    height: 42px;
+    padding: 0 18px;
+    font-size: 0.9rem;
+  }
+
+  .clients__wall {
+    min-height: 0;
+    padding: 0.8rem 0 0.9rem;
+  }
+
+  .clients__wall-second {
+    display: none;
+  }
+
+  .clients__wall .marquee {
+    --marquee-gap: 36px;
+  }
+
+  .globe-route li {
+    min-width: 2.1rem;
+    height: 1.5rem;
+    font-size: 0.66rem;
+  }
+
+  .globe-route li + li {
+    margin-left: 0.7rem;
+  }
+
+  .globe-route li + li::before {
+    width: calc(0.7rem + 1px);
+  }
+}

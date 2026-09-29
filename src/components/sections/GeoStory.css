@@ -1,0 +1,80 @@
+/* ------------------------------------------------------------------
+   One globe behind two sections (GeoStory.jsx).
+   The layer spans both scroll tracks; its sticky child keeps the globe
+   pinned in the right-hand column (desktop) or the middle band (phone)
+   while the section copy scrolls and pins above it.
+------------------------------------------------------------------- */
+
+.geo {
+  /* Phone geometry, shared by the globe band and both section stages. */
+  --geo-top: 26svh;
+  --geo-band: 44svh;
+  --geo-stage-top: calc(var(--header-top) + var(--header-h) + clamp(0.75rem, 3vh, 1.75rem));
+  /* Content inset: the wide container with its gutter. */
+  --geo-inset: max(var(--gutter), calc((100% - var(--container-wide)) / 2 + var(--gutter)));
+
+  /* Same background as the sections around it (and no border): the pair reads
+     as part of one continuous page, with nothing drawn between copy and globe. */
+  position: relative;
+  background: var(--c-bg);
+}
+
+.geo__layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Pinned for as long as the layer (both sections) is in view. */
+.geo__sticky {
+  position: sticky;
+  top: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
+  column-gap: clamp(1.5rem, 4vw, 4rem);
+  height: 100vh;
+  height: 100svh;
+  /* The bottom is left to the clients logo wall. */
+  padding: calc(var(--header-top) + var(--header-h) + 0.5rem) var(--geo-inset) 132px;
+  background: radial-gradient(45% 60% at 66% 45%, rgba(62, 125, 198, 0.12), rgba(62, 125, 198, 0) 70%);
+}
+
+[data-scheme='dark'] .geo__sticky {
+  background: radial-gradient(50% 62% at 66% 42%, rgba(42, 82, 190, 0.3), rgba(42, 82, 190, 0) 70%);
+}
+
+.geo__frame {
+  position: relative;
+  grid-column: 2;
+  margin-left: -4vw;
+}
+
+.geo__frame > .geo-globe,
+.geo__frame > .geo-globe__labels {
+  position: absolute;
+  inset: 0;
+}
+
+/* Short desktop windows: the clients wall shows a single row. */
+@media (min-width: 900px) and (max-height: 700px) {
+  .geo__sticky {
+    padding-bottom: 76px;
+  }
+}
+
+@media (max-width: 899px) {
+  .geo__sticky {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--geo-top) 0 calc(100svh - var(--geo-top) - var(--geo-band));
+    background: radial-gradient(90% 32% at 50% 48%, rgba(62, 125, 198, 0.12), rgba(62, 125, 198, 0) 70%);
+  }
+
+  [data-scheme='dark'] .geo__sticky {
+    background: radial-gradient(90% 32% at 50% 48%, rgba(42, 82, 190, 0.3), rgba(42, 82, 190, 0) 70%);
+  }
+
+  .geo__frame {
+    grid-column: 1;
+    margin: 0;
+  }
+}

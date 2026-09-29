@@ -1,0 +1,536 @@
+{
+  "36412c-92f12ffefe4b4d628f247c7f3dd169dcmv2": {
+    "w": 231,
+    "h": 120,
+    "source": "36412c_92f12ffefe4b4d628f247c7f3dd169dcmv2.avif",
+    "mode": "transparent"
+  },
+  "adriferco": {
+    "w": 166,
+    "h": 114,
+    "source": "adriferco.png",
+    "mode": "transparent"
+  },
+  "ag3": {
+    "w": 212,
+    "h": 120,
+    "source": "ag3.png",
+    "mode": "transparent"
+  },
+  "agener": {
+    "w": 247,
+    "h": 108,
+    "source": "agener.jpg",
+    "mode": "bg(255,255,255)"
+  },
+  "anovis": {
+    "w": 224,
+    "h": 45,
+    "source": "anovis.jpg",
+    "mode": "bg(255,255,255)"
+  },
+  "ardutec": {
+    "w": 420,
+    "h": 66,
+    "source": "ardutec.jpg",
+    "mode": "bg(92,154,158)"
+  },
+  "astrazeneca": {
+    "w": 216,
+    "h": 52,
+    "source": "astrazeneca.png",
+    "mode": "transparent"
+  },
+  "biochimico": {
+    "w": 420,
+    "h": 59,
+    "source": "biochimico.png",
+    "mode": "bg(255,255,255)"
+  },
+  "biolab": {
+    "w": 229,
+    "h": 101,
+    "source": "biolab.png",
+    "mode": "transparent"
+  },
+  "bionovis": {
+    "w": 379,
+    "h": 120,
+    "source": "bionovis.png",
+    "mode": "transparent"
+  },
+  "biosintetica": {
+    "w": 414,
+    "h": 120,
+    "source": "biosintetica.png",
+    "mode": "transparent"
+  },
+  "bosh": {
+    "w": 420,
+    "h": 98,
+    "source": "bosh-1024x344.png",
+    "mode": "transparent"
+  },
+  "bp": {
+    "w": 247,
+    "h": 120,
+    "source": "bp.png",
+    "mode": "transparent"
+  },
+  "brainfarma": {
+    "w": 251,
+    "h": 61,
+    "source": "brainfarma.png",
+    "mode": "bg(255,255,255)"
+  },
+  "btu-1": {
+    "w": 185,
+    "h": 100,
+    "source": "btu-1.png",
+    "mode": "bg(255,255,255)"
+  },
+  "buildingservice": {
+    "w": 152,
+    "h": 103,
+    "source": "BuildingService.png",
+    "mode": "bg(255,255,255)"
+  },
+  "butantan": {
+    "w": 366,
+    "h": 120,
+    "source": "butantan-e1733231599608.png",
+    "mode": "transparent"
+  },
+  "calbos": {
+    "w": 378,
+    "h": 120,
+    "source": "calbos.png",
+    "mode": "transparent"
+  },
+  "cellavita": {
+    "w": 118,
+    "h": 120,
+    "source": "cellavita.png",
+    "mode": "transparent"
+  },
+  "climapress": {
+    "w": 343,
+    "h": 120,
+    "source": "climapress-e1733235811276.png",
+    "mode": "transparent"
+  },
+  "cnen": {
+    "w": 276,
+    "h": 83,
+    "source": "cnen.png",
+    "mode": "bg(255,255,255)"
+  },
+  "coldcontrol": {
+    "w": 374,
+    "h": 120,
+    "source": "coldcontrol.png",
+    "mode": "transparent"
+  },
+  "cristalia": {
+    "w": 230,
+    "h": 65,
+    "source": "cristalia.png",
+    "mode": "transparent"
+  },
+  "dechra": {
+    "w": 153,
+    "h": 120,
+    "source": "dechra-e1733236032143.png",
+    "mode": "transparent"
+  },
+  "dlapharma": {
+    "w": 300,
+    "h": 67,
+    "source": "DLApharma.png",
+    "mode": "transparent"
+  },
+  "ebm-engenharia": {
+    "w": 286,
+    "h": 110,
+    "source": "ebm-engenharia.png",
+    "mode": "transparent"
+  },
+  "einstein": {
+    "w": 146,
+    "h": 120,
+    "source": "Einstein.png",
+    "mode": "transparent"
+  },
+  "ems": {
+    "w": 181,
+    "h": 120,
+    "source": "ems.png",
+    "mode": "transparent"
+  },
+  "ergo": {
+    "w": 250,
+    "h": 120,
+    "source": "ergo.webp",
+    "mode": "transparent"
+  },
+  "eurofarma": {
+    "w": 420,
+    "h": 96,
+    "source": "eurofarma-e1733235833759.png",
+    "mode": "transparent"
+  },
+  "fabiani": {
+    "w": 129,
+    "h": 120,
+    "source": "fabiani.png",
+    "mode": "bg(255,255,255)"
+  },
+  "fresenius-kabi": {
+    "w": 417,
+    "h": 115,
+    "source": "fresenius-kabi.png",
+    "mode": "transparent"
+  },
+  "freseniusmedicalcare": {
+    "w": 420,
+    "h": 90,
+    "source": "freseniusmedicalcare.png",
+    "mode": "transparent"
+  },
+  "garneira": {
+    "w": 370,
+    "h": 120,
+    "source": "garneira.png",
+    "mode": "bg(254,254,254)"
+  },
+  "grupovilela": {
+    "w": 164,
+    "h": 120,
+    "source": "grupovilela.png",
+    "mode": "bg(255,255,255)"
+  },
+  "hemocentrorp": {
+    "w": 287,
+    "h": 60,
+    "source": "hemocentrorp.png",
+    "mode": "transparent"
+  },
+  "hemocord-logo": {
+    "w": 420,
+    "h": 83,
+    "source": "Hemocord-Logo.svg",
+    "mode": "transparent"
+  },
+  "hospira-logo": {
+    "w": 168,
+    "h": 120,
+    "source": "hospira_logo.png",
+    "mode": "bg(255,255,255)"
+  },
+  "hum": {
+    "w": 124,
+    "h": 120,
+    "source": "hum.png",
+    "mode": "bg(255,255,255)"
+  },
+  "inovat-logo": {
+    "w": 290,
+    "h": 88,
+    "source": "inovat_logo.jpg",
+    "mode": "bg(255,255,255)"
+  },
+  "inpharma": {
+    "w": 145,
+    "h": 47,
+    "source": "inpharma.png",
+    "mode": "transparent"
+  },
+  "ipen": {
+    "w": 222,
+    "h": 120,
+    "source": "ipen.png",
+    "mode": "bg(255,255,255)"
+  },
+  "isodur": {
+    "w": 330,
+    "h": 120,
+    "source": "isodur.svg",
+    "mode": "transparent"
+  },
+  "kimberlyclark": {
+    "w": 313,
+    "h": 120,
+    "source": "kimberlyclark.jpg",
+    "mode": "bg(255,255,255)"
+  },
+  "kurita": {
+    "w": 233,
+    "h": 56,
+    "source": "kurita.png",
+    "mode": "bg(255,255,255)"
+  },
+  "laborpack-scaled": {
+    "w": 420,
+    "h": 62,
+    "source": "laborpack-scaled.png",
+    "mode": "transparent"
+  },
+  "latinofarma": {
+    "w": 400,
+    "h": 97,
+    "source": "latinofarma.png",
+    "mode": "transparent"
+  },
+  "libbs": {
+    "w": 332,
+    "h": 120,
+    "source": "libbs.png",
+    "mode": "bg(255,255,255)"
+  },
+  "life": {
+    "w": 113,
+    "h": 120,
+    "source": "Life.png",
+    "mode": "transparent"
+  },
+  "lilly": {
+    "w": 225,
+    "h": 120,
+    "source": "lilly.png",
+    "mode": "transparent"
+  },
+  "lobov": {
+    "w": 356,
+    "h": 120,
+    "source": "lobov-e1733235856920.png",
+    "mode": "transparent"
+  },
+  "logo-250x123-1": {
+    "w": 244,
+    "h": 120,
+    "source": "logo-250x123-1.png",
+    "mode": "transparent"
+  },
+  "logoboehringeringelheim": {
+    "w": 264,
+    "h": 80,
+    "source": "LogoBoehringerIngelheim.png",
+    "mode": "transparent"
+  },
+  "logosiarcon": {
+    "w": 207,
+    "h": 120,
+    "source": "logosiarcon.svg",
+    "mode": "transparent"
+  },
+  "logo-bayer": {
+    "w": 120,
+    "h": 120,
+    "source": "logo_bayer.svg",
+    "mode": "transparent"
+  },
+  "logo-biogen": {
+    "w": 355,
+    "h": 120,
+    "source": "logo_biogen.svg",
+    "mode": "transparent"
+  },
+  "logo-nutriex": {
+    "w": 420,
+    "h": 114,
+    "source": "logo_nutriex.png",
+    "mode": "transparent"
+  },
+  "luftklima": {
+    "w": 411,
+    "h": 120,
+    "source": "luftklima-e1733235880444.png",
+    "mode": "transparent"
+  },
+  "lycra": {
+    "w": 203,
+    "h": 120,
+    "source": "lycra.webp",
+    "mode": "transparent"
+  },
+  "masstin-1": {
+    "w": 394,
+    "h": 97,
+    "source": "masstin-1.png",
+    "mode": "bg(30,45,59)"
+  },
+  "mastertrade": {
+    "w": 420,
+    "h": 80,
+    "source": "mastertrade.svg",
+    "mode": "transparent"
+  },
+  "mcassab": {
+    "w": 418,
+    "h": 112,
+    "source": "mcassab.png",
+    "mode": "bg(255,255,255)"
+  },
+  "minancora": {
+    "w": 120,
+    "h": 120,
+    "source": "minancora.png",
+    "mode": "transparent"
+  },
+  "momenta-logo": {
+    "w": 151,
+    "h": 120,
+    "source": "momenta_logo.jpg",
+    "mode": "bg(164,32,55)"
+  },
+  "mondelez": {
+    "w": 420,
+    "h": 100,
+    "source": "mondelez.png",
+    "mode": "transparent"
+  },
+  "msd": {
+    "w": 300,
+    "h": 112,
+    "source": "msd.png",
+    "mode": "transparent"
+  },
+  "museulasarsegall": {
+    "w": 414,
+    "h": 120,
+    "source": "museulasarsegall.png",
+    "mode": "bg(255,255,255)"
+  },
+  "ourofino": {
+    "w": 420,
+    "h": 102,
+    "source": "ourofino.png",
+    "mode": "transparent"
+  },
+  "particule-measuring-systems": {
+    "w": 278,
+    "h": 104,
+    "source": "particule_measuring_systems.avif",
+    "mode": "transparent"
+  },
+  "perfettivanmelle": {
+    "w": 157,
+    "h": 61,
+    "source": "perfettivanmelle.png",
+    "mode": "bg(47,48,135)"
+  },
+  "pfizer": {
+    "w": 292,
+    "h": 120,
+    "source": "pfizer-e1733236012605.png",
+    "mode": "transparent"
+  },
+  "pg-products": {
+    "w": 281,
+    "h": 55,
+    "source": "pg-products.png",
+    "mode": "bg(9,45,57)"
+  },
+  "pharmaesthetcs": {
+    "w": 420,
+    "h": 80,
+    "source": "pharmaesthetcs.png",
+    "mode": "transparent"
+  },
+  "planevale": {
+    "w": 121,
+    "h": 120,
+    "source": "planevale.jpg",
+    "mode": "bg(255,255,255)"
+  },
+  "prati": {
+    "w": 345,
+    "h": 120,
+    "source": "prati.png",
+    "mode": "transparent"
+  },
+  "r2-radiofarma": {
+    "w": 98,
+    "h": 120,
+    "source": "r2-radiofarma.jpg",
+    "mode": "bg(255,255,255)"
+  },
+  "rac": {
+    "w": 121,
+    "h": 120,
+    "source": "rac.png",
+    "mode": "transparent"
+  },
+  "rodoserv": {
+    "w": 420,
+    "h": 114,
+    "source": "rodoserv.png",
+    "mode": "transparent"
+  },
+  "sanofi": {
+    "w": 420,
+    "h": 109,
+    "source": "sanofi.png",
+    "mode": "bg(255,255,255)"
+  },
+  "sintegra": {
+    "w": 420,
+    "h": 68,
+    "source": "sintegra.svg",
+    "mode": "transparent"
+  },
+  "soleri": {
+    "w": 174,
+    "h": 92,
+    "source": "soleri.png",
+    "mode": "transparent"
+  },
+  "starcenter": {
+    "w": 346,
+    "h": 66,
+    "source": "starcenter.png",
+    "mode": "transparent"
+  },
+  "steptodont": {
+    "w": 118,
+    "h": 120,
+    "source": "steptodont.svg",
+    "mode": "transparent"
+  },
+  "syngenta-logo-svg": {
+    "w": 401,
+    "h": 120,
+    "source": "Syngenta_Logo.svg.png",
+    "mode": "transparent"
+  },
+  "takeda": {
+    "w": 368,
+    "h": 120,
+    "source": "takeda-e1733235776531.png",
+    "mode": "transparent"
+  },
+  "teuto": {
+    "w": 148,
+    "h": 120,
+    "source": "teuto-e1733235996221.png",
+    "mode": "transparent"
+  },
+  "uniaoquimica": {
+    "w": 420,
+    "h": 90,
+    "source": "uniaoquimica-e1733235936429.png",
+    "mode": "transparent"
+  },
+  "venco": {
+    "w": 199,
+    "h": 65,
+    "source": "venco.png",
+    "mode": "bg(255,255,255)"
+  },
+  "west-blue": {
+    "w": 300,
+    "h": 120,
+    "source": "West-Blue.webp",
+    "mode": "bg(255,255,255)"
+  }
+}

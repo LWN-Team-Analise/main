@@ -1,0 +1,118 @@
+/* ------------------------------------------------------------------
+   Dark colour scheme. Light is the default; <html data-scheme="dark">
+   remaps the neutral tokens so every "light" section turns deep navy
+   while the already-dark sections (hero, commitment, contact, footer)
+   keep their look.
+------------------------------------------------------------------- */
+
+:root {
+  --c-surface: #ffffff;
+  --c-photo-bg: #e9edf2;
+  color-scheme: light;
+}
+
+:root[data-scheme='dark'] {
+  color-scheme: dark;
+
+  --c-blue-800: #b9d3f3;
+  --c-blue-700: #5b8fd6;
+  --c-blue-600: #7aa7e0;
+  --c-sky-100: #16264d;
+  --c-sky-50: #0e1a38;
+
+  --c-ink: #eef3fb;
+  --c-text: #b4c0d4;
+  --c-muted: #8492a9;
+  --c-line: rgba(255, 255, 255, 0.1);
+  --c-line-strong: rgba(255, 255, 255, 0.2);
+  --c-bg: #060d20;
+  --c-bg-soft: #091330;
+  --c-surface: #0e1a38;
+  --c-photo-bg: #16223f;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 18px 40px -26px rgba(0, 0, 0, 0.8);
+}
+
+/* Quiet colour ease while the scheme changes (class removed after ~0.45s).
+   The visible gesture is the sun ↔ moon swap on the toggle (ThemeToggle.css). */
+html.is-theme-switching *,
+html.is-theme-switching *::before,
+html.is-theme-switching *::after {
+  transition:
+    background-color 0.35s ease,
+    color 0.35s ease,
+    border-color 0.35s ease,
+    fill 0.35s ease,
+    stroke 0.35s ease !important;
+}
+
+[data-scheme='dark'] .button--dark {
+  background: var(--c-blue-600);
+  color: #06102a;
+}
+
+[data-scheme='dark'] .button--dark:hover {
+  background: var(--c-blue-300);
+}
+
+[data-scheme='dark'] .skip-link {
+  color: var(--c-bg);
+}
+
+[data-scheme='dark'] .service__norms li {
+  border: 1px solid var(--c-line-strong);
+}
+
+/* Floating mobile drawer: dark glass instead of milky glass. */
+[data-scheme='dark'] .mobile-menu {
+  background-color: rgba(9, 19, 48, 0.86);
+}
+
+[data-scheme='dark'] .mobile-menu__link:hover,
+[data-scheme='dark'] .mobile-menu__link[aria-current],
+[data-scheme='dark'] .mobile-menu__phone:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--c-blue-300);
+}
+
+[data-scheme='dark'] .mobile-menu__phone {
+  color: var(--c-blue-300);
+}
+
+/* ---------- Brazil map ("Onde encontrar") ---------- */
+
+/* Labels: the light theme's white halo reads as a thick outline on navy, so
+   dark mode drops it and uses plain, lighter-weight ink. */
+[data-scheme='dark'] .map-marker__label {
+  fill: #e6edf8;
+  font-weight: 500;
+  stroke: none;
+  paint-order: normal;
+}
+
+[data-scheme='dark'] .brazil-map__inset-title {
+  fill: #a9b6ca;
+}
+
+[data-scheme='dark'] .brazil-map__dots {
+  stroke: var(--c-blue-300);
+  opacity: 0.16;
+}
+
+[data-scheme='dark'] .brazil-map__outline {
+  stroke: var(--c-blue-300);
+  opacity: 0.3;
+}
+
+[data-scheme='dark'] .map-marker__dot,
+[data-scheme='dark'] .brazil-map__cluster {
+  stroke: var(--c-bg-soft);
+}
+
+[data-scheme='dark'] .brazil-map__inset-bg {
+  fill: var(--c-surface);
+  stroke: var(--c-line-strong);
+}
+
+[data-scheme='dark'] .brazil-map__inset-dot {
+  fill: #fff;
+}

@@ -1,0 +1,417 @@
+/* ------------------------------------------------------------------
+   Floating liquid-glass header.
+   The glass adapts to what is behind it (data-theme on each section):
+   dark sections → clear glass with white ink, light sections → milky
+   glass with dark ink. Everything transitions smoothly while scrolling.
+------------------------------------------------------------------- */
+
+.site-header {
+  --glass-ink: #fff;
+  --glass-ink-soft: rgba(255, 255, 255, 0.74);
+  --glass-tint: rgba(255, 255, 255, 0.06);
+  --glass-rim: rgba(255, 255, 255, 0.55);
+  --glass-hover: rgba(255, 255, 255, 0.12);
+  --glass-active: rgba(255, 255, 255, 0.16);
+  --glass-shadow: 0 12px 34px -18px rgba(2, 8, 22, 0.6);
+  --glass-text-shadow: 0 1px 10px rgba(2, 8, 22, 0.35);
+
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 100;
+  padding: var(--header-top) var(--gutter) 0;
+  pointer-events: none;
+}
+
+.site-header[data-theme='light'] {
+  --glass-ink: var(--c-ink);
+  --glass-ink-soft: rgba(11, 19, 36, 0.66);
+  /* Translucent: the page stays visible through the bar, softened by the blur. */
+  --glass-tint: rgba(255, 255, 255, 0.24);
+  --glass-rim: rgba(255, 255, 255, 0.9);
+  --glass-hover: rgba(13, 31, 69, 0.06);
+  --glass-active: rgba(255, 255, 255, 0.6);
+  --glass-shadow: 0 10px 30px -22px rgba(8, 22, 52, 0.32);
+  /* A faint halo keeps the ink crisp over whatever passes behind the glass. */
+  --glass-text-shadow: 0 0 10px rgba(255, 255, 255, 0.55);
+}
+
+.site-header[data-scrolled] {
+  --glass-tint: rgba(255, 255, 255, 0.09);
+}
+
+.site-header[data-scrolled][data-theme='light'] {
+  --glass-tint: rgba(255, 255, 255, 0.32);
+}
+
+/* Light mode over a dark band (commitment, contact, footer…): the glass takes a
+   little more milk so the brand-coloured logo and the dark ink stay readable. */
+.site-header[data-theme='light'][data-over='dark'] {
+  --glass-tint: rgba(255, 255, 255, 0.55);
+  --glass-shadow: 0 12px 32px -20px rgba(2, 8, 22, 0.5);
+}
+
+/* ---------- Glass material ---------- */
+
+.glass {
+  position: relative;
+  background-color: var(--glass-tint);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 55%);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6) brightness(1.04);
+  backdrop-filter: blur(14px) saturate(1.6) brightness(1.04);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.06),
+    inset 0 0 18px rgba(255, 255, 255, 0.04),
+    var(--glass-shadow);
+  transition:
+    background-color 0.5s var(--ease-out),
+    box-shadow 0.5s var(--ease-out);
+}
+
+/* Chromium: the backdrop is also refracted along the rim (see LiquidGlassFilter). */
+.glass--liquid {
+  backdrop-filter: url(#lwn-liquid-glass) blur(11px) saturate(1.6) brightness(1.04);
+}
+
+/* Specular sheen across the top of the slab. */
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(90% 160% at 18% -70%, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 50%),
+    radial-gradient(60% 120% at 92% 170%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 55%);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Rim light: a 1px border whose brightness changes around the edge, like light
+   caught in the thickness of the glass. */
+.glass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    140deg,
+    var(--glass-rim) 0%,
+    rgba(255, 255, 255, 0.14) 28%,
+    rgba(255, 255, 255, 0.04) 62%,
+    rgba(255, 255, 255, 0.4) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.glass > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- Bar ---------- */
+
+.site-header__bar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
+  max-width: var(--container-wide);
+  height: var(--header-h);
+  margin: 0 auto;
+  padding: 0 12px 0 22px;
+  border-radius: 18px;
+  color: var(--glass-ink);
+  pointer-events: auto;
+  transition:
+    color 0.4s var(--ease-out),
+    background-color 0.5s var(--ease-out),
+    box-shadow 0.5s var(--ease-out);
+}
+
+.site-header__brand {
+  display: grid;
+  border-radius: 8px;
+}
+
+.site-header__logo {
+  grid-area: 1 / 1;
+  display: block;
+  width: auto;
+  height: 38px;
+  transition: opacity 0.4s var(--ease-out);
+}
+
+.site-header__logo--white {
+  opacity: 1;
+}
+
+.site-header__logo--color {
+  opacity: 0;
+}
+
+.site-header[data-theme='light'] .site-header__logo--white {
+  opacity: 0;
+}
+
+.site-header[data-theme='light'] .site-header__logo--color {
+  opacity: 1;
+}
+
+.site-header__nav {
+  justify-self: center;
+}
+
+.site-header__end {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: end;
+}
+
+/* ---------- Desktop navigation ---------- */
+
+.nav__list {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  list-style: none;
+}
+
+.nav__link {
+  position: relative;
+  display: inline-flex;
+  padding: 9px 14px;
+  border-radius: 10px;
+  color: var(--glass-ink);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  text-shadow: var(--glass-text-shadow);
+  transition:
+    color 0.3s var(--ease-out),
+    background-color 0.3s var(--ease-out);
+}
+
+.nav__link:hover {
+  background: var(--glass-hover);
+}
+
+.nav__indicator {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-active);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 1px 4px rgba(2, 8, 22, 0.08);
+}
+
+.nav__label {
+  position: relative;
+}
+
+.site-header__social {
+  color: var(--glass-ink);
+}
+
+/* The "|" between the social icons (WhatsApp) and the theme toggle. */
+.site-header__divider {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  margin: 0 6px;
+  border-radius: 1px;
+  background: var(--glass-ink);
+  opacity: 0.3;
+  transition: background-color 0.4s var(--ease-out);
+}
+
+/* ---------- Menu toggle ---------- */
+
+.menu-toggle {
+  position: relative;
+  display: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  color: var(--glass-ink);
+  transition: background-color 0.25s var(--ease-out);
+}
+
+.menu-toggle:hover {
+  background: var(--glass-hover);
+}
+
+.menu-toggle__line {
+  position: absolute;
+  left: 12px;
+  width: 18px;
+  height: 1.75px;
+  border-radius: 2px;
+  background: currentColor;
+  transition:
+    transform 0.4s var(--ease-out),
+    top 0.4s var(--ease-out);
+}
+
+.menu-toggle__line:first-child {
+  top: 16px;
+}
+
+.menu-toggle__line:last-child {
+  top: 23px;
+}
+
+.menu-toggle[aria-expanded='true'] .menu-toggle__line:first-child {
+  top: 20px;
+  transform: rotate(45deg);
+}
+
+.menu-toggle[aria-expanded='true'] .menu-toggle__line:last-child {
+  top: 20px;
+  transform: rotate(-45deg);
+}
+
+/* ---------- Mobile drawer ---------- */
+
+.mobile-menu__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: rgba(4, 11, 28, 0.38);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  pointer-events: auto;
+}
+
+.mobile-menu {
+  z-index: 1;
+  max-width: var(--container-wide);
+  max-height: calc(100svh - var(--header-h) - var(--header-top) - 24px);
+  margin: 10px auto 0;
+  padding: 10px;
+  overflow-y: auto;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.78);
+  color: var(--c-ink);
+  transform-origin: top center;
+  pointer-events: auto;
+}
+
+.mobile-menu__list {
+  list-style: none;
+}
+
+.mobile-menu__link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 12px;
+  color: var(--c-ink);
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  transition:
+    background-color 0.2s var(--ease-out),
+    color 0.2s var(--ease-out);
+}
+
+.mobile-menu__link:hover,
+.mobile-menu__link[aria-current] {
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--c-blue-700);
+}
+
+.mobile-menu__index {
+  min-width: 1.6rem;
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.mobile-menu__label {
+  flex: 1;
+}
+
+.mobile-menu__arrow {
+  color: var(--c-muted);
+  transition: transform 0.25s var(--ease-out);
+}
+
+.mobile-menu__link:hover .mobile-menu__arrow {
+  transform: translate(2px, -2px);
+}
+
+.mobile-menu__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 14px 8px 6px;
+  border-top: 1px solid var(--c-line);
+}
+
+.mobile-menu__footer .social-links {
+  color: var(--c-ink);
+}
+
+.mobile-menu__phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  color: var(--c-blue-700);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.mobile-menu__phone:hover {
+  background: rgba(255, 255, 255, 0.75);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1239px) {
+  .nav__link {
+    padding: 9px 11px;
+  }
+}
+
+@media (max-width: 1099px) {
+  .site-header__nav {
+    display: none;
+  }
+
+  .menu-toggle {
+    display: block;
+  }
+}
+
+@media (max-width: 639px) {
+  .site-header__bar {
+    gap: 12px;
+    padding: 0 8px 0 16px;
+    border-radius: 16px;
+  }
+
+  .site-header__logo {
+    height: 32px;
+  }
+
+  .site-header__social,
+  .site-header__divider {
+    display: none;
+  }
+}

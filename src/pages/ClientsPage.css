@@ -1,0 +1,175 @@
+.clients-page {
+  padding-bottom: var(--section-y);
+  background:
+    radial-gradient(70% 40% at 50% 0%, rgba(62, 125, 198, 0.1), rgba(62, 125, 198, 0) 70%),
+    var(--c-bg);
+  color: var(--c-text);
+}
+
+[data-scheme='dark'] .clients-page {
+  background:
+    radial-gradient(70% 40% at 50% 0%, rgba(42, 82, 190, 0.3), rgba(42, 82, 190, 0) 70%),
+    var(--c-bg);
+}
+
+.clients-page__hero {
+  padding: calc(var(--header-top) + var(--header-h) + clamp(3rem, 7vw, 5.5rem)) 0 clamp(2.5rem, 5vw, 4rem);
+}
+
+.clients-page__title {
+  margin-top: 1rem;
+  color: var(--c-ink);
+  font-size: clamp(2.2rem, 1.4rem + 3vw, 3.75rem);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.clients-page__lead {
+  max-width: 36rem;
+  margin-top: 1rem;
+  font-size: 1.0625rem;
+}
+
+.clients-page__sectors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2rem;
+}
+
+.clients-page__sectors a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--c-line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--c-ink);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition:
+    background-color 0.25s var(--ease-out),
+    border-color 0.25s var(--ease-out);
+}
+
+.clients-page__sectors a:hover {
+  border-color: var(--c-blue-600);
+  background: var(--c-sky-50);
+}
+
+.clients-page__sectors span {
+  color: var(--c-blue-600);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+/* ---------- Sectors ---------- */
+
+.sector {
+  padding-top: clamp(2.5rem, 5vw, 3.5rem);
+  scroll-margin-top: calc(var(--header-h) + var(--header-top) + 1rem);
+}
+
+.sector__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--c-line-strong);
+}
+
+.sector__title {
+  color: var(--c-ink);
+  font-size: clamp(1.25rem, 1rem + 0.8vw, 1.6rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.sector__count {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sector__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  list-style: none;
+}
+
+.sector__cell {
+  display: grid;
+  place-items: center;
+  min-height: 118px;
+  padding: 1.5rem 1rem;
+  border-right: 1px solid var(--c-line);
+  border-bottom: 1px solid var(--c-line);
+  transition: background-color 0.3s var(--ease-out);
+}
+
+.sector__cell:hover {
+  background: var(--c-bg-soft);
+}
+
+/* The logo files are white marks (made for dark backgrounds): on light
+   paper they are shown as a quiet ink monochrome instead. */
+.sector__cell .client-logo {
+  max-width: 100%;
+  height: auto !important;
+  filter: brightness(0);
+  opacity: 0.72;
+  transition:
+    filter 0.45s var(--ease-out),
+    opacity 0.3s var(--ease-out);
+}
+
+.sector__cell:hover .client-logo {
+  opacity: 0.95;
+}
+
+[data-scheme='dark'] .sector__cell .client-logo {
+  filter: none;
+  opacity: 1;
+}
+
+/* ---------- CTA ---------- */
+
+.clients-page__cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem 2rem;
+  margin-top: clamp(3rem, 6vw, 5rem);
+  padding: clamp(1.75rem, 4vw, 2.75rem);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-lg);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.clients-page__cta h2 {
+  color: var(--c-ink);
+  font-size: clamp(1.3rem, 1.1rem + 0.9vw, 1.8rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.clients-page__cta p {
+  max-width: 36rem;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 479px) {
+  .sector__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sector__cell {
+    min-height: 96px;
+    padding: 1rem 0.75rem;
+  }
+}

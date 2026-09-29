@@ -1,0 +1,712 @@
+/* The veil is the colour laid over the videos so copy stays legible:
+   white in light mode, deep navy in dark mode. */
+.gases-page {
+  --veil: 255, 255, 255;
+}
+
+[data-scheme='dark'] .gases-page {
+  --veil: 6, 13, 32;
+}
+
+/* ---------- Scroll video fade-in (the canvas appears with its first frame) ---------- */
+
+.scroll-video {
+  display: block;
+  opacity: 0;
+  transition: opacity 0.8s var(--ease-out);
+}
+
+.scroll-video[data-ready] {
+  opacity: 1;
+}
+
+/* ---------- Hero: smoke.mp4 scrubbed by scroll ---------- */
+
+.gases-hero {
+  --track: 260vh;
+  position: relative;
+  height: var(--track);
+  background: var(--c-bg);
+}
+
+.gases-hero__stage {
+  --p: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  background: var(--c-bg-soft);
+  color: var(--c-text);
+}
+
+.gases-hero__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  /* A slow pull-back makes the scrub feel like a camera move. */
+  transform: scale(calc(1.06 - var(--p) * 0.06));
+}
+
+.gases-hero__shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(var(--veil), 0.9) 0%, rgba(var(--veil), 0.62) 42%, rgba(var(--veil), 0.08) 100%),
+    linear-gradient(0deg, rgba(var(--veil), 0.7) 0%, rgba(var(--veil), 0) 38%);
+}
+
+.gases-hero__content {
+  position: relative;
+  /* Clear the header on top and the progress rail at the bottom. */
+  padding-top: calc(var(--header-top) + var(--header-h));
+  padding-bottom: 4.5rem;
+  opacity: calc(1 - max(var(--p) - 0.7, 0) * 2.2);
+  transform: translateY(calc(var(--p) * -40px));
+}
+
+.gases-page .back-link {
+  margin-bottom: clamp(0.75rem, 3vh, 1.75rem);
+  color: var(--c-text);
+}
+
+.gases-hero__title {
+  max-width: 17ch;
+  margin-top: 1rem;
+  color: var(--c-ink);
+  /* Also bounded by the viewport height so the whole hero fits on short screens. */
+  font-size: min(clamp(2.1rem, 1.2rem + 3.4vw, 4rem), 7.4vh);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.gases-hero__lead {
+  max-width: 38rem;
+  margin-top: 1.25rem;
+  font-size: clamp(0.98rem, 0.9rem + 0.3vw, 1.125rem);
+}
+
+.gases-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  margin-top: 2rem;
+}
+
+.gases-hero__norms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+}
+
+.gases-hero__norms li {
+  padding: 5px 10px;
+  border: 1px solid var(--c-line-strong);
+  border-radius: var(--radius-sm);
+  background: rgba(var(--veil), 0.5);
+  color: var(--c-ink);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.gases-hero__rail {
+  position: absolute;
+  right: var(--gutter);
+  bottom: clamp(1.25rem, 3vw, 2rem);
+  left: var(--gutter);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: calc(var(--container) - 2 * var(--gutter));
+  margin: 0 auto;
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.gases-hero__cue {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  opacity: calc(1 - var(--p) * 3);
+}
+
+/* ---------- Page progress: a thin vertical rail on the right edge ---------- */
+
+.page-progress {
+  --progress: 0;
+  position: fixed;
+  top: 50%;
+  right: clamp(8px, 1.3vw, 20px);
+  z-index: 90;
+  width: 3px;
+  height: min(44vh, 380px);
+  border-radius: 3px;
+  background: var(--c-line-strong);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.page-progress__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, var(--c-blue-500), var(--c-blue-700));
+  transform: scaleY(var(--progress));
+  transform-origin: top;
+}
+
+/* Marker at the leading edge of the fill. */
+.page-progress__head {
+  position: absolute;
+  top: calc(var(--progress) * 100%);
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--c-bg);
+  border-radius: 50%;
+  background: var(--c-blue-600);
+  box-shadow: 0 0 0 3px rgba(62, 125, 198, 0.18);
+  transform: translate(-50%, -50%);
+}
+
+[data-scheme='dark'] .page-progress {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+[data-scheme='dark'] .page-progress__fill {
+  background: linear-gradient(180deg, var(--c-blue-300), var(--c-blue-600));
+}
+
+@media (max-width: 599px) {
+  .page-progress {
+    right: 5px;
+    width: 2px;
+    height: 34vh;
+  }
+
+  .page-progress__head {
+    width: 7px;
+    height: 7px;
+  }
+}
+
+/* ---------- Why ---------- */
+
+.gases-why,
+.gases-diff {
+  padding: var(--section-y) 0;
+  background: var(--c-bg);
+}
+
+.gases-why__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(2rem, 6vw, 5rem);
+  align-items: start;
+}
+
+.gases-why__grid .section-heading {
+  position: sticky;
+  top: calc(var(--header-top) + var(--header-h) + 2rem);
+}
+
+.gases-why__body {
+  display: grid;
+  gap: 1.1rem;
+  font-size: 1.0625rem;
+}
+
+.gases-why__goals {
+  display: grid;
+  list-style: none;
+  border-top: 1px solid var(--c-line);
+}
+
+.gases-why__goals li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--c-line);
+  color: var(--c-ink);
+  font-weight: 600;
+}
+
+.gases-why__goals svg {
+  flex: none;
+  color: var(--c-blue-600);
+}
+
+.gases-why__closing {
+  color: var(--c-muted);
+}
+
+.gases-why__gases {
+  margin-top: 0.75rem;
+  padding: 1.25rem;
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-lg);
+  background: var(--c-surface);
+}
+
+.gases-why__gases ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 0.75rem;
+  list-style: none;
+}
+
+.gases-why__gases li {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--c-sky-100);
+  color: var(--c-blue-800);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* ---------- Analyses ---------- */
+
+.gases-analyses {
+  padding: var(--section-y) 0;
+  border-top: 1px solid var(--c-line);
+  background: var(--c-bg-soft);
+}
+
+.gases-analyses__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: clamp(2.5rem, 5vw, 3.5rem);
+  list-style: none;
+}
+
+.analysis {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: clamp(1.25rem, 2.5vw, 1.75rem);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-lg);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.3s var(--ease-out);
+}
+
+.analysis:hover {
+  border-color: var(--c-line-strong);
+}
+
+.analysis__index {
+  color: var(--c-blue-600);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.analysis__title {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.analysis__text {
+  font-size: 0.95rem;
+}
+
+.analysis__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 0.4rem;
+  list-style: none;
+}
+
+.analysis__items li {
+  padding: 4px 9px;
+  border: 1px solid var(--c-line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--c-ink);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+/* ---------- Sectors: full-bleed story driven by video2.mp4 ---------- */
+
+.gases-story {
+  --slides: 9;
+  position: relative;
+  /* One viewport for the pinned stage + a slice of scroll per slide. */
+  height: calc(100vh + var(--slides) * 42vh);
+  background: var(--c-bg);
+}
+
+.gases-story__stage {
+  --p: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  background: var(--c-bg-soft);
+  color: var(--c-text);
+}
+
+.gases-story__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  transform: scale(calc(1.05 - var(--p) * 0.05));
+}
+
+/* The veil carries the copy on the left and the chapter index on the right,
+   leaving the middle of the frame to the video. */
+.gases-story__shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(var(--veil), 0.94) 0%, rgba(var(--veil), 0.8) 28%, rgba(var(--veil), 0.3) 50%, rgba(var(--veil), 0) 64%),
+    linear-gradient(270deg, rgba(var(--veil), 0.92) 0%, rgba(var(--veil), 0.72) 17%, rgba(var(--veil), 0.25) 29%, rgba(var(--veil), 0) 38%),
+    linear-gradient(0deg, rgba(var(--veil), 0.6) 0%, rgba(var(--veil), 0) 26%);
+}
+
+.gases-story__frame {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  column-gap: clamp(2rem, 5vw, 5rem);
+  width: 100%;
+  max-width: var(--container-wide);
+  margin: 0 auto;
+  padding: calc(var(--header-top) + var(--header-h) + clamp(1rem, 3.5vh, 2.25rem)) var(--gutter)
+    clamp(1.25rem, 4vh, 2.25rem);
+}
+
+/* Corner label, shown once the intro slide has left. */
+.gases-story__kicker {
+  grid-area: 1 / 1;
+  display: grid;
+  gap: 0.4rem;
+  opacity: clamp(0, calc((var(--p) * var(--slides) - 0.85) * 4), 1);
+  transform: translateY(calc((1 - clamp(0, calc((var(--p) * var(--slides) - 0.85) * 4), 1)) * 10px));
+}
+
+.gases-story__kicker-title {
+  color: var(--c-ink);
+  font-size: 0.98rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* All slides share one cell, anchored to the lower left. */
+/* Slides sit at the optical centre of the frame (a touch above the middle). */
+.gases-story__slides {
+  grid-area: 2 / 1;
+  display: grid;
+  align-items: center;
+  padding-bottom: clamp(2rem, 8vh, 5rem);
+}
+
+.story-slide {
+  --in: 0;
+  --out: 0;
+  grid-area: 1 / 1;
+  max-width: 50rem;
+  opacity: calc(var(--in) * (1 - var(--out)));
+}
+
+.story-slide[data-hidden] {
+  visibility: hidden;
+}
+
+/* Staggered parallax: number, title and text travel different distances. */
+.story-slide > * {
+  transform: translate3d(0, calc((1 - var(--in)) * var(--rise) - var(--out) * var(--rise) * 0.7), 0);
+  will-change: transform;
+}
+
+.story-slide__index,
+.story-slide__eyebrow {
+  --rise: 90px;
+}
+
+.story-slide__title {
+  --rise: 60px;
+}
+
+.story-slide__text {
+  --rise: 36px;
+}
+
+.story-slide__index {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.9rem;
+  margin-bottom: clamp(0.5rem, 1.5vh, 1rem);
+}
+
+/* Outlined numerals: large presence without competing with the title. */
+.story-slide__number {
+  color: transparent;
+  font-size: clamp(4.5rem, 2rem + 7.5vw, 10rem);
+  font-weight: 700;
+  line-height: 0.8;
+  letter-spacing: -0.06em;
+  -webkit-text-stroke: 1.5px var(--c-blue-600);
+}
+
+.story-slide__of {
+  padding-bottom: 0.4rem;
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+}
+
+.story-slide__eyebrow {
+  margin-bottom: 1.25rem;
+}
+
+.story-slide__title {
+  max-width: 14ch;
+  color: var(--c-ink);
+  font-size: clamp(2.4rem, 1.3rem + 3.5vw, 4.75rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.story-slide--intro .story-slide__title {
+  max-width: 13ch;
+  font-size: clamp(2.6rem, 1.4rem + 3.9vw, 5.25rem);
+}
+
+.story-slide__text {
+  max-width: 33rem;
+  margin-top: clamp(1rem, 2.5vh, 1.5rem);
+  color: var(--c-text);
+  font-size: clamp(1.05rem, 0.95rem + 0.45vw, 1.35rem);
+  line-height: 1.55;
+}
+
+/* Right-hand chapter index: every sector reached so far stays lit. */
+/* Sector list, level with the slides; high enough contrast to read over the video. */
+.gases-story__index {
+  grid-area: 2 / 2;
+  align-self: center;
+  display: grid;
+  gap: 6px;
+  margin-bottom: clamp(2rem, 8vh, 5rem);
+  list-style: none;
+}
+
+.gases-story__index li {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 8px 0 8px 16px;
+  border-left: 2px solid var(--c-line-strong);
+  color: var(--c-ink);
+  font-size: 1.02rem;
+  font-weight: 500;
+  text-shadow: 0 0 14px rgba(var(--veil), 0.95), 0 0 2px rgba(var(--veil), 0.9);
+  opacity: 0.72;
+  transition:
+    opacity 0.5s var(--ease-out),
+    border-color 0.5s var(--ease-out),
+    transform 0.5s var(--ease-out);
+}
+
+.gases-story__index li span {
+  color: var(--c-text);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.gases-story__index li[data-state='past'] {
+  border-color: rgba(62, 125, 198, 0.45);
+  opacity: 0.9;
+}
+
+.gases-story__index li[data-state='active'] {
+  border-color: var(--c-blue-600);
+  font-weight: 600;
+  opacity: 1;
+  transform: translateX(4px);
+}
+
+.gases-story__index li[data-state='active'] span {
+  color: var(--c-blue-600);
+}
+
+/* Segmented progress: one bar per sector, each filling with the scroll. */
+.gases-story__progress {
+  grid-area: 3 / 1 / 4 / 3;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px;
+  list-style: none;
+}
+
+.gases-story__progress li {
+  height: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--c-line-strong);
+}
+
+.gases-story__progress span {
+  display: block;
+  height: 100%;
+  background: var(--c-blue-600);
+  transform: scaleX(clamp(0, calc(var(--p) * var(--slides) - var(--i)), 1));
+  transform-origin: left;
+}
+
+/* ---------- CTA ---------- */
+
+.gases-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem 2rem;
+  margin-top: clamp(3rem, 6vw, 5rem);
+  padding: clamp(1.75rem, 4vw, 2.75rem);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(70% 120% at 100% 0%, rgba(62, 125, 198, 0.35), rgba(62, 125, 198, 0) 70%),
+    var(--c-navy-900);
+  color: rgba(222, 232, 246, 0.78);
+}
+
+.gases-cta h2 {
+  color: #fff;
+  font-size: clamp(1.3rem, 1.1rem + 0.9vw, 1.8rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.gases-cta p {
+  max-width: 36rem;
+  margin-top: 0.5rem;
+}
+
+.gases-cta__contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 10px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.gases-cta__contact a:hover {
+  color: #fff;
+}
+
+[data-scheme='dark'] .gases-cta {
+  border: 1px solid var(--c-line);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1099px) {
+  .gases-story__index {
+    display: none;
+  }
+
+  .gases-story__frame {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gases-story__progress {
+    grid-column: 1 / 2;
+  }
+}
+
+@media (max-width: 899px) {
+  .gases-hero {
+    --track: 220vh;
+  }
+
+  .gases-story {
+    height: calc(100vh + var(--slides) * 36vh);
+  }
+
+  .gases-why__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gases-why__grid .section-heading {
+    position: static;
+  }
+
+  /* Phone: the copy sits low, over a veil rising from the bottom edge. */
+  .gases-story__shade {
+    background:
+      linear-gradient(180deg, rgba(var(--veil), 0.86) 0%, rgba(var(--veil), 0.3) 18%, rgba(var(--veil), 0) 30%),
+      linear-gradient(0deg, rgba(var(--veil), 0.95) 0%, rgba(var(--veil), 0.82) 32%, rgba(var(--veil), 0.2) 58%, rgba(var(--veil), 0) 70%);
+  }
+
+  .gases-story__slides {
+    align-items: end;
+    padding-bottom: clamp(1rem, 4vh, 2.5rem);
+  }
+
+  .story-slide__title,
+  .story-slide--intro .story-slide__title {
+    max-width: none;
+  }
+}
+
+@media (max-width: 599px) {
+  .gases-hero__shade {
+    background: linear-gradient(0deg, rgba(var(--veil), 0.92) 0%, rgba(var(--veil), 0.62) 60%, rgba(var(--veil), 0.4) 100%);
+  }
+
+  .gases-hero__lead {
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .story-slide__number {
+    font-size: 4.25rem;
+  }
+
+  .story-slide__title {
+    font-size: 2.2rem;
+  }
+
+  .story-slide--intro .story-slide__title {
+    font-size: 2.35rem;
+  }
+
+  .story-slide__text {
+    font-size: 1rem;
+  }
+
+  .gases-story__kicker-title {
+    font-size: 0.9rem;
+  }
+}

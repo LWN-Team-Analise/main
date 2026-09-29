@@ -1,0 +1,51 @@
+.social-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  list-style: none;
+}
+
+.social-links__link {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  transition:
+    color 0.3s var(--ease-out),
+    background-color 0.3s var(--ease-out),
+    transform 0.3s var(--ease-out);
+}
+
+.social-links__link:hover {
+  transform: translateY(-1px);
+}
+
+/* Dark ink (light backgrounds) */
+.social-links--dark .social-links__link {
+  color: var(--c-ink);
+}
+
+.social-links--dark .social-links__link:hover {
+  color: var(--c-blue-600);
+  background: var(--c-sky-100);
+}
+
+/* Light ink (dark backgrounds) */
+.social-links--light .social-links__link {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.social-links--light .social-links__link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Follows the colour of its container (the glass header) */
+.social-links--auto .social-links__link {
+  color: inherit;
+}
+
+.social-links--auto .social-links__link:hover {
+  background: var(--glass-hover);
+}
