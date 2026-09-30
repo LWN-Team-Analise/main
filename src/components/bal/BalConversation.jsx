@@ -3,7 +3,9 @@ import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronRight, Mail, MapPin, Phone 
 import { useEffect, useRef, useState } from 'react';
 import { FaWhatsapp } from 'react-icons/fa6';
 import { Link } from 'react-router-dom';
-import { TOPICS } from './balTopics';
+import { useLanguage } from '../../i18n/language';
+import { useStrings } from '../../i18n/strings';
+import { topicsFor } from './balTopics';
 
 const EASE = [0.22, 1, 0.36, 1];
 const TYPING_MS = 650; // how long BAL "types" before an answer appears
@@ -12,6 +14,7 @@ const external = { target: '_blank', rel: 'noopener noreferrer' };
 
 /** One piece of an answer (see the block types in balTopics.js). */
 function Block({ block }) {
+  const copy = useStrings();
   switch (block.type) {
     case 'text':
       return <p>{block.text}</p>;
@@ -104,7 +107,7 @@ function Block({ block }) {
                   <span key={line}>{line}</span>
                 ))}
                 <a href={office.map} {...external}>
-                  Ver no mapa <ArrowUpRight size={13} aria-hidden="true" />
+                  {copy.bal.onMap} <ArrowUpRight size={13} aria-hidden="true" />
                 </a>
               </span>
             </li>
@@ -132,7 +135,9 @@ export default function BalConversation({ onNavigate }) {
   // Going back puts the focus on the topic just read, once the list is back on screen.
   const returnTo = useRef(null);
 
-  const topic = TOPICS.find((t) => t.id === topicId);
+  const copy = useStrings();
+  const topics = topicsFor(useLanguage());
+  const topic = topics.find((item) => item.id === topicId);
 
   // A short "typing" pause before each answer (none with reduced motion).
   useEffect(() => {
@@ -170,7 +175,7 @@ export default function BalConversation({ onNavigate }) {
               <p className="bal-msg bal-msg--user">{topic.label}</p>
               <div aria-live="polite" aria-busy={typing}>
                 {typing ? (
-                  <p className="bal-msg bal-msg--bot bal-typing" aria-label="BAL está digitando">
+                  <p className="bal-msg bal-msg--bot bal-typing" aria-label={copy.bal.typing}>
                     <span />
                     <span />
                     <span />
@@ -201,11 +206,12 @@ export default function BalConversation({ onNavigate }) {
           ) : (
             <motion.div key="menu" className="bal-chat__thread" {...view}>
               <div className="bal-msg bal-msg--bot">
-                <p>Olá! Eu sou o BAL, da LWN Engenharia.</p>
-                <p>Sobre o que você gostaria de saber?</p>
+                {copy.bal.greeting.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
               </div>
-              <ul className="bal-topics" aria-label="Tópicos">
-                {TOPICS.map(({ id, label, Icon }) => (
+              <ul className="bal-topics" aria-label={copy.bal.topics}>
+                {topics.map(({ id, label, Icon }) => (
                   <li key={id}>
                     <button
                       ref={(el) => {
@@ -236,7 +242,7 @@ export default function BalConversation({ onNavigate }) {
         <div className="bal-chat__foot">
           <button ref={backRef} type="button" className="bal-back" onClick={back}>
             <ArrowLeft size={16} aria-hidden="true" />
-            Voltar aos tópicos
+            {copy.bal.back}
           </button>
         </div>
       )}

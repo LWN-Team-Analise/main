@@ -929,6 +929,10 @@ export function createGlobe(canvas, { radius = 0.44, centerY = 0.5 } = {}) {
     wanted.sort((a, b) => b.rank - a.rank);
     for (const { label, index } of wanted) {
       const w = labelWidths[index];
+      // A name that would run to the edge of the frame goes on the other side of its marker.
+      const edge = 18;
+      if (label.side > 0 && label.x + label.gap + w > width - edge && label.x - label.gap - w >= edge) label.side = -1;
+      else if (label.side < 0 && label.x - label.gap - w < edge && label.x + label.gap + w <= width - edge) label.side = 1;
       const x0 = label.side > 0 ? label.x + label.gap : label.x - label.gap - w;
       const box = [x0, label.y - h / 2, x0 + w, label.y + h / 2];
       const onName = boxes.some((b) => b[0] < box[2] && box[0] < b[2] && b[1] < box[3] && box[1] < b[3]);

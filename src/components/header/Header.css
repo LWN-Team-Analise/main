@@ -8,7 +8,8 @@
 .site-header {
   --glass-ink: #fff;
   --glass-ink-soft: rgba(255, 255, 255, 0.74);
-  --glass-tint: rgba(255, 255, 255, 0.06);
+  /* Dark scheme: a smoky grey glass, a shade deeper than clear. */
+  --glass-tint: rgba(22, 28, 42, 0.34);
   --glass-rim: rgba(255, 255, 255, 0.55);
   --glass-hover: rgba(255, 255, 255, 0.12);
   --glass-active: rgba(255, 255, 255, 0.16);
@@ -25,8 +26,9 @@
 .site-header[data-theme='light'] {
   --glass-ink: var(--c-ink);
   --glass-ink-soft: rgba(11, 19, 36, 0.66);
-  /* Translucent: the page stays visible through the bar, softened by the blur. */
-  --glass-tint: rgba(255, 255, 255, 0.24);
+  /* Translucent grey glass: the page stays visible through the bar, softened
+     by the blur, with enough body for the logo and the ink to stand out. */
+  --glass-tint: rgba(203, 210, 222, 0.52);
   --glass-rim: rgba(255, 255, 255, 0.9);
   --glass-hover: rgba(13, 31, 69, 0.06);
   --glass-active: rgba(255, 255, 255, 0.6);
@@ -36,17 +38,17 @@
 }
 
 .site-header[data-scrolled] {
-  --glass-tint: rgba(255, 255, 255, 0.09);
+  --glass-tint: rgba(22, 28, 42, 0.44);
 }
 
 .site-header[data-scrolled][data-theme='light'] {
-  --glass-tint: rgba(255, 255, 255, 0.32);
+  --glass-tint: rgba(203, 210, 222, 0.6);
 }
 
-/* Light mode over a dark band (commitment, contact, footer…): the glass takes a
-   little more milk so the brand-coloured logo and the dark ink stay readable. */
+/* Light mode over a dark band (commitment, contact…): the glass takes a little
+   more body so the brand-coloured logo and the dark ink stay readable. */
 .site-header[data-theme='light'][data-over='dark'] {
-  --glass-tint: rgba(255, 255, 255, 0.55);
+  --glass-tint: rgba(214, 220, 230, 0.8);
   --glass-shadow: 0 12px 32px -20px rgba(2, 8, 22, 0.5);
 }
 
@@ -132,6 +134,12 @@
     color 0.4s var(--ease-out),
     background-color 0.5s var(--ease-out),
     box-shadow 0.5s var(--ease-out);
+}
+
+/* Above the mobile menu's backdrop, so its controls (menu, theme, language)
+   keep working while the menu is open. */
+.site-header .site-header__bar {
+  z-index: 2;
 }
 
 .site-header__brand {

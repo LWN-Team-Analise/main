@@ -1,11 +1,10 @@
 import { useEffect } from 'react';
+import { useStrings } from '../i18n/strings';
 
-const BASE = 'LWN Engenharia';
-const HOME = 'LWN Engenharia — Qualificação e Certificação de Salas Limpas';
-
-/** Sets the browser tab title for the current page. */
+/** Sets the browser tab title for the current page (pass it already in the current language). */
 export function useDocumentTitle(title) {
+  const { site } = useStrings();
   useEffect(() => {
-    document.title = title ? `${title} · ${BASE}` : HOME;
-  }, [title]);
+    document.title = title ? `${title} · ${site.name}` : site.homeTitle;
+  }, [title, site]);
 }

@@ -1,7 +1,11 @@
+/* A white footer: the brand-coloured logo, dark ink, blue hovers. In the dark
+   colour scheme it follows the site's tokens (deep navy surface, white logo),
+   like every other light section. */
 .footer {
   padding: clamp(3.5rem, 7vw, 5rem) 0 1.75rem;
-  background: var(--c-navy-950);
-  color: rgba(222, 232, 246, 0.66);
+  border-top: 1px solid var(--c-line);
+  background: var(--c-surface);
+  color: var(--c-text);
   font-size: 0.95rem;
 }
 
@@ -13,19 +17,34 @@
   gap: 2.5rem clamp(2rem, 4.5vw, 4.5rem);
 }
 
-.footer__col a {
-  overflow-wrap: anywhere;
-}
-
 .footer__brand {
   display: grid;
   align-content: start;
   gap: 1.25rem;
 }
 
+.footer__home {
+  display: grid;
+  width: fit-content;
+  border-radius: 8px;
+}
+
 .footer__logo {
+  grid-area: 1 / 1;
   width: auto;
   height: 44px;
+}
+
+.footer__logo--white {
+  visibility: hidden;
+}
+
+[data-scheme='dark'] .footer__logo--color {
+  visibility: hidden;
+}
+
+[data-scheme='dark'] .footer__logo--white {
+  visibility: visible;
 }
 
 .footer__about {
@@ -37,22 +56,12 @@
   margin-left: -8px;
 }
 
-@media (max-width: 599px) {
-  .footer__brand .social-links {
-    margin-left: 0;
-  }
-
-  /* The last lines of the page stay clear of BAL's corner (the floating assistant). */
-  .footer__bottom p {
-    padding-right: 64px;
-  }
-}
-
 .footer__title {
   margin-bottom: 1rem;
-  color: #fff;
+  color: var(--c-ink);
   font-family: var(--font-mono);
   font-size: 0.72rem;
+  font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -64,11 +73,13 @@
 }
 
 .footer__col a {
+  color: var(--c-ink);
+  overflow-wrap: anywhere;
   transition: color 0.2s var(--ease-out);
 }
 
 .footer__col a:hover {
-  color: #fff;
+  color: var(--c-blue-600);
 }
 
 .footer__review {
@@ -83,44 +94,64 @@
 }
 
 .footer__offices strong {
-  color: rgba(234, 241, 251, 0.92);
   font-weight: 600;
 }
 
 .footer__offices span {
+  color: var(--c-text);
   font-size: 0.85rem;
+}
+
+.footer__offices a:hover span {
+  color: inherit;
 }
 
 .footer__bottom {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: 0.75rem 1.5rem;
   margin-top: clamp(2.5rem, 5vw, 4rem);
   padding-top: 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--c-line);
   font-size: 0.82rem;
 }
 
-/* Developer credit: present but quiet. */
+.footer__legal {
+  color: var(--c-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--c-line-strong);
+  text-underline-offset: 3px;
+  transition:
+    color 0.2s var(--ease-out),
+    text-decoration-color 0.2s var(--ease-out);
+}
+
+.footer__legal:hover {
+  color: var(--c-blue-600);
+  text-decoration-color: currentColor;
+}
+
+/* Developer credit: present but quiet, at the far end of the row. */
 .footer__credit {
-  color: rgba(222, 232, 246, 0.42);
+  margin-left: auto;
+  color: var(--c-muted);
   font-family: var(--font-mono);
   font-size: 0.72rem;
   letter-spacing: 0.04em;
 }
 
 .footer__credit a {
-  color: rgba(222, 232, 246, 0.62);
+  color: var(--c-text);
   text-decoration: underline;
-  text-decoration-color: rgba(222, 232, 246, 0.25);
+  text-decoration-color: var(--c-line-strong);
   text-underline-offset: 3px;
   transition: color 0.2s var(--ease-out);
 }
 
 .footer__credit a:hover {
-  color: #fff;
+  color: var(--c-blue-600);
 }
 
 @media (max-width: 999px) {
@@ -131,6 +162,26 @@
 
   .footer__brand {
     grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 599px) {
+  .footer__brand .social-links {
+    margin-left: 0;
+  }
+
+  .footer__bottom {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* The last lines of the page stay clear of BAL's corner (the floating assistant). */
+  .footer__bottom > * {
+    padding-right: 64px;
+  }
+
+  .footer__credit {
+    margin-left: 0;
   }
 }
 

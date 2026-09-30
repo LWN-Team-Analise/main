@@ -1,0 +1,131 @@
+/* Language switch in the header bar (LanguageSelect.jsx). The button borrows
+   the bar's glass ink, like the theme toggle beside it. */
+
+.lang-select {
+  position: relative;
+}
+
+.lang-select__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 8px 0 9px;
+  border-radius: 10px;
+  color: var(--glass-ink, currentColor);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  transition:
+    color 0.3s var(--ease-out),
+    background-color 0.3s var(--ease-out),
+    transform 0.3s var(--ease-out);
+}
+
+.lang-select__button:hover,
+.lang-select[data-open] .lang-select__button {
+  background: var(--glass-hover);
+}
+
+.lang-select__button:active {
+  transform: scale(0.95);
+}
+
+.lang-flag {
+  flex: none;
+  width: 20px;
+  height: 14px;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(8, 22, 52, 0.18);
+}
+
+.lang-select__chevron {
+  opacity: 0.7;
+  transition: transform 0.3s var(--ease-out);
+}
+
+.lang-select[data-open] .lang-select__chevron {
+  transform: rotate(180deg);
+}
+
+/* The menu: a small solid card under the button, right-aligned. */
+.lang-select__menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 5;
+  display: grid;
+  gap: 2px;
+  min-width: 176px;
+  padding: 6px;
+  border: 1px solid var(--c-line);
+  border-radius: 14px;
+  background: var(--c-surface);
+  box-shadow:
+    0 20px 40px -18px rgba(8, 22, 52, 0.45),
+    0 2px 6px rgba(8, 22, 52, 0.08);
+  list-style: none;
+  animation: lang-menu-in 0.22s var(--ease-out);
+}
+
+.lang-select__option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 9px;
+  color: var(--c-ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+  transition: background-color 0.2s var(--ease-out);
+}
+
+.lang-select__option:hover,
+.lang-select__option:focus-visible {
+  background: var(--c-sky-50);
+  outline: none;
+}
+
+.lang-select__option[aria-checked='true'] {
+  background: var(--c-sky-100);
+  color: var(--c-blue-700);
+}
+
+.lang-select__check {
+  margin-left: auto;
+  color: var(--c-blue-600);
+}
+
+@keyframes lang-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+}
+
+[data-scheme='dark'] .lang-select__menu {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 20px 40px -18px rgba(0, 0, 0, 0.85),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+[data-scheme='dark'] .lang-flag {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+/* Phones: the code is enough next to the flag, so the bar stays compact. */
+@media (max-width: 380px) {
+  .lang-select__button {
+    gap: 4px;
+    padding: 0 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lang-select__menu {
+    animation: none;
+  }
+}

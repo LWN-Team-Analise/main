@@ -1,10 +1,12 @@
 import { useImperativeHandle, useRef } from 'react';
-import { TEXT } from '../../airflow/config';
+import { useStrings } from '../../i18n/strings';
 import { range } from '../../lib/math';
+import { TEXT } from './timeline';
 
-/** Vertical rail that shows how far the airflow sequence has progressed. */
+/** Vertical rail that shows how far through the hero the visitor has scrolled. */
 export default function ScrollCue({ ref }) {
   const rootRef = useRef(null);
+  const t = useStrings();
 
   useImperativeHandle(
     ref,
@@ -21,11 +23,10 @@ export default function ScrollCue({ ref }) {
 
   return (
     <div ref={rootRef} className="scroll-cue" aria-hidden="true">
-      <span className="scroll-cue__label">Role para explorar</span>
+      <span className="scroll-cue__label">{t.hero.scroll}</span>
       <span className="scroll-cue__track">
         <span className="scroll-cue__fill" />
       </span>
-      <span className="scroll-cue__index">Fluxo de ar</span>
     </div>
   );
 }

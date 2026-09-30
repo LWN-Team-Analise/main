@@ -1,6 +1,12 @@
-const dateFormat = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' });
+import { LOCALES } from '../../i18n/content';
 
-export const formatDate = (iso) => dateFormat.format(new Date(`${iso}T12:00:00Z`));
+const formats = {};
+
+/** A post date (yyyy-mm-dd) written out in `lang` ('pt' | 'en'). */
+export function formatDate(iso, lang = 'pt') {
+  formats[lang] ??= new Intl.DateTimeFormat(LOCALES[lang], { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  return formats[lang].format(new Date(`${iso}T12:00:00Z`));
+}
 
 export const postImage = (post, size) => `/assets/blog/${post.image}-${size}.webp`;
 

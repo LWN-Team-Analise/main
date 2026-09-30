@@ -15,12 +15,20 @@
       property="og:description"
       content="Referência Nacional em Qualificação e Certificação de Salas Limpas e Gases Industriais."
     />
-    <meta property="og:image" content="/assets/hero/hero-sala-limpa.webp" />
+    <meta property="og:image" content="/assets/hero/hero-video-poster.webp" />
 
     <link rel="icon" type="image/png" href="/assets/favicon.png" />
     <link rel="apple-touch-icon" href="/assets/app-icon-192.png" />
 
-    <link rel="preload" as="image" href="/assets/hero/hero-sala-limpa.webp" type="image/webp" fetchpriority="high" />
+    <!-- The hero video's first frame (wide screens only: phones get no video). -->
+    <link
+      rel="preload"
+      as="image"
+      href="/assets/hero/hero-video-poster.webp"
+      type="image/webp"
+      media="(min-width: 900px)"
+      fetchpriority="high"
+    />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -31,6 +39,10 @@
     <script>
       try {
         if (localStorage.getItem('lwn-color-scheme') === 'dark') document.documentElement.dataset.scheme = 'dark';
+        if (localStorage.getItem('lwn-language') === 'en') {
+          document.documentElement.dataset.lang = 'en';
+          document.documentElement.lang = 'en';
+        }
       } catch (e) {}
     </script>
   </head>

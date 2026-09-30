@@ -15,6 +15,9 @@ export const company = {
 
 export const credit = { label: '@oluuiss', href: 'https://oluuiss.com/' };
 
+// The privacy policy page (the same page in both languages; /privacy-policy also leads there).
+export const privacyPath = '/politica-de-privacidade';
+
 // `section` links scroll to a block of the home page; `route` links open a page.
 export const navLinks = [
   { id: 'inicio', label: 'Início', section: 'inicio' },
@@ -38,6 +41,8 @@ export const hero = {
   eyebrow: 'LWN Engenharia · Team Análise',
   headline:
     'Referência Nacional em Qualificação e Certificação de Salas Limpas e Gases Industriais',
+  // The two service families, emphasised inside the headline.
+  emphasis: ['Salas Limpas', 'Gases Industriais'],
   // Segments marked `strong` are emphasised as they are revealed.
   description: [
     { text: 'A LWN Engenharia é especialista em qualificação e certificação de' },

@@ -2,8 +2,10 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import PostCard from '../components/blog/PostCard';
 import { formatDate, postImage } from '../components/blog/postUtils';
-import { getPost, POSTS } from '../data/posts';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useLanguage } from '../i18n/language';
+import { usePosts } from '../i18n/posts';
+import { useStrings } from '../i18n/strings';
 import NotFoundPage from './NotFoundPage';
 import './Blog.css';
 
@@ -44,11 +46,14 @@ function Block({ block }) {
 export default function ArticlePage() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const post = getPost(slug);
-  useDocumentTitle(post?.title ?? 'Artigo não encontrado');
+  const lang = useLanguage();
+  const t = useStrings();
+  const posts = usePosts();
+  const post = posts.find((p) => p.slug === slug);
+  useDocumentTitle(post?.title ?? t.blog.notFound);
   if (!post) return <NotFoundPage />;
 
-  const others = POSTS.filter((p) => p.slug !== post.slug);
+  const others = posts.filter((p) => p.slug !== post.slug);
 
   // Links inside the migrated HTML are plain anchors: keep internal ones in the app.
   const handleProseClick = (event) => {
@@ -65,13 +70,13 @@ export default function ArticlePage() {
         <div className="container article__hero-inner">
           <Link to="/blog" className="back-link">
             <ArrowLeft size={16} aria-hidden="true" />
-            Todos os artigos
+            {t.blog.allArticles}
           </Link>
           <p className="article__meta">
             <span className="post-card__tag">{post.tag}</span>
-            <time dateTime={post.date}>{formatDate(post.date)}</time>
+            <time dateTime={post.date}>{formatDate(post.date, lang)}</time>
             <span aria-hidden="true">·</span>
-            <span>{post.readingMinutes} min de leitura</span>
+            <span>{t.blog.readingTime(post.readingMinutes)}</span>
           </p>
           <h1 className="article__title">{post.title}</h1>
           {post.author && (
@@ -80,7 +85,7 @@ export default function ArticlePage() {
                 {initials(post.author)}
               </span>
               <span>
-                Por <strong>{post.author}</strong>
+                {t.blog.by} <strong>{post.author}</strong>
                 <span className="article__byline-org">LWN Engenharia</span>
               </span>
             </p>
@@ -110,11 +115,11 @@ export default function ArticlePage() {
 
           <aside className="article__cta">
             <div className="article__cta-copy">
-              <p className="article__cta-title">Fale com um especialista</p>
-              <p>Entre em contato e solicite um orçamento.</p>
+              <p className="article__cta-title">{t.blog.ctaTitle}</p>
+              <p>{t.blog.ctaText}</p>
             </div>
             <Link to={{ pathname: '/', hash: '#contato' }} className="button article__cta-button">
-              Entrar em contato
+              {t.blog.ctaButton}
               <ArrowRight size={18} aria-hidden="true" />
             </Link>
           </aside>
@@ -125,7 +130,7 @@ export default function ArticlePage() {
         <section className="article__more" data-theme="light" aria-labelledby="mais-artigos">
           <div className="container">
             <h2 className="article__more-title" id="mais-artigos">
-              Outros artigos
+              {t.blog.others}
             </h2>
             <div className="blog-list__grid">
               {others.map((p) => (

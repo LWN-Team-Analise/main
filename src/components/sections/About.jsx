@@ -1,12 +1,14 @@
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { useRef } from 'react';
-import { about } from '../../data/site';
+import { useSite } from '../../i18n/content';
+import { useStrings } from '../../i18n/strings';
 import Counter from '../ui/Counter';
 import Reveal from '../ui/Reveal';
 import './About.css';
 
 function ParallaxFigure() {
   const ref = useRef(null);
+  const t = useStrings();
   const reduce = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
   const y = useTransform(scrollYProgress, [0, 1], reduce ? ['0%', '0%'] : ['-9%', '9%']);
@@ -15,18 +17,20 @@ function ParallaxFigure() {
     <figure ref={ref} className="about__figure">
       <motion.img
         src="/assets/hero/hero-laboratorio.webp"
-        alt="Técnicos da LWN com equipamentos de proteção analisando uma amostra em laboratório."
+        alt={t.about.figureAlt}
         width="960"
         height="636"
         loading="lazy"
         style={{ y }}
       />
-      <figcaption className="about__figure-tag">Desde 2014</figcaption>
+      <figcaption className="about__figure-tag">{t.about.since}</figcaption>
     </figure>
   );
 }
 
 export default function About() {
+  const { about } = useSite();
+  const t = useStrings();
   const [lead, ...rest] = about.paragraphs;
 
   return (
@@ -73,11 +77,11 @@ export default function About() {
       <div className="stats-band">
         <div className="container">
           <Reveal as="p" className="stats__caption">
-            A LWN em números
+            {t.about.numbers}
           </Reveal>
-          <ul className="stats" aria-label="A LWN em números">
+          <ul className="stats" aria-label={t.about.numbers}>
             {about.stats.map((stat, i) => (
-              <Reveal as="li" key={stat.label.join(' ')} className="stat" delay={0.06 * i}>
+              <Reveal as="li" key={stat.value + '-' + i} className="stat" delay={0.06 * i}>
                 <span className="stat__value">
                   <span className="stat__plus" aria-hidden="true">
                     +

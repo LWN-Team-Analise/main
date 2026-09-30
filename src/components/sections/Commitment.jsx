@@ -1,15 +1,18 @@
-import { commitment } from '../../data/site';
+import { useSite } from '../../i18n/content';
+import { useStrings } from '../../i18n/strings';
 import Reveal from '../ui/Reveal';
 import './Commitment.css';
 
 export default function Commitment() {
+  const { commitment } = useSite();
+  const t = useStrings();
   return (
     <section className="commitment" data-theme="dark" aria-labelledby="compromisso-title">
       <div className="container">
         <Reveal>
           <p className="eyebrow eyebrow--dark">
             <span className="eyebrow__index">02</span>
-            Cultura
+            {t.commitment.eyebrow}
           </p>
           <h2 className="commitment__title" id="compromisso-title">
             {commitment.title}
@@ -18,7 +21,7 @@ export default function Commitment() {
 
         <ol className="commitment__pillars">
           {commitment.pillars.map((pillar, i) => (
-            <Reveal as="li" key={pillar} className="commitment__pillar" delay={i * 0.08}>
+            <Reveal as="li" key={i} className="commitment__pillar" delay={i * 0.08}>
               <span className="commitment__index">{String(i + 1).padStart(2, '0')}</span>
               <span className="commitment__word">{pillar}</span>
             </Reveal>
@@ -33,10 +36,10 @@ export default function Commitment() {
           ))}
           <Reveal className="commitment__tags" delay={0.12}>
             <span className="commitment__tag commitment__tag--strong">ANVISA</span>
-            <span className="commitment__tag">Normas internacionais</span>
+            <span className="commitment__tag">{t.commitment.standards}</span>
             {commitment.sectors.map((sector) => (
               <span key={sector} className="commitment__tag">
-                Setor {sector.toLowerCase()}
+                {t.commitment.sector(sector)}
               </span>
             ))}
           </Reveal>

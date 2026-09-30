@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { ROUTE } from '../../data/serviceRoute';
 import { offices } from '../../data/site';
 import { useColorScheme } from '../../hooks/useColorScheme';
+import { useStrings } from '../../i18n/strings';
 import { clamp, damp } from '../../lib/math';
 import { createGlobe } from './globeEngine';
 import './GeoGlobe.css';
@@ -38,6 +39,7 @@ export default function GeoGlobe({ wrapRef, locationsRef, clientsRef, onStep, cl
   const onStepRef = useRef(onStep);
   onStepRef.current = onStep;
   const scheme = useColorScheme();
+  const t = useStrings();
   const schemeRef = useRef(scheme);
   schemeRef.current = scheme;
 
@@ -174,7 +176,7 @@ export default function GeoGlobe({ wrapRef, locationsRef, clientsRef, onStep, cl
         ref={canvasRef}
         className={`geo-globe ${className}`.trim()}
         role="img"
-        aria-label="Globo interativo: as unidades da LWN em São Paulo, Barueri e Anápolis e os estados atendidos — São Paulo, Goiás, Rio de Janeiro, Minas Gerais, Paraná e Pernambuco."
+        aria-label={t.clients.globe}
       />
       <div ref={labelsRef} className="geo-globe__labels" aria-hidden="true">
         {LABELS.map((name, i) => (

@@ -1,9 +1,13 @@
 import { FaLinkedinIn } from 'react-icons/fa6';
-import { leaderPhoto, leaders } from '../../data/site';
+import { leaderPhoto } from '../../data/site';
+import { useSite } from '../../i18n/content';
+import { useStrings } from '../../i18n/strings';
 import Reveal from '../ui/Reveal';
 import './Leadership.css';
 
 export default function Leadership() {
+  const { leaders } = useSite();
+  const t = useStrings();
   return (
     <section className="leaders" data-theme="light" aria-labelledby="lideres-title">
       <div className="container">
@@ -12,10 +16,10 @@ export default function Leadership() {
             <Reveal>
               <p className="eyebrow">
                 <span className="eyebrow__index">03</span>
-                Liderança
+                {t.leaders.eyebrow}
               </p>
               <h2 className="leaders__title" id="lideres-title">
-                Líderes de Excelência
+                {t.leaders.title}
               </h2>
             </Reveal>
           </li>
@@ -27,7 +31,7 @@ export default function Leadership() {
                   src={leaderPhoto(leader.photo, 720)}
                   srcSet={`${leaderPhoto(leader.photo, 360)} 360w, ${leaderPhoto(leader.photo, 720)} 720w`}
                   sizes="(max-width: 599px) 50vw, (max-width: 1099px) 33vw, 290px"
-                  alt={`${leader.name}, ${leader.role} da LWN Engenharia`}
+                  alt={t.leaders.photoAlt(leader.name, leader.role)}
                   width="720"
                   height="720"
                   loading="lazy"
@@ -45,7 +49,7 @@ export default function Leadership() {
                     href={leader.linkedin}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label={`LinkedIn de ${leader.name} (abre em nova aba)`}
+                    aria-label={t.leaders.linkedin(leader.name)}
                   >
                     <FaLinkedinIn size={15} aria-hidden="true" />
                   </a>

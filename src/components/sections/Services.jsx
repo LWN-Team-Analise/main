@@ -1,11 +1,13 @@
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { services } from '../../data/site';
+import { useSite } from '../../i18n/content';
+import { useStrings } from '../../i18n/strings';
 import Reveal from '../ui/Reveal';
 import SectionHeading from '../ui/SectionHeading';
 import './Services.css';
 
 function ServiceGroup({ group, index }) {
+  const t = useStrings();
   return (
     <article className="service" aria-labelledby={`servico-${group.id}`}>
       <Reveal className="service__head">
@@ -16,7 +18,7 @@ function ServiceGroup({ group, index }) {
         <p className="service__summary">{group.summary}</p>
 
         {group.norms && (
-          <ul className="service__norms" aria-label="Referências normativas">
+          <ul className="service__norms" aria-label={t.services.norms}>
             {group.norms.map((norm) => (
               <li key={norm}>{norm}</li>
             ))}
@@ -33,7 +35,7 @@ function ServiceGroup({ group, index }) {
       <div className="service__body">
         {group.gases && (
           <Reveal className="service__gases" delay={0.05}>
-            <p className="service__caption">Gases qualificados</p>
+            <p className="service__caption">{t.services.gases}</p>
             <ul>
               {group.gases.map((gas) => (
                 <li key={gas}>{gas}</li>
@@ -44,7 +46,7 @@ function ServiceGroup({ group, index }) {
 
         <ol className="service__items">
           {group.items.map((item, i) => (
-            <Reveal as="li" key={item.title} className="service__item" delay={0.04 * i}>
+            <Reveal as="li" key={i} className="service__item" delay={0.04 * i}>
               <span className="service__item-index">
                 {String(index + 1).padStart(2, '0')}.{i + 1}
               </span>
@@ -61,14 +63,16 @@ function ServiceGroup({ group, index }) {
 }
 
 export default function Services() {
+  const { services } = useSite();
+  const t = useStrings();
   return (
     <section id="servicos" className="services" data-theme="light" aria-labelledby="servicos-title">
       <div className="container">
         <SectionHeading
           id="servicos-title"
           index="04"
-          eyebrow="Serviços"
-          title="Performance, segurança e conformidade."
+          eyebrow={t.services.eyebrow}
+          title={t.services.title}
           lead={services.intro}
         />
 

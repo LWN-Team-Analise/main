@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { privacyPath } from './data/site';
 import SiteLayout from './layouts/SiteLayout';
 import HomePage from './pages/HomePage';
 
@@ -9,6 +10,7 @@ const GasesPage = lazy(() => import('./pages/GasesPage'));
 const BlogPage = lazy(() => import('./pages/BlogPage'));
 const ArticlePage = lazy(() => import('./pages/ArticlePage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 
 export default function App() {
   return (
@@ -47,6 +49,15 @@ export default function App() {
             </Suspense>
           }
         />
+        <Route
+          path={privacyPath.slice(1)}
+          element={
+            <Suspense fallback={<div className="page-loading" />}>
+              <PrivacyPage />
+            </Suspense>
+          }
+        />
+        <Route path="privacy-policy" element={<Navigate to={privacyPath} replace />} />
         <Route
           path="*"
           element={

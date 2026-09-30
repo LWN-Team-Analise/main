@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { navLinks } from '../../data/site';
 import { useColorScheme } from '../../hooks/useColorScheme';
+import { useStrings } from '../../i18n/strings';
 import { useActiveSection } from '../../hooks/useActiveSection';
 import { useHeaderTheme } from '../../hooks/useHeaderTheme';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import LanguageSelect from './LanguageSelect';
 import LiquidGlassFilter, { supportsLiquidGlass } from './LiquidGlassFilter';
 import MenuToggle from './MenuToggle';
 import MobileMenu from './MobileMenu';
@@ -23,6 +25,7 @@ export default function Header() {
   const barRef = useRef(null);
   const toggleRef = useRef(null);
   const liquid = useMemo(supportsLiquidGlass, []);
+  const t = useStrings();
 
   const activeSection = useActiveSection(SECTION_IDS, pathname);
   // The glass follows the chosen theme: light mode keeps the brand-coloured logo
@@ -30,7 +33,8 @@ export default function Header() {
   // behind the bar only tunes how opaque the glass gets (`data-over`).
   const theme = useColorScheme();
   const behind = useHeaderTheme(40, [pathname]);
-  let activeId = activeSection;
+  // Home sections light up as they scroll by; other pages mark their own entry (or none).
+  let activeId = pathname === '/' ? activeSection : null;
   if (pathname.startsWith('/blog')) activeId = 'blog';
   else if (pathname.startsWith('/clientes')) activeId = 'clientes';
   else if (pathname.startsWith('/gases')) activeId = 'servicos';
@@ -73,7 +77,7 @@ export default function Header() {
     >
       {liquid && <LiquidGlassFilter target={barRef} />}
       <div ref={barRef} className={`site-header__bar glass${liquid ? ' glass--liquid' : ''}`}>
-        <Link to="/" className="site-header__brand" aria-label="LWN Engenharia — página inicial" onClick={close}>
+        <Link to="/" className="site-header__brand" aria-label={t.header.home} onClick={close}>
           <img
             src="/assets/LogoLWN.png"
             alt="LWN Engenharia"
@@ -98,6 +102,7 @@ export default function Header() {
           <SocialLinks className="site-header__social" tone="auto" />
           <span className="site-header__divider" aria-hidden="true" />
           <ThemeToggle />
+          <LanguageSelect />
           <MenuToggle ref={toggleRef} open={open} onToggle={() => setOpen((v) => !v)} />
         </div>
       </div>

@@ -1,18 +1,21 @@
-import { seals } from '../../data/site';
+import { useSite } from '../../i18n/content';
+import { useStrings } from '../../i18n/strings';
 import Reveal from '../ui/Reveal';
 import './Seals.css';
 
 export default function Seals() {
+  const { seals } = useSite();
+  const t = useStrings();
   return (
     <section className="seals" data-theme="light" aria-labelledby="selos-title">
       <div className="container seals__grid">
         <Reveal className="seals__head">
           <p className="eyebrow">
             <span className="eyebrow__index">08</span>
-            Reconhecimentos
+            {t.seals.eyebrow}
           </p>
           <h2 className="seals__title" id="selos-title">
-            Selos e Reconhecimentos
+            {t.seals.title}
           </h2>
         </Reveal>
 

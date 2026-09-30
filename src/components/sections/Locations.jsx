@@ -1,5 +1,6 @@
 import { ArrowUpRight, MapPin } from 'lucide-react';
 import { offices } from '../../data/site';
+import { useStrings } from '../../i18n/strings';
 import Reveal from '../ui/Reveal';
 import './Locations.css';
 
@@ -11,6 +12,7 @@ const officeState = (i, step) => (i === step.active ? 'active' : i < step.reache
  * `step` marks the office it has reached.
  */
 export default function Locations({ ref, step }) {
+  const t = useStrings();
   return (
     <section ref={ref} className="locations" data-theme="light" aria-labelledby="unidades-title">
       <div className="locations__stage">
@@ -18,15 +20,12 @@ export default function Locations({ ref, step }) {
           <Reveal className="locations__copy">
             <p className="eyebrow">
               <span className="eyebrow__index">05</span>
-              Presença
+              {t.locations.eyebrow}
             </p>
             <h2 className="locations__title" id="unidades-title">
-              Onde encontrar o Grupo LWN
+              {t.locations.title}
             </h2>
-            <p className="locations__text">
-              Com bases estratégicas em São Paulo, Barueri e Anápolis, atendemos com excelência em qualquer lugar do
-              Brasil.
-            </p>
+            <p className="locations__text">{t.locations.text}</p>
           </Reveal>
 
           <ol className="locations__list">
@@ -46,10 +45,10 @@ export default function Locations({ ref, step }) {
                   href={office.map}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`Ver ${office.city} no Google Maps (abre em nova aba)`}
+                  aria-label={t.locations.mapLabel(office.city)}
                 >
                   <MapPin size={15} aria-hidden="true" />
-                  <span className="office__map-label">Mapa</span>
+                  <span className="office__map-label">{t.locations.map}</span>
                   <ArrowUpRight size={14} aria-hidden="true" />
                 </a>
               </li>

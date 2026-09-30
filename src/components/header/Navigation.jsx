@@ -1,10 +1,13 @@
 import { motion } from 'framer-motion';
-import { navLinks } from '../../data/site';
+import { useSite } from '../../i18n/content';
+import { useStrings } from '../../i18n/strings';
 import NavItem from './NavItem';
 
 export default function Navigation({ activeId, className = '' }) {
+  const { navLinks } = useSite();
+  const t = useStrings();
   return (
-    <nav className={`nav ${className}`.trim()} aria-label="Navegação principal">
+    <nav className={`nav ${className}`.trim()} aria-label={t.header.mainNav}>
       <ul className="nav__list">
         {navLinks.map((item) => {
           const active = activeId === item.id;

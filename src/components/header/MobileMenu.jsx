@@ -1,7 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowUpRight, Phone } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import { company, navLinks } from '../../data/site';
+import { company } from '../../data/site';
+import { useSite } from '../../i18n/content';
+import { useStrings } from '../../i18n/strings';
 import NavItem from './NavItem';
 import SocialLinks from './SocialLinks';
 
@@ -9,6 +11,8 @@ const EASE = [0.22, 1, 0.36, 1];
 
 export default function MobileMenu({ open, activeId, onClose }) {
   const firstLinkRef = useRef(null);
+  const { navLinks } = useSite();
+  const t = useStrings();
 
   useEffect(() => {
     if (open) firstLinkRef.current?.focus({ preventScroll: true });
@@ -36,7 +40,7 @@ export default function MobileMenu({ open, activeId, onClose }) {
             exit={{ opacity: 0, y: -10, scale: 0.985 }}
             transition={{ duration: 0.32, ease: EASE }}
           >
-            <nav aria-label="Navegação móvel">
+            <nav aria-label={t.header.mobileNav}>
               <ul className="mobile-menu__list">
                 {navLinks.map((item, i) => (
                   <motion.li

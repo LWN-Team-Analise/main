@@ -209,7 +209,8 @@
   }
 }
 
-@media (max-width: 359px) {
+/* Two buttons side by side need ~350px; narrower phones stack them. */
+@media (max-width: 399px) {
   .hero-text__actions {
     flex-wrap: wrap;
   }

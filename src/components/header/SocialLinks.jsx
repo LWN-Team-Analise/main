@@ -1,5 +1,6 @@
 import { FaFacebook, FaInstagram, FaLinkedin, FaWhatsapp, FaYoutube } from 'react-icons/fa6';
 import { socialLinks } from '../../data/site';
+import { useStrings } from '../../i18n/strings';
 import './SocialLinks.css';
 
 const ICONS = {
@@ -11,6 +12,7 @@ const ICONS = {
 };
 
 export default function SocialLinks({ className = '', size = 20, tone = 'dark' }) {
+  const t = useStrings();
   return (
     <ul className={`social-links social-links--${tone} ${className}`.trim()}>
       {socialLinks.map(({ id, label, href }) => {
@@ -22,7 +24,7 @@ export default function SocialLinks({ className = '', size = 20, tone = 'dark' }
               target="_blank"
               rel="noopener noreferrer"
               className="social-links__link"
-              aria-label={`${label} (abre em nova aba)`}
+              aria-label={`${label} ${t.site.newTab}`}
               title={label}
             >
               <Icon size={size} aria-hidden="true" focusable="false" />

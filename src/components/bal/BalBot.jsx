@@ -2,6 +2,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useStrings } from '../../i18n/strings';
 import './BalBot.css';
 
 // The conversation (and the content it quotes) loads on its own, off the
@@ -31,6 +32,7 @@ const INTERACTIVE = 'a[href], button, input, select, textarea, summary, [role="b
 export default function BalBot() {
   const [open, setOpen] = useState(false);
   const [tucked, setTucked] = useState(false);
+  const t = useStrings();
   const reduce = useReducedMotion();
   const rootRef = useRef(null);
   const launcherRef = useRef(null);
@@ -131,9 +133,9 @@ export default function BalBot() {
                 <p className="bal-panel__name" id="bal-title">
                   BAL
                 </p>
-                <p className="bal-panel__role">Assistente virtual da LWN Engenharia</p>
+                <p className="bal-panel__role">{t.bal.role}</p>
               </div>
-              <button type="button" className="bal-panel__close" onClick={close} aria-label="Fechar o assistente">
+              <button type="button" className="bal-panel__close" onClick={close} aria-label={t.bal.closePanel}>
                 <X size={18} aria-hidden="true" />
               </button>
             </header>
@@ -150,7 +152,7 @@ export default function BalBot() {
         className="bal-launcher"
         aria-expanded={open}
         aria-controls="bal-panel"
-        aria-label={open ? 'Fechar o assistente BAL' : 'Abrir o BAL, assistente virtual da LWN Engenharia'}
+        aria-label={open ? t.bal.close : t.bal.open}
         onClick={() => setOpen((value) => !value)}
         onPointerEnter={loadConversation}
         onFocus={loadConversation}
@@ -160,7 +162,7 @@ export default function BalBot() {
           <X size={13} strokeWidth={2.6} />
         </span>
         <span className="bal-launcher__hint" aria-hidden="true">
-          Olá! Posso ajudar?
+          {t.bal.hint}
         </span>
       </button>
     </div>

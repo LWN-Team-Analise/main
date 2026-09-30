@@ -1,20 +1,25 @@
 import { ArrowRight } from 'lucide-react';
-import { Fragment, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TEXT } from '../../airflow/config';
-import { hero } from '../../data/site';
+import { useSite } from '../../i18n/content';
+import { useStrings } from '../../i18n/strings';
 import { range, smoothstep } from '../../lib/math';
+import { TEXT } from './timeline';
 import './HeroText.css';
 
-const WORDS = hero.description.flatMap(({ text, strong }) =>
-  text.split(' ').map((word) => ({ word, strong: Boolean(strong) })),
-);
-const FULL_DESCRIPTION = hero.description.map((part) => part.text).join(' ');
-
-// Emphasise the two service families inside the headline.
-const HEADLINE = hero.headline
-  .split(/(Salas Limpas|Gases Industriais)/)
-  .map((part) => (part === 'Salas Limpas' || part === 'Gases Industriais' ? <em key={part}>{part}</em> : part));
+/** The hero copy prepared for rendering: description words, and the headline with its two service families emphasised. */
+function useCopy(hero) {
+  return useMemo(() => {
+    const words = hero.description.flatMap(({ text, strong }) =>
+      text.split(' ').map((word) => ({ word, strong: Boolean(strong) })),
+    );
+    const pattern = new RegExp(`(${hero.emphasis.join('|')})`);
+    const headline = hero.headline
+      .split(pattern)
+      .map((part) => (hero.emphasis.includes(part) ? <em key={part}>{part}</em> : part));
+    return { words, full: hero.description.map((part) => part.text).join(' '), headline };
+  }, [hero]);
+}
 
 // Blur is applied in a few fixed steps, and only to the line that is resolving:
 // every distinct blur radius costs the browser a shader variant, and a blur on
@@ -26,12 +31,15 @@ const blurFor = (value) => {
   return 'blur(1px)';
 };
 
-/** Groups the description words into the lines the browser actually laid out. */
-function useLines(paragraphRef) {
+/**
+ * Groups the description words into the lines the browser actually laid out
+ * (only needed for the line-by-line reveal; `enabled` is false when static).
+ */
+function useLines(paragraphRef, enabled) {
   const [lines, setLines] = useState(null);
 
   useLayoutEffect(() => {
-    if (lines) return;
+    if (!enabled || lines) return;
     const words = paragraphRef.current?.querySelectorAll('[data-word]');
     if (!words?.length) return;
     const grouped = [];
@@ -44,12 +52,15 @@ function useLines(paragraphRef) {
       grouped[grouped.length - 1].push(i);
     });
     setLines(grouped);
-  }, [lines, paragraphRef]);
+  }, [enabled, lines, paragraphRef]);
 
-  // Re-measure when the column width changes.
+  // Re-measure when the column width changes, and once the web font has loaded
+  // (its wider glyphs can move words to another line).
   useEffect(() => {
     const el = paragraphRef.current;
-    if (!el) return undefined;
+    if (!enabled || !el) return undefined;
+    let alive = true;
+    document.fonts?.ready.then(() => alive && setLines(null));
     let width = el.offsetWidth;
     const observer = new ResizeObserver(() => {
       if (Math.abs(el.offsetWidth - width) > 1) {
@@ -58,30 +69,37 @@ function useLines(paragraphRef) {
       }
     });
     observer.observe(el);
-    return () => observer.disconnect();
-  }, [paragraphRef]);
+    return () => {
+      alive = false;
+      observer.disconnect();
+    };
+  }, [enabled, paragraphRef]);
 
   return lines;
 }
 
-const renderWord = (i) => (
-  <Fragment key={i}>
-    <span data-word className={WORDS[i].strong ? 'hero-text__strong' : undefined}>
-      {WORDS[i].word}
-    </span>{' '}
-  </Fragment>
-);
-
 /**
- * Headline + scroll-revealed description. `update(progress)` is called by the
- * hero every frame; lines resolve one after another as the air descends.
+ * Headline + description. On wide screens the description is revealed by the
+ * scroll: `update(progress)` is called by the hero every frame and the lines
+ * resolve one after another. `isStatic` shows everything at once (phones,
+ * reduced motion).
  */
 export default function HeroText({ ref, isStatic = false }) {
+  const { hero } = useSite();
+  const t = useStrings();
+  const { words, full, headline } = useCopy(hero);
+  const renderWord = (i) => (
+    <Fragment key={i}>
+      <span data-word className={words[i].strong ? 'hero-text__strong' : undefined}>
+        {words[i].word}
+      </span>{' '}
+    </Fragment>
+  );
   const paragraphRef = useRef(null);
   const lineRefs = useRef([]);
   const actionsRef = useRef(null);
   const cache = useRef({ lines: [], actions: -1 });
-  const lines = useLines(paragraphRef);
+  const lines = useLines(paragraphRef, !isStatic);
 
   useImperativeHandle(
     ref,
@@ -123,12 +141,12 @@ export default function HeroText({ ref, isStatic = false }) {
           <span className="hero-text__eyebrow-mark" aria-hidden="true" />
           {hero.eyebrow}
         </p>
-        <h1 className="hero-text__headline">{HEADLINE}</h1>
+        <h1 className="hero-text__headline">{headline}</h1>
       </div>
 
       <div className="hero-text__secondary">
         <p className="hero-text__description" ref={paragraphRef}>
-          <span className="sr-only">{FULL_DESCRIPTION}</span>
+          <span className="sr-only">{full}</span>
           <span aria-hidden="true">
             {lines
               ? lines.map((indices, li) => (
@@ -142,17 +160,17 @@ export default function HeroText({ ref, isStatic = false }) {
                     {indices.map(renderWord)}
                   </span>
                 ))
-              : WORDS.map((_, i) => renderWord(i))}
+              : words.map((_, i) => renderWord(i))}
           </span>
         </p>
 
         <div ref={actionsRef} className="hero-text__actions" inert={!isStatic}>
           <Link to={{ pathname: '/', hash: '#contato' }} className="hero-text__button hero-text__button--primary">
-            Solicite um orçamento
+            {t.hero.quote}
             <ArrowRight size={18} aria-hidden="true" />
           </Link>
           <Link to={{ pathname: '/', hash: '#servicos' }} className="hero-text__button hero-text__button--ghost">
-            Nossos serviços
+            {t.hero.services}
           </Link>
         </div>
       </div>
