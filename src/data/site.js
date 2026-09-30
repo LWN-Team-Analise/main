@@ -4,7 +4,8 @@
 export const company = {
   name: 'LWN Engenharia',
   fullName: 'LWN Team Análise',
-  phoneDisplay: '11 4116-9210',
+  // With Brazil's country code (+55), so it reads right for callers from abroad too.
+  phoneDisplay: '+55 11 4116-9210',
   phoneHref: 'tel:+551141169210',
   whatsappHref: 'https://wa.me/+551141169210',
   email: 'contato@lwnengenharia.com.br',
