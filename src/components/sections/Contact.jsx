@@ -38,7 +38,7 @@ export default function Contact() {
                 </span>
                 <span className="channel__text">
                   <span className="channel__label">{t.contact[id]}</span>
-                  <span className="channel__value">{value}</span>
+                  <span className={`channel__value channel__value--${id}`}>{value}</span>
                 </span>
                 <ArrowUpRight className="channel__arrow" size={18} aria-hidden="true" />
               </a>

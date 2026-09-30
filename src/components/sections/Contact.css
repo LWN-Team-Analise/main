@@ -120,4 +120,10 @@
   .channel__arrow {
     display: none;
   }
+
+  /* The long e-mail address scales with the screen so it is never cut short;
+     the phone numbers keep their full size. */
+  .channel__value--email {
+    font-size: min(1.05rem, 3.95vw);
+  }
 }
