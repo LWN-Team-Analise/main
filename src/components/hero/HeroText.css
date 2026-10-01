@@ -47,32 +47,21 @@
   font-style: normal;
 }
 
-/* ---------- Scroll-revealed description ---------- */
+/* ---------- Description ---------- */
 
+/* In place from the start: it only rises in with the headline as the page opens. */
 .hero-text__secondary {
   padding-bottom: 0.35rem;
+  animation: hero-rise 1.1s var(--ease-out) 0.4s both;
 }
 
 .hero-text__description {
   max-width: 30rem;
   font-size: clamp(1rem, 0.92rem + 0.3vw, 1.125rem);
   line-height: 1.62;
-}
-
-.hero-text__description > [aria-hidden] {
   color: rgba(222, 232, 246, 0.84);
 }
 
-/* One element per laid-out line: lines rise, brighten and come into focus in
-   sequence (the stepped blur is set from JS, see HeroText.jsx). */
-.hero-text__line {
-  --reveal: 0;
-  display: block;
-  white-space: nowrap;
-  opacity: var(--reveal);
-  transform: translate3d(0, calc((1 - var(--reveal)) * 0.6em), 0);
-  will-change: opacity, transform;
-}
 
 .hero-text__strong {
   color: #fff;
@@ -82,13 +71,10 @@
 /* ---------- Actions ---------- */
 
 .hero-text__actions {
-  --reveal: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 1.75rem;
-  opacity: var(--reveal);
-  transform: translate3d(0, calc((1 - var(--reveal)) * 14px), 0);
 }
 
 .hero-text__button {
@@ -135,12 +121,6 @@
 .hero-text__button--ghost:hover {
   border-color: rgba(255, 255, 255, 0.7);
   background: rgba(255, 255, 255, 0.08);
-}
-
-/* Reduced motion / no-animation mode shows everything immediately. */
-.hero-text--static .hero-text__line,
-.hero-text--static .hero-text__actions {
-  --reveal: 1;
 }
 
 @keyframes hero-rise {

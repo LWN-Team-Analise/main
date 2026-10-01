@@ -1,37 +1,17 @@
-/* Wide screens: the section is a scroll track; its sticky stage stays on screen
-   over the background video while the copy is revealed. Track length = how much
-   scrolling the reveal takes. (Phones: .hero--compact below.) */
+/* Wide screens: one viewport over the background video, with the copy in place
+   from the start. (Phones: .hero--compact below.) */
 .hero {
-  --toolbar-gap: 0px;
   position: relative;
-  height: 280vh;
   background: var(--c-navy-950);
 }
 
-@supports (height: 100lvh) {
-  .hero {
-    /* Room taken by mobile browser toolbars, so copy never hides under them. */
-    --toolbar-gap: calc(100lvh - 100svh);
-  }
-}
-
-.hero--static {
-  height: auto;
-}
-
 .hero__stage {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  height: 100lvh;
-  overflow: hidden;
-  isolation: isolate;
-}
-
-.hero--static .hero__stage {
   position: relative;
+  height: 100vh;
   height: 100svh;
   min-height: 560px;
+  overflow: hidden;
+  isolation: isolate;
 }
 
 /* ---------- Background video ---------- */
@@ -53,21 +33,8 @@
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  /* Light mode: a soft white haze at the top lifts the ceiling behind the
-     header; the bottom stays deep so the white copy keeps its contrast. */
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.14) 11%, rgba(255, 255, 255, 0) 22%),
-    linear-gradient(
-      0deg,
-      rgba(4, 11, 28, 0.92) 0%,
-      rgba(4, 11, 28, 0.66) 26%,
-      rgba(4, 11, 28, 0.14) 52%,
-      rgba(4, 11, 28, 0) 66%
-    ),
-    radial-gradient(110% 80% at 0% 100%, rgba(8, 20, 48, 0.5) 0%, rgba(8, 20, 48, 0) 62%);
-}
-
-[data-scheme='dark'] .hero__grade {
+  /* The same in both colour schemes: a soft shade at the top under the dark
+     header, and a deep bottom so the white copy keeps its contrast. */
   background:
     linear-gradient(180deg, rgba(4, 11, 28, 0.5) 0%, rgba(4, 11, 28, 0.12) 20%, rgba(4, 11, 28, 0) 34%),
     linear-gradient(
@@ -97,66 +64,12 @@
   z-index: 3;
   display: flex;
   align-items: flex-end;
-  padding: calc(var(--header-top) + var(--header-h) + 2rem) var(--gutter)
-    calc(var(--toolbar-gap) + clamp(3.25rem, 12.5vh, 7.5rem));
+  padding: calc(var(--header-top) + var(--header-h) + 2rem) var(--gutter) clamp(3.25rem, 12.5vh, 7.5rem);
   pointer-events: none;
 }
 
 .hero__content > * {
   pointer-events: auto;
-}
-
-/* Keep the right-hand column clear of the vertical scroll cue. */
-@media (min-width: 900px) {
-  .hero__content .hero-text__secondary {
-    padding-right: 36px;
-  }
-}
-
-/* ---------- Progress rail ---------- */
-
-.scroll-cue {
-  --progress: 0;
-  --label: 1;
-  position: absolute;
-  top: 50%;
-  right: calc(var(--gutter) - 4px);
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  color: rgba(255, 255, 255, 0.82);
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-
-.scroll-cue__label {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  writing-mode: vertical-rl;
-  text-shadow: 0 1px 12px rgba(4, 11, 28, 0.6);
-  opacity: var(--label);
-  transform: translateY(calc((1 - var(--label)) * -8px));
-}
-
-.scroll-cue__track {
-  position: relative;
-  width: 1px;
-  height: 128px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.28);
-}
-
-.scroll-cue__fill {
-  position: absolute;
-  inset: 0;
-  background: #fff;
-  box-shadow: 0 0 10px rgba(169, 203, 245, 0.9);
-  transform: scaleY(var(--progress));
-  transform-origin: top;
 }
 
 /* ---------- Phones and small tablets: no video, a compact opening ---------- */
@@ -172,8 +85,8 @@
 }
 
 .hero--compact .hero__stage {
-  position: relative;
   height: auto;
+  min-height: 0;
 }
 
 .hero--compact .hero__stage::before {
@@ -202,6 +115,7 @@
 
 /* Already there when the page opens: no entrance animation on the copy. */
 .hero--compact .hero-text__eyebrow,
-.hero--compact .hero-text__headline {
+.hero--compact .hero-text__headline,
+.hero--compact .hero-text__secondary {
   animation: none;
 }

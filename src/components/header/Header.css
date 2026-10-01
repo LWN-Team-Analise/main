@@ -1,14 +1,16 @@
 /* ------------------------------------------------------------------
    Floating liquid-glass header.
-   The glass adapts to what is behind it (data-theme on each section):
-   dark sections → clear glass with white ink, light sections → milky
-   glass with dark ink. Everything transitions smoothly while scrolling.
+   Always the deep smoky glass with white ink and the LWN mark, in both the
+   light and the dark colour scheme. What sits behind the bar (data-over, from
+   the sections' data-theme) only tunes how much body the glass needs to keep
+   that same dark look. Everything transitions smoothly while scrolling.
 ------------------------------------------------------------------- */
 
+/* Over dark bands (the hero video, commitment, contact…) the glass stays
+   clear and smoky. */
 .site-header {
   --glass-ink: #fff;
   --glass-ink-soft: rgba(255, 255, 255, 0.74);
-  /* Dark scheme: a smoky grey glass, a shade deeper than clear. */
   --glass-tint: rgba(22, 28, 42, 0.34);
   --glass-rim: rgba(255, 255, 255, 0.55);
   --glass-hover: rgba(255, 255, 255, 0.12);
@@ -23,33 +25,15 @@
   pointer-events: none;
 }
 
-.site-header[data-theme='light'] {
-  --glass-ink: var(--c-ink);
-  --glass-ink-soft: rgba(11, 19, 36, 0.66);
-  /* Translucent grey glass: the page stays visible through the bar, softened
-     by the blur, with enough body for the logo and the ink to stand out. */
-  --glass-tint: rgba(203, 210, 222, 0.52);
-  --glass-rim: rgba(255, 255, 255, 0.9);
-  --glass-hover: rgba(13, 31, 69, 0.06);
-  --glass-active: rgba(255, 255, 255, 0.6);
-  --glass-shadow: 0 10px 30px -22px rgba(8, 22, 52, 0.32);
-  /* A faint halo keeps the ink crisp over whatever passes behind the glass. */
-  --glass-text-shadow: 0 0 10px rgba(255, 255, 255, 0.55);
-}
-
 .site-header[data-scrolled] {
   --glass-tint: rgba(22, 28, 42, 0.44);
 }
 
-.site-header[data-scrolled][data-theme='light'] {
-  --glass-tint: rgba(203, 210, 222, 0.6);
-}
-
-/* Light mode over a dark band (commitment, contact…): the glass takes a little
-   more body so the brand-coloured logo and the dark ink stay readable. */
-.site-header[data-theme='light'][data-over='dark'] {
-  --glass-tint: rgba(214, 220, 230, 0.8);
-  --glass-shadow: 0 12px 32px -20px rgba(2, 8, 22, 0.5);
+/* Over a light section the same glass takes more body, so it keeps its deep
+   tone and the white ink stays readable while the content passes behind. */
+.site-header[data-over='light'] {
+  --glass-tint: rgba(10, 16, 32, 0.94);
+  --glass-shadow: 0 12px 32px -18px rgba(2, 8, 22, 0.45);
 }
 
 /* ---------- Glass material ---------- */
@@ -126,7 +110,7 @@
   max-width: var(--container-wide);
   height: var(--header-h);
   margin: 0 auto;
-  padding: 0 12px 0 22px;
+  padding: 0 12px 0 18px;
   border-radius: 18px;
   color: var(--glass-ink);
   pointer-events: auto;
@@ -148,27 +132,9 @@
 }
 
 .site-header__logo {
-  grid-area: 1 / 1;
   display: block;
   width: auto;
   height: 38px;
-  transition: opacity 0.4s var(--ease-out);
-}
-
-.site-header__logo--white {
-  opacity: 1;
-}
-
-.site-header__logo--color {
-  opacity: 0;
-}
-
-.site-header[data-theme='light'] .site-header__logo--white {
-  opacity: 0;
-}
-
-.site-header[data-theme='light'] .site-header__logo--color {
-  opacity: 1;
 }
 
 .site-header__nav {
@@ -410,7 +376,7 @@
 @media (max-width: 639px) {
   .site-header__bar {
     gap: 12px;
-    padding: 0 8px 0 16px;
+    padding: 0 8px 0 14px;
     border-radius: 16px;
   }
 

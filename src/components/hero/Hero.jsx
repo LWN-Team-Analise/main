@@ -1,10 +1,7 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMediaQuery, usePrefersReducedMotion } from '../../hooks/useMediaQuery';
-import { useScrollTimeline } from '../../hooks/useScrollTimeline';
-import { useLanguage } from '../../i18n/language';
 import { useStrings } from '../../i18n/strings';
 import HeroText from './HeroText';
-import ScrollCue from './ScrollCue';
 import './Hero.css';
 
 // LWN's own footage (assets/VideoFundoSite.mp4, remuxed so it can start
@@ -57,44 +54,26 @@ function HeroVideo({ play }) {
 /**
  * Homepage hero.
  *
- * Wide screens: a full-viewport stage over the video. The section is a tall
- * scroll track with a sticky stage; the scroll reveals the description line by
- * line (the video itself plays regardless of the scroll).
+ * Wide screens: one viewport over the video, with the whole copy fixed in
+ * place from the start — only the sections below are revealed by the scroll.
  *
  * Phones and small tablets: no video — a compact opening on the brand navy with
  * the whole copy visible from the first paint, without entrance animations.
  */
 export default function Hero() {
-  const trackRef = useRef(null);
-  const textRef = useRef(null);
-  const cueRef = useRef(null);
   const wide = useMediaQuery(WIDE);
   const reducedMotion = usePrefersReducedMotion();
-  const language = useLanguage();
   const t = useStrings();
-  const animated = wide && !reducedMotion;
-
-  const onFrame = useCallback((progress) => {
-    textRef.current?.update(progress);
-    cueRef.current?.update(progress);
-  }, []);
-
-  useScrollTimeline(trackRef, onFrame, { enabled: animated });
-
-  const variant = !wide ? ' hero--compact' : animated ? '' : ' hero--static';
 
   return (
-    <section id="inicio" ref={trackRef} className={`hero${variant}`} data-theme="dark" aria-label={t.hero.label}>
+    <section id="inicio" className={`hero${wide ? '' : ' hero--compact'}`} data-theme="dark" aria-label={t.hero.label}>
       <div className="hero__stage">
         {wide && <HeroVideo play={!reducedMotion} />}
         <div className="hero__grade" aria-hidden="true" />
 
         <div className="hero__content">
-          {/* Re-measured from scratch in another language (its lines differ). */}
-          <HeroText key={language} ref={textRef} isStatic={!animated} />
+          <HeroText />
         </div>
-
-        {animated && <ScrollCue ref={cueRef} />}
       </div>
     </section>
   );

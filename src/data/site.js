@@ -44,7 +44,7 @@ export const hero = {
     'Referência Nacional em Qualificação e Certificação de Salas Limpas e Gases Industriais',
   // The two service families, emphasised inside the headline.
   emphasis: ['Salas Limpas', 'Gases Industriais'],
-  // Segments marked `strong` are emphasised as they are revealed.
+  // Segments marked `strong` are emphasised.
   description: [
     { text: 'A LWN Engenharia é especialista em qualificação e certificação de' },
     { text: 'salas limpas,', strong: true },

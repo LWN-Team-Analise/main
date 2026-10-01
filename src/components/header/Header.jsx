@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { navLinks } from '../../data/site';
-import { useColorScheme } from '../../hooks/useColorScheme';
 import { useStrings } from '../../i18n/strings';
 import { useActiveSection } from '../../hooks/useActiveSection';
 import { useHeaderTheme } from '../../hooks/useHeaderTheme';
@@ -28,10 +27,8 @@ export default function Header() {
   const t = useStrings();
 
   const activeSection = useActiveSection(SECTION_IDS, pathname);
-  // The glass follows the chosen theme: light mode keeps the brand-coloured logo
-  // on milky glass, dark mode uses the white logo on dark glass. What sits
-  // behind the bar only tunes how opaque the glass gets (`data-over`).
-  const theme = useColorScheme();
+  // The glass is always dark, in either colour scheme; what sits behind the
+  // bar only tunes how opaque it gets (`data-over`).
   const behind = useHeaderTheme(40, [pathname]);
   // Home sections light up as they scroll by; other pages mark their own entry (or none).
   let activeId = pathname === '/' ? activeSection : null;
@@ -70,7 +67,6 @@ export default function Header() {
   return (
     <header
       className="site-header"
-      data-theme={theme}
       data-over={behind}
       data-scrolled={scrolled || undefined}
       data-open={open || undefined}
@@ -79,20 +75,12 @@ export default function Header() {
       <div ref={barRef} className={`site-header__bar glass${liquid ? ' glass--liquid' : ''}`}>
         <Link to="/" className="site-header__brand" aria-label={t.header.home} onClick={close}>
           <img
-            src="/assets/LogoLWN.png"
+            src="/assets/logo-mark.png"
             alt="LWN Engenharia"
-            width="848"
-            height="294"
-            className="site-header__logo site-header__logo--color"
+            width="170"
+            height="160"
+            className="site-header__logo"
             fetchPriority="high"
-          />
-          <img
-            src="/assets/LogoLWNWhite.png"
-            alt=""
-            aria-hidden="true"
-            width="848"
-            height="294"
-            className="site-header__logo site-header__logo--white"
           />
         </Link>
 

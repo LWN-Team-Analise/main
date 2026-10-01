@@ -24,7 +24,6 @@ const pt = {
     label: 'Apresentação',
     quote: 'Solicite um orçamento',
     services: 'Nossos serviços',
-    scroll: 'Role para explorar',
   },
   about: {
     figureAlt: 'Técnicos da LWN com equipamentos de proteção analisando uma amostra em laboratório.',
@@ -189,7 +188,6 @@ const en = {
     label: 'Introduction',
     quote: 'Request a quote',
     services: 'Our services',
-    scroll: 'Scroll to explore',
   },
   about: {
     figureAlt: 'LWN technicians in protective equipment analysing a sample in a laboratory.',
