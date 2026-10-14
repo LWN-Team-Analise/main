@@ -1,0 +1,110 @@
+-- ============================================================
+--  ATUALIZACAO 13 — PRAZOS, CHECK SIM/NAO E INFORMACOES
+--
+--  Tres coisas novas no roteiro e na obra:
+--
+--  1. CHECK DE PERGUNTA (etapa_check.sim_nao)
+--     Cada CHECK decide sozinho se pede resposta. Com a caixa
+--     "Obrigatorio responder Sim ou Nao?" marcada, marcar o check
+--     abre a pergunta. Os dois contam como feito — o "nao" e uma
+--     resposta, nao uma pendencia ("Hospedagem: nao tem"). A
+--     resposta fica em obra_check.resposta:
+--         NULL  = check comum;
+--         true  = sim;
+--         false = nao (a tela mostra um X e a palavra "Nao").
+--     Mora no CHECK, e nao no card: no mesmo card um check pode
+--     pedir resposta e o do lado nao.
+--
+--  2. INFORMACOES (etapa_card.informacoes e etapa_check.informacoes)
+--     Texto livre que aparece ao passar o mouse: o que aquele card
+--     (ou aquele check) faz, o que conta como feito.
+--
+--  3. PRAZOS DA OBRA (obra_prazo_etapa e obra_prazo_check)
+--     Data limite por obra: para uma etapa inteira, ou para um
+--     check so. E por OBRA, e nao no roteiro, porque o roteiro e
+--     o mesmo para todas e o prazo de cada uma e um.
+--     Quem define e quem tem a permissao nova `definir_prazos`.
+--     E o que pinta o card do quadro quando atrasa.
+--
+--  A permissao nova so entra sozinha no setor com acesso total
+--  (diretoria), como foi feito com as outras. Os demais setores
+--  ganham marcando a caixa na tela de Setores.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao apaga nada.
+-- ============================================================
+
+BEGIN;
+
+-- 1. check de pergunta + informacoes
+ALTER TABLE public.etapa_check ADD COLUMN IF NOT EXISTS sim_nao boolean NOT NULL DEFAULT false;
+ALTER TABLE public.etapa_check ADD COLUMN IF NOT EXISTS informacoes text;
+ALTER TABLE public.etapa_card ADD COLUMN IF NOT EXISTS informacoes text;
+
+COMMENT ON COLUMN public.etapa_check.sim_nao IS
+    'true = ao marcar este check a pessoa responde Sim ou Nao (os dois contam como feito).';
+COMMENT ON COLUMN public.etapa_check.informacoes IS
+    'O que o check pede. Aparece ao passar o mouse sobre ele. NULL = sem dica.';
+COMMENT ON COLUMN public.etapa_card.informacoes IS
+    'O que o card faz. Aparece ao passar o mouse sobre ele. NULL = sem dica.';
+
+ALTER TABLE public.obra_check ADD COLUMN IF NOT EXISTS resposta boolean;
+
+COMMENT ON COLUMN public.obra_check.resposta IS
+    'So em check de pergunta: true = sim, false = nao. NULL = check comum.';
+
+-- 2. prazos por obra
+CREATE TABLE IF NOT EXISTS public.obra_prazo_etapa (
+    obra_id      bigint      NOT NULL REFERENCES public.obra (id)    ON DELETE CASCADE,
+    etapa_id     bigint      NOT NULL REFERENCES public.etapa (id)   ON DELETE CASCADE,
+    prazo        date        NOT NULL,
+    definido_por bigint      REFERENCES public.usuario (id)          ON DELETE SET NULL,
+    definido_em  timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (obra_id, etapa_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.obra_prazo_check (
+    obra_id      bigint      NOT NULL REFERENCES public.obra (id)        ON DELETE CASCADE,
+    check_id     bigint      NOT NULL REFERENCES public.etapa_check (id) ON DELETE CASCADE,
+    prazo        date        NOT NULL,
+    definido_por bigint      REFERENCES public.usuario (id)              ON DELETE SET NULL,
+    definido_em  timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (obra_id, check_id)
+);
+
+COMMENT ON TABLE public.obra_prazo_etapa IS 'Data limite de uma etapa NESTA obra.';
+COMMENT ON TABLE public.obra_prazo_check IS 'Data limite de um check NESTA obra.';
+
+-- 3. a permissao nova no setor de acesso total
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['definir_prazos']
+ WHERE acesso_total
+   AND NOT ('definir_prazos' = ANY (permissoes));
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'etapa_check.sim_nao' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'etapa_check' AND column_name = 'sim_nao') AS ok
+UNION ALL
+SELECT 'etapa_check.informacoes',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'etapa_check' AND column_name = 'informacoes')
+UNION ALL
+SELECT 'etapa_card.informacoes',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'etapa_card' AND column_name = 'informacoes')
+UNION ALL
+SELECT 'obra_check.resposta',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'obra_check' AND column_name = 'resposta')
+UNION ALL
+SELECT 'obra_prazo_etapa', to_regclass('public.obra_prazo_etapa') IS NOT NULL
+UNION ALL
+SELECT 'obra_prazo_check', to_regclass('public.obra_prazo_check') IS NOT NULL;

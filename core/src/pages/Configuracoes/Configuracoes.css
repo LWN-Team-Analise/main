@@ -1,0 +1,393 @@
+/* Sem largura travada: os blocos ocupam a linha inteira e se
+   distribuem em colunas quando ha espaco, em vez de deixar meia tela
+   em branco. */
+.config {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  align-content: start;
+  gap: 16px;
+}
+
+/* TODOS os blocos ocupam a linha inteira.
+
+   A tela tem poucos blocos e todos são formulários: parados no meio,
+   sobrava um vazio grande à direita bem onde a atenção da pessoa está,
+   e os campos de senha ficavam espremidos em meia tela sem motivo —
+   não há um segundo bloco para ocupar a outra metade. */
+.config > header,
+.config__bloco {
+  grid-column: 1 / -1;
+}
+
+.config__bloco {
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+}
+
+.config__titulo {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.config__nota {
+  margin: -8px 0 12px;
+  font-size: 0.8rem;
+  color: var(--text-faint);
+}
+
+/* foto a esquerda, nome a direita */
+.config__cabeca {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.config__foto {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  overflow: hidden;
+  --avatar-anel: transparent;
+}
+
+.config__foto:hover .config__trocar {
+  opacity: 1;
+}
+
+.config__trocar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 5px 0;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.config__nome {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.config__semfoto {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 0.74rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.config__semfoto:hover {
+  color: var(--accent);
+}
+
+/* so o "Remover" fica vermelho: e o unico que tira alguma coisa */
+.config__fotoacoes .config__semfoto:last-child:hover {
+  color: var(--danger);
+}
+
+.config__grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 15px;
+}
+
+.config__recado {
+  margin: 15px 0 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--pri-baixa-suave);
+  font-size: 0.82rem;
+  color: var(--text-base);
+}
+
+.config__salvar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+/* o Button ocupa 100% por padrao; aqui ele so precisa do proprio tamanho */
+.config__salvar .btn {
+  width: auto;
+}
+
+
+
+@media (max-width: 560px) {
+  .config__grade {
+    grid-template-columns: 1fr;
+  }
+
+  /* no celular a foto fica em cima e o nome (com o tema) ganha a linha
+     inteira: ao lado da foto sobravam ~150px, e "Modo noturno" vazava
+     para fora do cartao */
+  .config__cabeca {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .config__foto {
+    align-self: flex-start;
+  }
+
+  .config__temas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .config__temas .config__tema {
+    gap: 6px;
+    padding-inline: 8px;
+  }
+}
+
+
+/* recado de erro, no mesmo lugar do recado de sucesso */
+.config__recado--erro {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+/* aviso de quem ainda esta com a senha do primeiro acesso */
+.config__alerta {
+  margin: 0 0 15px;
+  padding: 11px 14px;
+  border: 1px solid var(--pri-media);
+  border-radius: var(--radius-sm);
+  background: var(--pri-media-suave);
+  font-size: 0.83rem;
+  line-height: 1.45;
+  color: var(--text-base);
+}
+
+
+
+/* ============================================================
+   Tema, na propria linha do nome
+
+   Antes era um card separado ("Aparência") lá embaixo. Agora os
+   dois botoes ficam logo abaixo do campo Nome e dividem a
+   largura inteira dele — meia tela para cada.
+   ============================================================ */
+
+.config__temas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.config__tema {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.config__tema:hover:not(.is-atual) {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.config__tema.is-atual {
+  border-color: transparent;
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ============================================================
+   Conta Microsoft
+   ============================================================ */
+
+/* enquanto o Outlook nao esta vinculado, o bloco chama atencao */
+.config__bloco--outlook.is-pendente {
+  border-color: var(--pri-media);
+}
+
+.config__bloco--outlook code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--control-bg-hover);
+  font-size: 0.92em;
+}
+
+/* o mesmo tratamento do botao do login: a logo e um recorte, e a cor
+   que aparece dentro dela e a do botao Entrar */
+.botaooutlook {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 20px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.botaooutlook:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+  border-color: var(--btn-bg);
+}
+
+.botaooutlook:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* A logo fica com a cor que a Microsoft usa, igual a do botao do login:
+   pintada de azul do sistema ela virava so mais um icone. */
+.botaooutlook__logo {
+  display: block;
+  width: 19px;
+  height: 19px;
+  object-fit: contain;
+}
+
+/* ---------------- Corpo do bloco do Outlook ---------------- */
+
+.config__outlookcorpo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px 22px;
+}
+
+/* o texto cresce e empurra o botão para a ponta direita da linha */
+.config__outlooktexto {
+  flex: 1;
+  min-width: min(100%, 260px);
+}
+
+.config__outlooktexto > *:last-child {
+  margin-bottom: 0;
+}
+
+.config__outlookacao {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ---------------- Nome + tema na mesma linha ----------------
+
+   Os dois botões de tema pegavam a largura inteira embaixo do nome e
+   ficavam com cara de campo principal, que não são. Ao lado do nome eles
+   voltam ao tamanho de um controle, e o campo Nome ganha o espaço. */
+
+.config__nome {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px 16px;
+}
+
+.config__nome > *:first-child {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.config__temas {
+  grid-column: 2;
+  grid-row: 1;
+  width: auto;
+}
+
+.config__temas .config__tema {
+  padding-inline: 15px;
+  white-space: nowrap;
+}
+
+/* "Ajustar enquadramento" e "Remover foto" dividem a MESMA celula da
+   grade: soltos, os dois caiam na linha 2 e ficavam um por cima do
+   outro. Juntos num span, eles se alinham lado a lado. */
+.config__fotoacoes {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  justify-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 860px) {
+  /* não cabem lado a lado: o tema volta para baixo do nome */
+  .config__nome {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .config__temas {
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+  }
+
+  .config__fotoacoes {
+    grid-row: auto;
+  }
+
+  .config__outlookacao {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* ---------------- o bloco apontado pela ilha ----------------
+   Chegar rolando ate o bloco certo nao basta: a tela inteira e feita
+   de blocos iguais, e a pessoa nao sabe em qual deles parou. O anel
+   pisca duas vezes e sai — marca o lugar sem virar decoracao. */
+.config__bloco.is-aceso {
+  animation: config-aceso 1.2s var(--ease-out) 2;
+}
+
+@keyframes config-aceso {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  35% {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .config__bloco.is-aceso {
+    animation: none;
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+}

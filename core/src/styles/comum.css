@@ -1,0 +1,550 @@
+/* ============================================================
+   Pecas repetidas nas telas internas: botao de acao, campo de
+   procura, ferramentas da barra, recado e o rodape dos
+   formularios em modal. Ficam aqui porque mais de uma tela usa.
+   ============================================================ */
+
+/* ---------------- Botao de acao ---------------- */
+
+.acao {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 17px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: #fff;
+  font-size: 0.83rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: filter var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.acao:hover {
+  filter: brightness(1.08);
+}
+
+.acao:active {
+  transform: scale(0.98);
+}
+
+/* ---------------- Pastilha de filtro ---------------- */
+
+.chip {
+  padding: 6px 13px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.chip[data-tom='alta'] { --tom: var(--pri-alta); --tom-fg: var(--pri-alta-fg); }
+.chip[data-tom='media'] { --tom: var(--pri-media); --tom-fg: var(--pri-media-fg); }
+.chip[data-tom='baixa'] { --tom: var(--pri-baixa); --tom-fg: var(--pri-baixa-fg); }
+.chip[data-tom='comercial'] { --tom: var(--setor-comercial); --tom-fg: var(--setor-fg); }
+.chip[data-tom='adm'] { --tom: var(--setor-adm); --tom-fg: var(--setor-fg); }
+.chip[data-tom='tecnico'] { --tom: var(--setor-tecnico); --tom-fg: var(--setor-fg); }
+.chip[data-tom='gq'] { --tom: var(--setor-gq); --tom-fg: var(--setor-fg); }
+.chip[data-tom='excelencia'] { --tom: var(--setor-excelencia); --tom-fg: var(--setor-fg); }
+
+/* ---------------- Campo de procura ---------------- */
+
+.procura {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 15px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-faint);
+}
+
+.procura input {
+  width: 168px;
+  border: 0;
+  background: transparent;
+  color: var(--text-strong);
+  font-size: 0.8rem;
+}
+
+.procura input::placeholder {
+  color: var(--text-faint);
+}
+
+.procura input:focus {
+  outline: none;
+}
+
+/* ---------------- Ferramentas da barra ---------------- */
+
+.ferramenta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 15px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-base);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.ferramenta--fraca {
+  border-style: dashed;
+  color: var(--text-faint);
+}
+
+.ferramenta__selo {
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+/* ---------------- Recado (confirmacao curta) ---------------- */
+
+.recado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--pri-baixa-suave);
+  color: var(--text-base);
+  font-size: 0.82rem;
+  animation: recado-entra var(--dur-base) var(--ease-out);
+}
+
+.recado button {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.recado button:hover {
+  color: var(--text-strong);
+}
+
+@keyframes recado-entra {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+}
+
+/* ---------------- Rodape dos formularios em modal ---------------- */
+
+.formobra__acoes {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.formobra__cancelar {
+  padding: 10px 18px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.formobra__cancelar:hover {
+  background: var(--control-bg);
+  color: var(--text-strong);
+}
+
+/* ---------------- Cabecalho das telas simples ---------------- */
+
+.tela__titulo {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.6vw, 1.85rem);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--text-strong);
+}
+
+.tela__lead {
+  margin: 5px 0 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+@media (max-width: 720px) {
+  .procura {
+    flex: 1;
+  }
+
+  .procura input {
+    width: 100%;
+  }
+}
+
+
+
+/* ============================================================
+   LIQUID GLASS — so nas SUPERFICIES
+
+   O vidro veste o que e painel: header, menu da esquerda, faixa
+   de informacoes, colunas. Em BOTAO ele saiu — o reflexo deixava
+   a pastilha branca no hover e sumia com a cor de quem estava
+   selecionado.
+
+   A unica excecao sao os dois botoes de adicionar obra, que sao
+   a acao principal do quadro: eles ficam com o vidro sobre a cor
+   (e sem borda).
+
+   Regra da casa: pop-up nunca leva vidro.
+   ============================================================ */
+
+.vidro {
+  position: relative;
+  background: var(--vidro-fundo);
+  border: 1px solid var(--vidro-borda);
+  box-shadow: var(--vidro-realce), var(--vidro-sombra);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+}
+
+/* O reflexo diagonal saiu daqui.
+   Ele era o "gradiente que comeca branco em cima a esquerda e termina
+   preto embaixo a direita": aparecia no menu, no header e em quase
+   todo card do modo escuro. O vidro agora e so cor translucida +
+   desfoque do que passa por tras — que e o efeito de verdade. */
+
+.vidro > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================================
+   Botao de acao — chapado, sem reflexo
+   ============================================================ */
+
+.acao {
+  border: 0;
+  box-shadow: none;
+}
+
+.acao--padrao {
+  background: var(--accent);
+  box-shadow: 0 10px 22px -14px var(--accent);
+}
+
+.acao--emergencia {
+  background: var(--btn-emergencia);
+  box-shadow: 0 10px 22px -14px rgba(255, 60, 0, 0.9);
+}
+
+/* As duas excecoes: adicionar obra padrao e adicionar obra
+   emergencia ficam com o vidro por cima da cor — e sem borda. */
+.acao--padrao,
+.acao--emergencia {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border: 0;
+}
+
+.acao--padrao::after,
+.acao--emergencia::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--vidro-brilho-cor);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.acao--padrao > *,
+.acao--emergencia > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* acao secundaria: superficie simples do tema */
+.acao--fraca {
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  color: var(--text-base);
+  box-shadow: none;
+}
+
+.acao--fraca:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+  filter: none;
+}
+
+/* ============================================================
+   Filtros e ferramentas
+
+   Sem vidro. E o hover NUNCA passa por cima de quem esta
+   selecionado: era isso que fazia a pastilha escolhida
+   "sumir" quando o mouse encostava nela.
+   ============================================================ */
+
+.chip,
+.procura,
+.ferramenta {
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.chip:hover:not(.is-atual),
+.ferramenta:hover:not(.is-ativo) {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+/* pastilha ligada: a cor dela manda, inclusive no hover e no foco */
+.chip.is-atual,
+.chip.is-atual:hover,
+.chip.is-atual:focus-visible {
+  background: var(--tom, var(--control-on-bg));
+  color: var(--tom-fg, var(--control-on-fg));
+  border-color: transparent;
+}
+
+/* Prioridade DESLIGADA tambem mostra a cor.
+
+   Vermelho, amarelo e verde sao o codigo da prioridade no sistema
+   inteiro. Se as tres pastilhas do filtro so ficam cinzas ate alguem
+   clicar, esse codigo some justamente onde a pessoa esta escolhendo por
+   ele — entao aqui a cor entra no texto e na borda, e o preenchimento
+   continua sendo o que marca a escolhida. */
+.chip[data-tom='alta']:not(.is-atual),
+.chip[data-tom='media']:not(.is-atual),
+.chip[data-tom='baixa']:not(.is-atual) {
+  color: var(--tom);
+  border-color: color-mix(in srgb, var(--tom) 45%, transparent);
+  background: color-mix(in srgb, var(--tom) 10%, transparent);
+}
+
+.chip[data-tom='alta']:not(.is-atual):hover,
+.chip[data-tom='media']:not(.is-atual):hover,
+.chip[data-tom='baixa']:not(.is-atual):hover {
+  color: var(--tom);
+  background: color-mix(in srgb, var(--tom) 20%, transparent);
+}
+
+.ferramenta.is-ativo,
+.ferramenta.is-ativo:hover {
+  border-color: var(--accent);
+  color: var(--text-strong);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* ============================================================
+   Acao destrutiva no rodape do pop-up (excluir cargo, card,
+   check, etapa). Fica no comum porque quatro telas usam.
+   ============================================================ */
+
+/* nao quebra nem encolhe: o botao de Salvar (width: 100%) e quem cede
+   a largura — antes era o Excluir que era cortado ao meio */
+.formrot__apagar {
+  flex-shrink: 0;
+  white-space: nowrap;
+  margin-right: auto;
+  padding: 10px 16px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--danger);
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.formrot__apagar:hover:not(:disabled) {
+  background: var(--danger-bg);
+}
+
+.formrot__apagar.is-confirmando {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+.formrot__apagar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.formrot__aviso {
+  margin: 0;
+  padding: 10px 13px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+/* ============================================================
+   Pop-up: superficie opaca, sem vidro nenhum.
+   ============================================================ */
+
+.modal__caixa .vidro {
+  background: var(--control-bg);
+  border-color: var(--control-border);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* ============================================================
+   Menu lateral e barra superior
+
+   Os dois ficam SO com o desfoque: uma camada translucida que
+   borra o que passa por baixo, sem degrade nenhum pintado por
+   cima. E o unico "efeito" que sobra neles.
+   ============================================================ */
+
+.rail,
+.topbar {
+  background: var(--vidro-fundo);
+  box-shadow: var(--vidro-sombra);
+}
+
+/* ============================================================
+   O (!) de "falta preencher"
+
+   Mora aqui porque aparece em DOIS lugares que nao se falam: a faixa
+   da tela da obra e o pop-up de cadastro. Sao a mesma pendencia — a
+   obra padrao sem data de conclusao —, e duas copias do desenho
+   acabariam divergindo na primeira vez que uma delas fosse ajustada.
+
+   Ele pisca DEVAGAR (1,6s) e nunca apaga de vez: a opacidade minima e
+   0,35. Um sinal que some inteiro vira um bloco vazio piscando, e no
+   instante em que sumiu ele nao avisa nada. Assim ele pulsa e
+   continua legivel o tempo todo.
+
+   Quem pediu menos movimento no sistema recebe o mesmo sinal, firme.
+   ============================================================ */
+
+.pendencia {
+  position: absolute;
+  top: -7px;
+  right: -2px;
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--pri-alta);
+  color: #fff;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  animation: pendencia-pisca 1.6s var(--ease-out) infinite;
+}
+
+.pendencia:hover {
+  filter: brightness(1.12);
+}
+
+/* dentro de um formulario ele nao leva a lugar nenhum: o campo esta
+   ali do lado. Vira so o sinal, sem cursor de clique. */
+.pendencia--parada {
+  cursor: default;
+}
+
+@keyframes pendencia-pisca {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--pri-alta) 60%, transparent);
+  }
+  50% {
+    opacity: 0.35;
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--pri-alta) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pendencia {
+    animation: none;
+  }
+}
+
+/* a moldura que ancora o sinal: o campo dentro dela, o (!) no canto */
+.pendencia__caixa {
+  position: relative;
+}
+
+/* ---- Estrelas como CAMPO ----
+
+   Com `aoEscolher`, cada estrela vira botão: clicar na terceira dá 3.
+   A escala tem cinco degraus, e escolher um clicando nele é mais rápido
+   que digitar — e não deixa digitar 7 numa escala que vai até 5. */
+
+.estrelas--campo {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.estrelas__btn {
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.estrelas__btn:hover {
+  background: var(--control-bg-hover);
+  transform: scale(1.15);
+}
+
+.estrelas__btn:active {
+  transform: scale(0.95);
+}
+
+.estrelas__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

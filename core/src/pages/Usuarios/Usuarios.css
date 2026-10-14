@@ -1,0 +1,471 @@
+.usuarios {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.usuarios__topo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* o total de cadastrados, ao lado do titulo */
+.usuarios__total {
+  margin: 0;
+  padding: 4px 11px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.usuarios__total strong {
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.usuarios__acoes {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+/* Busca por nome a esquerda, cargos a direita. Os dois filtros se
+   somam, e da para marcar mais de um cargo ao mesmo tempo. */
+.usuarios__filtro {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.usuarios__cargos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* align-items: start — o card que abre cresce sozinho; os da mesma
+   linha continuam do tamanho deles */
+.usuarios__grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  align-items: start;
+  gap: 13px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.usuarios__vazio {
+  margin: 0;
+  padding: 46px 20px;
+  border: 1px dashed var(--control-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--text-faint);
+}
+
+/* ---------------- Card da pessoa ---------------- */
+
+.pessoa {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 15px;
+  /* tarja com a cor do cargo */
+  padding-left: 20px;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--glass-inner);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  --avatar-anel: transparent;
+}
+
+.pessoa::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: var(--cargo-cor);
+}
+
+.pessoa.is-eu {
+  border-color: var(--accent);
+}
+
+/* editar e excluir aparecem ao passar o mouse pelo card */
+.pessoa__botoes {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.pessoa:hover .pessoa__botoes,
+.pessoa:focus-within .pessoa__botoes {
+  opacity: 1;
+}
+
+.pessoa__botoes button {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border: 1px solid var(--control-border);
+  border-radius: 50%;
+  background: var(--control-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.pessoa__botoes button:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.pessoa__botoes button:last-child:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.pessoa__topo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* o botao que abre o card: foto, nome, setor, cargo e a setinha */
+.pessoa__abrir {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pessoa__abrir:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.pessoa__quem {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+
+.pessoa__seta {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: var(--text-faint);
+  transition: transform var(--dur-base) var(--ease-out), color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.pessoa__abrir:hover .pessoa__seta {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.pessoa.is-aberto .pessoa__seta {
+  transform: rotate(180deg);
+  color: var(--text-strong);
+}
+
+/* O que o card guarda. Fechado tem altura zero; abre deslizando (a
+   linha da grade vai de 0fr a 1fr) e o conteudo aparece junto. */
+.pessoa__detalhe {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows var(--dur-base) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+
+.pessoa.is-aberto .pessoa__detalhe {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.pessoa__dentro {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pessoa__dentro > :first-child {
+  margin-top: 13px;
+}
+
+.pessoa__semcontato {
+  margin: 0;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pessoa__detalhe,
+  .pessoa__seta {
+    transition: none;
+  }
+}
+
+.pessoa__nome {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 5px;
+  font-size: 0.96rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.pessoa__eu {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pessoa__cargo {
+  display: inline-block;
+  padding: 3px 11px;
+  border-radius: var(--radius-pill);
+  background: var(--cargo-cor);
+  color: #fff;
+  font-size: 0.71rem;
+  font-weight: 600;
+}
+
+.pessoa__contato {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.pessoa__contato > div {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.pessoa__contato dt {
+  flex-shrink: 0;
+  width: 62px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.pessoa__contato dd {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.8rem;
+  color: var(--text-base);
+  overflow-wrap: anywhere;
+}
+
+.pessoa__base {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.pessoa__nota {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pessoa__nota strong {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.pessoa__nota em {
+  font-style: normal;
+  font-size: 0.68rem;
+  color: var(--text-faint);
+}
+
+.pessoa__semnota {
+  padding: 3px 10px;
+  border: 1px dashed var(--control-border);
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+
+.pessoa__andamento {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+/* O CARGO da pessoa, logo abaixo da etiqueta do SETOR.
+
+   Os dois não podem se parecer: a etiqueta colorida é o setor (o que
+   define permissão) e esta linha é o título dentro dele. Por isso ela
+   vem sem fundo, menor e em tom apagado — informa, não classifica. */
+.pessoa__titulo {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* quem entrou so pelo e-mail e ainda nao completou o cadastro */
+.pessoa__pendente {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 1px 8px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-pill);
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   O CELULAR
+
+   Duas coisas estavam feias aqui, e as duas pela mesma razao: a
+   tela foi montada para uma linha larga, onde cabe busca a
+   esquerda e todos os setores a direita.
+
+   1. Os SETORES. Numa tela estreita as pastilhas quebravam em
+      quatro linhas e empurravam a busca para cima sozinha no
+      meio. Agora as duas ficam lado a lado numa linha so, e a
+      fila de setores rola DENTRO da propria caixa — nao na
+      pagina. Aparecem dois ou tres; o resto vem com o dedo.
+
+   2. Os BOTOES do topo. Em fila com `margin-left: auto` eles
+      passavam da largura da tela. Agora ocupam a linha inteira e
+      dividem o espaco; com `min-width: 0` o rotulo comprido
+      quebra dentro do botao em vez de vazar por cima da borda.
+   ============================================================ */
+
+@media (max-width: 720px) {
+  .usuarios__acoes {
+    width: 100%;
+    margin-left: 0;
+    gap: 8px;
+  }
+
+  .usuarios__acoes .acao {
+    flex: 1 1 auto;
+    /* `min-width: 0` e o que autoriza o botao a encolher: sem ele o
+       item flex nunca fica menor que o proprio texto, e e assim que
+       um rotulo comprido empurra a linha para fora da tela */
+    min-width: 0;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .usuarios__filtro {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .usuarios__filtro .procura {
+    flex: 1 1 46%;
+    min-width: 0;
+    padding: 7px 12px;
+  }
+
+  .usuarios__filtro .procura input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .usuarios__cargos {
+    flex: 1 1 54%;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    /* a barra de rolagem some: o que indica que ha mais e o proprio
+       corte da ultima pastilha na borda */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .usuarios__cargos::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* telefone pequeno: lado a lado a busca ficava com ~130px e o texto
+     dela cortado. Cada um ganha a propria linha (as pastilhas continuam
+     rolando de lado) */
+  @media (max-width: 420px) {
+    .usuarios__filtro {
+      flex-wrap: wrap;
+    }
+
+    .usuarios__filtro .procura,
+    .usuarios__cargos {
+      flex-basis: 100%;
+    }
+  }
+
+  .usuarios__cargos .chip {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  /* 300px de minimo estourava a tela de 360px assim que entrava o
+     respiro lateral da pagina */
+  .usuarios__grade {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  }
+}

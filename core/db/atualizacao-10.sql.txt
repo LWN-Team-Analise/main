@@ -1,0 +1,89 @@
+-- ============================================================
+--  ATUALIZACAO 10 — DESPESAS: OBRA OPCIONAL E PERMISSOES DA ABA
+--
+--  1. O CLIENTE PASSA A SER GRAVADO NO ENVIO
+--
+--     Ate aqui todo envio apontava para uma obra, e o cliente saia
+--     dela. Agora o cliente e OBRIGATORIO e a obra e OPCIONAL: da
+--     para lancar a despesa de um cliente sem obra nenhuma. Sem obra,
+--     o unico lugar de onde o cliente pode sair e o proprio envio —
+--     dai a coluna nova `cliente_id`.
+--
+--     Quando o envio TEM obra, quem manda continua sendo a obra (a
+--     leitura usa o cliente dela, como antes); o `cliente_id` do
+--     envio e o que vale quando nao ha obra, ou quando a obra foi
+--     excluida depois.
+--
+--     Excluir o cliente NAO apaga a despesa: registro de dinheiro
+--     fica, igual ao que ja acontece com a obra (ON DELETE SET NULL).
+--     A obrigatoriedade e conferida na API, na hora de enviar.
+--
+--     Os envios que ja existem ganham o cliente da obra deles.
+--
+--  2. DUAS PERMISSOES NOVAS
+--
+--     ver_despesas      abre a aba Despesas (e os proprios envios);
+--     alterar_despesas  envia despesa, refeicao e bonus.
+--
+--     As duas passam a ser conferidas na API. Ate aqui a aba era de
+--     todo mundo; para ninguem perder o acesso no dia da troca, todo
+--     setor que JA EXISTE ganha as duas. Isso acontece UMA vez so:
+--     a concessao roda ANTES de a coluna acima existir e so vale
+--     enquanto ela nao existe. Rodar este arquivo de novo nao
+--     devolve a permissao a um setor de quem ela foi tirada depois.
+--     Setor novo continua nascendo sem nenhuma.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao apaga nada.
+-- ============================================================
+
+BEGIN;
+
+-- 1. as permissoes novas, so na PRIMEIRA vez (a coluna ainda nao existe)
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY(
+           SELECT p FROM unnest(ARRAY['ver_despesas', 'alterar_despesas']) AS p
+            WHERE NOT (p = ANY (permissoes))
+       )
+ WHERE NOT EXISTS (
+           SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name   = 'despesa_envio'
+              AND column_name  = 'cliente_id'
+       );
+
+-- 2. a coluna do cliente
+ALTER TABLE public.despesa_envio
+    ADD COLUMN IF NOT EXISTS cliente_id bigint REFERENCES public.cliente(id) ON DELETE SET NULL;
+
+-- 3. os envios que ja existem ganham o cliente da obra deles
+UPDATE public.despesa_envio e
+   SET cliente_id = o.cliente_id
+  FROM public.obra o
+ WHERE o.id = e.obra_id
+   AND e.cliente_id IS NULL;
+
+-- sem este, excluir um cliente varreria a tabela inteira para o SET NULL
+CREATE INDEX IF NOT EXISTS despesa_envio_cliente_idx
+    ON public.despesa_envio (cliente_id);
+
+COMMENT ON COLUMN public.despesa_envio.cliente_id IS
+    'O cliente do envio (obrigatorio ao enviar). Com obra, a leitura usa o cliente da obra.';
+COMMENT ON COLUMN public.despesa_envio.obra_id IS
+    'A obra, OPCIONAL. NULL = enviado sem obra, ou a obra foi excluida depois.';
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" nas duas linhas
+-- ============================================================
+
+SELECT 'despesa_envio.cliente_id' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = 'despesa_envio'
+                  AND column_name = 'cliente_id') AS ok
+UNION ALL
+SELECT 'indice despesa_envio_cliente_idx',
+       to_regclass('public.despesa_envio_cliente_idx') IS NOT NULL;

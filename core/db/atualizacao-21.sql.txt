@@ -1,0 +1,50 @@
+-- ============================================================
+--  ATUALIZACAO 21 — LIMITE DE TENTATIVAS
+--
+--  O login, o "esqueci minha senha" e a sugestao do LWN Bot nao
+--  tinham freio nenhum: dava para testar senhas sem parar numa conta,
+--  e cada pedido de codigo mandava um e-mail de verdade para a pessoa.
+--
+--  Cada tentativa vira uma linha aqui, com uma CHAVE que diz o que foi
+--  tentado e por quem:
+--
+--      login:<e-mail ou cpf>      senha errada naquela conta
+--      login-ip:<ip>              senha errada vinda daquele endereco
+--      recuperar:<e-mail ou cpf>  pedido de codigo
+--      ...
+--
+--  A API conta as linhas da chave numa janela (15 minutos, 1 hora) e
+--  recusa quando passa do limite. Login certo apaga as falhas da conta.
+--  Linha com mais de um dia nao serve para nada e e apagada sozinha.
+--
+--  Fica numa TABELA, e nao na memoria do servidor, porque na Vercel
+--  cada chamada pode cair numa copia diferente da funcao: um contador
+--  em memoria zeraria a cada copia nova.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao apaga nada.
+-- ============================================================
+
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS public.tentativa_acesso (
+    id         bigserial PRIMARY KEY,
+    chave      text NOT NULL,
+    criada_em  timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE public.tentativa_acesso IS
+    'Tentativas de login, de pedido de codigo e de sugestao, para o limite por janela. Linhas com mais de um dia sao apagadas pela API.';
+
+CREATE INDEX IF NOT EXISTS tentativa_acesso_chave_idx ON public.tentativa_acesso (chave, criada_em);
+CREATE INDEX IF NOT EXISTS tentativa_acesso_criada_idx ON public.tentativa_acesso (criada_em);
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'tentativa_acesso' AS item, to_regclass('public.tentativa_acesso') IS NOT NULL AS ok;

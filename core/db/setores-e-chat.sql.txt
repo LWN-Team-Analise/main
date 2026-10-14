@@ -1,0 +1,83 @@
+-- ============================================================
+--  TRAJETORIA DE CLIENTES — SETORES DO CLIENTE E CHAT DO SITE
+--  Rode este arquivo INTEIRO no banco "TrajetoClientes",
+--  depois de db/atualizacao.sql.txt.
+--
+--  Ele so ACRESCENTA: nenhuma tabela existente e apagada e
+--  nenhum dado se perde. Pode rodar mais de uma vez sem
+--  problema (tudo e IF NOT EXISTS).
+-- ============================================================
+
+BEGIN;
+
+-- ============================================================
+--  1. SETOR DO CLIENTE
+--
+--  O ramo em que a empresa atua (Farmaceutico, Alimenticio,
+--  Cosmetico...). Serve para agrupar e filtrar a lista de
+--  clientes, e a cor pinta a etiqueta do card.
+--
+--  E uma tabela propria, e nao um texto solto no cliente,
+--  porque o setor tem que ser o MESMO em todos os cadastros:
+--  com texto livre, "Farmaceutico" e "farmaceutica" viram dois
+--  setores diferentes e o filtro deixa de funcionar.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.setor_cliente (
+    id         bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nome       text NOT NULL,
+    cor        text NOT NULL DEFAULT '#3a63e8',
+    criado_em  timestamptz NOT NULL DEFAULT now()
+);
+
+-- dois setores com o mesmo nome nao fazem sentido; o indice
+-- ignora maiuscula/minuscula, senao "ADM" e "Adm" passariam
+CREATE UNIQUE INDEX IF NOT EXISTS setor_cliente_nome_unico
+    ON public.setor_cliente (lower(nome));
+
+COMMENT ON TABLE public.setor_cliente IS
+    'Ramo de atuacao do cliente. Editado na aba Clientes.';
+
+-- ------------------------------------------------------------
+--  O cliente aponta para o setor.
+--
+--  ON DELETE SET NULL de proposito: apagar um setor NAO pode
+--  levar os clientes junto. Eles ficam "sem setor" e a pessoa
+--  reclassifica com calma.
+-- ------------------------------------------------------------
+
+ALTER TABLE public.cliente
+    ADD COLUMN IF NOT EXISTS setor_id bigint
+        REFERENCES public.setor_cliente (id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS cliente_setor_idx ON public.cliente (setor_id);
+
+COMMENT ON COLUMN public.cliente.setor_id IS
+    'Setor (ramo) do cliente. NULL = ainda nao classificado.';
+
+
+-- ============================================================
+--  2. CHAT DO SITE
+--
+--  A conversa geral da equipe, a que o botao flutuante abre em
+--  qualquer tela. E separada do chat da obra (obra_chat) de
+--  proposito: aquele morre com a obra e vira historico dela;
+--  este e do dia a dia e nao pertence a obra nenhuma.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.chat_site (
+    id          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    usuario_id  bigint REFERENCES public.usuario (id) ON DELETE SET NULL,
+    autor_nome  text NOT NULL DEFAULT 'Usuário',
+    texto       text NOT NULL DEFAULT '',
+    enviada_em  timestamptz NOT NULL DEFAULT now(),
+    editada_em  timestamptz
+);
+
+-- a tela le sempre em ordem de envio
+CREATE INDEX IF NOT EXISTS chat_site_enviada_idx ON public.chat_site (enviada_em);
+
+COMMENT ON TABLE public.chat_site IS
+    'Conversa geral da equipe (botao flutuante). Nao pertence a nenhuma obra.';
+
+COMMIT;

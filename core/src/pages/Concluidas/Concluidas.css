@@ -1,0 +1,457 @@
+/* A tela ocupa a altura inteira: os doze meses se espalham por ela em
+   vez de virar uma faixa de botoes no topo com o resto da pagina
+   vazio. Quem cresce e o calendario (`flex: 1` la embaixo); o titulo e
+   a linha do ano ficam com a altura deles. */
+.concluidas {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.concluidas__topo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.concluidas__total {
+  padding: 4px 13px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.concluidas__vazio {
+  margin: 0;
+  padding: 46px 20px;
+  border: 1px dashed var(--control-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--text-faint);
+}
+
+/* ---------------- Ano ---------------- */
+
+/* ---------------- Ano: setas nas pontas, ano no meio ---------------- */
+
+.anos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.anos__seta {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--vidro-borda);
+  border-radius: 50%;
+  background: var(--vidro-fundo);
+  color: var(--text-base);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.anos__seta:hover:not(:disabled) {
+  background: var(--vidro-fundo-forte);
+  color: var(--text-strong);
+}
+
+.anos__seta:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+/* ponta da lista: a seta fica, apagada — sumir mudaria o lugar do ano */
+.anos__seta:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+
+.anos__atual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 130px;
+  text-align: center;
+}
+
+.anos__atual strong {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  color: var(--text-strong);
+}
+
+.anos__atual span {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+/* ---------------- Calendário: os doze meses do ano ----------------
+
+   Grade de doze, e nao uma lista dos que tem obra: o mes vazio tambem
+   diz alguma coisa, e a grade fixa deixa a leitura sempre no mesmo lugar
+   de um ano para o outro. */
+
+/* Quatro colunas por tres linhas, e as duas medidas em `1fr`: a grade
+   preenche o que sobra da tela na largura E na altura. Antes eram seis
+   colunas de altura fixa — uma tira no alto da pagina.
+
+   `minmax(0, 1fr)` nas linhas, e nao `1fr` puro: sem o minimo zero, a
+   linha nunca encolhe abaixo do conteudo e a grade estoura a tela em
+   janela baixa. */
+.calendario {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(3, minmax(84px, 1fr));
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  margin-bottom: 4px;
+}
+
+.calmes {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 13px 8px 12px;
+  border: 1px solid var(--vidro-borda);
+  border-radius: var(--radius-md);
+  background: var(--vidro-fundo);
+  color: var(--text-base);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.calmes:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: var(--control-border);
+  background: var(--vidro-fundo-forte);
+}
+
+/* com o card maior, o texto acompanha — mas com teto, para nao virar
+   um numero gigante numa tela de 4K */
+.calmes__nome {
+  font-size: clamp(0.76rem, 1.1vw, 0.95rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.calmes__quantas {
+  font-size: clamp(1.35rem, 3vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text-strong);
+}
+
+/* o selo vermelho conta as emergencias do mes */
+.calmes__emerg {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--obra-emerg);
+  color: var(--obra-emerg-fg);
+  font-size: 0.6rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* mes sem obra: continua na grade, so nao clica */
+.calmes.is-vazio {
+  cursor: default;
+  opacity: 0.4;
+  background: transparent;
+  border-style: dashed;
+}
+
+.calmes.is-vazio .calmes__quantas {
+  color: var(--text-faint);
+}
+
+/* o :hover acima tem especificidade maior; o mes escolhido precisa vencer
+   dele, senao ficava cinza justamente enquanto o ponteiro estava em cima */
+.calmes.is-atual,
+.calmes.is-atual:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  box-shadow: var(--btn-shadow);
+}
+
+.calmes.is-atual .calmes__nome,
+.calmes.is-atual .calmes__quantas {
+  color: var(--btn-fg);
+}
+
+/* ---------------- O mês aberto, dentro do pop-up ----------------
+
+   O titulo e o resumo do mes agora sao o cabecalho do proprio pop-up
+   (Modal), entao aqui sobra so a lista. */
+
+.mesaberto {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------------- Padrão e emergência, separados ----------------
+
+   Sao dois tipos de trabalho diferentes. Na mesma lista, a conta de
+   emergencias do mes se perde no meio das outras. */
+
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.grupo__titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--grupo-cor, var(--text-muted));
+}
+
+/* a barrinha antes do titulo leva a cor do tipo — a mesma do quadro */
+.grupo__titulo::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  border-radius: var(--radius-pill);
+  background: var(--grupo-cor, var(--text-faint));
+}
+
+.grupo[data-tipo='padrao'] {
+  --grupo-cor: var(--obra-padrao);
+}
+
+.grupo[data-tipo='emergencia'] {
+  --grupo-cor: var(--obra-emerg);
+}
+
+.grupo__quantas {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--grupo-cor) 18%, transparent);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .calendario {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(4, minmax(76px, 1fr));
+  }
+}
+
+@media (max-width: 460px) {
+  .calendario {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(6, minmax(68px, 1fr));
+  }
+}
+
+.mes__obras {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fechada {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--obra-padrao);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+  --avatar-anel: var(--surface);
+}
+
+.fechada[data-tipo='emergencia'] {
+  border-left-color: var(--obra-emerg);
+}
+
+.fechada:hover {
+  transform: translateX(2px);
+}
+
+.fechada__quem {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.fechada__quem strong {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.fechada__quem span {
+  font-size: 0.74rem;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fechada__data {
+  flex-shrink: 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.fechada__nota {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  min-width: 42px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--pri-baixa-suave);
+  color: var(--etapa-ok);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.fechada__nota em {
+  font-style: normal;
+  color: var(--text-faint);
+}
+
+.fechada__avatares {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.fechada__avatares > * + * {
+  margin-left: -7px;
+}
+
+@media (max-width: 720px) {
+  .mes__cabeca {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .mes__info {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 14px;
+  }
+
+  .fechada {
+    flex-wrap: wrap;
+  }
+
+  .fechada__quem {
+    flex-basis: 60%;
+  }
+}
+
+/* ============================================================
+   Excluir uma obra concluída
+
+   O lixo fica FORA do botão que abre a obra, não dentro: um
+   botão dentro de outro é onde o clique erra de alvo, e aqui
+   errar significa apagar o registro de uma obra entregue.
+
+   Ele nasce quase invisível e só ganha cor no hover da linha —
+   a ação normal desta tela é abrir a obra, não apagá-la.
+   ============================================================ */
+
+.fechada__linha {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.fechada__linha .fechada {
+  flex: 1;
+  min-width: 0;
+}
+
+.fechada__apagar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-faint);
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.fechada__linha:hover .fechada__apagar {
+  opacity: 1;
+}
+
+.fechada__apagar:hover {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+/* "por Fulano" embaixo da data: quem confirmou a conclusão */
+.fechada__data em {
+  display: block;
+  font-size: 0.68rem;
+  font-style: normal;
+  opacity: 0.75;
+}
+
+/* a descrição virou opcional; sem ela, a linha diz isso em vez de
+   deixar um buraco onde o texto costumava estar */
+.fechada__semdesc {
+  font-style: italic;
+  opacity: 0.6;
+}

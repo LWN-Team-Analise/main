@@ -1,0 +1,101 @@
+/* ============================================================
+   Proposta técnica (1a etapa): o check que pede o documento.
+   A linha do arquivo e o botão de escolher vêm dos Anexos da obra
+   (ModalAnexos.css), para os dois parecerem a mesma coisa.
+   ============================================================ */
+
+.proposta {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.proposta__texto {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-base);
+}
+
+.proposta__atual,
+.proposta__escolhido {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+}
+
+/* o já anexado ganha o verde de "feito"; o escolhido, o tracejado de
+   quem ainda não foi */
+.proposta__atual {
+  border-color: color-mix(in srgb, var(--etapa-ok) 45%, transparent);
+  background: color-mix(in srgb, var(--etapa-ok) 7%, transparent);
+}
+
+.proposta__escolhido {
+  border-style: dashed;
+  border-color: var(--accent);
+}
+
+.proposta__trocar {
+  flex-shrink: 0;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.proposta__trocar:hover:not(:disabled) {
+  color: var(--text-strong);
+}
+
+.proposta__aviso {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.proposta__nota {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--text-faint);
+}
+
+.proposta__rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+/* o botao do sistema nasce com a largura toda; aqui ele divide a linha
+   com o "Desmarcar" e fica do tamanho do texto */
+.proposta__rodape .btn {
+  width: auto;
+  flex-shrink: 0;
+}
+
+.proposta__desmarcar {
+  white-space: nowrap;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.proposta__desmarcar:hover {
+  color: var(--danger);
+}

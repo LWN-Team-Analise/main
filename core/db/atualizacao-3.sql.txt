@@ -1,0 +1,119 @@
+-- ============================================================
+--  TRAJETORIA DE CLIENTES — ATUALIZACAO 3
+--  Rode DEPOIS de db/atualizacao-2.sql.txt, no banco
+--  "TrajetoClientes".
+--
+--  So ACRESCENTA. Pode rodar de novo sem problema.
+--
+--  O que muda:
+--    1. configuracao      — os termos que a empresa troca na tela
+--                           (hoje: como se chama "Etapa")
+--    2. chat: apagar      — para TODOS (deixa marca) ou so PARA MIM
+-- ============================================================
+
+BEGIN;
+
+-- ============================================================
+--  1. CONFIGURACAO DO SISTEMA (chave/valor)
+--
+--  Uma tabela minuscula para as palavras que a empresa quer
+--  poder trocar sem mexer no codigo. A primeira delas e o nome
+--  de "Etapa": o roteiro pode passar a se chamar Fase, Marco,
+--  Frente — e todo lugar que hoje escreve "3ª Etapa" tem de
+--  acompanhar.
+--
+--  Chave/valor de proposito: cada termo novo e uma linha, nao
+--  uma coluna nova e uma migracao junto.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.configuracao (
+    chave         text PRIMARY KEY,
+    valor         text NOT NULL,
+    atualizado_em timestamp with time zone NOT NULL DEFAULT now(),
+    atualizado_por bigint REFERENCES public.usuario(id) ON DELETE SET NULL
+);
+
+COMMENT ON TABLE public.configuracao IS
+    'Textos e ajustes que a empresa troca pela tela. Uma linha por termo.';
+
+-- os dois termos de hoje: singular e plural de "Etapa"
+INSERT INTO public.configuracao (chave, valor)
+VALUES ('termo_etapa', 'Etapa'), ('termo_etapas', 'Etapas')
+ON CONFLICT (chave) DO NOTHING;
+
+
+-- ============================================================
+--  2. APAGAR MENSAGEM DO CHAT: DOIS SENTIDOS
+--
+--  Ate aqui apagar era apagar: a linha sumia do banco e, com
+--  ela, sumia da tela de todo mundo sem deixar sinal — quem
+--  estava respondendo aquela mensagem ficava sem entender o
+--  buraco na conversa.
+--
+--  Agora sao dois gestos diferentes:
+--
+--    APAGAR PARA TODOS — a mensagem continua na conversa, mas
+--      vazia, com a marca "mensagem apagada". O texto e o
+--      arquivo somem de verdade (obra_chat.texto/arquivo viram
+--      NULL); o que fica e o rastro de que ali houve algo. So
+--      quem escreveu pode.
+--
+--    APAGAR PARA MIM — a mensagem some da MINHA tela e continua
+--      inteira para os outros. E uma linha em obra_chat_oculta,
+--      e vale para qualquer mensagem, minha ou nao.
+--
+--  Ninguem apaga a mensagem de outra pessoa da conversa: no chat
+--  de uma obra, isso e reescrever o que foi dito.
+-- ============================================================
+
+ALTER TABLE public.obra_chat
+    ADD COLUMN IF NOT EXISTS apagada_em  timestamp with time zone,
+    ADD COLUMN IF NOT EXISTS apagada_por bigint;
+
+DO $bloco$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'obra_chat_apagada_por_fk') THEN
+        ALTER TABLE public.obra_chat
+            ADD CONSTRAINT obra_chat_apagada_por_fk
+            FOREIGN KEY (apagada_por) REFERENCES public.usuario(id) ON DELETE SET NULL;
+    END IF;
+END
+$bloco$;
+
+COMMENT ON COLUMN public.obra_chat.apagada_em IS
+    'Apagada para todos. A linha fica; o texto e o arquivo viram NULL e a tela mostra "mensagem apagada".';
+
+-- A trava "toda mensagem tem texto ou arquivo" nao vale mais para a
+-- mensagem apagada: e justamente disso que ela e feita — nada.
+ALTER TABLE public.obra_chat DROP CONSTRAINT IF EXISTS obra_chat_tem_conteudo;
+ALTER TABLE public.obra_chat
+    ADD CONSTRAINT obra_chat_tem_conteudo
+    CHECK (
+        apagada_em IS NOT NULL
+        OR btrim(coalesce(texto, '')) <> ''
+        OR arquivo_conteudo IS NOT NULL
+    );
+
+-- "apagar para mim": some da tela de quem pediu, e de mais ninguem
+CREATE TABLE IF NOT EXISTS public.obra_chat_oculta (
+    mensagem_id bigint NOT NULL REFERENCES public.obra_chat(id) ON DELETE CASCADE,
+    usuario_id  bigint NOT NULL REFERENCES public.usuario(id)   ON DELETE CASCADE,
+    ocultada_em timestamp with time zone NOT NULL DEFAULT now(),
+    PRIMARY KEY (mensagem_id, usuario_id)
+);
+
+COMMENT ON TABLE public.obra_chat_oculta IS
+    'Linha aqui = esta pessoa apagou a mensagem so para ela. Para o resto do chat ela continua inteira.';
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+SELECT 'configuracao' AS item, to_regclass('public.configuracao') IS NOT NULL AS ok
+UNION ALL SELECT 'termo_etapa',
+       EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'termo_etapa')
+UNION ALL SELECT 'obra_chat.apagada_em',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'obra_chat' AND column_name = 'apagada_em')
+UNION ALL SELECT 'obra_chat_oculta', to_regclass('public.obra_chat_oculta') IS NOT NULL;

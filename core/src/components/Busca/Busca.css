@@ -1,0 +1,240 @@
+/* ============================================================
+   A LISTA DA BUSCA
+
+   O campo em si (a pílula de vidro, o orbe, o placeholder) continua
+   sendo estilizado pelo `.omni` do AppShell.css — ele já existia e
+   não mudou. Aqui mora só o que nasceu com a busca: a caixa de
+   resultados que desce por baixo dele.
+   ============================================================ */
+
+.busca {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.busca__caixa {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  max-height: min(60vh, 460px);
+  padding: 8px;
+  border-radius: var(--radius-md);
+  /* O vidro vem escrito aqui, e não pela classe `.vidro` do comum.css:
+     aquela declara `position: relative`, e as duas regras têm a mesma
+     força — quem ganhava era a última folha a entrar no pacote. Com a
+     classe, a caixa chegou a nascer DENTRO da linha, empurrada para o
+     lado do campo em vez de descer por baixo dele. Escrito aqui, não há
+     disputa nenhuma para a ordem dos imports decidir.
+
+     O fundo é o `--vidro-menu`, e não o `--vidro-fundo`: este último é
+     feito para superfície que ENCOSTA na página (header, card), onde o
+     que passa por trás é o próprio fundo. A lista flutua por cima do
+     conteúdo da tela, e com 50% de transparência o texto dela caía em
+     cima de outro texto — dois alfabetos disputando o mesmo pixel. */
+  background: var(--vidro-menu);
+  border: 1px solid var(--vidro-borda);
+  backdrop-filter: blur(calc(var(--glass-blur) * 1.4)) saturate(170%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.4)) saturate(170%);
+  box-shadow: var(--vidro-realce), 0 18px 40px rgba(0, 0, 0, 0.22);
+  overflow-y: auto;
+  animation: busca-desce var(--dur-fast) var(--ease-out);
+}
+
+@keyframes busca-desce {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.busca__grupo + .busca__grupo {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+
+.busca__rotulo {
+  margin: 2px 0 4px;
+  padding: 0 8px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* ---- cada item é uma lâmina de vidro ----
+
+   Fundo transparente deixava a linha sem corpo: o texto ficava solto
+   sobre o que estivesse por trás e a lista parecia um borrão com
+   palavras. Agora cada item tem superfície própria — tinta translúcida,
+   desfoque do que passa atrás, aro claro em cima e a refração do
+   `#lg-refraction`, o mesmo filtro que veste os cartões do site.
+
+   `isolation: isolate` é o que segura a camada de refração: sem ela o
+   `z-index: -1` do ::before escapa do item e some por trás da caixa
+   inteira, levando junto o fundo da lista. */
+.busca__item {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--vidro-borda);
+  border-radius: var(--radius-sm);
+  background: var(--vidro-fundo);
+  box-shadow: var(--vidro-realce);
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.7)) saturate(150%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.7)) saturate(150%);
+  color: var(--text-base);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.busca__item + .busca__item {
+  margin-top: 4px;
+}
+
+/* a refração: distorce de leve o que está atrás da lâmina */
+.busca__item::before {
+  content: "";
+  position: absolute;
+  inset: -14%;
+  z-index: -1;
+  opacity: 0.3;
+  pointer-events: none;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+@supports (filter: url("#lg-refraction")) {
+  .busca__item::before {
+    filter: url("#lg-refraction");
+  }
+}
+
+/* uma classe só para as duas entradas — teclado e mouse marcam a MESMA
+   linha, senão a seta mostra uma e o Enter abriria outra */
+.busca__item.is-ativo {
+  background: var(--vidro-fundo-forte);
+  border-color: var(--vidro-borda-forte);
+}
+
+/* Sem `backdrop-filter` o item ficaria quase invisível: a tinta sozinha
+   é translúcida demais. Aí ele vira superfície chapada, que é feia mas
+   se lê. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .busca__item {
+    background: var(--glass-fallback);
+  }
+}
+
+.busca__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.busca__texto strong {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.busca__texto small {
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.busca__marca {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 0.64rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.busca__marca[data-fechada='sim'] {
+  background: rgba(61, 220, 151, 0.16);
+  color: #1c8f5f;
+}
+
+.busca__marca[data-fechada='nao'] {
+  background: rgba(255, 159, 67, 0.16);
+  color: #b96a12;
+}
+
+/* no escuro o texto da etiqueta precisa clarear: o mesmo verde que lê
+   bem sobre branco some sobre a superfície escura */
+:root[data-theme='dark'] .busca__marca[data-fechada='sim'] {
+  color: #6ff0b6;
+}
+
+:root[data-theme='dark'] .busca__marca[data-fechada='nao'] {
+  color: #ffc082;
+}
+
+.busca__nada {
+  margin: 0;
+  padding: 12px 10px;
+  font-size: 0.82rem;
+  color: var(--text-faint);
+}
+
+.busca__nada strong {
+  color: var(--text-base);
+}
+
+/* No celular ela acompanha o campo EXATAMENTE. Antes vazava 8px para
+   cada lado para ganhar largura, e o resultado era uma lista visivelmente
+   mais larga que a caixa de busca logo acima dela — duas bordas
+   diferentes, uma em cima da outra. A largura que ela tem basta: o campo
+   agora ocupa a linha inteira da barra. */
+@media (max-width: 640px) {
+  .busca__caixa {
+    max-height: 56vh;
+  }
+}
+
+/* No celular a lista e a resposta inteira — nao ha tela ao lado para
+   conferir. O que era letra de apoio no computador vira o texto
+   principal aqui. */
+@media (max-width: 720px) {
+  .busca__rotulo {
+    font-size: 0.68rem;
+  }
+
+  .busca__item {
+    padding: 10px;
+  }
+
+  .busca__texto strong {
+    font-size: 0.95rem;
+  }
+
+  .busca__texto small {
+    font-size: 0.82rem;
+  }
+
+  .busca__marca {
+    font-size: 0.7rem;
+  }
+}

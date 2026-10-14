@@ -1,0 +1,142 @@
+/* ============================================================
+   Pop-up do "esqueci minha senha"
+   ============================================================ */
+
+.recupera {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* os tres passos, em bolinhas numeradas */
+.recupera__trilha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recupera__trilha li {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+  color: var(--text-faint);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.recupera__trilha li + li {
+  position: relative;
+  margin-left: 20px;
+}
+
+.recupera__trilha li + li::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  width: 20px;
+  height: 1px;
+  background: var(--line);
+}
+
+.recupera__trilha li.is-feito {
+  border-color: transparent;
+  background: var(--accent);
+  color: #fff;
+}
+
+.recupera__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* o campo do codigo: seis digitos grandes e espacados */
+.recupera__codigo {
+  width: 100%;
+  padding: 14px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  text-align: center;
+  /* o letter-spacing empurra o texto para a esquerda do centro:
+     este recuo devolve o equilibrio */
+  text-indent: 0.42em;
+}
+
+.recupera__codigo:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.recupera__codigo::placeholder {
+  color: var(--text-faint);
+}
+
+.recupera__tempo,
+.recupera__recado {
+  margin: 0;
+  font-size: 0.79rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.recupera__tempo strong {
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.recupera__erro {
+  margin: 0;
+  padding: 10px 13px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.recupera__pronto {
+  margin: 0;
+  padding: 14px 15px;
+  border-radius: var(--radius-sm);
+  background: var(--pri-baixa-suave);
+  color: var(--text-base);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.recupera__reenviar,
+.recupera__voltar {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.recupera__reenviar:hover:not(:disabled),
+.recupera__voltar:hover {
+  color: var(--text-strong);
+}
+
+.recupera__reenviar:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  text-decoration: none;
+}

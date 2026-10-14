@@ -1,0 +1,293 @@
+/* ============================================================
+   Observacoes do quadro: o formulario em cima, a lista embaixo.
+   ============================================================ */
+
+.quadroform {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.quadroform__autor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.86rem;
+  color: var(--text-strong);
+}
+
+.quadroform__acao {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ---------------- Lista ---------------- */
+
+.quadrolista {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 330px;
+  margin-top: 8px;
+  overflow-y: auto;
+}
+
+.quadrolista__vazio {
+  margin: 0;
+  padding: 22px 0;
+  font-size: 0.84rem;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+.quadrolista__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 11px;
+  border-radius: var(--radius-md);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.quadrolista__item:hover {
+  background: var(--control-bg);
+}
+
+.quadrolista__corpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.quadrolista__quem {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 3px;
+}
+
+.quadrolista__quem strong {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.quadrolista__quem span {
+  font-size: 0.71rem;
+  color: var(--text-faint);
+}
+
+.quadrolista__texto {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-base);
+  overflow-wrap: anywhere;
+}
+
+.quadrolista__apagar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  opacity: 0;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+
+.quadrolista__item:hover .quadrolista__apagar,
+.quadrolista__apagar:focus-visible {
+  opacity: 1;
+}
+
+.quadrolista__apagar:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+/* ---- Editar a própria observação ----
+
+   O lápis fica ao lado do lixo, e só na própria observação. Antes havia
+   só o lixo, e corrigir uma palavra obrigava a apagar o recado e
+   escrever de novo — o que mandava a observação para o topo da lista e
+   apagava o contexto de quem já tinha lido. */
+
+.quadrolista__ferramentas {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+/* a marca de que o texto mudou depois de publicado */
+.quadrolista__editada {
+  font-size: 0.68rem;
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+.quadrolista__form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.quadrolista__formacoes {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ============================================================
+   Duracao da observacao
+
+   Fechada, a duracao e uma caixa de marcar e mais nada — a maioria
+   dos recados nao tem prazo, e um par de calendarios sempre aberto
+   pesaria no formulario para nada. Marcada, os dois campos abrem
+   lado a lado.
+   ============================================================ */
+
+.quadroprazo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+}
+
+/* Os dois interruptores do formulário dividem a linha em dois. O
+   `flex-basis` generoso é o que faz um descer para baixo do outro
+   quando a tela é estreita, em vez de espremer os dois rótulos. */
+.quadroform__dupla {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+}
+
+.quadroform__dupla > * {
+  flex: 1 1 190px;
+}
+
+.quadroprazo__marca {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+/* desligado — não há obra aberta, ou a observação já é de uma obra */
+.quadroprazo__marca:has(input:disabled) {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.quadroprazo__marca input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.quadroprazo__datas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.quadroprazo__nota {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--text-faint);
+}
+
+.quadroprazo__nota.is-erro {
+  color: var(--danger);
+}
+
+@media (max-width: 480px) {
+  .quadroprazo__datas {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   As duas abas: o que esta no quadro e o que ja venceu
+
+   O historico so existe porque a observacao com prazo NAO e
+   apagada quando vence — ela sai da vista. A aba e o caminho de
+   volta ate ela.
+   ============================================================ */
+
+.quadroabas {
+  display: flex;
+  gap: 4px;
+  margin-top: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.quadroabas__aba {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.quadroabas__aba:hover {
+  color: var(--text-strong);
+}
+
+.quadroabas__aba.is-atual {
+  border-bottom-color: var(--accent);
+  color: var(--text-strong);
+}
+
+.quadroabas__aba em {
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+/* ---- a janela, no card da observacao ---- */
+
+.quadrolista__prazo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 5px 0 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+/* vencida: continua legivel, mas nao compete com o que ainda vale */
+.quadrolista__item.is-vencida .quadrolista__texto {
+  color: var(--text-muted);
+}

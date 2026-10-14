@@ -1,6 +1,6 @@
-import { Star } from 'lucide-react';
+import { Star, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { company, credit, offices, privacyPath } from '../../data/site';
+import { company, credit, corePath, offices, privacyPath } from '../../data/site';
 import { useSite } from '../../i18n/content';
 import { useStrings } from '../../i18n/strings';
 import NavItem from '../header/NavItem';
@@ -39,6 +39,13 @@ export default function Footer() {
             </Link>
             <p className="footer__about">{t.footer.about}</p>
             <SocialLinks tone="dark" />
+            {/* The employees' area: another app on this domain, so a full page load. */}
+            <a href={corePath} className="footer__team">
+              <span className="footer__team-icon" aria-hidden="true">
+                <Users size={20} />
+              </span>
+              {t.footer.team}
+            </a>
           </div>
 
           <nav className="footer__col" aria-label={t.footer.label}>

@@ -1,0 +1,325 @@
+@import './tokens.css';
+@import './comum.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* fundo liso: branco no claro, preto no escuro. A malha azul saiu. */
+  background-color: var(--page-bg);
+  color: var(--text-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition: background var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
+}
+
+/* ============================================================
+   Fundo com um leve ar de VHS
+
+   Tres camadas, todas bem fracas de proposito — o fundo tem que
+   dar textura, nao chamar atencao:
+
+     1. a franja colorida das linhas verticais (o "sangramento"
+        de cor da fita);
+     2. as scanlines horizontais, que descem devagar;
+     3. uma lavagem diagonal de cor, quase imperceptivel.
+
+   Fica ATRAS de tudo (o #root sobe para o z-index 1), entao ele
+   aparece justamente por baixo do vidro do menu, do header e
+   dos cards — que e onde o efeito faz sentido.
+   ============================================================ */
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 0, 92, var(--vhs-cor)) 0 2px,
+      rgba(0, 224, 200, var(--vhs-cor)) 2px 4px,
+      rgba(70, 120, 255, var(--vhs-cor)) 4px 6px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, var(--vhs-linha)) 0 1px,
+      rgba(0, 0, 0, 0) 1px 4px
+    ),
+    linear-gradient(
+      118deg,
+      rgba(255, 0, 128, var(--vhs-lavagem)) 0%,
+      rgba(0, 190, 255, var(--vhs-lavagem)) 45%,
+      rgba(168, 60, 255, var(--vhs-lavagem)) 100%
+    );
+  background-size: 6px 100%, 100% 4px, 100% 100%;
+  animation: vhs-desce 9s linear infinite;
+}
+
+/* so as scanlines andam; as outras duas camadas ficam paradas */
+@keyframes vhs-desce {
+  to {
+    background-position: 0 0, 0 4px, 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::after {
+    animation: none;
+  }
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---------------- Campos de data ----------------
+   No iPhone o <input type="date"> e um botao do sistema: ele ignora a
+   largura do campo e cresce ate caber a data por extenso ("8 de out.
+   de 2026"), atravessando o card, a tela e o pop-up. Sem a aparencia
+   nativa ele volta a obedecer a largura de quem o usa. No Chrome nada
+   muda: o icone do calendario e o dd/mm/aaaa continuam la.
+
+   O valor, que o iPhone centraliza, volta para a esquerda, como nos
+   outros campos; e o campo vazio deixa de murchar (sem placeholder,
+   ele perdia a altura da linha). */
+input[type='date'] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+}
+
+input[type='date']::-webkit-date-and-time-value {
+  min-height: 1.3em;
+  text-align: left;
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+a:hover {
+  color: var(--link-hover);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--control-on-bg);
+  color: var(--control-on-fg);
+}
+
+/* Scrollbar discreta */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: var(--radius-pill);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ============================================================
+   Troca de tema suave.
+   A classe entra no <html> so durante a troca (ThemeContext) e
+   sai depois: assim as cores deslizam de um tema para o outro
+   sem atrapalhar as transicoes proprias de cada componente
+   (hover, foco) no resto do tempo.
+   ============================================================ */
+
+.theme-switching,
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: background-color var(--dur-theme) var(--ease-out),
+    border-color var(--dur-theme) var(--ease-out),
+    color var(--dur-theme) var(--ease-out),
+    box-shadow var(--dur-theme) var(--ease-out),
+    fill var(--dur-theme) var(--ease-out),
+    stroke var(--dur-theme) var(--ease-out),
+    opacity var(--dur-theme) var(--ease-out) !important;
+}
+
+/* ============================================================
+   O CELULAR
+
+   Tres coisas, e as tres vieram do mesmo defeito: a tela foi
+   desenhada no computador, onde sobra largura.
+
+   1. A FONTE. Tudo aqui e medido em `rem`, entao mexer na raiz
+      encolhe o sistema inteiro de uma vez — texto, botao e
+      pastilha na mesma proporcao. Encolher cada regra a mao
+      daria um site com dois tamanhos brigando.
+
+   2. A LARGURA. `overflow-x: clip` no #root corta o que passar
+      da borda sem criar barra de rolagem lateral. E `clip`, e
+      nao `hidden`, de proposito: `hidden` faz do elemento um
+      container de rolagem e quebra o `position: sticky` do
+      header e das colunas de Obras.
+
+   3. O TEXTO DENTRO DO BOTAO. Palavra comprida em botao estreito
+      vazava por baixo do fundo dele. `overflow-wrap` faz a
+      palavra quebrar quando nao couber, em vez de passar por
+      cima da borda.
+   ============================================================ */
+
+#root {
+  overflow-x: clip;
+}
+
+/* nada mais largo que a tela: imagem, tabela e bloco de codigo
+   respeitam a caixa em vez de empurrar a pagina para o lado */
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+@media (max-width: 720px) {
+  html {
+    font-size: 15px;
+  }
+
+  body {
+    overflow-wrap: break-word;
+  }
+
+  /* O botao encolhe com o texto: fonte menor, respiro menor e teto de
+     largura na caixa que o abriga.
+
+     `white-space: normal` desfaz o `nowrap` da regra base. Era ele o
+     ultimo motivo de rotulo passando da borda: mesmo podendo encolher, o
+     botao nao tinha onde quebrar "Adicionar obra emergência", e o texto
+     seguia reto para fora. Agora ele quebra em duas linhas e o fundo
+     cresce junto. */
+  .acao {
+    max-width: 100%;
+    padding: 8px 14px;
+    font-size: 0.78rem;
+    white-space: normal;
+    line-height: 1.25;
+  }
+
+  .chip {
+    padding: 5px 11px;
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 400px) {
+  html {
+    font-size: 14px;
+  }
+
+  .acao {
+    padding: 8px 12px;
+    font-size: 0.75rem;
+  }
+}
+
+/* ------------------------------------------------------------
+   Os campos de digitar, no celular
+
+   16px, e em PIXEL — nao em `rem`. Sao dois motivos no mesmo
+   numero:
+
+   1. Legibilidade. Com a fonte da raiz reduzida, os 0.8rem do
+      campo de busca viravam 11px: letra de rodape dentro do
+      lugar onde mais se digita.
+
+   2. O ZOOM do iPhone. O Safari dá um zoom na pagina inteira
+      quando o campo focado tem menos de 16px — e sair do campo
+      nao desfaz o zoom. A tela ficava torta depois de uma busca,
+      e ninguem ligava uma coisa a outra.
+
+   Por isso o valor nao acompanha a raiz: o limiar do Safari e
+   absoluto, e um `rem` que encolhe passaria por baixo dele.
+   ------------------------------------------------------------ */
+
+@media (max-width: 720px) {
+  input,
+  select,
+  textarea,
+  /* `.procura input` vem escrito aqui porque e uma regra de CLASSE: ela
+     ganha de `input` por especificidade, nao por ordem, e sem nomea-la
+     o campo continuava no tamanho antigo. Funciona daqui porque o
+     comum.css, dono da regra original, e importado no topo deste
+     arquivo — entao esta linha vem depois.
+
+     O campo da barra de cima (`.omni__campo`) NAO cabe aqui pelo mesmo
+     motivo invertido: o AppShell.css entra depois do global.css, e
+     ganharia de qualquer coisa escrita aqui. A regra dele mora la. */
+  .procura input {
+    font-size: 16px;
+  }
+
+  /* menor: com o respiro de antes o campo ficava visivelmente mais
+     alto que os botoes da mesma barra, e a tela parecia ter dois
+     tamanhos de controle */
+  .procura {
+    padding: 6px 12px;
+    gap: 6px;
+  }
+}

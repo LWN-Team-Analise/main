@@ -1,0 +1,48 @@
+/* A bolha da dica: mora no <body>, por cima de tudo menos dos pop-ups.
+   Fundo do proprio pop-up do tema, para ler igual no claro e no escuro. */
+.dica {
+  position: fixed;
+  z-index: 80;
+  max-width: 300px;
+  padding: 9px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--modal-bg);
+  color: var(--text-base);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  box-shadow: 0 14px 30px -14px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  animation: dica-entra var(--dur-fast) var(--ease-out);
+}
+
+.dica__titulo {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+/* quebra de linha escrita pela pessoa continua quebra */
+.dica__texto {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@keyframes dica-entra {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dica {
+    animation: none;
+  }
+}

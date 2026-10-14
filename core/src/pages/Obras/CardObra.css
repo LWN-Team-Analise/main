@@ -1,0 +1,425 @@
+/* ============================================================
+   Card da obra no QUADRO.
+
+   Tinta suave e transparente, com o texto na cor normal do tema
+   (nada de branco sobre cor chapada). A cor inteira sai de --tom-*,
+   escolhida pelo data-tom — que vem de situacaoDaObra:
+
+     ok          verde    obra padrao em dia (ou sem prazo final)
+     emergencia  azul     obra de emergencia em dia
+     atraso      amarelo  prazo final passou da metade, ou check vencido
+     laranja     laranja  prazo final muito perto
+     vermelho    vermelho prazo final amanha ou hoje
+     vencido     vermelho o prazo final ja passou (fio mais grosso e
+                          o selo "Atrasada")
+
+   O -acento pinta a linha do motivo e a barra da execucao. O FIO DA
+   ESQUERDA nao: ele e a cor da PRIORIDADE (data-pri), a mesma da
+   palavra em "Prioridade: Alta" — verde baixa, amarelo media,
+   vermelho alta e o azul da emergencia no "Urgente". Os valores de
+   cada tema estao em src/styles/tokens.css.
+   ============================================================ */
+
+.obracard {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 12px 10px 15px;
+  overflow: hidden;
+  border: 1px solid var(--tom-borda);
+  border-radius: var(--radius-md);
+  background: var(--tom-bg);
+  color: var(--text-base);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: none;
+  /* o topo muda de arranjo pela LARGURA DO CARD (ver .obracard__topo),
+     que muda com a coluna, e nao so com a tela */
+  container-type: inline-size;
+  /* o avatar usa isso para o anel combinar com o card */
+  --avatar-anel: var(--surface);
+  --tom-bg: var(--quadro-ok-bg);
+  --tom-borda: var(--quadro-ok-borda);
+  --tom-acento: var(--quadro-ok-acento);
+  --pri-cor: var(--tom-acento);
+  --fio: 3px;
+  transition: transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+/* o fio da esquerda, na cor da prioridade */
+.obracard::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  width: var(--fio);
+  background: var(--pri-cor);
+}
+
+.obracard[data-pri='alta'] {
+  --pri-cor: var(--pri-alta);
+}
+
+.obracard[data-pri='urgente'] {
+  --pri-cor: var(--pri-urgente);
+}
+
+.obracard[data-pri='media'] {
+  --pri-cor: var(--pri-media);
+}
+
+.obracard[data-pri='baixa'] {
+  --pri-cor: var(--pri-baixa);
+}
+
+.obracard:hover {
+  transform: translateY(-2px);
+  border-color: var(--tom-acento);
+  box-shadow: 0 14px 26px -20px rgba(0, 0, 0, 0.6);
+}
+
+.obracard:active {
+  transform: translateY(0) scale(0.995);
+}
+
+.obracard:focus-visible {
+  outline: 2px solid var(--tom-acento);
+  outline-offset: 2px;
+}
+
+.obracard[data-tom='emergencia'] {
+  --tom-bg: var(--quadro-emerg-bg);
+  --tom-borda: var(--quadro-emerg-borda);
+  --tom-acento: var(--quadro-emerg-acento);
+}
+
+.obracard[data-tom='atraso'] {
+  --tom-bg: var(--quadro-atraso-bg);
+  --tom-borda: var(--quadro-atraso-borda);
+  --tom-acento: var(--quadro-atraso-acento);
+}
+
+.obracard[data-tom='laranja'] {
+  --tom-bg: var(--quadro-laranja-bg);
+  --tom-borda: var(--quadro-laranja-borda);
+  --tom-acento: var(--quadro-laranja-acento);
+}
+
+.obracard[data-tom='vermelho'],
+.obracard[data-tom='vencido'] {
+  --tom-bg: var(--quadro-vermelho-bg);
+  --tom-borda: var(--quadro-vermelho-borda);
+  --tom-acento: var(--quadro-vermelho-acento);
+}
+
+/* vencido: o mesmo vermelho, com o fio e o contorno mais marcados —
+   fica claro que nao e "esta perto", e "ja passou" */
+.obracard[data-tom='vencido'] {
+  --fio: 5px;
+  border-width: 1.5px;
+}
+
+/* ---- topo ---- */
+
+/* a logo, o nome e, no canto de cima a direita, as fotos de quem mexeu
+   na obra; os setores que devem descem para a linha de baixo — a coluna
+   da etapa e estreita, e ao lado do nome eles espremiam o titulo ate
+   virar reticencias */
+.obracard__topo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'logo quem rostos'
+    'setores setores setores';
+  align-items: start;
+  gap: 6px 8px;
+}
+
+.obracard__logo {
+  grid-area: logo;
+}
+
+.obracard__quem {
+  grid-area: quem;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.obracard__rostos {
+  grid-area: rostos;
+  display: flex;
+}
+
+/* Card estreito (duas colunas no celular, cinco numa tela de 1280): o
+   nome desce para a linha inteira, e a logo e as fotos ficam sozinhas na
+   primeira, uma em cada ponta. Com as tres coisas lado a lado, sobravam
+   ~50px para o nome. A medida e a de DENTRO do card (sem o recheio):
+   179px sao uns 210px de card. */
+@container (max-width: 179px) {
+  .obracard__topo {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'logo rostos'
+      'quem quem'
+      'setores setores';
+  }
+
+  .obracard__rostos {
+    justify-self: end;
+  }
+}
+
+.obracard__empresa {
+  font-size: 0.83rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.obracard__etapa {
+  font-size: 0.68rem;
+  line-height: 1.2;
+  color: var(--text-muted);
+}
+
+/* os setores que ainda devem: contorno e texto na cor suave do setor */
+.obracard__setores {
+  grid-area: setores;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.obracard__setor {
+  padding: 1px 6px;
+  border: 1px solid var(--setor-cor);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--setor-cor);
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1.5;
+  text-transform: lowercase;
+}
+
+/* ---- o motivo da cor ---- */
+
+.obracard__motivo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--tom-acento);
+}
+
+.obracard__motivo em {
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--tom-acento) 16%, transparent);
+  font-style: normal;
+  font-size: 0.62rem;
+}
+
+.obracard__atrasada {
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--tom-acento);
+  color: var(--surface);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ---- corpo ---- */
+
+.obracard__desc {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.32;
+  color: var(--text-strong);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* a execucao dos ensaios: rotulo, barra e percentual */
+.obracard__exec {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.obracard__exec strong {
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.obracard__barra {
+  position: relative;
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+}
+
+.obracard__barra > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--etapa-ok);
+}
+
+/* ---- etiquetas da obra ---- */
+
+.obracard__etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.obracard__etiqueta {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.6;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+/* ---- base ---- */
+
+/* Em card estreito o "Concluído em" desce para a linha de baixo, em vez
+   de passar por cima das datas: antes ele nao encolhia nem quebrava, e o
+   texto saia do card. */
+.obracard__base {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6px 10px;
+  margin-top: auto;
+}
+
+/* canto inferior DIREITO: o carimbo de "acabou", em verde de "feito" —
+   e a linha que faz alguem lembrar de fechar a obra */
+.obracard__pronta {
+  min-width: 0;
+  margin-left: auto;
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text-muted);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.obracard__pronta strong {
+  font-weight: 800;
+  color: var(--etapa-ok);
+}
+
+.obracard__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--text-base);
+}
+
+/* as duas datas na mesma linha enquanto couberem; em card estreito a
+   segunda desce, e nao encolhe a letra */
+.obracard__datas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+}
+
+.obracard__data {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.obracard__data strong {
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+/* ---- Prioridade: um ponto colorido, sem pastilha ---- */
+
+.obracard__pri {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.obracard__pri::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--pri-cor, currentColor);
+  box-shadow: 0 0 0 1.5px var(--surface);
+}
+
+/* a palavra na cor da prioridade (o --pri-cor vem do data-pri do
+   card), puxada um pouco para a cor do texto: o amarelo puro some
+   sobre o fundo claro */
+.obracard__pri strong {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--pri-cor) 82%, var(--text-strong));
+}
+
+/* ---- "prazo final: sem data" com o (!) ----
+
+   O sinal vermelho e o mesmo `.pendencia` da tela da obra — mesma
+   classe, mesma piscada. `position: relative` ancora o (!) no canto. */
+.obracard__semprazo {
+  position: relative;
+  padding-right: 15px;
+}
+
+/* "sem data" nao e um valor: italico e mais apagado */
+.obracard__semprazo strong {
+  font-weight: 700;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+/* o anel e `outline`, e nao `box-shadow`: a piscada anima o box-shadow */
+.obracard__semprazo .pendencia {
+  top: -6px;
+  right: -3px;
+  width: 15px;
+  height: 15px;
+  font-size: 0.62rem;
+  outline: 1.5px solid var(--surface);
+}

@@ -1,0 +1,174 @@
+/* Calendario de dias soltos (CalendarioDias.jsx).
+   Prefixo `diascal`: todo CSS do app vai junto num arquivo so, e
+   `.calendario`/`.calmes` ja sao da tela de Concluidas. */
+
+.diascal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.diascal__topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.diascal__mes {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+/* quantos dias marcados neste mes */
+.diascal__mes em {
+  font-style: normal;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.diascal__seta {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-base);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.diascal__seta:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+.diascal__seta:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.diascal__semana,
+.diascal__grade {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.diascal__semana span {
+  padding: 2px 0;
+  text-align: center;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.diascal__semana span[data-fim] {
+  color: var(--text-faint);
+}
+
+/* sem espaco entre as colunas: os dias seguidos marcados viram uma
+   faixa so. O respiro fica so entre as linhas. */
+.diascal__grade {
+  row-gap: 4px;
+  touch-action: none;
+}
+
+.diascal__dia {
+  position: relative;
+  height: 38px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-base);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+/* sabado e domingo: um tom abaixo, para os dias uteis saltarem a vista
+   — mas sem chegar ao apagado do dia travado, que nao se marca */
+.diascal__dia[data-fim] {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.diascal__dia:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+.diascal__dia:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.diascal__dia:disabled {
+  opacity: 0.25;
+  font-weight: 400;
+  cursor: not-allowed;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+/* hoje: o pontinho embaixo do numero */
+.diascal__dia[data-hoje]::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 5px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.diascal__dia[aria-pressed='true'],
+.diascal__dia[aria-pressed='true']:hover:not(:disabled) {
+  background: var(--control-on-bg);
+  color: var(--control-on-fg);
+}
+
+.diascal__dia[aria-pressed='true'][data-hoje]::after {
+  background: var(--control-on-fg);
+}
+
+/* o vizinho do mesmo lado tambem esta marcado: a borda daquele lado
+   fica reta e os dois se juntam */
+.diascal__dia[data-liga~='esq'] {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.diascal__dia[data-liga~='dir'] {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+@media (max-width: 420px) {
+  .diascal {
+    padding: 10px 8px;
+  }
+
+  .diascal__dia {
+    height: 36px;
+    font-size: 0.8rem;
+  }
+}

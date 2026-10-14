@@ -1,0 +1,44 @@
+-- ============================================================
+--  ATUALIZACAO 12 — CADASTRO SO PELO E-MAIL
+--
+--  Quem cadastra colaborador passa a precisar so do e-mail (e do
+--  setor, que e o que decide as permissoes). Nome, nascimento e
+--  CPF a propria pessoa completa depois, em Configuracoes.
+--
+--  Para isso o CPF deixa de ser obrigatorio no banco. O resto
+--  continua como estava:
+--
+--    - o indice unico do CPF segue valendo: NULL nao conta como
+--      repetido, entao varios cadastros "esperando o CPF" convivem;
+--    - a checagem usuario_cpf_digitos segue valendo para quem TEM
+--      CPF (11 digitos), e deixa passar o NULL;
+--    - o nome continua obrigatorio: a API grava um nome provisorio
+--      tirado do e-mail ("joao.silva@" vira "Joao Silva"), e a
+--      pessoa troca pelo nome completo na conta dela.
+--
+--  CPF vazio ('') nunca entra: a API grava NULL. Sem isso o '' de
+--  um batia no '' do outro no indice unico.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao apaga nada.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.usuario ALTER COLUMN cpf DROP NOT NULL;
+
+COMMENT ON COLUMN public.usuario.cpf IS
+    'Somente digitos (11). NULL = a pessoa ainda nao completou o cadastro (entrou so pelo e-mail).';
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t"
+-- ============================================================
+
+SELECT 'usuario.cpf aceita NULL' AS item,
+       coalesce((SELECT is_nullable = 'YES' FROM information_schema.columns
+                  WHERE table_schema = 'public' AND table_name = 'usuario'
+                    AND column_name = 'cpf'), false) AS ok;

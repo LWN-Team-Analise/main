@@ -1,0 +1,162 @@
+/* O respiro de CIMA e maior que o dos lados: o pop-up alto (um
+   formulario) comecava em cima da barra de busca, e parecia grudado
+   nela. Agora ele comeca abaixo da barra (~80px) e so encolhe em tela
+   baixa. O pop-up de tamanho ajustavel (o chat) fica como era: o
+   tamanho que a pessoa salvou foi medido com 20px em volta. */
+.modal {
+  --modal-topo: clamp(20px, 11vh, 96px);
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  /* A coluna e a TELA, e nao o conteudo: sem isso um pop-up com algo
+     largo dentro (as cinco etapas do modelo da obra) crescia ate a
+     largura do conteudo e vazava para fora do celular, sem rolar. */
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  padding: var(--modal-topo) 20px 20px;
+  background: var(--modal-veu);
+  animation: modal-entra var(--dur-fast) var(--ease-out);
+}
+
+.modal:has(> .modal__caixa.is-ajustado) {
+  --modal-topo: 20px;
+}
+
+/* No celular a barra de cima tem duas linhas e o veu ja a cobre:
+   empurrar o pop-up para baixo dela so tiraria altura do formulario. */
+@media (max-width: 720px) {
+  .modal {
+    --modal-topo: clamp(16px, 5vh, 40px);
+    padding-inline: 16px;
+  }
+}
+
+/* O pop-up e o unico lugar sem vidro: superficie opaca, sem desfoque
+   e sem brilho. Formulario tem que ser facil de ler. */
+.modal__caixa {
+  width: 100%;
+  max-height: min(calc(100dvh - var(--modal-topo) - 20px), 860px);
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  background: var(--modal-bg);
+  border: 1px solid var(--modal-borda);
+  box-shadow: var(--modal-sombra);
+  animation: modal-sobe var(--dur-base) var(--ease-out);
+}
+
+.modal__caixa:focus {
+  outline: none;
+}
+
+.modal__topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.modal__titulo {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.modal__sub {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.modal__x {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--control-border);
+  border-radius: 50%;
+  background: var(--control-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.modal__x:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.modal__corpo {
+  padding: 18px 20px 20px;
+  overflow-y: auto;
+}
+
+@keyframes modal-entra {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-sobe {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+
+/* ---------------- a alça de redimensionar ----------------
+   So existe no pop-up que recebeu `ajustavel`. Fica no canto de dentro,
+   sobre a propria caixa: uma alca por fora seria a primeira coisa que o
+   clique-fora fecharia. */
+.modal__caixa {
+  position: relative;
+}
+
+.modal__alca {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+  /* as duas riscas do canto, desenhadas no proprio fundo */
+  background: linear-gradient(
+    -45deg,
+    transparent 0 3px,
+    var(--text-faint) 3px 4.2px,
+    transparent 4.2px 6.5px,
+    var(--text-faint) 6.5px 7.7px,
+    transparent 7.7px
+  );
+  opacity: 0.55;
+  border-bottom-right-radius: var(--radius-lg);
+  touch-action: none;
+}
+
+.modal__alca:hover {
+  opacity: 1;
+}
+
+/* com tamanho escolhido a mao, o corpo passa a ser quem estica: sem
+   isto a caixa cresceria e o conteudo ficaria boiando no topo */
+.modal__caixa.is-ajustado .modal__corpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* No celular a alca sai de cena. Ela nasceu para o ponteiro: a largura
+   minima do arrasto (360px) e maior que a tela inteira de um telefone,
+   e o cursor de redimensionar nao existe no toque. O pop-up ali ja
+   ocupa a largura toda — nao ha o que ajustar. */
+@media (max-width: 720px) {
+  .modal__alca {
+    display: none;
+  }
+}

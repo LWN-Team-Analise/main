@@ -7,8 +7,6 @@ import { clamp, damp } from '../../lib/math';
 import { createGlobe } from './globeEngine';
 import './GeoGlobe.css';
 
-// Scroll quiet for this long (and the camera settled) counts as idle.
-const IDLE_AFTER_MS = 350;
 // Stiffness of the spring that follows the scroll (rad/s): lower = more glide.
 const FOLLOW = 4.8;
 
@@ -23,8 +21,8 @@ const LABELS = [...offices.map((o) => o.city), ...ROUTE.map((r) => r.name)];
  * offices track, one across the bridge between the two tracks, one through
  * the clients track. The scroll is followed by a critically damped spring —
  * it accelerates and settles smoothly and never overshoots — so the camera
- * glides continuously with the scroll, in both directions. The time since the
- * last scroll feeds the idle turn of the Earth.
+ * glides continuously with the scroll, in both directions. On top of it the
+ * globe keeps its own ambient motion the whole time, scrolling or not.
  *
  * The place names are page text laid over the canvas (crisp at any pixel
  * density), moved every frame to sit beside their markers.
@@ -60,8 +58,6 @@ export default function GeoGlobe({ wrapRef, locationsRef, clientsRef, onStep, cl
     let last = 0;
     let follow = null; // the spring's position (px into the wrapper)
     let velocity = 0;
-    let idle = 0;
-    let lastScroll = 0;
     let stepKey = '';
 
     const frame = (now) => {
@@ -90,16 +86,12 @@ export default function GeoGlobe({ wrapRef, locationsRef, clientsRef, onStep, cl
         }
       }
 
-      const settled = now - lastScroll > IDLE_AFTER_MS && Math.abs(velocity) < 4;
-      const target = reduceMotion ? 0 : settled ? 1 : 0;
-      idle += (target - idle) * damp(target ? 1.2 : 6, dt);
-
       const T =
         clamp(follow / Math.max(1, locationsH - vh)) +
         clamp((follow - (locationsH - vh)) / vh) +
         clamp((follow - locationsH) / Math.max(1, clientsH - vh));
 
-      const info = globe.render({ T, idle, dt, time: now });
+      const info = globe.render({ T, motion: reduceMotion ? 0 : 1, dt, time: now });
       if (!info) return;
       if (import.meta.env.DEV) canvas.lastFrame = { T, ...info };
 
@@ -145,9 +137,6 @@ export default function GeoGlobe({ wrapRef, locationsRef, clientsRef, onStep, cl
       cancelAnimationFrame(raf);
       raf = 0;
     };
-    const onScroll = () => {
-      lastScroll = performance.now();
-    };
 
     const visibility = new IntersectionObserver(([entry]) => (entry.isIntersecting ? start() : stop()), {
       rootMargin: '10% 0px',
@@ -155,13 +144,11 @@ export default function GeoGlobe({ wrapRef, locationsRef, clientsRef, onStep, cl
     visibility.observe(wrap);
     const sizing = new ResizeObserver(() => globe.resize());
     sizing.observe(canvas);
-    window.addEventListener('scroll', onScroll, { passive: true });
 
     return () => {
       stop();
       visibility.disconnect();
       sizing.disconnect();
-      window.removeEventListener('scroll', onScroll);
       globeRef.current = null;
     };
   }, [wrapRef, locationsRef, clientsRef]);

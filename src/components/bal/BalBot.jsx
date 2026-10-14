@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useAnimate, useReducedMotion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -11,7 +11,18 @@ const loadConversation = () => import('./BalConversation');
 const BalConversation = lazy(loadConversation);
 
 const IMAGE = '/assets/mascot/bal.webp';
-const EASE = [0.22, 1, 0.36, 1];
+// BAL's hop when he is clicked: a squash, a jump and a soft landing (opening),
+// or a small nod (closing). Scaled from his feet.
+const HOP = {
+  open: [
+    { y: [0, 3, -14, 0, -4, 0], scaleX: [1, 1.1, 0.94, 1.04, 0.99, 1], scaleY: [1, 0.86, 1.08, 0.95, 1.02, 1] },
+    { duration: 0.75, times: [0, 0.14, 0.4, 0.66, 0.83, 1], ease: ['easeOut', 'easeOut', 'easeIn', 'easeOut', 'easeInOut'] },
+  ],
+  close: [
+    { y: [0, 2, -6, 0], scaleX: [1, 1.05, 0.98, 1], scaleY: [1, 0.92, 1.03, 1] },
+    { duration: 0.5, times: [0, 0.2, 0.55, 1], ease: ['easeOut', 'easeOut', 'easeIn'] },
+  ],
+};
 // What BAL must never sit on top of: anything that can be tapped or clicked.
 const INTERACTIVE = 'a[href], button, input, select, textarea, summary, [role="button"]';
 
@@ -20,8 +31,9 @@ const INTERACTIVE = 'a[href], button, input, select, textarea, summary, [role="b
  * every page. Clicking him opens a small chat-style panel with a few topics;
  * each answer is taken from the site's own content (see balTopics.js).
  *
- * The panel is a non-modal dialog: Escape or the × closes it and returns the
- * focus to BAL; following a link to another part of the site closes it too.
+ * The panel is a non-modal dialog: Escape, its × or BAL himself closes it and
+ * returns the focus to BAL; following a link to another part of the site
+ * closes it too.
  *
  * BAL never covers a link or button: when one is underneath him (a map button
  * in a pinned section, the footer links on a phone…) he tucks himself aside,
@@ -37,6 +49,7 @@ export default function BalBot() {
   const rootRef = useRef(null);
   const launcherRef = useRef(null);
   const panelRef = useRef(null);
+  const [bodyRef, animateBody] = useAnimate();
   const { pathname, hash } = useLocation();
 
   useEffect(() => {
@@ -102,12 +115,24 @@ export default function BalBot() {
     return () => document.removeEventListener('keydown', onKey);
   }, [open, close]);
 
+  const toggle = () => {
+    if (!reduce) animateBody(bodyRef.current, ...HOP[open ? 'close' : 'open']);
+    setOpen((value) => !value);
+  };
+
+  // The panel grows out of BAL on a spring (a touch of overshoot, then it
+  // settles) and folds back into him when it closes.
   const panelMotion = reduce
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
     : {
-        initial: { opacity: 0, scale: 0.9, y: 18 },
-        animate: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.46, ease: EASE } },
-        exit: { opacity: 0, scale: 0.94, y: 12, transition: { duration: 0.22, ease: [0.4, 0, 1, 1] } },
+        initial: { opacity: 0, scale: 0.82, y: 24 },
+        animate: {
+          opacity: 1,
+          scale: 1,
+          y: 0,
+          transition: { type: 'spring', stiffness: 340, damping: 26, mass: 0.9, opacity: { duration: 0.22, ease: 'easeOut' } },
+        },
+        exit: { opacity: 0, scale: 0.88, y: 16, transition: { duration: 0.26, ease: [0.4, 0, 0.6, 1] } },
       };
 
   return (
@@ -122,7 +147,7 @@ export default function BalBot() {
             role="dialog"
             aria-labelledby="bal-title"
             tabIndex={-1}
-            style={{ originX: 1, originY: 1 }}
+            style={{ originX: 0.93, originY: 1 }}
             {...panelMotion}
           >
             <header className="bal-panel__head">
@@ -153,13 +178,12 @@ export default function BalBot() {
         aria-expanded={open}
         aria-controls="bal-panel"
         aria-label={open ? t.bal.close : t.bal.open}
-        onClick={() => setOpen((value) => !value)}
+        onClick={toggle}
         onPointerEnter={loadConversation}
         onFocus={loadConversation}
       >
-        <img className="bal-launcher__figure" src={IMAGE} alt="" width="283" height="440" decoding="async" />
-        <span className="bal-launcher__x" aria-hidden="true">
-          <X size={13} strokeWidth={2.6} />
+        <span ref={bodyRef} className="bal-launcher__body">
+          <img className="bal-launcher__figure" src={IMAGE} alt="" width="283" height="440" decoding="async" />
         </span>
         <span className="bal-launcher__hint" aria-hidden="true">
           {t.bal.hint}

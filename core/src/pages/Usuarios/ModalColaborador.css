@@ -1,0 +1,131 @@
+.formcolab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* foto a esquerda, nome ocupando o resto da linha */
+.formcolab__cabeca {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+}
+
+.formcolab__foto {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  --avatar-anel: var(--modal-bg);
+}
+
+.formcolab__foto:hover .formcolab__trocar {
+  opacity: 1;
+}
+
+.formcolab__trocar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 4px 0;
+  border-radius: 0 0 999px 999px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.formcolab__nome {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formcolab__semfoto {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 0.74rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.formcolab__semfoto:hover {
+  color: var(--accent);
+}
+
+/* "Ajustar enquadramento" e "Remover foto" na mesma linha, embaixo do
+   nome. So o remover fica vermelho no hover: e o unico que tira algo. */
+.formcolab__fotoacoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.formcolab__fotoacoes .formcolab__semfoto:last-child:hover {
+  color: var(--danger);
+}
+
+.formcolab__grade {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+/* a linha de explicacao do cadastro novo: o que e preciso agora e o
+   que a pessoa completa depois */
+.formcolab__dica {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* abre o resto do formulario no cadastro novo — fica com cara de link,
+   e nao de botao, porque e o caminho opcional */
+.formcolab__mais {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.formcolab__mais:hover {
+  color: var(--accent);
+}
+
+@media (max-width: 560px) {
+  .formcolab__grade {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* recado de erro que veio do servidor (CPF/e-mail repetido, por exemplo) */
+.formcolab__erro {
+  margin: 0;
+  padding: 10px 13px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}

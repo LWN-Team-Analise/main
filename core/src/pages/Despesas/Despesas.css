@@ -1,0 +1,1004 @@
+/* ============================================================
+   DESPESAS — a porta de entrada, o formulario e Meus envios
+
+   Cada categoria tem uma cor propria so para se reconhecer de
+   relance (o circulo do icone e o selo do envio). E um tom, nao
+   um codigo: o laranja da refeicao nao quer dizer "atencao".
+   ============================================================ */
+
+[data-categoria='despesa'] {
+  --cat-cor: var(--accent);
+}
+
+[data-categoria='refeicao'] {
+  --cat-cor: var(--pri-media);
+}
+
+[data-categoria='bonus'] {
+  --cat-cor: var(--pri-baixa);
+}
+
+:root[data-theme='dark'] [data-categoria='despesa'] {
+  --cat-cor: var(--grad-a);
+}
+
+/* ---------------- A porta de entrada ---------------- */
+
+/* o respiro de cima e maior que o das outras telas: a entrada de
+   Despesas e curta e centralizada, e colada na barra de busca ela
+   parecia fazer parte do cabecalho */
+.despesas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: clamp(24px, 7vh, 64px) 0 24px;
+}
+
+.despesas__topo {
+  text-align: center;
+}
+
+/* No celular o respiro extra sai: a barra de cima ja e a ultima coisa
+   antes do titulo, e os 50px a mais deixavam "Despesas" solto no meio
+   da tela, longe da busca. Fica o mesmo comeco das outras telas. */
+@media (max-width: 860px) {
+  .despesas {
+    gap: 18px;
+    padding-top: 0;
+  }
+}
+
+.despesas__recado {
+  width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.despesas__recado a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+:root[data-theme='dark'] .despesas__recado a {
+  color: var(--grad-b);
+}
+
+/* Tres botoes numa linha no computador; no celular (ver o @media
+   abaixo) eles viram tres linhas, com o icone ao lado do texto. */
+.despesas__acoes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+
+.despesas__botao {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 24px 16px 22px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-strong);
+  text-align: center;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.despesas__botao:hover {
+  border-color: color-mix(in srgb, var(--cat-cor) 45%, transparent);
+  box-shadow: 0 14px 26px -18px rgba(0, 0, 0, 0.55);
+  transform: translateY(-2px);
+}
+
+.despesas__botao:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.despesas__botao:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.despesas__botao strong {
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.despesas__icone {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--cat-cor) 14%, transparent);
+  color: var(--cat-cor);
+}
+
+.despesas__descricao {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+/* "Meus envios" e, para quem revisa, "Envios gerais" ao lado */
+.despesas__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.despesas__envios {
+  justify-content: center;
+  min-width: 190px;
+  padding: 11px 22px;
+  font-size: 0.88rem;
+}
+
+/* No celular os tres lado a lado ficavam com ~90px cada, sem espaco
+   para a descricao. Empilhados, cada um ocupa a largura toda: icone a
+   esquerda, nome e descricao a direita — e o dedo acerta facil. */
+@media (max-width: 640px) {
+  .despesas__acoes {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .despesas__botao {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 14px;
+    row-gap: 2px;
+    padding: 14px 16px;
+    text-align: left;
+  }
+
+  .despesas__icone {
+    grid-row: 1 / span 2;
+    width: 46px;
+    height: 46px;
+  }
+
+  .despesas__botao strong {
+    align-self: end;
+  }
+
+  .despesas__descricao {
+    align-self: start;
+  }
+
+  .despesas__links {
+    width: 100%;
+  }
+
+  .despesas__envios {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+}
+
+/* ---------------- O formulario ---------------- */
+
+.formdesp {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+/* cliente e obra dividem a linha; no celular, um embaixo do outro */
+.formdesp__par {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  gap: 16px 10px;
+}
+
+.formdesp__aviso {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px dashed var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.formdesp__erro,
+.envios__erro {
+  margin: 0;
+  padding: 10px 13px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* ---------------- Meus envios ---------------- */
+
+.envios {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  /* o mesmo respiro da entrada de Despesas, um pouco menor: aqui o
+     conteudo e longo e comeca logo pelos filtros */
+  padding-top: clamp(12px, 3vh, 32px);
+}
+
+.envios__voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.envios__voltar:hover {
+  color: var(--text-strong);
+}
+
+/* titulo a esquerda, "Exportar para o Excel" a direita; no celular o
+   botao desce para baixo do texto */
+.envios__titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+
+.envios__titulo > div {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.envios__filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.envios__visao {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.envios__periodo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.envios__passo {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--control-border);
+  border-radius: 50%;
+  background: var(--control-bg);
+  color: var(--text-base);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.envios__passo:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.envios__passo:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Todos / Despesa / Refeicao / Bonus. A pastilha ligada pega a cor da
+   categoria — a mesma do selo de cada envio. */
+.envios__tipos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.envios__tipos .chip[data-categoria] {
+  --tom: var(--cat-cor);
+  --tom-fg: #fff;
+}
+
+/* "Exportar para o Excel" fecha a linha de filtros: e a ultima coisa
+   que se faz depois de escolher o recorte */
+.envios__exportar:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.envios__contagem {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+.envios__vazio {
+  margin: 0;
+  padding: 42px 20px;
+  border: 1px dashed var(--control-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--text-faint);
+}
+
+.envios__conteudo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.envios__conteudo.is-carregando {
+  opacity: 0.55;
+}
+
+/* o total do periodo na frente, e as tres categorias ao lado */
+.envios__resumo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.envios__total,
+.envios__cat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.envios__total span,
+.envios__catnome {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.envios__total strong {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.envios__cat strong {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.envios__total em,
+.envios__cat em {
+  font-size: 0.72rem;
+  font-style: normal;
+  color: var(--text-faint);
+}
+
+.envios__cat,
+.envios__total[data-categoria] {
+  border-top: 3px solid var(--cat-cor);
+}
+
+/* com um tipo escolhido, sobra so o total: ele ocupa a linha */
+.envios__resumo--so-total {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.envios__caticone {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .envios__resumo {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .envios__total {
+    grid-column: 1 / -1;
+  }
+
+  .envios__cat {
+    padding: 10px 11px;
+  }
+
+  .envios__cat strong {
+    font-size: 0.88rem;
+  }
+
+  .envios__tipos {
+    margin-left: 0;
+  }
+}
+
+.envios__subtitulo {
+  margin: 0 0 8px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ---- por pessoa ---- */
+
+.envios__porpessoa ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.envios__porpessoa li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.envios__pnome {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.envios__porpessoa em {
+  font-size: 0.72rem;
+  font-style: normal;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.envios__porpessoa strong {
+  font-size: 0.86rem;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---- dias ---- */
+
+.envios__dias {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.envios__dia {
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.envios__diatopo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--control-bg);
+}
+
+.envios__diatopo h2 {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.envios__diatopo h2 span {
+  margin-left: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.envios__diatopo strong {
+  font-size: 0.92rem;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.envios__lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.envio {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.envio + .envio {
+  border-top: 1px solid var(--line);
+}
+
+.envio__avatar {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.envio__corpo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.envio__pessoa {
+  font-size: 0.86rem;
+  color: var(--text-strong);
+}
+
+.envio__titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.envio__selo {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--cat-cor) 16%, transparent);
+  color: var(--cat-cor);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.envio__obra {
+  font-size: 0.8rem;
+  color: var(--text-base);
+}
+
+.envio__obra em {
+  font-style: normal;
+  color: var(--text-faint);
+}
+
+.envio__obra.is-removida {
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+.envio__texto {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.envio__texto b {
+  font-weight: 600;
+  color: var(--text-base);
+}
+
+.envio__meta {
+  font-size: 0.7rem;
+  color: var(--text-faint);
+}
+
+.envio__lado {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: 45%;
+}
+
+.envio__valor {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.envio__anexo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 5px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-base);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.envio__anexo span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.envio__anexo svg {
+  flex-shrink: 0;
+}
+
+.envio__anexo:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+/* Excluir: discreto ate a pessoa chegar nele. Vermelho cheio em todo
+   envio da lista transformaria a tela num campo minado — o tom de
+   perigo so acende no hover, e a confirmacao vem depois do clique. */
+.envio__excluir {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.envio__excluir svg {
+  flex-shrink: 0;
+}
+
+.envio__excluir:hover,
+.envio__excluir:focus-visible {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+}
+
+@media (max-width: 520px) {
+  .envio {
+    flex-wrap: wrap;
+    padding: 12px 13px;
+  }
+
+  .envio__corpo {
+    flex-basis: calc(100% - 46px);
+  }
+
+  .envio__lado {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* ---- ano ---- */
+
+.envios__meses {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.envios__meses > li {
+  display: flex;
+}
+
+.envios__mes {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 13px 16px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-strong);
+  text-align: left;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.envios__mes:hover {
+  box-shadow: 0 14px 26px -18px rgba(0, 0, 0, 0.55);
+  transform: translateY(-2px);
+}
+
+.envios__mes:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.envios__mes.is-vazio {
+  opacity: 0.6;
+}
+
+.envios__mesnome {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.envios__mesdetalhe {
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.envios__mestotal {
+  margin-top: 2px;
+  font-size: 0.84rem;
+  color: var(--text-base);
+}
+
+.envios__mestotal strong {
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- envios gerais: quem ja enviou ---- */
+
+.gerais {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gerais > li {
+  display: flex;
+}
+
+.gerais > li.envios__vazio {
+  grid-column: 1 / -1;
+}
+
+.gerais__pessoa {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 13px 15px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-strong);
+  transition: transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.gerais__pessoa:hover {
+  box-shadow: 0 14px 26px -18px rgba(0, 0, 0, 0.55);
+  transform: translateY(-2px);
+}
+
+.gerais__pessoa:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.gerais__pessoa--todos {
+  border-style: dashed;
+}
+
+.gerais__todosicone {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+:root[data-theme='dark'] .gerais__todosicone {
+  color: var(--grad-b);
+}
+
+.gerais__quem {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gerais__quem strong {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  font-size: 0.92rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gerais__quem > span {
+  overflow: hidden;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gerais__setor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gerais__setor i {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--setor-cor);
+}
+
+.gerais__email {
+  color: var(--text-faint) !important;
+}
+
+.gerais__inativo {
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  color: var(--text-muted);
+  font-size: 0.64rem;
+  font-style: normal;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.gerais__numeros {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  font-size: 0.7rem;
+  color: var(--text-faint);
+}
+
+.gerais__numeros strong {
+  font-size: 0.92rem;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.gerais__cabeca {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.gerais__cabeca > div {
+  min-width: 0;
+}
+
+/* setor · cargo · e-mail: e-mail comprido quebra em vez de vazar */
+.gerais__cabeca .tela__lead {
+  overflow-wrap: anywhere;
+}
+
+/* Celular: o valor e as contagens descem para uma linha propria,
+   embaixo do nome. Na mesma linha, o nome ficava com ~100px e cortado. */
+@media (max-width: 480px) {
+  .gerais__pessoa {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .gerais__quem {
+    flex: 1 1 calc(100% - 56px);
+  }
+
+  .gerais__numeros {
+    flex: 1 1 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+    padding: 8px 0 0 56px;
+    border-top: 1px solid var(--line);
+  }
+
+  .gerais__numeros strong {
+    margin-right: auto;
+  }
+}
+
+/* ---- o total, no fim ---- */
+
+.envios__rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 18px;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: #fff;
+}
+
+.envios__rodape span {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.envios__rodape strong {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

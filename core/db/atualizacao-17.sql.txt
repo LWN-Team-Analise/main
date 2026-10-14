@@ -1,0 +1,75 @@
+-- ============================================================
+--  ATUALIZACAO 17 — CLASSIFICACAO DOS ENSAIOS E O CHECK DE GASES
+--
+--  1. CLASSIFICACAO DO ENSAIO (ensaio.classificacao)
+--     Todo ensaio novo nasce HVAC ou GASES — so essas duas. Os que
+--     ja existiam ficam sem classificacao ate alguem escolher, no
+--     "Gerenciar ensaios".
+--
+--  2. O CHECK "MATERIAL DE GASES" (etapa_check.tipo = 'material_gases')
+--     O check da Qualidade (GQ) na 2a etapa cujo nome fala de gases
+--     ("Material de gases", "Mat. Gases") vira check do SISTEMA: ele
+--     so e OBRIGATORIO na obra que tem algum ensaio de GASES
+--     planejado; nas outras e opcional (nao segura a etapa nem a
+--     conclusao da obra). Como os outros checks do sistema, nao se
+--     exclui, nao muda de nome e nao vira pergunta.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao apaga nada.
+-- ============================================================
+
+BEGIN;
+
+-- 1. a classificacao do ensaio
+ALTER TABLE public.ensaio ADD COLUMN IF NOT EXISTS classificacao text;
+
+ALTER TABLE public.ensaio DROP CONSTRAINT IF EXISTS ensaio_classificacao_valida;
+ALTER TABLE public.ensaio ADD CONSTRAINT ensaio_classificacao_valida
+    CHECK (classificacao IS NULL OR classificacao IN ('hvac', 'gases'));
+
+COMMENT ON COLUMN public.ensaio.classificacao IS
+    'hvac ou gases. Obra com ensaio de gases torna obrigatorio o check material_gases.';
+
+-- 2. o check de gases vira do sistema
+ALTER TABLE public.etapa_check DROP CONSTRAINT IF EXISTS etapa_check_tipo_valido;
+ALTER TABLE public.etapa_check ADD CONSTRAINT etapa_check_tipo_valido
+    -- 'prazo_execucao' veio na atualizacao 19; ja vai aqui porque o
+    -- db:atualizar roda esta de novo depois dela
+    CHECK (tipo IN ('comum', 'planejamento_ensaios', 'execucao_ensaios', 'material_gases', 'prazo_execucao'));
+
+COMMENT ON COLUMN public.etapa_check.tipo IS
+    'comum, planejamento_ensaios, execucao_ensaios ou material_gases. Os tres ultimos sao do sistema: nao se excluem.';
+
+UPDATE public.etapa_check
+   SET tipo = 'material_gases'
+ WHERE id = (SELECT ck.id
+               FROM public.etapa_check ck
+               JOIN public.etapa_card kd ON kd.id = ck.card_id AND kd.vigente_ate IS NULL
+               JOIN (SELECT id, row_number() OVER (ORDER BY ordem, id) AS posicao
+                       FROM public.etapa
+                      WHERE fixa AND vigente_ate IS NULL) et ON et.id = kd.etapa_id AND et.posicao = 2
+              WHERE ck.tipo = 'comum'
+                AND ck.vigente_ate IS NULL
+                AND ck.titulo ILIKE '%gases%'
+                AND EXISTS (SELECT 1 FROM public.etapa_card_cargo cc
+                              JOIN public.cargo c ON c.id = cc.cargo_id
+                             WHERE cc.card_id = kd.id AND c.chave = 'gq')
+              ORDER BY ck.ordem, ck.id
+              LIMIT 1)
+   AND NOT EXISTS (SELECT 1 FROM public.etapa_check
+                    WHERE tipo = 'material_gases' AND vigente_ate IS NULL);
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'ensaio.classificacao' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'ensaio' AND column_name = 'classificacao') AS ok
+UNION ALL
+SELECT 'check material_gases', EXISTS (SELECT 1 FROM public.etapa_check
+                                        WHERE tipo = 'material_gases' AND vigente_ate IS NULL);

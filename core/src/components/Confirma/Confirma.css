@@ -1,0 +1,154 @@
+.confirma {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.confirma__texto {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-base);
+}
+
+.confirma__aviso {
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--danger);
+}
+
+.confirma__acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding-top: 6px;
+}
+
+/* ---- Conferência do que vai ser feito ----
+   Um bloco neutro: aqui nao ha alerta, so o resumo da acao. */
+.confirma__detalhes {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-base);
+}
+
+.confirma__detalhes dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+}
+
+.confirma__detalhes dt {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.confirma__detalhes dd {
+  margin: 0;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.confirma__detalhes ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.confirma__detalhes li {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.confirma__ok {
+  padding: 10px 20px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+/* apagar e vermelho; criar/sair sai na cor do sistema — pintar de
+   vermelho um "Criar obra" faz a pessoa hesitar sem motivo */
+.confirma__ok--perigo {
+  background: var(--danger);
+}
+
+:root[data-theme='dark'] .confirma__ok--perigo {
+  color: #2a0906;
+}
+
+.confirma__ok--acao {
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  box-shadow: var(--btn-shadow);
+}
+
+.confirma__ok:hover {
+  filter: brightness(1.08);
+}
+
+.confirma__ok:active {
+  transform: scale(0.98);
+}
+
+/* ---- O segundo passo ----
+
+   Só aparece quando a confirmação pede ciência. É para o que não tem
+   desfazer: um clique só, num botão que já estava debaixo do cursor,
+   não é decisão suficiente para apagar o registro de uma obra. */
+
+.confirma__ciencia {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-base);
+  cursor: pointer;
+}
+
+.confirma__ciencia input {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  accent-color: var(--danger);
+  cursor: pointer;
+}
+
+/* o botão desligado enquanto a caixinha não é marcada: é ele que
+   mostra que ainda falta um passo */
+.confirma__ok:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

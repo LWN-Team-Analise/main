@@ -1,0 +1,166 @@
+/* ============================================================
+   Icones do tempo
+
+   As cores moram aqui, e nao no JSX, porque elas mudam com o tema: a
+   nuvem cinza-clara do modo claro some no fundo preto do escuro.
+   ============================================================ */
+
+:root {
+  --clima-sol: #f2a33c;
+  --clima-sol-claro: #ffd27a;
+  --clima-lua: #b9c6de;
+  --clima-lua-claro: #f2f5fb;
+  --clima-nuvem: #b6c2d4;
+  --clima-nuvem-alta: #d7deea;
+  --clima-agua: #4b93d8;
+  --clima-neve: #cfe4f5;
+  --clima-raio: #f0b429;
+}
+
+:root[data-theme='dark'] {
+  --clima-sol: #f5b34a;
+  --clima-sol-claro: #ffd98a;
+  --clima-lua: #97a6c2;
+  --clima-lua-claro: #dbe4f2;
+  --clima-nuvem: #7f8da4;
+  --clima-nuvem-alta: #9aa7bd;
+  --clima-agua: #5fa8ea;
+  --clima-neve: #dcecf9;
+  --clima-raio: #ffc93c;
+}
+
+.clima__icone {
+  display: block;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+/* ---- o que se mexe ----
+
+   Devagar de propósito: é enfeite de canto de tela, não animação de
+   carregamento. O sol dá uma volta em 24s; a chuva escorre em 1,4s,
+   que é o ritmo de gota caindo. */
+
+.clima__raios {
+  transform-origin: 32px 32px;
+  animation: clima-gira 24s linear infinite;
+}
+
+@keyframes clima-gira {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* a duração e o atraso vêm do JSX (ver `ritmo`, em IconeClima.jsx):
+   é lá que eles são distribuídos pelo ciclo para que haja sempre
+   alguma gota no ar */
+.clima__gotas line,
+.clima__gotas circle {
+  animation: clima-cai 1.4s var(--ease-out) infinite;
+}
+
+/* Visível em 85% do ciclo. A versão antiga aparecia e sumia num terço
+   dele, e as três gotas juntas deixavam o ícone de garoa idêntico ao
+   de "encoberto" por meio segundo a cada volta. */
+@keyframes clima-cai {
+  0% {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  15%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.clima__raio {
+  animation: clima-pisca 2.6s var(--ease-out) infinite;
+}
+
+@keyframes clima-pisca {
+  0%, 62%, 100% { opacity: 1; }
+  68% { opacity: 0.25; }
+  74% { opacity: 1; }
+  80% { opacity: 0.4; }
+}
+
+.clima__neblina line {
+  animation: clima-desliza 4s var(--ease-out) infinite alternate;
+}
+
+.clima__neblina line:nth-child(2) { animation-delay: 0.5s; }
+.clima__neblina line:nth-child(3) { animation-delay: 1s; }
+
+@keyframes clima-desliza {
+  from { transform: translateX(-2.5px); }
+  to { transform: translateX(2.5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clima__raios,
+  .clima__gotas line,
+  .clima__gotas circle,
+  .clima__raio,
+  .clima__neblina line {
+    animation: none;
+  }
+}
+
+/* ============================================================
+   A temperatura, por cima do canto do desenho
+
+   SEM moldura: nada de pastilha, borda ou sombra. O que aparece na
+   faixa e o DESENHO do tempo — ele responde "como esta la fora" de
+   relance —, e os numeros sao texto solto sobreposto ao canto
+   superior direito dele, para quem parou para olhar.
+
+   Uma pastilha ali fazia o conjunto parecer um botao, e botao pede
+   para ser clicado. Aqui nao ha o que clicar.
+   ============================================================ */
+
+.clima {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  /* a folga a direita e em cima e o espaco por onde o texto vaza */
+  padding: 4px 18px 0 0;
+}
+
+.clima__selo {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  margin: 0;
+  line-height: 1.05;
+  white-space: nowrap;
+  /* e informacao, nao alvo: nao rouba o clique de nada atras dele */
+  pointer-events: none;
+}
+
+.clima__agora {
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+}
+
+/* máxima e mínima na mesma linha, coladas: são o contexto do número
+   de cima, não dois números novos */
+.clima__faixa {
+  display: flex;
+  gap: 5px;
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+.clima__max { color: var(--pri-alta); }
+.clima__min { color: var(--clima-agua); }

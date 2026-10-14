@@ -1,0 +1,7 @@
+# What `vercel deploy` (the CLI) must never upload. The CLI does not read
+# .gitignore, so the local secrets file went up with a deploy once.
+.env
+.env.local
+.env.*.local
+node_modules
+dist

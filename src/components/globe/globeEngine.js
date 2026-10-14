@@ -9,8 +9,9 @@
 // travels on a gently curved track with a slight bank, and descends as it
 // arrives, easing in and out. Every highlight, marker, label and route line
 // fades or draws continuously with T, so scrolling back plays the journey in
-// reverse, and stopping mid-scroll holds the camera mid-flight. While the page
-// is idle the Earth keeps turning slowly (see `render`).
+// reverse. The globe is never still, scrolling or not: at the world view the
+// Earth keeps turning, and closer in the camera drifts gently to and fro
+// around the place it is on (see `render`).
 //
 // Geometry: unit sphere, v(lat, lon) = (cos lat · sin lon, sin lat, cos lat · cos lon).
 // The camera looks at a focus point; the view rotation is Rx(lat₀) · Ry(−lon₀),
@@ -413,11 +414,12 @@ const LABEL_SIZE = 14;
 
 const markerRadius = (pop, focus, k) => (3.6 + 2.2 * focus) * k * (0.5 + 0.5 * pop);
 
-// ---------- Idle motion ----------
+// ---------- Ambient motion ----------
 
 // The Earth turns west → east, so the point under the camera drifts westward.
-const SPIN_RATE = 2.5 * DEG; // per second, at the world view
-const SWAY_REACH = 0.045; // radians at zoom 1; shrinks as the camera closes in
+const SPIN_RATE = 8 * DEG; // per second, at the world view (one turn in 45 s)
+const SWAY_REACH = 0.07; // radians at zoom 1; shrinks as the camera closes in
+const SWAY_PERIOD = 14; // seconds for one to-and-fro of the close-up drift
 
 // ---------- Engine ----------
 
@@ -571,6 +573,8 @@ export function createGlobe(canvas, { radius = 0.44, centerY = 0.5 } = {}) {
   let dpr = 1;
   let spin = 0;
   let sway = 0;
+  let swayPhase = 0;
+  let openLon = null; // the opening view's longitude as last drawn (degrees, unwrapped)
 
   // Per-frame buffers, reused: dot batches (tone × depth × level × covered) and
   // accent overlays for the highlighted regions (one list per region).
@@ -596,12 +600,16 @@ export function createGlobe(canvas, { radius = 0.44, centerY = 0.5 } = {}) {
   /** Where the camera is at T: the dive into São Paulo, then rests and flights. */
   function camera(T) {
     if (T <= sp.leave) {
-      // The opening view turns with the idle spin; its longitude is taken on the
-      // side facing Brazil so the flight in is always the short way round.
+      // The opening view turns with the Earth. At the pure world view its
+      // longitude is taken on the side facing Brazil, so the flight in is always
+      // the short way round; once the dive has begun it only stays continuous
+      // with the last frame, so the turning Earth never makes the camera jump.
       const [olat, olon] = latLon(turn(OPENING, -spin));
+      const near = T <= 0 || openLon === null ? keys[1].lon : openLon;
       let lon = olon;
-      while (lon - keys[1].lon > 180) lon -= 360;
-      while (lon - keys[1].lon < -180) lon += 360;
+      while (lon - near > 180) lon -= 360;
+      while (lon - near < -180) lon += 360;
+      openLon = lon;
       keys[0].lat = olat;
       keys[0].lon = lon;
       const lat = hermite(kt, keys.map((k) => k.lat), monotoneTangents(kt, keys.map((k) => k.lat)), T);
@@ -647,22 +655,26 @@ export function createGlobe(canvas, { radius = 0.44, centerY = 0.5 } = {}) {
 
   /**
    * Draws one frame.
-   * @param {{ T: number, idle?: number, dt?: number, time?: number }} input  the journey
-   *   position (0..3), how idle the page is (0..1) and the frame time — idle drives
-   *   the slow turn of the Earth.
+   * @param {{ T: number, motion?: number, dt?: number, time?: number }} input
+   *   the journey position (0..3), how much ambient motion there is (0..1, 0
+   *   with reduced motion) and the frame time.
    */
-  function render({ T, idle = 0, dt = 0, time = 0 }) {
+  function render({ T, motion = 1, dt = 0, time = 0 }) {
     if (!width || !height) resize();
     if (!width || !height) return null;
 
-    // Idle motion. At the world view the Earth turns freely; closer in it only
-    // drifts a little and settles, and scrolling eases it gently back.
+    // Ambient motion, the same whether the page is scrolling or not. At the
+    // world view the Earth turns steadily until the dive into Brazil takes
+    // over; closer in, the camera drifts slowly to and fro around the place it
+    // is on (two unhurried waves, so it never feels mechanical), less the
+    // closer it gets, so the place always stays in view.
     const spinWeight = 1 - smoothstep(range(T, 0, 0.12));
-    spin = (spin + SPIN_RATE * idle * spinWeight * dt) % (Math.PI * 2);
+    spin = (spin + SPIN_RATE * motion * spinWeight * dt) % (Math.PI * 2);
+    swayPhase = (swayPhase + ((Math.PI * 2) / SWAY_PERIOD) * dt) % (Math.PI * 200);
     const cam = camera(T);
     const zoom = cam.zoom;
-    const reach = (SWAY_REACH / Math.pow(zoom, 0.85)) * (1 - spinWeight) * idle;
-    sway += (reach - sway) * (1 - Math.exp(-dt / (0.8 + 6.2 * idle)));
+    const reach = (SWAY_REACH / Math.pow(zoom, 0.85)) * (1 - spinWeight) * motion;
+    sway = reach * (0.72 * Math.sin(swayPhase) + 0.28 * Math.sin(2.3 * swayPhase + 1.1));
     const [fx, fy, fz] = turn(cam.focus, -sway);
 
     const lat0 = Math.asin(clamp(fy, -1, 1));
@@ -1069,7 +1081,7 @@ export function createGlobe(canvas, { radius = 0.44, centerY = 0.5 } = {}) {
     render,
     resize,
     setScheme,
-    /** Idle-motion state, for inspection: the world turn and the close-up drift (radians). */
+    /** Ambient-motion state, for inspection: the world turn and the close-up drift (radians). */
     get motion() {
       return { spin, sway };
     },

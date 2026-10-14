@@ -1,0 +1,53 @@
+-- ============================================================
+--  ATUALIZACAO 11 — DUAS PERMISSOES NOVAS
+--
+--    ver_dashboard     a aba Dashboard da pagina inicial (e a
+--                      exportacao para o Power BI). Fica embaixo de
+--                      "Pagina inicial" na tela de Setores.
+--    excluir_despesas  excluir um lancamento de despesa, refeicao ou
+--                      bonus. Fica embaixo de "Visualizar despesas".
+--
+--  Nenhuma tabela nova: as permissoes moram na lista
+--  cargo.permissoes, e a API passa a conferir as duas chaves.
+--
+--  O Dashboard deixa de ser de todo mundo, DE PROPOSITO: setor que
+--  ja existe NAO ganha nenhuma das duas. Quem administra marca, na
+--  tela de Setores, quem ve o Dashboard e quem exclui despesa.
+--
+--  A unica concessao e para o setor com acesso total (diretoria):
+--  ele ja passa por qualquer permissao sem estar na lista, e as
+--  chaves entram la so para a tela de Setores mostrar as caixas
+--  marcadas — o mesmo que foi feito com `revisar_despesa_geral`.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao apaga nada.
+-- ============================================================
+
+BEGIN;
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['ver_dashboard']
+ WHERE acesso_total
+   AND NOT ('ver_dashboard' = ANY (permissoes));
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['excluir_despesas']
+ WHERE acesso_total
+   AND NOT ('excluir_despesas' = ANY (permissoes));
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" nas duas linhas (ou nenhum
+--  setor com acesso total, e ai nao ha o que conferir)
+-- ============================================================
+
+SELECT 'ver_dashboard no acesso total' AS item,
+       NOT EXISTS (SELECT 1 FROM public.cargo
+                    WHERE acesso_total AND NOT ('ver_dashboard' = ANY (permissoes))) AS ok
+UNION ALL
+SELECT 'excluir_despesas no acesso total',
+       NOT EXISTS (SELECT 1 FROM public.cargo
+                    WHERE acesso_total AND NOT ('excluir_despesas' = ANY (permissoes)));

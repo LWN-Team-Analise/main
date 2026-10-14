@@ -1,0 +1,299 @@
+/* ============================================================
+   Data e hora (CampoData.jsx) — o botao fechado e o painel.
+   O botao copia o Seletor, para os campos da mesma linha
+   parecerem a mesma familia.
+   ============================================================ */
+
+.datahora__botao {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 13px 9px 15px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.datahora__botao:hover {
+  background: var(--control-bg-hover);
+}
+
+.datahora__botao.is-aberto,
+.datahora__botao:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.datahora__botao.is-vazio .datahora__valor {
+  color: var(--text-faint);
+}
+
+.has-erro .datahora__botao {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+.datahora__valor {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.datahora__icone {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  color: var(--text-muted);
+}
+
+/* ---------------- O painel ---------------- */
+
+.datahora__painel {
+  position: fixed;
+  z-index: 130;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--vidro-borda);
+  border-radius: var(--radius-md);
+  background: var(--vidro-menu);
+  box-shadow: var(--glass-shadow), var(--vidro-realce);
+  backdrop-filter: blur(calc(var(--glass-blur) * 1.5)) saturate(175%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.5)) saturate(175%);
+  user-select: none;
+  -webkit-user-select: none;
+  animation: datahora-abre var(--dur-fast) var(--ease-out);
+}
+
+/* pop-up nao leva vidro: aberto de dentro de um, o painel fica solido */
+.datahora__painel.is-solido {
+  background: var(--modal-bg);
+  border-color: var(--modal-borda);
+  box-shadow: var(--modal-sombra);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+@keyframes datahora-abre {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.datahora__topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.datahora__topo strong {
+  flex: 1;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.datahora__seta {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-base);
+  cursor: pointer;
+}
+
+.datahora__seta:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+.datahora__seta:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.datahora__semana,
+.datahora__grade {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.datahora__semana span {
+  padding: 2px 0;
+  text-align: center;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.datahora__dia {
+  position: relative;
+  height: 36px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-base);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.datahora__dia:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+.datahora__dia:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.datahora__dia:disabled {
+  opacity: 0.25;
+  font-weight: 400;
+  cursor: not-allowed;
+}
+
+/* hoje: o pontinho embaixo do numero */
+.datahora__dia[data-hoje]::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.datahora__dia[aria-pressed='true'],
+.datahora__dia[aria-pressed='true']:hover {
+  background: var(--control-on-bg);
+  color: var(--control-on-fg);
+}
+
+.datahora__dia[aria-pressed='true'][data-hoje]::after {
+  background: var(--control-on-fg);
+}
+
+.datahora__rodape {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.datahora__atalho {
+  padding: 6px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.datahora__atalho:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+.datahora__atalho:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.datahora__atalho.is-fraco {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+/* ---------------- Hora: duas colunas ---------------- */
+
+.datahora__colunas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: 4px;
+}
+
+.datahora__coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.datahora__titulo {
+  text-align: center;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.datahora__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 200px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.datahora__item {
+  flex-shrink: 0;
+  height: 34px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-base);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.datahora__item:hover {
+  background: var(--control-bg-hover);
+}
+
+.datahora__item[aria-pressed='true'] {
+  background: var(--control-on-bg);
+  color: var(--control-on-fg);
+}
+
+.datahora__dois {
+  padding-top: 100px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}

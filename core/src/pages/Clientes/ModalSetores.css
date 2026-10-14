@@ -1,0 +1,174 @@
+/* ============================================================
+   Setores do cliente
+
+   Mesma forma da tela de Cargos: uma linha de etiquetas que
+   quebra quando chega no fim do pop-up.
+   ============================================================ */
+
+.setores {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.setores__linha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.setores__etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  /* fundo translucido da cor do setor: a letra segue a cor do tema e se le
+     no claro e no escuro, sem duas amostras lado a lado */
+  border: 1px solid color-mix(in srgb, var(--setor-cor) 55%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--setor-cor) 18%, transparent);
+  color: var(--text-strong);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.setores__etiqueta:hover {
+  background: color-mix(in srgb, var(--setor-cor) 30%, transparent);
+}
+
+.setores__etiqueta:active {
+  transform: scale(0.97);
+}
+
+/* a previa nao e botao: nao reage ao ponteiro */
+.setores__etiqueta.is-previa {
+  cursor: default;
+  pointer-events: none;
+}
+
+.setores__quantos {
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--setor-cor) 40%, transparent);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.setores__novo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border: 1px dashed var(--control-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.setores__novo:hover {
+  color: var(--text-strong);
+  border-color: var(--line-strong);
+}
+
+.setores__nota {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+/* ---------------- Formulário ---------------- */
+
+.setores__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.setores__campo {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.setores__campo span {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.setores__campo input {
+  padding: 11px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font-size: 0.9rem;
+}
+
+.setores__campo input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.setores__paleta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.setores__cor {
+  width: 26px;
+  height: 26px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.setores__cor:hover {
+  transform: scale(1.12);
+}
+
+.setores__cor.is-atual {
+  border-color: var(--text-strong);
+}
+
+.setores__previa {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.setores__previanome {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.setores__erro {
+  margin: 0;
+  padding: 9px 13px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.8rem;
+}

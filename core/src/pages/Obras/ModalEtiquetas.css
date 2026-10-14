@@ -1,0 +1,337 @@
+/* ============================================================
+   Etiquetas da obra
+
+   A ordem e sempre a mesma: o botao de adicionar em primeiro, as
+   etiquetas embaixo dele, e o lapis de cada uma na direita.
+   ============================================================ */
+
+.etiq {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.etiq__novo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 16px;
+  border: 1px dashed var(--control-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.etiq__novo:hover {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--control-bg);
+  color: var(--text-strong);
+}
+
+.etiq__vazio {
+  margin: 0;
+  padding: 14px 4px;
+  font-size: 0.8rem;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+.etiq__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.etiq__lista li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.etiq__selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 0.82rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.etiq__editar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--control-border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.etiq__editar:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+/* ---------------- formulario ---------------- */
+
+.etiq__form {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.etiq__campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.etiq__campo span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.etiq__campo input {
+  padding: 10px 13px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font-size: 0.88rem;
+}
+
+.etiq__campo input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.etiq__cores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.etiq__cor {
+  width: 28px;
+  height: 28px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.etiq__cor:hover {
+  transform: scale(1.1);
+}
+
+.etiq__cor.is-atual {
+  border-color: var(--text-strong);
+  box-shadow: 0 0 0 2px var(--modal-bg) inset;
+}
+
+.etiq__previa {
+  display: flex;
+  margin: 0;
+}
+
+.etiq__erro {
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.78rem;
+}
+
+/* ---------------- reaproveitar ---------------- */
+
+.etiq__jaexistem {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding-top: 13px;
+  border-top: 1px solid var(--line);
+}
+
+.etiq__titulo {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.etiq__sugestoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* a sugestao usa a cor da etiqueta so no contorno: ela ainda nao e
+   desta obra, entao nao pode competir com as que ja sao */
+.etiq__selo--fraco {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border: 1px solid var(--cor);
+  background: transparent;
+  color: var(--cor);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.etiq__selo--fraco:hover {
+  background: color-mix(in srgb, var(--cor) 16%, transparent);
+}
+
+/* ============================================================
+   Etiquetas do CARD
+
+   Mesmo desenho do modal de obra, classes próprias (`etiqc__`): as
+   duas telas dividem o visual, e nada mais — os catálogos são
+   separados no banco, e misturar as classes acabaria misturando os
+   dois na primeira mudança de estilo.
+   ============================================================ */
+
+.etiqc__campo {
+  width: 100%;
+  padding: 9px 13px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.etiqc__campo:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.etiqc__acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.etiqc__lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.etiqc__lista li {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.etiqc__pastilha {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.etiqc__pastilha--botao {
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  transition: filter var(--dur-fast) var(--ease-out);
+}
+
+.etiqc__pastilha--botao:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.etiqc__tirar {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.etiqc__tirar:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+/* a lista de reaproveitar, separada por um risco: o que está em cima
+   é deste card, o que está aqui é do catálogo */
+.etiqc__reusar {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.etiqc__reusartopo {
+  margin: 0 0 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.etiqc__reusarlista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+/* ---- O bloco dentro do "Editar card" ----
+
+   Ele nao e mais uma caixa propria: mora no formulario do card,
+   separado do resto por um risco. */
+
+.etiqc {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}

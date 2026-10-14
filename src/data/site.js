@@ -19,6 +19,9 @@ export const credit = { label: '@oluuiss', href: 'https://oluuiss.com/' };
 // The privacy policy page (the same page in both languages; /privacy-policy also leads there).
 export const privacyPath = '/politica-de-privacidade';
 
+// Atmosfera LWN, the employees' management platform: a separate app served under this path (core/).
+export const corePath = '/core/';
+
 // `section` links scroll to a block of the home page; `route` links open a page.
 export const navLinks = [
   { id: 'inicio', label: 'Início', section: 'inicio' },

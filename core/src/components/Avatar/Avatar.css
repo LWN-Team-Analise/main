@@ -1,0 +1,44 @@
+.avatarfig {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--control-bg);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  box-shadow: 0 0 0 1.5px var(--avatar-anel, var(--surface));
+  user-select: none;
+}
+
+.avatarfig--quadrado {
+  border-radius: 30%;
+}
+
+.avatarfig img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pilha {
+  display: inline-flex;
+  align-items: center;
+}
+
+.pilha > * + * {
+  margin-left: -8px;
+}
+
+.pilha__resto {
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--control-bg-hover);
+  color: var(--text-base);
+  font-size: 0.62rem;
+  font-weight: 600;
+  box-shadow: 0 0 0 1.5px var(--avatar-anel, var(--surface));
+}

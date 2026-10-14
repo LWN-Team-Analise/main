@@ -1,0 +1,274 @@
+/* ============================================================
+   Rastreabilidade da obra fechada
+
+   Uma linha do tempo so, com um fio vertical ligando os
+   acontecimentos. A cor da bolinha diz de onde cada um veio.
+   ============================================================ */
+
+.rastro {
+  margin-top: 18px;
+  padding: 18px 20px 20px;
+  border-radius: var(--radius-lg);
+}
+
+.rastro__topo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.rastro__titulo {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.rastro__lead {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.rastro__cabeca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rastro__limpar {
+  margin-left: auto;
+  padding: 4px 11px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+
+.rastro__limpar:hover {
+  background: var(--control-bg);
+  color: var(--text-strong);
+}
+
+/* ---- As duas linhas de filtro ----
+
+   Uma pergunta por linha, com o nome da pergunta a esquerda. Os dois
+   filtros se CRUZAM, e sem a etiqueta os chips de setor pareceriam
+   mais uma leva de tipos — "Comercial" ao lado de "Anexos" nao diz
+   sozinho que sao dois eixos diferentes. */
+
+.rastro__grupo {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.rastro__legenda {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+@media (max-width: 620px) {
+  .rastro__grupo {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rastro__filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* o chip de setor leva a cor do cargo num ponto, e nao no fundo: o
+   fundo colorido ja e o jeito de dizer "escolhido", e as duas coisas
+   juntas nao deixam ver qual e qual */
+.rastro__setor::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--setor-cor);
+}
+
+/* ligada, o fundo JA e a cor do setor (--tom); o ponto passa a branco
+   para nao sumir dentro dela */
+.rastro__setor.is-atual::before {
+  background: currentColor;
+}
+
+.rastro__filtros .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  font-size: 0.73rem;
+}
+
+.rastro__quantos {
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  font-size: 0.66rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.rastro__vazio {
+  margin: 0;
+  padding: 26px 0;
+  text-align: center;
+  font-size: 0.84rem;
+  color: var(--text-faint);
+}
+
+/* ---------------- A linha ---------------- */
+
+.rastro__linha {
+  position: relative;
+  margin: 0;
+  padding: 0 0 0 4px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rastro__item {
+  position: relative;
+  display: flex;
+  gap: 13px;
+  padding: 10px 0 10px 0;
+}
+
+/* o fio que liga um acontecimento ao proximo. Nasce da bolinha e desce ate
+   o proximo item; o ultimo nao tem fio, senao ele sobraria no ar. */
+.rastro__item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 34px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--line);
+}
+
+.rastro__marca {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--rastro-cor, var(--accent)) 45%, transparent);
+  background: color-mix(in srgb, var(--rastro-cor, var(--accent)) 16%, transparent);
+  color: var(--rastro-cor, var(--accent));
+}
+
+/* cada origem tem a sua cor: da para varrer a lista sem ler os rotulos */
+.rastro__item[data-tipo='check'] {
+  --rastro-cor: var(--pri-baixa);
+}
+
+.rastro__item[data-tipo='chat'] {
+  --rastro-cor: var(--grad-b);
+}
+
+.rastro__item[data-tipo='nota'] {
+  --rastro-cor: var(--text-muted);
+}
+
+.rastro__item[data-tipo='aviso'] {
+  --rastro-cor: var(--obra-aviso);
+}
+
+.rastro__item[data-tipo='avaliacao'] {
+  --rastro-cor: var(--pri-media);
+}
+
+.rastro__item[data-tipo='anexo'] {
+  --rastro-cor: var(--setor-tecnico, var(--accent));
+}
+
+.rastro__corpo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rastro__cabeca {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 0;
+}
+
+.rastro__nome {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.rastro__quando {
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.rastro__texto {
+  margin: 0;
+  font-size: 0.81rem;
+  line-height: 1.5;
+  color: var(--text-base);
+  overflow-wrap: anywhere;
+  /* mensagem de chat vem com quebra de linha; preserva sem esticar a caixa */
+  white-space: pre-wrap;
+}
+
+.rastro__rodape {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+
+.rastro__quem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.rastro__extra {
+  font-style: italic;
+}
+
+@media (max-width: 620px) {
+  .rastro {
+    padding: 15px 14px 16px;
+  }
+
+  .rastro__item {
+    gap: 10px;
+  }
+}

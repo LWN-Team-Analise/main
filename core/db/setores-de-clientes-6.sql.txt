@@ -1,0 +1,64 @@
+-- ============================================================
+-- Setores de CLIENTE: de 16 para 6 (09/10/2026)
+--
+-- Ficam so os seis do site da LWN (lwnengenharia.com.br/clientes):
+--
+--   Setor Pharma            Farmaceutico + Dispositivos Medicos,
+--                           Equipamentos e Instrumentacao, Cosmetico,
+--                           Higiene e Limpeza, AG3 (Consultoria) e
+--                           Kurita (Quimico) — o site poe todos no Pharma
+--   Setor Agro              Agronegocio (Syngenta) + Saude Animal
+--   Setor Alimenticio       Alimenticio
+--   Instituicoes de Saude   Saude (hospitais, hemocentros, Butantan)
+--   Setor de Engenharia     Engenharia
+--   Outros Setores          Automotivo, Energia Nuclear, Cultura, Textil
+--                           e M.Cassab (Quimico)
+--
+-- Os cinco primeiros sao os setores de antes RENOMEADOS (mesmo id, mesma
+-- cor); o "Outros Setores" e a antiga Consultoria (cinza). Primeiro os
+-- clientes mudam de setor, depois os dez que sobraram saem.
+--
+-- Pelos NOMES, e nao pelos ids: o banco da maquina e o Neon tem os
+-- mesmos setores com ids diferentes. Rodar de novo nao muda nada.
+-- SQL simples, sem bloco DO: o conector do Neon quebra o texto em cada
+-- ponto e virgula.
+-- ============================================================
+
+BEGIN;
+
+UPDATE setor_cliente SET nome = 'Setor Pharma' WHERE nome = 'Farmacêutico';
+UPDATE setor_cliente SET nome = 'Setor Agro' WHERE nome = 'Agronegócio';
+UPDATE setor_cliente SET nome = 'Setor Alimentício' WHERE nome = 'Alimentício';
+UPDATE setor_cliente SET nome = 'Instituições de Saúde' WHERE nome = 'Saúde';
+UPDATE setor_cliente SET nome = 'Setor de Engenharia' WHERE nome = 'Engenharia';
+UPDATE setor_cliente SET nome = 'Outros Setores' WHERE nome = 'Consultoria';
+
+-- banco sem algum dos de antes: o setor novo nasce aqui
+INSERT INTO setor_cliente (nome, cor) SELECT 'Setor Pharma', '#13b7c7' WHERE NOT EXISTS (SELECT 1 FROM setor_cliente WHERE nome = 'Setor Pharma');
+INSERT INTO setor_cliente (nome, cor) SELECT 'Setor Agro', '#38761d' WHERE NOT EXISTS (SELECT 1 FROM setor_cliente WHERE nome = 'Setor Agro');
+INSERT INTO setor_cliente (nome, cor) SELECT 'Setor Alimentício', '#e69138' WHERE NOT EXISTS (SELECT 1 FROM setor_cliente WHERE nome = 'Setor Alimentício');
+INSERT INTO setor_cliente (nome, cor) SELECT 'Instituições de Saúde', '#cc0000' WHERE NOT EXISTS (SELECT 1 FROM setor_cliente WHERE nome = 'Instituições de Saúde');
+INSERT INTO setor_cliente (nome, cor) SELECT 'Setor de Engenharia', '#3d5a99' WHERE NOT EXISTS (SELECT 1 FROM setor_cliente WHERE nome = 'Setor de Engenharia');
+INSERT INTO setor_cliente (nome, cor) SELECT 'Outros Setores', '#8d8d8d' WHERE NOT EXISTS (SELECT 1 FROM setor_cliente WHERE nome = 'Outros Setores');
+
+UPDATE cliente SET setor_id = (SELECT id FROM setor_cliente WHERE nome = 'Setor Pharma')
+ WHERE setor_id IN (SELECT id FROM setor_cliente
+                     WHERE nome IN ('Dispositivos Médicos', 'Equipamentos e Instrumentação', 'Cosmético', 'Higiene e Limpeza'))
+    OR nome IN ('AG3 Solutions', 'Kurita');
+
+UPDATE cliente SET setor_id = (SELECT id FROM setor_cliente WHERE nome = 'Setor Agro')
+ WHERE setor_id IN (SELECT id FROM setor_cliente WHERE nome = 'Saúde Animal');
+
+UPDATE cliente SET setor_id = (SELECT id FROM setor_cliente WHERE nome = 'Outros Setores')
+ WHERE setor_id IN (SELECT id FROM setor_cliente WHERE nome IN ('Automotivo', 'Energia Nuclear', 'Cultura', 'Têxtil'))
+    OR nome = 'M.Cassab';
+
+DELETE FROM setor_cliente
+ WHERE nome NOT IN ('Setor Pharma', 'Setor Agro', 'Setor Alimentício', 'Instituições de Saúde',
+                    'Setor de Engenharia', 'Outros Setores');
+
+COMMIT;
+
+-- CONFERENCIA: seis setores e nenhum cliente sem setor
+-- SELECT s.nome, count(c.id) FROM setor_cliente s LEFT JOIN cliente c ON c.setor_id = s.id GROUP BY s.nome ORDER BY s.nome;
+-- SELECT count(*) FROM cliente WHERE setor_id IS NULL;

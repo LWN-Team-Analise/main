@@ -1,0 +1,53 @@
+-- ============================================================
+--  ATUALIZACAO 19 — O PRAZO DA EXECUCAO SAI NA 1a ETAPA
+--
+--  O prazo da execucao (obra.execucao_prazo) era definido no bloco da
+--  3a etapa, e a etapa de execucao ficava parada ate alguem lembrar de
+--  preencher. Agora ele e um check do SISTEMA no card do Time Tecnico
+--  da 1a ETAPA, logo depois do "Planejamento de ensaios":
+--
+--    etapa_check.tipo = 'prazo_execucao'   "Prazo da execucao"
+--
+--  O clique no check abre o periodo de execucao; definir o prazo marca
+--  o check. Na 3a etapa o prazo continua aparecendo, TRAVADO: ali so se
+--  le o que foi definido na 1a.
+--
+--  O check vale a partir de AGORA (vigente_de = now()): so as obras
+--  criadas daqui em diante o enxergam. As que ja existem nao ganham um
+--  check novo na 1a etapa — o que faria voltar de etapa quem ja passou
+--  dela — e continuam definindo o prazo na 3a, como sempre.
+--
+--  Como os outros checks do sistema, nao se exclui, nao muda de nome e
+--  nao vira pergunta.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao duplica o check.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.etapa_check DROP CONSTRAINT IF EXISTS etapa_check_tipo_valido;
+ALTER TABLE public.etapa_check ADD CONSTRAINT etapa_check_tipo_valido
+    CHECK (tipo IN ('comum', 'planejamento_ensaios', 'execucao_ensaios', 'material_gases', 'prazo_execucao'));
+
+COMMENT ON COLUMN public.etapa_check.tipo IS
+    'comum, planejamento_ensaios, execucao_ensaios, material_gases ou prazo_execucao. Os quatro ultimos sao do sistema: nao se excluem.';
+
+-- o check, no mesmo card do Planejamento de ensaios, logo depois dele
+INSERT INTO public.etapa_check (card_id, ordem, titulo, tipo, vigente_de)
+SELECT pe.card_id, pe.ordem + 1, 'Prazo da execução', 'prazo_execucao', now()
+  FROM public.etapa_check pe
+ WHERE pe.tipo = 'planejamento_ensaios'
+   AND pe.vigente_ate IS NULL
+   AND pe.obra_id IS NULL
+   AND NOT EXISTS (SELECT 1 FROM public.etapa_check x
+                    WHERE x.tipo = 'prazo_execucao' AND x.vigente_ate IS NULL AND x.obra_id IS NULL)
+ ORDER BY pe.id
+ LIMIT 1;
+
+COMMIT;
+
+-- CONFERENCIA
+-- SELECT id, card_id, ordem, titulo, tipo, vigente_de FROM etapa_check WHERE tipo = 'prazo_execucao';
