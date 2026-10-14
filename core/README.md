@@ -10,6 +10,14 @@ Trajetória de Clientes.)
 > e é servido em `lwnengenharia.com.br/core`. A API continua em `/api`
 > (`api/index.js` → `core/server/app.js`).
 >
+> **Por enquanto, em produção** o `/api` é repassado (vercel.json) para a API
+> do projeto `customers` na Vercel (`lwn-customers.vercel.app`), que é onde
+> estão as variáveis de ambiente — elas são "sensíveis" e a Vercel não deixa
+> copiá-las. Para a API rodar aqui mesmo: cadastre as variáveis do
+> `.env.example` no projeto `main` (com `DATABASE_URL` do Neon e
+> `APP_URL=https://www.lwnengenharia.com.br/core`) e volte o desvio de
+> `/api/:path*` no vercel.json para `"/api"`.
+>
 > Tudo roda da **raiz do repositório**, com o `.env` também na raiz:
 >
 > - `npm run dev:all` — site e LWN Core em http://localhost:3000 (o sistema

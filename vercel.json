@@ -33,7 +33,7 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/api/:path*", "destination": "https://lwn-customers.vercel.app/api/:path*" },
     { "source": "/core/:path*", "destination": "/core/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
