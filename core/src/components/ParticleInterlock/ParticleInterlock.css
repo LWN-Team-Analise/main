@@ -1,0 +1,12 @@
+/* ============================================================
+   Orbe de pontos
+
+   O tamanho vem por atributo (o canvas precisa dele em pixels
+   reais para nao borrar); aqui fica so o que e visual.
+   ============================================================ */
+
+.interlock {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 50%;
+}

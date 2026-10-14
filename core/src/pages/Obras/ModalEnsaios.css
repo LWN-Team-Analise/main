@@ -1,0 +1,786 @@
+/* ============================================================
+   Ensaios: o Planejamento (arrastar e soltar), a Execucao (dia a
+   dia) e o catalogo. Os tres pop-ups dividem este arquivo.
+   ============================================================ */
+
+/* ---------------- Planejamento: as duas caixas ---------------- */
+
+.ensaios {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ensaios__colunas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.ensaios__caixa {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 220px;
+  padding: 12px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+
+/* a caixa da obra e onde se solta: tracejada, convidando */
+.ensaios__caixa--obra {
+  border-style: dashed;
+  border-color: var(--quadro-ok-borda);
+  background: color-mix(in srgb, var(--quadro-ok-bg) 55%, transparent);
+}
+
+.ensaios__caixa--obra.is-esperando {
+  border-color: var(--quadro-ok-acento);
+}
+
+.ensaios__caixa.is-alvo {
+  border-style: solid;
+  border-color: var(--quadro-ok-acento);
+  background: var(--quadro-ok-bg);
+}
+
+.ensaios__caixa--catalogo.is-alvo {
+  border-color: var(--line-strong);
+  background: var(--control-bg-hover);
+}
+
+.ensaios__topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ensaios__topo h3 {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.ensaios__conta {
+  display: grid;
+  place-items: center;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  color: var(--text-base);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.ensaios__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* um ensaio: a pecinha que se arrasta */
+.ensaio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 6px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-strong);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: grab;
+  user-select: none;
+  transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.ensaio:hover {
+  box-shadow: 0 6px 16px -10px rgba(0, 0, 0, 0.45);
+}
+
+.ensaio:active {
+  cursor: grabbing;
+}
+
+.ensaio.is-arrastando {
+  opacity: 0.4;
+}
+
+/* o fio de onde o ensaio vai cair, na reordenacao */
+.ensaio.is-antes {
+  box-shadow: 0 -3px 0 0 var(--quadro-ok-acento);
+}
+
+.ensaio--escolhido {
+  border-color: var(--quadro-ok-borda);
+}
+
+.ensaio__pegador {
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+.ensaio__nome {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* HVAC / GASES no planejamento — as mesmas cores do catalogo */
+.ensaio__classe {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--quadro-emerg-bg);
+  color: var(--text-strong);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.ensaio__classe[data-classe='gases'] {
+  background: color-mix(in srgb, var(--prazo-perto) 20%, transparent);
+  color: var(--prazo-perto);
+}
+
+.ensaio__selo {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--quadro-emerg-bg);
+  color: var(--quadro-emerg-acento);
+  font-size: 0.62rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ensaio__mover {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.ensaio__mover:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.ensaios__soltar,
+.ensaios__vazio {
+  display: grid;
+  place-items: center;
+  flex: 1;
+  margin: 0;
+  padding: 18px 10px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-faint);
+}
+
+.ensaios__soltar {
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.ensaios__aviso {
+  margin: 0;
+  padding: 10px 13px;
+  border: 1px solid var(--quadro-atraso-borda);
+  border-radius: var(--radius-sm);
+  background: var(--quadro-atraso-bg);
+  color: var(--text-strong);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.ensaios__acoes {
+  flex-wrap: wrap;
+}
+
+/* o .btn nasce com width: 100%; numa fila que quebra linha ele tomaria
+   a linha inteira */
+.ensaios__acoes .btn,
+.execucao__salvar .btn,
+.execucao .formobra__acoes .btn {
+  width: auto;
+}
+
+.ensaios__catalogo {
+  margin-right: auto;
+  padding: 10px 16px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-base);
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ensaios__catalogo:hover {
+  background: var(--control-bg-hover);
+}
+
+/* ---------------- Catalogo ---------------- */
+
+.catalogo {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.catalogo__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 46vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.catalogo__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.catalogo__nome {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.catalogo__pergunta {
+  margin-left: auto;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--danger);
+}
+
+.catalogo__edicao {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.catalogo__campo {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.catalogo__botao {
+  flex-shrink: 0;
+  padding: 5px 11px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-base);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.catalogo__botao:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+.catalogo__botao--perigo {
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+.catalogo__botao--perigo:hover:not(:disabled) {
+  background: var(--danger-bg);
+}
+
+/* o campo toma a linha e o botao fica do tamanho do texto dele. Antes
+   os dois eram flex, e o .btn (que nasce com width: 100%) engolia a
+   linha: o campo encolhia ate sumir e nao dava para digitar o ensaio */
+.catalogo__novo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.catalogo__classe {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ---- HVAC | GASES ---- */
+
+.classe {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 2px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+}
+
+.classe__opcao {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.catalogo__classe .classe__opcao {
+  padding: 9px 12px;
+}
+
+.classe__opcao:hover:not(:disabled) {
+  color: var(--text-strong);
+}
+
+.classe__opcao[aria-checked='true'][data-classe='hvac'] {
+  background: var(--quadro-emerg-bg);
+  color: var(--text-strong);
+  box-shadow: inset 0 0 0 1px var(--quadro-emerg-borda);
+}
+
+.classe__opcao[aria-checked='true'][data-classe='gases'] {
+  background: color-mix(in srgb, var(--prazo-perto) 20%, transparent);
+  color: var(--prazo-perto);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--prazo-perto) 45%, transparent);
+}
+
+.classe__opcao:disabled {
+  cursor: default;
+}
+
+/* so leitura: um selo */
+.classe--selo {
+  padding: 2px 9px;
+  border: 0;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+
+.classe--selo[data-classe='hvac'] {
+  background: var(--quadro-emerg-bg);
+  color: var(--text-strong);
+}
+
+.classe--selo[data-classe='gases'] {
+  background: color-mix(in srgb, var(--prazo-perto) 20%, transparent);
+  color: var(--prazo-perto);
+}
+
+.classe--selo[data-classe='nenhuma'] {
+  background: transparent;
+  color: var(--text-faint);
+  font-weight: 600;
+  text-transform: none;
+}
+
+.catalogo__novo .btn {
+  width: auto;
+  min-height: 0;
+  height: 40px;
+  padding: 0 20px;
+  white-space: nowrap;
+}
+
+/* ---------------- Execucao ---------------- */
+
+.execucao {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.execucao__rotulo {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* a faixa do periodo: so informa, no tom calmo — a cor do card vem do
+   prazo final. Vermelho so quando falta o prazo da execucao */
+.execucao__periodo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--tom-borda, var(--quadro-ok-borda));
+  border-radius: var(--radius-md);
+  background: var(--tom-bg, var(--quadro-ok-bg));
+}
+
+.execucao__periodo strong {
+  font-size: 0.92rem;
+  color: var(--text-strong);
+}
+
+.execucao__selo {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--tom-acento, var(--quadro-ok-acento));
+  color: var(--surface);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.execucao__periodo[data-tom='vencido'] {
+  --tom-bg: var(--quadro-vermelho-bg);
+  --tom-borda: var(--quadro-vermelho-borda);
+  --tom-acento: var(--quadro-vermelho-acento);
+}
+
+.execucao__periodobotao {
+  margin-left: auto;
+  padding: 6px 13px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.execucao__periodobotao:hover {
+  background: var(--control-bg-hover);
+}
+
+.execucao__geral {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.execucao__geral > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.execucao__geral > header strong {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.execucao__barra {
+  position: relative;
+  display: block;
+  height: 10px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+}
+
+.execucao__barra > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--etapa-ok);
+  transition: width var(--dur-med, 0.25s) var(--ease-out);
+}
+
+.execucao__barra--fina {
+  height: 6px;
+}
+
+.execucao__ensaios {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.execucao__ensaios li {
+  display: grid;
+  grid-template-columns: minmax(90px, 160px) 1fr 54px;
+  align-items: center;
+  gap: 10px;
+}
+
+.execucao__nome {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.execucao__pct {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: right;
+  color: var(--text-base);
+  font-variant-numeric: tabular-nums;
+}
+
+.execucao__ensaios li[data-pronto] .execucao__pct {
+  color: var(--etapa-ok);
+}
+
+.execucao__dia {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.execucao__diatopo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.execucao__data {
+  padding: 6px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.82rem;
+  color-scheme: light dark;
+}
+
+.execucao__dias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.execucao__chip {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 50px;
+  padding: 5px 8px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-base);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.execucao__chip small {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+}
+
+.execucao__chip:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+.execucao__chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* o pontinho de "este dia tem registro" */
+.execucao__chip[data-registrado]::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--etapa-ok);
+}
+
+/* dia depois do prazo final: a obra ja atrasou */
+.execucao__chip[data-atrasado] {
+  border-color: var(--quadro-vermelho-borda);
+}
+
+/* dia que nao estava marcado no periodo de execucao */
+.execucao__chip[data-fora] {
+  border-style: dashed;
+}
+
+.execucao__chip.is-atual {
+  border-color: var(--accent);
+  background: var(--control-on-bg);
+  color: var(--control-on-fg);
+}
+
+.execucao__chip.is-atual small {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.execucao__campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 8px 12px;
+}
+
+.execucao__campo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.execucao__entrada {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+}
+
+.execucao__entrada input {
+  width: 62px;
+  padding: 5px 7px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: right;
+}
+
+.execucao__salvar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.execucao__historico {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.execucao__tabela {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.execucao__tabela table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.execucao__tabela th,
+.execucao__tabela td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+  color: var(--text-base);
+}
+
+.execucao__tabela th:first-child,
+.execucao__tabela td:first-child {
+  text-align: left;
+}
+
+.execucao__tabela th {
+  position: sticky;
+  top: 0;
+  background: var(--modal-bg, var(--surface));
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.execucao__tabela tr:last-child td {
+  border-bottom: 0;
+}
+
+@media (max-width: 520px) {
+  .execucao__ensaios li {
+    grid-template-columns: 1fr 48px;
+  }
+
+  .execucao__ensaios li .execucao__barra {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .catalogo__novo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .catalogo__novo .btn {
+    width: 100%;
+  }
+}

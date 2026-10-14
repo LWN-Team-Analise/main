@@ -6,6 +6,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["vite", "--port", "3000", "--strictPort", "--open", "false"],
       "port": 3000
+    },
+    {
+      "name": "core-api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["core/server/index.js"],
+      "port": 3001
     }
   ]
 }

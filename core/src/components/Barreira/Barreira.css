@@ -1,0 +1,60 @@
+/* ============================================================
+   Barreira de erro: o que aparece no lugar da tela branca.
+   ============================================================ */
+
+.barreira {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 24px;
+}
+
+.barreira__caixa {
+  width: 100%;
+  max-width: 520px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--modal-sombra);
+}
+
+/* A caixa ficou só com os dois caminhos de volta: o título, o texto e a
+   mensagem técnica saíram da tela (a mensagem continua no console). Sem
+   nada acima deles, os botões vão para o centro — encostados na
+   esquerda de uma caixa vazia pareciam sobra de outra coisa. */
+.barreira__acoes {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.barreira__btn {
+  padding: 10px 18px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-base);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.barreira__btn:hover {
+  background: var(--control-bg);
+  color: var(--text-strong);
+}
+
+.barreira__btn--forte {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+}
+
+.barreira__btn--forte:hover {
+  background: var(--accent);
+  color: #fff;
+  filter: brightness(1.1);
+}

@@ -1,0 +1,92 @@
+-- ============================================================
+--  ATUALIZACAO 16 — NOMES DAS ETAPAS DE VOLTA, FIM DA REGRA DOS 3 DIAS
+--
+--  1. NOMES DAS ETAPAS FIXAS
+--     Desfaz a troca da atualizacao 15: as etapas fixas voltam a ser
+--     "1° Etapa", "2° Etapa"... So volta o nome que ainda e o que a 15
+--     pos (Comercial, Planejamento, Execução, Entrega, Encerramento, na
+--     mesma posicao): nome escrito por alguem depois fica.
+--
+--  2. OBRA EMERGENCIAL SO SE FOR CADASTRADA COMO EMERGENCIAL
+--     A regra "execucao em menos de 3 dias vira emergencia" saiu. A
+--     obra PADRAO que ela transformou (o historico tem
+--     'obra.emergencia', ou a criacao "...(execução em menos de 3
+--     dias)") volta a ser padrao — a menos que alguem tenha mudado o
+--     tipo dela a mao depois. A prioridade fica como esta (a regra a
+--     tinha posto em alta; a de antes nao ficou guardada).
+--
+--  3. O PERIODO ANTIGO, DE NOVO
+--     O mesmo passo 1 da atualizacao 15, para a obra que usou o
+--     "Periodo de execucao" ANTIGO depois dela (a versao antiga do
+--     site gravava o fim do periodo no prazo final da obra): aquela
+--     data vai para o prazo da execucao. O prazo final fica como esta.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao apaga nada.
+-- ============================================================
+
+BEGIN;
+
+-- 1. os nomes das etapas fixas, de volta ao automatico
+UPDATE public.etapa e
+   SET nome = f.posicao || '° Etapa'
+  FROM (SELECT id, row_number() OVER (ORDER BY ordem, id) AS posicao
+          FROM public.etapa
+         WHERE fixa AND vigente_ate IS NULL) f
+ WHERE e.id = f.id
+   AND e.nome = (ARRAY['Comercial', 'Planejamento', 'Execução', 'Entrega', 'Encerramento'])[f.posicao];
+
+-- 2. a obra que a regra dos 3 dias transformou volta a ser padrao
+UPDATE public.obra o
+   SET tipo = 'padrao'
+ WHERE o.tipo = 'emergencia'
+   AND EXISTS (SELECT 1 FROM public.atividade a
+                WHERE a.entidade_tipo = 'obra'
+                  AND a.entidade_id = o.id::text
+                  AND (a.acao = 'obra.emergencia'
+                       OR (a.acao = 'obra.criada' AND a.descricao LIKE '%execução em menos de 3 dias%')))
+   AND NOT EXISTS (SELECT 1 FROM public.atividade b
+                    WHERE b.entidade_tipo = 'obra'
+                      AND b.entidade_id = o.id::text
+                      AND b.acao = 'obra.editada'
+                      AND b.detalhes ->> 'alterado' LIKE '%tipo%'
+                      AND b.id > (SELECT max(c.id) FROM public.atividade c
+                                   WHERE c.entidade_tipo = 'obra'
+                                     AND c.entidade_id = o.id::text
+                                     AND c.acao IN ('obra.emergencia', 'obra.criada')));
+
+-- 3. o periodo antigo usado depois da atualizacao 15
+UPDATE public.obra o
+   SET execucao_prazo = o.data_conclusao
+ WHERE o.execucao_prazo IS NULL
+   AND o.data_conclusao IS NOT NULL
+   AND EXISTS (SELECT 1 FROM public.atividade a
+                WHERE a.acao = 'prazo.execucao'
+                  AND a.entidade_id = o.id::text
+                  AND a.detalhes ? 'prazo_final');
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'etapas fixas com o nome automatico' AS item,
+       NOT EXISTS (SELECT 1 FROM public.etapa
+                    WHERE fixa AND vigente_ate IS NULL
+                      AND nome IN ('Comercial', 'Planejamento', 'Execução', 'Entrega', 'Encerramento')) AS ok
+UNION ALL
+SELECT 'nenhuma emergencia pela regra dos 3 dias',
+       NOT EXISTS (SELECT 1 FROM public.obra o
+                    WHERE o.tipo = 'emergencia'
+                      AND EXISTS (SELECT 1 FROM public.atividade a
+                                   WHERE a.entidade_tipo = 'obra'
+                                     AND a.entidade_id = o.id::text
+                                     AND a.acao = 'obra.emergencia')
+                      AND NOT EXISTS (SELECT 1 FROM public.atividade b
+                                       WHERE b.entidade_tipo = 'obra'
+                                         AND b.entidade_id = o.id::text
+                                         AND b.acao = 'obra.editada'
+                                         AND b.detalhes ->> 'alterado' LIKE '%tipo%'));

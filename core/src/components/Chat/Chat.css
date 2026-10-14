@@ -1,0 +1,609 @@
+/* ============================================================
+   Chat da obra
+   ============================================================ */
+
+.chat {
+  /* âncora do painel de "apagar mensagem", que cobre a conversa e só
+     ela — a decisão é sobre uma fala daquele chat */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* a caixa do modal ja rola; aqui a conversa tem altura propria para
+     o campo de escrever ficar sempre visivel embaixo */
+  min-height: 340px;
+}
+
+.chat__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: min(46dvh, 420px);
+  padding: 4px 2px;
+  overflow-y: auto;
+}
+
+.chat__vazio {
+  margin: auto;
+  padding: 30px 16px;
+  max-width: 340px;
+  text-align: center;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--text-faint);
+}
+
+/* ---------------- uma mensagem ---------------- */
+
+.fala {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 84%;
+  --avatar-anel: var(--modal-bg);
+}
+
+.fala.is-minha {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.fala__balao {
+  min-width: 0;
+  padding: 9px 12px 7px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+}
+
+.fala.is-minha .fala__balao {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+/* mensagem que cita quem esta lendo: uma faixa na lateral */
+.fala.is-citado .fala__balao {
+  border-left: 3px solid var(--pri-media);
+}
+
+.fala__quem {
+  margin: 0 0 3px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+/* a mensagem respondida, citada em cima */
+.fala__citada {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0 0 6px;
+  padding: 6px 9px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--control-bg-hover);
+  font-size: 0.74rem;
+}
+
+.fala__citada strong {
+  color: var(--text-strong);
+}
+
+.fala__citada span {
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fala__citada--sumiu {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.fala__texto {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-base);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.fala__mencao {
+  padding: 0 3px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.fala__imagem {
+  display: block;
+  margin-bottom: 6px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.fala__imagem img {
+  max-width: 240px;
+  max-height: 240px;
+  object-fit: cover;
+}
+
+.fala__arquivo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 6px;
+  padding: 7px 11px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-base);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.fala__arquivo:hover {
+  color: var(--text-strong);
+  border-color: var(--accent);
+}
+
+.fala__pe {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  font-size: 0.66rem;
+  color: var(--text-faint);
+}
+
+.fala__pe button {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.fala:hover .fala__pe button,
+.fala__pe button:focus-visible {
+  opacity: 1;
+}
+
+.fala__pe button:hover {
+  color: var(--text-strong);
+}
+
+/* ---------------- escrever ---------------- */
+
+.chat__escrever {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.chat__respondendo,
+.chat__anexo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 7px 10px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--control-bg);
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.chat__respondendo span {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat__respondendo strong,
+.chat__anexo span {
+  color: var(--text-strong);
+}
+
+.chat__anexo {
+  border-left-color: var(--pri-baixa);
+}
+
+.chat__anexo img {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.chat__anexo span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat__anexo em {
+  font-style: normal;
+  font-size: 0.68rem;
+  color: var(--text-faint);
+}
+
+.chat__respondendo button,
+.chat__anexo button {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.chat__respondendo button:hover,
+.chat__anexo button:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.chat__erro {
+  margin: 0;
+  padding: 8px 11px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+/* Os botões (anexar, câmera, mencionar, enviar) ficam CENTRALIZADOS na
+   altura da caixa de escrever. Presos ao pé dela, como estavam, eles
+   desciam junto quando a caixa era esticada e a fileira ficava colada
+   na borda de baixo do pop-up. */
+.chat__linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat__campo {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 13px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  /* Sem alcinha: a caixa acompanha o texto sozinha (useAlturaAuto).
+     O teto e daqui — passado ele ela para de crescer e o texto rola por
+     dentro, para uma mensagem longa nao empurrar o botao de enviar
+     para fora do pop-up. */
+  resize: none;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.chat__campo:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.chat__campo::placeholder {
+  color: var(--text-faint);
+}
+
+.chat__ferramentas {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.chat__ferramentas button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.chat__ferramentas button:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.chat__enviar {
+  background: var(--accent) !important;
+  color: #fff !important;
+}
+
+.chat__enviar:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------------- lista do @ ---------------- */
+
+.chat__mencoes {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% - 4px);
+  z-index: 5;
+  width: min(300px, 100%);
+  max-height: 232px;
+  margin: 0;
+  padding: 5px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  background: var(--modal-bg);
+  box-shadow: var(--modal-sombra);
+  list-style: none;
+  overflow-y: auto;
+}
+
+.chat__mencoes button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat__mencoes button:hover {
+  background: var(--control-bg);
+}
+
+.chat__mencoes strong {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat__mencoes em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+/* ---------------- camera ---------------- */
+
+.camera {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+}
+
+.camera video {
+  width: 100%;
+  max-height: 300px;
+  border-radius: var(--radius-sm);
+  background: #000;
+  object-fit: cover;
+}
+
+.camera__acoes {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.camera__tirar,
+.camera__cancelar {
+  padding: 9px 18px;
+  border-radius: var(--radius-pill);
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.camera__tirar {
+  border: 0;
+  background: var(--accent);
+  color: #fff;
+}
+
+.camera__tirar:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.camera__cancelar {
+  border: 1px solid var(--control-border);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.camera__cancelar:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+@media (max-width: 560px) {
+  .fala {
+    max-width: 95%;
+  }
+}
+
+/* ============================================================
+   Apagar mensagem: para todos ou só para mim
+
+   Duas ações com consequências bem diferentes, então elas são
+   escolhidas num painel e não num botão só. O painel cobre a
+   conversa (e não a tela inteira) porque a decisão é sobre uma
+   mensagem daquela conversa — sair dela é clicar fora.
+   ============================================================ */
+
+.chat__apagar {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 10, 14, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.chat__apagarcaixa {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 340px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--modal-sombra);
+}
+
+.chat__apagartitulo {
+  margin: 0 0 2px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.chat__apagaropcao {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-base);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.chat__apagaropcao strong {
+  font-size: 0.83rem;
+  font-weight: 700;
+}
+
+.chat__apagaropcao span {
+  font-size: 0.73rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.chat__apagaropcao:hover {
+  border-color: var(--accent);
+  background: var(--control-bg);
+}
+
+/* "para todos" é a que não tem volta: ela avisa disso na cor */
+.chat__apagaropcao--forte:hover {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+.chat__apagaropcao--forte:hover strong {
+  color: var(--danger);
+}
+
+.chat__apagarcancelar {
+  margin-top: 2px;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chat__apagarcancelar:hover {
+  color: var(--text-strong);
+}
+
+/* ---- a mensagem que foi apagada para todos ----
+
+   Ela continua na conversa, e é isso que importa: quem respondeu a
+   mensagem apagada continua entendendo a própria resposta. O balão
+   perde a cor e o conteúdo, e fica só o rastro. */
+
+.fala__balao.is-apagada {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--text-faint);
+}
+
+.fala__apagada {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+
+/* ---------------- dentro de um pop-up redimensionado ----------------
+   A lista tem teto proprio (46dvh) para o campo de escrever nao ser
+   empurrado para fora da tela. Quando a pessoa escolheu o tamanho do
+   pop-up na mao, esse teto vira estorvo: quem manda na altura passa a
+   ser a caixa, e a lista ocupa o que sobrar. */
+.modal__caixa.is-ajustado .chat {
+  flex: 1;
+  min-height: 0;
+}
+
+.modal__caixa.is-ajustado .chat__lista {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}

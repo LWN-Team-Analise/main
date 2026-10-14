@@ -1,0 +1,252 @@
+-- ============================================================
+--  ATUALIZACAO 14 — ETAPAS FIXAS, ENSAIOS E EXECUCAO
+--
+--  1. ETAPAS FIXAS (etapa.fixa e etapa.papel)
+--     As etapas de fabrica do roteiro sao o esqueleto do fluxo e
+--     NAO podem ser renomeadas, reordenadas nem excluidas. So as
+--     criadas a mao (pela tela) continuam editaveis.
+--
+--     Quem e de fabrica: a etapa que ainda vale e nasceu sem data
+--     de vigencia ('-infinity' — o roteiro plantado pela API).
+--     Etapa criada pela tela sempre leva a data em que foi criada,
+--     entao rodar de novo nunca trava uma etapa feita a mao.
+--
+--     As tres primeiras fixas ganham um PAPEL no fluxo:
+--         planejamento   1a — Planejamento / Time Tecnico
+--         intermediaria  2a — etapa intermediaria
+--         execucao       3a — Execucao (prazo final obrigatorio,
+--                              ensaios executados por dia)
+--
+--  2. CHECKS DO SISTEMA (etapa_check.tipo)
+--         comum                 o check de sempre;
+--         planejamento_ensaios  "Planejamento de ensaios" — abre a
+--                               escolha dos ensaios da obra;
+--         execucao_ensaios      "Execucao dos ensaios" — abre os
+--                               ensaios planejados, com o percentual
+--                               de cada um por dia. So fecha com
+--                               todos em 100%.
+--     O check que ja existe com esse nome e o marcado. Sem ele, o
+--     check e criado no card do Time Tecnico da etapa certa — e
+--     vale para as obras criadas DAQUI EM DIANTE (as abertas nao
+--     ganham check novo de repente).
+--
+--  3. ENSAIOS
+--     ensaio                 o catalogo (comeca com Teste 1, 2 e 3);
+--     obra_ensaio            os ensaios planejados para cada obra;
+--     obra_ensaio_progresso  ensaio + dia + percentual, por obra.
+--                            Um dia nao apaga o outro.
+--
+--  4. INICIO DA EXECUCAO (obra.execucao_inicio)
+--     A entrada em campo. O periodo de execucao vai dela ate o
+--     prazo final da obra (obra.data_conclusao, a entrega da
+--     documentacao).
+--
+--  5. PERMISSAO gerenciar_ensaios (o catalogo de ensaios), que so
+--     entra sozinha no setor de acesso total.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao apaga nada.
+-- ============================================================
+
+BEGIN;
+
+-- 1. etapas fixas e o papel de cada uma
+ALTER TABLE public.etapa ADD COLUMN IF NOT EXISTS fixa boolean NOT NULL DEFAULT false;
+ALTER TABLE public.etapa ADD COLUMN IF NOT EXISTS papel text;
+
+ALTER TABLE public.etapa DROP CONSTRAINT IF EXISTS etapa_papel_valido;
+ALTER TABLE public.etapa ADD CONSTRAINT etapa_papel_valido
+    CHECK (papel IS NULL OR papel IN ('planejamento', 'intermediaria', 'execucao'));
+
+COMMENT ON COLUMN public.etapa.fixa IS
+    'true = etapa de fabrica: nao se renomeia, nao se reordena, nao se exclui.';
+COMMENT ON COLUMN public.etapa.papel IS
+    'O lugar da etapa no fluxo: planejamento, intermediaria ou execucao. NULL nas outras.';
+
+UPDATE public.etapa
+   SET fixa = true
+ WHERE NOT fixa
+   AND vigente_ate IS NULL
+   AND vigente_de = '-infinity';
+
+UPDATE public.etapa e
+   SET papel = CASE x.posicao
+                 WHEN 1 THEN 'planejamento'
+                 WHEN 2 THEN 'intermediaria'
+                 ELSE 'execucao'
+               END
+  FROM (SELECT id, row_number() OVER (ORDER BY ordem, id) AS posicao
+          FROM public.etapa
+         WHERE fixa AND vigente_ate IS NULL) x
+ WHERE e.id = x.id
+   AND x.posicao <= 3
+   AND NOT EXISTS (SELECT 1 FROM public.etapa WHERE papel IS NOT NULL);
+
+CREATE UNIQUE INDEX IF NOT EXISTS etapa_papel_unico
+    ON public.etapa (papel) WHERE papel IS NOT NULL;
+
+-- 2. os checks do sistema
+ALTER TABLE public.etapa_check ADD COLUMN IF NOT EXISTS tipo text NOT NULL DEFAULT 'comum';
+
+ALTER TABLE public.etapa_check DROP CONSTRAINT IF EXISTS etapa_check_tipo_valido;
+ALTER TABLE public.etapa_check ADD CONSTRAINT etapa_check_tipo_valido
+    -- 'material_gases' veio na atualizacao 17 e 'prazo_execucao' na 19;
+    -- ja vao aqui porque o db:atualizar roda esta de novo depois delas
+    CHECK (tipo IN ('comum', 'planejamento_ensaios', 'execucao_ensaios', 'material_gases', 'prazo_execucao'));
+
+COMMENT ON COLUMN public.etapa_check.tipo IS
+    'comum, planejamento_ensaios ou execucao_ensaios. Os dois ultimos sao do sistema: nao se excluem.';
+
+-- 2a. o check que ja existe com o nome certo
+UPDATE public.etapa_check
+   SET tipo = 'planejamento_ensaios'
+ WHERE id = (SELECT min(ck.id) FROM public.etapa_check ck
+              WHERE ck.vigente_ate IS NULL
+                AND lower(btrim(ck.titulo)) IN ('planejamento de ensaios', 'planejamento dos ensaios'))
+   AND NOT EXISTS (SELECT 1 FROM public.etapa_check WHERE tipo = 'planejamento_ensaios');
+
+UPDATE public.etapa_check
+   SET tipo = 'execucao_ensaios'
+ WHERE id = (SELECT min(ck.id) FROM public.etapa_check ck
+              WHERE ck.vigente_ate IS NULL
+                AND lower(btrim(ck.titulo)) IN ('execução dos ensaios', 'execucao dos ensaios'))
+   AND NOT EXISTS (SELECT 1 FROM public.etapa_check WHERE tipo = 'execucao_ensaios');
+
+-- 2b. sem ele: um card do Time Tecnico na etapa (se ainda nao houver)...
+INSERT INTO public.etapa_card (etapa_id, ordem, vigente_de)
+SELECT e.id,
+       coalesce((SELECT max(k.ordem) FROM public.etapa_card k WHERE k.etapa_id = e.id), -1) + 1,
+       now()
+  FROM public.etapa e
+ WHERE e.papel IN ('planejamento', 'execucao')
+   AND e.vigente_ate IS NULL
+   AND EXISTS (SELECT 1 FROM public.cargo WHERE chave = 'tecnico')
+   AND NOT EXISTS (SELECT 1 FROM public.etapa_check
+                    WHERE tipo = CASE e.papel WHEN 'planejamento' THEN 'planejamento_ensaios'
+                                              ELSE 'execucao_ensaios' END)
+   AND NOT EXISTS (SELECT 1
+                     FROM public.etapa_card k
+                     JOIN public.etapa_card_cargo cc ON cc.card_id = k.id
+                     JOIN public.cargo c ON c.id = cc.cargo_id
+                    WHERE k.etapa_id = e.id AND k.vigente_ate IS NULL AND c.chave = 'tecnico');
+
+-- ...que e do Time Tecnico...
+INSERT INTO public.etapa_card_cargo (card_id, cargo_id, ordem)
+SELECT k.id, c.id, 0
+  FROM public.etapa_card k
+  JOIN public.etapa e ON e.id = k.etapa_id
+  JOIN public.cargo c ON c.chave = 'tecnico'
+ WHERE e.papel IN ('planejamento', 'execucao')
+   AND k.vigente_ate IS NULL
+   AND NOT EXISTS (SELECT 1 FROM public.etapa_card_cargo cc WHERE cc.card_id = k.id);
+
+-- ...e o check dentro dele
+INSERT INTO public.etapa_check (card_id, ordem, titulo, tipo, vigente_de)
+SELECT k.id,
+       coalesce((SELECT max(x.ordem) FROM public.etapa_check x WHERE x.card_id = k.id), -1) + 1,
+       CASE e.papel WHEN 'planejamento' THEN 'Planejamento de ensaios' ELSE 'Execução dos ensaios' END,
+       CASE e.papel WHEN 'planejamento' THEN 'planejamento_ensaios' ELSE 'execucao_ensaios' END,
+       now()
+  FROM public.etapa_card k
+  JOIN public.etapa e ON e.id = k.etapa_id
+ WHERE e.papel IN ('planejamento', 'execucao')
+   AND e.vigente_ate IS NULL
+   AND k.id = (SELECT min(k2.id)
+                 FROM public.etapa_card k2
+                 JOIN public.etapa_card_cargo cc ON cc.card_id = k2.id
+                 JOIN public.cargo c ON c.id = cc.cargo_id
+                WHERE k2.etapa_id = e.id AND k2.vigente_ate IS NULL AND c.chave = 'tecnico')
+   AND NOT EXISTS (SELECT 1 FROM public.etapa_check
+                    WHERE tipo = CASE e.papel WHEN 'planejamento' THEN 'planejamento_ensaios'
+                                              ELSE 'execucao_ensaios' END);
+
+CREATE UNIQUE INDEX IF NOT EXISTS etapa_check_tipo_unico
+    ON public.etapa_check (tipo) WHERE tipo <> 'comum' AND vigente_ate IS NULL;
+
+-- 3. ensaios
+CREATE TABLE IF NOT EXISTS public.ensaio (
+    id          bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    nome        text        NOT NULL,
+    descricao   text,
+    ordem       integer     NOT NULL DEFAULT 0,
+    ativo       boolean     NOT NULL DEFAULT true,
+    criado_por  bigint      REFERENCES public.usuario (id) ON DELETE SET NULL,
+    criado_em   timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE public.ensaio IS
+    'Catalogo de ensaios. ativo = false: saiu do catalogo, mas continua nas obras que ja o planejaram.';
+
+CREATE UNIQUE INDEX IF NOT EXISTS ensaio_nome_unico
+    ON public.ensaio (lower(btrim(nome))) WHERE ativo;
+
+INSERT INTO public.ensaio (nome, ordem)
+SELECT v.nome, v.ordem
+  FROM (VALUES ('Teste 1', 1), ('Teste 2', 2), ('Teste 3', 3)) AS v (nome, ordem)
+ WHERE NOT EXISTS (SELECT 1 FROM public.ensaio);
+
+CREATE TABLE IF NOT EXISTS public.obra_ensaio (
+    obra_id      bigint      NOT NULL REFERENCES public.obra (id)    ON DELETE CASCADE,
+    ensaio_id    bigint      NOT NULL REFERENCES public.ensaio (id)  ON DELETE CASCADE,
+    ordem        integer     NOT NULL DEFAULT 0,
+    definido_por bigint      REFERENCES public.usuario (id)          ON DELETE SET NULL,
+    definido_em  timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (obra_id, ensaio_id)
+);
+
+COMMENT ON TABLE public.obra_ensaio IS
+    'Os ensaios escolhidos no Planejamento de ensaios desta obra.';
+
+CREATE TABLE IF NOT EXISTS public.obra_ensaio_progresso (
+    obra_id        bigint      NOT NULL REFERENCES public.obra (id)   ON DELETE CASCADE,
+    ensaio_id      bigint      NOT NULL REFERENCES public.ensaio (id) ON DELETE CASCADE,
+    dia            date        NOT NULL,
+    percentual     smallint    NOT NULL,
+    registrado_por bigint      REFERENCES public.usuario (id)         ON DELETE SET NULL,
+    registrado_em  timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (obra_id, ensaio_id, dia),
+    CONSTRAINT obra_ensaio_progresso_faixa CHECK (percentual BETWEEN 0 AND 100)
+);
+
+COMMENT ON TABLE public.obra_ensaio_progresso IS
+    'Execucao de um ensaio: quanto ele estava feito (0-100) naquele dia. Um dia nao apaga o outro.';
+
+-- 4. o inicio da execucao (entrada em campo)
+ALTER TABLE public.obra ADD COLUMN IF NOT EXISTS execucao_inicio date;
+
+COMMENT ON COLUMN public.obra.execucao_inicio IS
+    'Entrada em campo. O periodo de execucao vai daqui ate data_conclusao (o prazo final).';
+
+-- 5. a permissao nova no setor de acesso total
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['gerenciar_ensaios']
+ WHERE acesso_total
+   AND NOT ('gerenciar_ensaios' = ANY (permissoes));
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'etapa.fixa' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'etapa' AND column_name = 'fixa') AS ok
+UNION ALL
+SELECT 'etapa de execucao', EXISTS (SELECT 1 FROM public.etapa WHERE papel = 'execucao')
+UNION ALL
+SELECT 'check Planejamento de ensaios', EXISTS (SELECT 1 FROM public.etapa_check WHERE tipo = 'planejamento_ensaios')
+UNION ALL
+SELECT 'check Execucao dos ensaios', EXISTS (SELECT 1 FROM public.etapa_check WHERE tipo = 'execucao_ensaios')
+UNION ALL
+SELECT 'ensaio', to_regclass('public.ensaio') IS NOT NULL
+UNION ALL
+SELECT 'obra_ensaio', to_regclass('public.obra_ensaio') IS NOT NULL
+UNION ALL
+SELECT 'obra_ensaio_progresso', to_regclass('public.obra_ensaio_progresso') IS NOT NULL
+UNION ALL
+SELECT 'obra.execucao_inicio',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'obra' AND column_name = 'execucao_inicio');

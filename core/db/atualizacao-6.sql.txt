@@ -1,0 +1,129 @@
+-- ============================================================
+--  TRAJETORIA DE CLIENTES — ATUALIZACAO 6
+--  Rode DEPOIS de db/atualizacao-5.sql.txt, no banco
+--  "TrajetoClientes".
+--
+--  So ACRESCENTA. Pode rodar de novo sem problema.
+--
+--  O que muda: o CHAT DA EQUIPE (chat_site) passa a ter o mesmo que
+--  o chat da obra (obra_chat) ja tinha — anexo, resposta a outra
+--  mensagem, mencao com @ e as duas formas de apagar.
+--
+--  Ate aqui o chat da equipe era so texto. Era a conversa do dia a
+--  dia da empresa, a que o botao flutuante abre em qualquer tela, e
+--  a unica em que nao dava para mandar uma foto: quem precisava
+--  anexar alguma coisa abria uma obra qualquer so para usar o chat
+--  dela.
+-- ============================================================
+
+BEGIN;
+
+-- ============================================================
+--  1. AS COLUNAS QUE FALTAVAM EM chat_site
+--
+--  Os nomes sao os MESMOS de obra_chat, de proposito: as duas
+--  tabelas respondem a mesma pergunta e sao lidas pelo mesmo tipo de
+--  codigo. Nome diferente para a mesma coisa e o comeco de dois
+--  jeitos diferentes de tratar a mesma coisa.
+-- ============================================================
+
+ALTER TABLE public.chat_site
+    ADD COLUMN IF NOT EXISTS responde_a       bigint REFERENCES public.chat_site(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS arquivo_nome     text,
+    ADD COLUMN IF NOT EXISTS arquivo_tipo     text,
+    ADD COLUMN IF NOT EXISTS arquivo_conteudo text,
+    ADD COLUMN IF NOT EXISTS apagada_em       timestamp with time zone,
+    ADD COLUMN IF NOT EXISTS apagada_por      bigint REFERENCES public.usuario(id) ON DELETE SET NULL;
+
+COMMENT ON COLUMN public.chat_site.responde_a IS
+    'A mensagem que esta responde. NULL = mensagem solta.';
+COMMENT ON COLUMN public.chat_site.arquivo_conteudo IS
+    'O anexo como data URL. Fica na propria linha, como no chat da obra.';
+COMMENT ON COLUMN public.chat_site.apagada_em IS
+    'Apagada PARA TODOS: o conteudo some, a linha fica e a tela mostra "mensagem apagada".';
+
+-- ------------------------------------------------------------
+--  texto deixa de ser NOT NULL
+--
+--  Duas razoes, e as duas ja existem no chat da obra:
+--    - mensagem que e SO anexo nao tem texto;
+--    - apagar para todos zera o texto e mantem a linha.
+--
+--  O DEFAULT '' tambem sai: com ele, uma mensagem so de anexo
+--  guardaria uma string vazia em vez de NULL, e as duas coisas
+--  passariam a significar o mesmo sem serem a mesma.
+-- ------------------------------------------------------------
+
+ALTER TABLE public.chat_site ALTER COLUMN texto DROP NOT NULL;
+ALTER TABLE public.chat_site ALTER COLUMN texto DROP DEFAULT;
+
+-- mensagem sem texto E sem arquivo nao e mensagem. A excecao e a
+-- apagada para todos, que existe justamente para ser um vazio com
+-- rastro.
+ALTER TABLE public.chat_site
+    DROP CONSTRAINT IF EXISTS chat_site_tem_conteudo;
+
+ALTER TABLE public.chat_site
+    ADD CONSTRAINT chat_site_tem_conteudo CHECK (
+        btrim(coalesce(texto, '')) <> ''
+        OR arquivo_conteudo IS NOT NULL
+        OR apagada_em IS NOT NULL
+    );
+
+
+-- ============================================================
+--  2. MENCOES
+--
+--  Quem foi citado com @ na mensagem. Tabela propria, e nao uma
+--  lista dentro da linha, porque a pergunta que ela responde e
+--  "fulano foi citado onde?" — e essa varre por usuario, nao por
+--  mensagem.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.chat_site_mencao (
+    mensagem_id bigint NOT NULL REFERENCES public.chat_site(id) ON DELETE CASCADE,
+    usuario_id  bigint NOT NULL REFERENCES public.usuario(id)   ON DELETE CASCADE,
+    PRIMARY KEY (mensagem_id, usuario_id)
+);
+
+
+-- ============================================================
+--  3. APAGAR SO PARA MIM
+--
+--  Linha aqui = esta pessoa apagou a mensagem so para ela. Para o
+--  resto da equipe ela continua inteira.
+--
+--  E por isso que o "apagar para mim" mora numa tabela e nao numa
+--  coluna: ele e por PESSOA, e a mesma mensagem pode estar escondida
+--  para uma e visivel para as outras cinco.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.chat_site_oculta (
+    mensagem_id bigint NOT NULL REFERENCES public.chat_site(id) ON DELETE CASCADE,
+    usuario_id  bigint NOT NULL REFERENCES public.usuario(id)   ON DELETE CASCADE,
+    ocultada_em timestamp with time zone NOT NULL DEFAULT now(),
+    PRIMARY KEY (mensagem_id, usuario_id)
+);
+
+COMMENT ON TABLE public.chat_site_oculta IS
+    'Linha aqui = esta pessoa apagou a mensagem so para ela. Para o resto da equipe ela continua inteira.';
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+SELECT 'chat_site.arquivo_conteudo' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'chat_site' AND column_name = 'arquivo_conteudo') AS ok
+UNION ALL SELECT 'chat_site.responde_a',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'chat_site' AND column_name = 'responde_a')
+UNION ALL SELECT 'chat_site.apagada_em',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'chat_site' AND column_name = 'apagada_em')
+UNION ALL SELECT 'chat_site.texto aceita NULL',
+       coalesce((SELECT is_nullable = 'YES' FROM information_schema.columns
+                  WHERE table_name = 'chat_site' AND column_name = 'texto'), false)
+UNION ALL SELECT 'chat_site_mencao', to_regclass('public.chat_site_mencao') IS NOT NULL
+UNION ALL SELECT 'chat_site_oculta', to_regclass('public.chat_site_oculta') IS NOT NULL;

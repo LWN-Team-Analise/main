@@ -1,0 +1,1673 @@
+/* ============================================================
+   Tela da obra: faixa colorida pelo tipo, informacoes, as cinco
+   etapas deslizando na horizontal e as observacoes fixas a direita.
+   ============================================================ */
+
+.detalhe {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------------- Faixa do topo ---------------- */
+
+.capa {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 22px 22px;
+  border-radius: var(--radius-lg);
+  background: var(--tom-bg);
+  color: var(--tom-fg);
+  border: 1px solid var(--tom-borda);
+  box-shadow: 0 20px 44px -30px rgba(0, 0, 0, 0.8);
+}
+
+.capa > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* ---- foto do cliente ao fundo ----
+   O `background-size` vem inline (ObraDetalhe.jsx), e nao daqui,
+   porque ele depende do que a imagem E: `cover` quando existe o
+   recorte de header — ele ja chega na proporcao desta faixa, e o que
+   a pessoa enquadrou e o que tem de aparecer — e o esticado
+   100% 100% de sempre quando so ha a logo, que e quadrada e num
+   cover viraria um zoom que ninguem escolheu.
+
+   A opacidade caminha da esquerda para a direita: 0% na esquerda,
+   onde fica o nome, ate 15% na ponta direita. Quem faz isso e a
+   mascara — a camada tem opacidade 0.15 e a mascara a apaga
+   progressivamente ate zero indo para a esquerda. */
+.capa__marca {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.15;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 100%);
+  pointer-events: none;
+}
+
+.capa[data-tom='padrao'] {
+  --tom-bg: var(--obra-padrao-grad);
+  --tom-fg: var(--obra-padrao-fg);
+  --tom-borda: var(--obra-padrao-borda);
+}
+
+.capa[data-tom='emergencia'] {
+  --tom-bg: var(--obra-emerg-grad);
+  --tom-fg: var(--obra-emerg-fg);
+  --tom-borda: var(--obra-emerg-borda);
+}
+
+/* fica na propria linha, ACIMA da trilha e do nome:
+       <-
+       Obras/Empresa
+       Empresa                                              */
+/* so a setinha, sem o circulo em volta e sem reacao ao mouse:
+   ela nao muda de cor nem escorrega quando o cursor passa */
+.capa__voltar {
+  display: block;
+  width: fit-content;
+  margin-bottom: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  opacity: 0.85;
+  cursor: pointer;
+}
+
+.capa__texto {
+  min-width: 0;
+  flex: 1;
+}
+
+.capa__trilha {
+  margin: 0 0 2px;
+  font-size: 0.78rem;
+  opacity: 0.78;
+}
+
+.capa__trilha a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.capa__trilha a:hover {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.capa__titulo {
+  margin: 0;
+  font-size: clamp(1.5rem, 3.2vw, 2.15rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+}
+
+.capa__lado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+  max-width: 320px;
+  text-align: right;
+}
+
+.capa__selo {
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.32);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.capa__desc {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  opacity: 0.9;
+}
+
+/* ---------------- Faixa de informacoes ---------------- */
+
+.infos {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 30px;
+  padding: 14px 20px;
+  border-radius: var(--radius-lg);
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.info__nome {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.info__valor {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+/* ---- O (!) de "falta preencher" ----
+
+   Canto superior direito do bloco, sobreposto: é a posição em que a
+   vista já procura selo de pendência, e ali ele não empurra nem o
+   rótulo nem a data.
+
+   Pisca DEVAGAR (1,6s) e nunca some de vez — a opacidade mínima é
+   0,35. Um sinal que apaga inteiro vira um bloco vazio piscando; um
+   que pulsa continua legível o tempo todo e ainda chama o olho.
+
+   Para quem pediu menos movimento no sistema ele para de piscar e
+   fica firme: o recado é o mesmo, sem o movimento. */
+.info--conclusao {
+  position: relative;
+  padding-right: 20px;
+}
+
+.info__valor--pri {
+  align-self: flex-start;
+  padding: 3px 12px;
+  border-radius: var(--radius-pill);
+  color: var(--pri-fg);
+  background: var(--pri-bg);
+}
+
+.info__valor--pri[data-pri='alta'] { --pri-bg: var(--pri-alta); --pri-fg: var(--pri-alta-fg); }
+/* "Urgente" leva o azul da emergência (o do botão "Obra emergência"),
+   não a cor da alta: é a diferença entre as duas que a palavra marca */
+.info__valor--pri[data-pri='urgente'] { --pri-bg: var(--pri-urgente); --pri-fg: var(--pri-urgente-fg); }
+.info__valor--pri[data-pri='media'] { --pri-bg: var(--pri-media); --pri-fg: var(--pri-media-fg); }
+.info__valor--pri[data-pri='baixa'] { --pri-bg: var(--pri-baixa); --pri-fg: var(--pri-baixa-fg); }
+
+/* a alta e a unica das tres que precisa ser vista antes de ser lida;
+   quem faz isso e a cor, com um peso a mais na letra */
+.info__valor--pri[data-pri='alta'],
+.info__valor--pri[data-pri='urgente'] {
+  font-weight: 800;
+}
+
+.info__linha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+/* o setor sem fundo chapado: contorno e texto na cor suave dele */
+.info__setor {
+  position: relative;
+  padding: 3px 11px;
+  border: 1.5px solid var(--setor-cor);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--setor-cor);
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.6;
+}
+
+.info__setor.is-pronto {
+  opacity: 1;
+}
+
+.info__setor.is-pronto::after {
+  content: '✓';
+  margin-left: 5px;
+  font-weight: 800;
+}
+
+
+/* O Progresso é o único bloco da faixa que tem DUAS coisas lado a
+   lado: a barra (na coluna .info__coluna) e o botão de concluir. Por
+   isso ele vira linha, e a coluna interna guarda o empilhamento que os
+   outros blocos têm de graça. */
+.info--progresso {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  min-width: 150px;
+}
+
+.info__coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1 1 auto;
+  min-width: 120px;
+}
+
+/* ---- "Concluir obra", à DIREITA do Progresso ----
+
+   Só existe com a barra em 100%: enquanto sobrar um check, o botão nem
+   é renderizado. Verde porque é a única ação de fechamento da tela, e
+   ela precisa se distinguir das outras à primeira vista — quem chega
+   aqui já marcou tudo e está procurando exatamente por ele.
+
+   Ele ficava EMBAIXO da barra, e ao aparecer empurrava a faixa inteira
+   de informações para baixo. Ao lado, a faixa não muda de altura: o
+   botão nasce no espaço que já existia à direita. */
+.concluir {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  align-self: center;
+  white-space: nowrap;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--etapa-ok);
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 16px -10px rgba(0, 0, 0, 0.8);
+  transition: filter var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.concluir:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.concluir:active {
+  transform: translateY(0);
+}
+
+/* o glifo do botão já é o círculo verde do "etapa concluída"; sobre o
+   fundo verde ele precisa virar branco para não sumir */
+.concluir svg circle {
+  fill: rgba(255, 255, 255, 0.28);
+}
+
+.barrinha {
+  display: block;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  overflow: hidden;
+}
+
+.barrinha__cheio {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--etapa-ok);
+  transition: width var(--dur-base) var(--ease-out);
+}
+
+.info--membros {
+  margin-left: auto;
+}
+
+.info__avatares {
+  display: inline-flex;
+  --avatar-anel: var(--surface);
+}
+
+.info__avatares > * + * {
+  margin-left: -9px;
+}
+
+/* ---------------- Tabuleiro ---------------- */
+
+.tabuleiro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 296px;
+  gap: 14px;
+  align-items: start;
+}
+
+/* as cinco etapas: cabem tres na tela, as outras entram deslizando */
+.trilho {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(268px, 1fr);
+  gap: 14px;
+  padding-bottom: 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximate;
+}
+
+.etapa {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 13px;
+  border-radius: var(--radius-lg);
+  scroll-snap-align: start;
+}
+
+.etapa[data-estado='bloqueada'] {
+  border-style: dashed;
+}
+
+.etapa__topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* O NOME da etapa ("Comercial"). Nome comprido não pode empurrar o
+   placar e as ferramentas para fora do card: ele corta com reticências
+   e o título completo fica na dica do rótulo. */
+.etapa__titulo {
+  margin: 0;
+  min-width: 0;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.etapa__contagem {
+  margin-left: auto;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  color: var(--text-base);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* A linha de apoio embaixo do nome: em que pé a etapa está
+   ("aguardando aprovação"). Ela substituiu o .etapa__nome, que
+   repetia em caixa alta o que hoje é o título. Texto livre, então
+   nada de uppercase — a frase é para ser lida, não etiquetada. */
+.etapa__desc {
+  margin: 0 0 2px;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--text-faint);
+  overflow-wrap: anywhere;
+}
+
+.etapa__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.etapa__aviso {
+  margin: 4px 0 0;
+  font-size: 0.73rem;
+  line-height: 1.4;
+  color: var(--text-faint);
+}
+
+/* etapa travada: da para ler, mas nao para mexer */
+.etapa[data-estado='bloqueada'] .etapa__cards {
+  opacity: 0.42;
+  filter: saturate(0.6);
+}
+
+/* ---------------- Card de setor ---------------- */
+
+/* SEM fundo chapado: o card e transparente, com o contorno e o nome
+   na cor SUAVE do setor dono (corSuave, src/utils/cor.js). Os checks
+   correm na cor normal do texto. O card e de um setor so. */
+.setorcard {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding: 11px 12px;
+  border: 1.5px solid var(--setor-cor);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-base);
+  box-shadow: none;
+  --avatar-anel: var(--surface);
+}
+
+.setorcard > * {
+  position: relative;
+  z-index: 1;
+}
+
+
+.setorcard.is-pronto {
+  box-shadow: 0 0 0 2px var(--etapa-ok);
+}
+
+/* etapa aberta, mas de outro setor: da para ler, nao para marcar */
+.setorcard.is-deoutro {
+  opacity: 0.62;
+}
+
+.setorcard.is-deoutro .tarefa {
+  cursor: not-allowed;
+}
+
+.setorcard__cadeado {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--control-bg-hover);
+  color: var(--text-muted);
+}
+
+.setorcard__topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* O titulo CORTA com reticencias, e nao quebra em duas linhas.
+
+   Ele divide a fila com o placar, os rostos e as ferramentas que
+   abrem no hover. Deixado quebrar, um titulo comprido empurrava a
+   linha para baixo e as ferramentas apareciam por cima do texto; sem
+   quebrar e sem cortar, ele estouraria a largura do card. Cortado, a
+   fila cabe sempre — e o nome inteiro fica na dica do hover. */
+.setorcard__titulo {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--setor-cor);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.setorcard__placar {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--setor-cor) 14%, transparent);
+  color: var(--setor-cor);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.setorcard__tarefas {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tarefa {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  width: 100%;
+  padding: 4px 5px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+
+.tarefa:hover:not([aria-disabled='true']) {
+  background: var(--control-bg-hover);
+}
+
+/* Check que não é seu: BLOQUEADO, e que se veja que está.
+
+   O botão já vinha com `disabled`, mas visualmente ele continuava um
+   check comum — e a pessoa clicava, não acontecia nada, e ela clicava
+   de novo. Agora o cursor avisa antes do clique, o hover não responde e
+   a caixinha fica riscada em diagonal: a leitura é "aqui não é comigo",
+   e não "não funcionou". */
+.tarefa[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+.tarefa.is-deoutro .tarefa__marca {
+  border-style: dashed;
+  border-color: var(--text-faint);
+  background-image: linear-gradient(
+    135deg,
+    transparent 45%,
+    var(--text-faint) 45%,
+    var(--text-faint) 55%,
+    transparent 55%
+  );
+}
+
+.tarefa.is-deoutro:hover {
+  background: transparent;
+}
+
+.tarefa__marca {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  border: 1.5px solid var(--setor-cor);
+  border-radius: 4px;
+  color: var(--surface);
+  background: transparent;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+/* feito: a caixinha cheia na cor do setor, o tique por cima */
+.tarefa.is-feita .tarefa__marca {
+  background: var(--setor-cor);
+  border-color: var(--setor-cor);
+}
+
+/* respondido "Nao": a caixinha vira um X num cinza-azulado — e uma
+   resposta, nao um erro, entao nada de vermelho */
+.tarefa.is-nao .tarefa__marca {
+  background: var(--resposta-nao);
+  border-color: var(--resposta-nao);
+}
+
+.tarefa.is-feita {
+  opacity: 0.72;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+/* ---------------- Observacoes ---------------- */
+
+.obs {
+  position: sticky;
+  top: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: calc(100dvh - 108px);
+  padding: 13px;
+  border: 1px solid var(--coluna-borda);
+  border-radius: var(--radius-lg);
+  background: var(--coluna-bg);
+}
+
+.obs__topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.obs__titulo {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.obs__contagem {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  color: var(--text-base);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.obs__mais {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  border: 0;
+  border-radius: 50%;
+  background: var(--control-bg);
+  color: var(--text-base);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.obs__mais:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.obs__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  overflow-y: auto;
+}
+
+.obs__vazio {
+  margin: 0;
+  padding: 18px 6px;
+  text-align: center;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+.nota {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.nota__texto {
+  flex: 1;
+  min-width: 0;
+}
+
+.nota__quem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 0.8rem;
+}
+
+.nota__quem strong {
+  font-weight: 600;
+  color: var(--text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nota__nota {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--pri-baixa-suave);
+  color: var(--etapa-ok);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.nota__corpo {
+  margin: 0 0 7px;
+  font-size: 0.81rem;
+  line-height: 1.45;
+  color: var(--text-base);
+  overflow-wrap: anywhere;
+}
+
+.nota__data {
+  margin: 0;
+  font-size: 0.68rem;
+  color: var(--text-faint);
+}
+
+/* foto centralizada na lateral direita, como pedido */
+.nota__lado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+  --avatar-anel: var(--surface);
+}
+
+.nota__apagar {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+
+.nota:hover .nota__apagar,
+.nota__apagar:focus-visible {
+  opacity: 1;
+}
+
+.nota__apagar:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+/* ---------------- Formulario da observacao ---------------- */
+
+.formobs {
+  display: grid;
+  gap: 15px;
+}
+
+.formobs__autor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.formobs__autor p {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-strong);
+}
+
+/* ---------------- Responsivo ---------------- */
+
+@media (max-width: 1080px) {
+  .tabuleiro {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .obs {
+    position: static;
+    max-height: none;
+  }
+
+  .obs__lista {
+    max-height: 420px;
+  }
+}
+
+@media (max-width: 720px) {
+  .capa {
+    flex-wrap: wrap;
+  }
+
+  .capa__lado {
+    align-items: flex-start;
+    max-width: none;
+    text-align: left;
+  }
+
+  .info--membros {
+    margin-left: 0;
+  }
+
+  .trilho {
+    grid-auto-columns: minmax(248px, 86%);
+  }
+}
+
+/* ============================================================
+   Edicao do roteiro pela propria tela da obra
+
+   Os botoes de + e de lapis so aparecem para quem pode mexer no
+   roteiro; ficam discretos e ganham contraste no hover, para nao
+   competirem com os checks, que sao a acao principal daqui.
+   ============================================================ */
+
+/* Novo card e editar etapa, lado a lado no topo. Aparecem quando o
+   mouse entra na etapa, para nao competirem com os checks.
+
+   Fechadas, elas nao ocupam LARGURA nenhuma (`max-width: 0` com
+   `overflow: hidden`), e nao so ficam invisiveis. Com `opacity: 0`
+   sozinho o espaco continuava reservado, e a contagem e os rostos
+   paravam a uns 55px da borda do card — um vao branco permanente
+   guardando lugar para botoes que quase nunca estao la.
+
+   Ao abrir, o titulo (que e `flex: 1`) cede a largura, e e isso que
+   faz o placar e a foto DESLIZAREM para a esquerda em vez de piscar
+   no lugar. A transicao e da largura, entao o movimento se ve. */
+.etapa__ferramentas {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  overflow: hidden;
+  max-width: 0;
+  margin-left: 0;
+  opacity: 0;
+  transition: max-width var(--dur-base) var(--ease-out),
+    margin-left var(--dur-base) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
+}
+
+.etapa:hover .etapa__ferramentas,
+.etapa__ferramentas:focus-within {
+  max-width: 90px;
+  margin-left: 4px;
+  opacity: 1;
+}
+
+/* quem chega pelo teclado nao passa o mouse: sem isto o foco entraria
+   numa caixa de largura zero e o botao ficaria invisivel */
+.etapa__ferramentas button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.etapa__botao {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.etapa__botao:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.etapa__botao:active {
+  transform: scale(0.9);
+}
+
+/* ---- ferramentas dentro do card de setor ---- */
+
+/* mesma mecanica do topo da etapa: fechadas nao ocupam largura, e
+   quem desliza para a esquerda ao abrir sao o placar e os rostos */
+.setorcard__ferramentas {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  overflow: hidden;
+  max-width: 0;
+  margin-left: 0;
+  opacity: 0;
+  transition: max-width var(--dur-base) var(--ease-out),
+    margin-left var(--dur-base) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
+}
+
+.setorcard:hover .setorcard__ferramentas,
+.setorcard__ferramentas:focus-within {
+  /* dois botoes de 20px mais o vao entre eles. O de etiquetas saiu
+     daqui e foi para dentro do "Editar card" — etiquetar e editar o
+     card sao a mesma ida, e um terceiro botao nesta fila abria por
+     cima do titulo em card de nome comprido. */
+  max-width: 44px;
+  margin-left: 4px;
+  opacity: 1;
+}
+
+/* 20px, e nao 24: sao dois botoes numa fila que ja tem titulo,
+   placar e rostos, e cada pixel deles sai da largura do titulo */
+.setorcard__ferramentas button {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--control-bg-hover);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.setorcard__ferramentas button:hover {
+  background: color-mix(in srgb, var(--setor-cor) 22%, transparent);
+  color: var(--text-strong);
+}
+
+/* ---- lapis de cada check ---- */
+
+.setorcard__tarefas li {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.setorcard__tarefas .tarefa {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Os botoes do check (prazo, editar) FECHADOS nao ocupam largura: com
+   so `opacity: 0` eles guardavam o lugar, o texto do check quebrava
+   linha antes da hora e sobrava um vao em branco no fim da linha. Mesma
+   mecanica das ferramentas do card: a largura abre no hover. */
+.tarefa__acoes {
+  display: flex;
+  flex-shrink: 0;
+  overflow: hidden;
+  max-width: 0;
+  opacity: 0;
+  transition: max-width var(--dur-base) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+
+.setorcard__tarefas li:hover .tarefa__acoes,
+.tarefa__acoes:focus-within {
+  max-width: 80px;
+  opacity: 1;
+}
+
+/* tela de toque nao tem hover: ali os botoes ficam sempre a mostra */
+@media (hover: none) {
+  .tarefa__acoes {
+    max-width: none;
+    opacity: 1;
+  }
+}
+
+.tarefa__editar {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0.85;
+  transition: background var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+
+.tarefa__editar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* O check que se arrasta: o proprio check e a alca. Sem selecionar
+   texto nem abrir o menu do toque ao segurar no celular. */
+.setorcard__tarefas li.is-arrastavel {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* a copia que segue o ponteiro */
+.tarefa-fantasma {
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--accent);
+  opacity: 0.96;
+}
+
+.tarefa-fantasma .tarefa__acoes {
+  display: none;
+}
+
+/* durante o arraste a tela inteira mostra a mao fechada */
+body.arrastando-check,
+body.arrastando-check * {
+  cursor: grabbing !important;
+}
+
+/* durante o arraste: o check pego fica apagado, e a linha diz onde ele
+   cai — em cima do check alvo, ou no fim do card */
+.setorcard__tarefas li.is-arrastando {
+  opacity: 0.4;
+}
+
+.setorcard__tarefas li.is-alvo {
+  box-shadow: 0 -2px 0 0 var(--accent);
+}
+
+.setorcard__tarefas.is-alvo-fim {
+  box-shadow: 0 2px 0 0 var(--accent);
+}
+
+/* no modelo da obra o check nao se marca, mas tambem nao e "de outro" */
+.tarefa.is-modelo[aria-disabled='true'] {
+  opacity: 1;
+  cursor: default;
+}
+
+.tarefa__editar:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+  opacity: 1;
+}
+
+/* "Material de gases": "obrigatório" (a obra tem ensaio de gases) no
+   tom de alerta; "opcional" apagado, para nao parecer pendencia */
+.tarefa__gases {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  color: var(--text-faint);
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.7;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tarefa__gases[data-exigido='sim'] {
+  background: color-mix(in srgb, var(--prazo-perto) 18%, transparent);
+  color: var(--prazo-perto);
+}
+
+/* Check com dono diferente do card: a sigla do cargo dele aparece no
+   fim da linha. Sem isso, dois checks vizinhos com donos diferentes
+   ficariam iguais na tela. */
+.tarefa__dono {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--setor-cor) 14%, transparent);
+  color: var(--setor-cor);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1.6;
+}
+
+/* check de outro cargo dentro de um card que e seu */
+.tarefa.is-deoutro {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.setorcard__semcheck {
+  padding: 6px 4px;
+  font-size: 0.76rem;
+  font-style: italic;
+  opacity: 0.72;
+}
+
+/* ---- recados de estado ---- */
+
+.trilho__vazio,
+.detalhe__carregando {
+  margin: 0;
+  padding: 40px 20px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* O "emergência é sempre alta" que morava colado na pastilha da
+   prioridade saiu da tela: ele esticava a pastilha num parágrafo e, com
+   isso, escondia a própria cor que ela existe para mostrar. A regra
+   continua escrita onde ela decide algo — no cadastro da obra. */
+
+/* ============================================================
+   Botao flutuante (canto inferior direito)
+   ============================================================ */
+
+.flutua {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.flutua__botao {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 12px 26px -12px rgba(9, 30, 74, 0.7);
+  /* giro curto e macio: o de 135deg dava um tranco a cada clique */
+  transition: transform 260ms cubic-bezier(0.34, 1.3, 0.5, 1),
+    box-shadow var(--dur-fast) var(--ease-out), filter var(--dur-fast) var(--ease-out);
+}
+
+.flutua__botao:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 16px 30px -12px rgba(9, 30, 74, 0.8);
+}
+
+.flutua__botao:active {
+  transform: scale(0.94);
+}
+
+/* aberto, o + vira x — meia volta e o bastante */
+.flutua__botao.is-aberto {
+  transform: rotate(45deg);
+}
+
+.flutua__botao.is-aberto:active {
+  transform: rotate(45deg) scale(0.94);
+}
+
+.flutua__menu {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 224px;
+  padding: 7px;
+  border-radius: var(--radius-md);
+  background: var(--vidro-menu);
+  border: 1px solid var(--vidro-borda);
+  box-shadow: var(--glass-shadow), var(--vidro-realce);
+  backdrop-filter: blur(calc(var(--glass-blur) * 1.5)) saturate(175%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.5)) saturate(175%);
+  animation: menu-sobe var(--dur-fast) var(--ease-out);
+}
+
+.flutua__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-base);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.flutua__item:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+/* no celular o botao sobe: a faixa de navegacao ocupa o rodape */
+@media (max-width: 860px) {
+  .flutua {
+    right: 16px;
+    bottom: 88px;
+  }
+}
+
+/* o texto do check ocupa o espaco e empurra a etiqueta do dono
+   para a direita da linha */
+.tarefa {
+  width: 100%;
+}
+
+/* ============================================================
+   Etiquetas na faixa da obra
+   ============================================================ */
+
+.capa__etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.capa__etiqueta {
+  padding: 3px 11px;
+  border-radius: var(--radius-pill);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* ---- etiqueta / anexo / editar, no canto direito da faixa ---- */
+
+.capa__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* sobre a faixa colorida o botao e translucido: a cor da obra
+   continua sendo quem manda ali */
+.capa__acao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.16);
+  color: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.capa__acao:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.capa__acao em {
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.28);
+  font-style: normal;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+/* ============================================================
+   "Abrir chat", logo a direita dos Membros
+
+   Os dois vivem no mesmo bloco (.infos__fim) e ele e que vai
+   para a direita da faixa: assim o botao nunca cai sozinho
+   para a linha de baixo quando a faixa fica apertada.
+   ============================================================ */
+
+.infos__fim {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-left: auto;
+}
+
+.abrirchat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 10px 22px -14px var(--accent);
+  transition: filter var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.abrirchat:hover {
+  filter: brightness(1.08);
+}
+
+.abrirchat:active {
+  transform: scale(0.97);
+}
+
+
+/* ============================================================
+   Carimbo: quem criou, quando, e quem mexeu por ultimo
+   ============================================================ */
+
+.carimbo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 32px;
+  padding: 11px 20px;
+  border-radius: var(--radius-lg);
+}
+
+.carimbo__item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  min-width: 0;
+}
+
+/* a observação da conclusão é texto corrido: ganha a faixa inteira em
+   vez de espremer as outras quatro colunas */
+.carimbo__item--largo {
+  flex-basis: 100%;
+}
+
+.carimbo__nome {
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.carimbo__valor {
+  font-size: 0.8rem;
+  color: var(--text-base);
+}
+
+/* "sem data" na conclusao ainda em aberto */
+.info__vazio {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--text-faint);
+}
+
+/* ============================================================
+   Observacao: lapis + lixeira, e a marca de editada
+   ============================================================ */
+
+.nota__ferramentas {
+  display: flex;
+  gap: 2px;
+}
+
+.nota__editada {
+  margin-left: 7px;
+  font-style: normal;
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-faint);
+}
+
+.nota__editada::before {
+  content: '· ';
+}
+
+@media (max-width: 720px) {
+  .infos__fim {
+    margin-left: 0;
+    flex-wrap: wrap;
+  }
+
+  .capa__acoes {
+    justify-content: flex-start;
+  }
+}
+
+/* a descrição da obra virou opcional; sem ela a capa diz isso em vez de
+   abrir um vazio entre o selo do tipo e os botões */
+.capa__semdesc {
+  font-style: italic;
+  opacity: 0.62;
+}
+
+/* ---- Etiquetas do card ----
+
+   Não confundir com as da obra, que ficam no cabeçalho da tela: são
+   catálogos separados no banco, e nenhuma das duas puxa a outra. Aqui
+   elas ficam entre o título do card e os checks — é onde se lê "este
+   pedaço do roteiro é assim" antes de olhar o que falta nele. */
+.setorcard__etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.setorcard__etiquetas li {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.5;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+/* ---- Excluir, no cabeçalho da obra concluída ----
+
+   Vermelho, e as outras ações da faixa não são: apagar o registro de
+   uma obra não é vizinha de "ver anexos", e a cor é o que separa as
+   duas antes de a pessoa ler o rótulo. */
+.capa__acao--perigo {
+  border-color: color-mix(in srgb, #ff6b5e 45%, transparent);
+  color: #ffb3ab;
+}
+
+.capa__acao--perigo:hover {
+  background: color-mix(in srgb, #ff6b5e 22%, transparent);
+  border-color: #ff8f84;
+  color: #fff;
+}
+
+/* ============================================================
+   Card de pergunta, informacoes e prazos (atualizacao 13)
+   ============================================================ */
+
+/* o "i" de quem tem informacoes: a dica abre no card inteiro, ele so
+   avisa que ela existe */
+.setorcard__info {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--setor-cor);
+  opacity: 0.85;
+}
+
+/* o texto do check ocupa o espaco; resposta, dono e prazo vao no fim */
+/* O texto toma o que sobra da linha e QUEBRA nela; as etiquetas
+   (Sim/Nao, gases, prazo, dono) descem para a linha de baixo quando nao
+   cabem do lado. Antes o texto encolhia abaixo da largura da palavra e
+   vazava por cima delas — e a borda do card cortava o que sobrava. */
+.tarefa {
+  flex-wrap: wrap;
+  row-gap: 3px;
+}
+
+.tarefa__texto {
+  flex: 1 1 7em;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+/* a resposta escrita do lado do check: "Hospedagem  Nao". Sem o risco
+   do texto feito: ela e a informacao, nao o que ja passou */
+.tarefa__resposta {
+  display: inline-block;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0 7px;
+  border-radius: var(--radius-pill);
+  font-size: 0.64rem;
+  font-weight: 800;
+  line-height: 1.7;
+}
+
+.tarefa__resposta[data-resposta='nao'] {
+  background: color-mix(in srgb, var(--resposta-nao) 18%, transparent);
+  color: var(--resposta-nao);
+}
+
+.tarefa__resposta[data-resposta='sim'] {
+  background: color-mix(in srgb, var(--etapa-ok) 16%, transparent);
+  color: var(--etapa-ok);
+}
+
+/* o risco do check feito fica so no texto dele */
+.tarefa.is-feita {
+  text-decoration: none;
+}
+
+.tarefa.is-feita .tarefa__texto {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.tarefa__prazo {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0 7px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.7;
+  white-space: nowrap;
+}
+
+.tarefa__prazo[data-estado='perto'] {
+  background: color-mix(in srgb, var(--prazo-perto) 18%, transparent);
+  color: var(--prazo-perto);
+}
+
+.tarefa__prazo[data-estado='vencido'] {
+  background: color-mix(in srgb, var(--prazo-vencido) 16%, transparent);
+  color: var(--prazo-vencido);
+}
+
+/* ============================================================
+   Etapas fixas, execucao e os checks do sistema (atualizacao 14)
+   ============================================================ */
+
+/* o bloco da execucao: periodo + andamento dos ensaios. Fica no tom
+   calmo; so o vermelho de "falta o prazo da execucao" */
+.execbloco {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px 11px;
+  border: 1px solid var(--tom-borda, var(--quadro-ok-borda));
+  border-radius: var(--radius-md);
+  background: var(--tom-bg, var(--quadro-ok-bg));
+}
+
+.execbloco[data-tom='vencido'] {
+  --tom-bg: var(--quadro-vermelho-bg);
+  --tom-borda: var(--quadro-vermelho-borda);
+  --tom-acento: var(--quadro-vermelho-acento);
+}
+
+.execbloco__linha {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  color: var(--tom-acento, var(--quadro-ok-acento));
+}
+
+.execbloco__periodo {
+  flex: 1 1 160px;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--text-base);
+}
+
+.execbloco__periodo strong {
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.execbloco__selo {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--tom-acento, var(--quadro-ok-acento));
+  color: var(--surface);
+  font-size: 0.64rem;
+  font-style: normal;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* o prazo veio da 1a etapa: aqui so se le */
+.execbloco__origem {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.execbloco__botao {
+  padding: 3px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.execbloco__botao:hover {
+  background: var(--control-bg-hover);
+}
+
+.execbloco__andamento {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.execbloco__andamento strong {
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+/* o check que pede Sim ou Nao e ainda nao foi respondido */
+.tarefa__pergunta {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0 7px;
+  border: 1px solid color-mix(in srgb, var(--setor-cor) 55%, transparent);
+  border-radius: var(--radius-pill);
+  color: var(--setor-cor);
+  font-size: 0.6rem;
+  font-weight: 800;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+/* os dois do sistema: quantos ensaios / quanto ja foi executado */
+.tarefa__ensaios {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0 7px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--setor-cor) 16%, transparent);
+  color: var(--setor-cor);
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.7;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* o check do sistema abre um pop-up: o texto ganha um sublinhado leve
+   para dizer "isto abre alguma coisa" */
+.tarefa.is-sistema .tarefa__texto {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: color-mix(in srgb, var(--setor-cor) 60%, transparent);
+  text-underline-offset: 3px;
+}
+
+.tarefa.is-sistema.is-feita .tarefa__texto {
+  text-decoration: line-through;
+}

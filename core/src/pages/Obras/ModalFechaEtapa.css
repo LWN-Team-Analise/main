@@ -1,0 +1,88 @@
+/* ============================================================
+   O recado de fechamento de etapa
+   ============================================================ */
+
+.metapa {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* a etapa numa faixa, com a cor do desfecho: verde quando ela fechou
+   inteira, ambar quando ainda ha setor devendo */
+.metapa__etapa {
+  margin: 0;
+  padding: 9px 14px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--tom-cor) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tom-cor) 34%, transparent);
+  color: var(--tom-cor);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.metapa__etapa[data-tom='ok'] { --tom-cor: var(--etapa-ok); }
+.metapa__etapa[data-tom='espera'] { --tom-cor: var(--pri-media); }
+
+.metapa__texto {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text-base);
+}
+
+/* os setores que faltam, cada um na cor dele — a mesma que identifica
+   o setor no filtro e no roteiro */
+.metapa__setores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.metapa__setores li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 13px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--setor-cor) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--setor-cor) 42%, transparent);
+  color: var(--setor-cor);
+  font-size: 0.79rem;
+  font-weight: 700;
+}
+
+.metapa__setores li::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--setor-cor);
+}
+
+.metapa__acoes {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+
+/* um botao so: a caixa conta o que aconteceu, nao pergunta nada */
+.metapa__ok {
+  padding: 9px 20px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter var(--dur-fast) var(--ease-out);
+}
+
+.metapa__ok:hover {
+  filter: brightness(1.08);
+}

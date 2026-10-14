@@ -1,0 +1,61 @@
+/* ============================================================
+   Modelo da obra (botao "Editar" do quadro)
+
+   As colunas sao as mesmas da tela da obra (.trilho, .etapa,
+   .setorcard — ObraDetalhe.css); aqui fica so o que e do pop-up.
+   ============================================================ */
+
+.modelo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.modelo__barra {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modelo__nova {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px dashed var(--control-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-base);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.modelo__nova:hover {
+  background: var(--control-bg-hover);
+  border-color: var(--line-strong);
+}
+
+/* dentro do pop-up as colunas sao um pouco mais estreitas: cabem as
+   cinco etapas numa tela comum sem rolar para o lado */
+.modelo__trilho {
+  grid-auto-columns: minmax(232px, 1fr);
+}
+
+.modelo__vazio {
+  margin: 0;
+  padding: 10px 4px;
+  font-size: 0.76rem;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+/* no celular, uma etapa por vez (e a ponta da proxima, que diz que ha
+   mais para o lado) — como na tela da obra */
+@media (max-width: 720px) {
+  .modelo__trilho {
+    grid-auto-columns: minmax(232px, 86%);
+  }
+}

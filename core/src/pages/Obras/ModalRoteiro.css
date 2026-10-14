@@ -1,0 +1,257 @@
+/* ============================================================
+   Formularios do roteiro (etapa, card e check).
+   Os tres pop-ups sao parecidos, entao dividem o mesmo estilo.
+   ============================================================ */
+
+.formrot {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.formrot__rotulo {
+  margin-bottom: -8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text-muted);
+}
+
+.formrot__dica {
+  margin: -6px 0 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--text-faint);
+}
+
+.formrot__erro {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--danger);
+}
+
+/* ---------------- Previa do card ---------------- */
+
+.formrot__previa {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 13px;
+  border: 1px dashed var(--control-border);
+  border-radius: var(--radius-md);
+}
+
+.formrot__previanome {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* As duas linhas do card da etapa, como elas vao aparecer no quadro:
+   o nome em cima, a descricao embaixo. Mesmos tamanhos e mesmas cores
+   de .etapa__titulo e .etapa__desc — uma previa que nao bate com o
+   resultado e pior que previa nenhuma. */
+.formrot__previaetapa {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.formrot__previaetapa strong {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.formrot__previaetapa em {
+  font-size: 0.76rem;
+  font-style: normal;
+  line-height: 1.4;
+  color: var(--text-faint);
+  overflow-wrap: anywhere;
+}
+
+/* a amostra usa o mesmo fundo do card de verdade: e o gradiente que
+   o usuario vai ver na etapa depois de salvar */
+.formrot__amostra {
+  padding: 10px 15px;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+
+/* ---------------- Comportamento do card (Sim/Nao) ---------------- */
+
+.formrot__escolha {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+/* o rotulo de cima sem o recuo negativo que o .formrot__rotulo usa
+   para colar no campo logo abaixo */
+.formrot__rotulo--solto {
+  margin-bottom: 0;
+}
+
+.formrot__opcoes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+}
+
+.formrot__opcao {
+  padding: 8px 10px;
+  border: 0;
+  border-radius: calc(var(--radius-sm) - 3px);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.formrot__opcao:hover {
+  color: var(--text-strong);
+}
+
+.formrot__opcao.is-atual {
+  background: var(--control-on-bg);
+  color: var(--control-on-fg);
+}
+
+.formrot__dica--colada {
+  margin: 0;
+}
+
+/* A previa no estilo novo do card: contorno e nome na cor suave do
+   setor, sem fundo. */
+.formrot__amostra {
+  position: relative;
+  overflow: hidden;
+  border: 1.5px solid var(--amostra-cor);
+  background: transparent;
+  color: var(--amostra-cor);
+  text-shadow: none;
+  font-weight: 700;
+}
+
+/* ---------------- O check: caixa de marcar e avisos ---------------- */
+
+/* "Obrigatorio responder Sim ou Nao?" — caixa de marcar de verdade, e
+   nao escolha entre duas opcoes: cada check responde a sua */
+.formrot__marca {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.formrot__marca input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* o recado de peca do sistema (check dos ensaios, etapa fixa) */
+.formrot__sistema {
+  margin: 0;
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text-base);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* embaixo do calendario do periodo de execucao: quantos dias e os
+   atalhos (tirar fins de semana, limpar) na primeira linha, quais dias
+   na de baixo. As duas linhas tem altura reservada: o resumo nao pode
+   crescer enquanto a pessoa arrasta no calendario. */
+.formrot__diasresumo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: 28px minmax(36px, auto);
+  align-items: center;
+  column-gap: 10px;
+}
+
+.formrot__diasresumo strong {
+  font-size: 0.86rem;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.formrot__diasresumo strong[data-vazio] {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.formrot__diastexto {
+  grid-column: 1 / -1;
+  align-self: start;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.formrot__diasatalhos {
+  display: flex;
+  gap: 6px;
+}
+
+/* no telefone os atalhos nao cabem ao lado do total: descem para uma
+   linha propria, tambem com altura reservada */
+@media (max-width: 480px) {
+  .formrot__diasresumo {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 24px minmax(36px, auto) 30px;
+  }
+
+  .formrot__diasatalhos {
+    grid-row: 3;
+  }
+
+  .formrot__diastexto {
+    grid-row: 2;
+  }
+}
+
+.formrot__diasatalho {
+  padding: 5px 11px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-base);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.formrot__diasatalho:hover {
+  background: var(--control-bg-hover);
+}

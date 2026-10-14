@@ -1,0 +1,753 @@
+/* ============================================================
+   Quadro de obras: painel de filtros, barra de acoes e as tres
+   colunas (padrao, emergencia, enviar aviso).
+   ============================================================ */
+
+.obras {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------------- Painel de filtros ---------------- */
+
+/* Duas colunas: a fila de filtros a esquerda, os Membros presos na
+   direita, no ALTO.
+
+   Grade, e nao flex, porque isto e o que segura os Membros na primeira
+   linha. Em flex com wrap, os quatro filtros tomam a largura toda e o
+   bloco de Membros cai inteiro para uma linha nova; ali sobra sempre
+   um pouco menos do que ele precisa, entao ele caia sempre. Como
+   coluna propria da grade, ele nao concorre por espaco: a coluna dos
+   filtros e que encolhe (`minmax(0, 1fr)`) e quebra por dentro. */
+.painel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px 20px;
+  padding: 15px 18px;
+  border-radius: var(--radius-lg);
+}
+
+/* em tela estreita nao ha largura para as duas colunas: ali os
+   Membros descem, de propósito */
+@media (max-width: 760px) {
+  .painel {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* A fila dos filtros, Membros incluso — todos na MESMA linha, com o
+   rotulo em cima e o controle embaixo:
+
+     Prioridade      Cliente        Data    Setor pendente    Membros
+     baixa media alta [todos ▾]     ..      diretor comer...  [fotos]
+
+   `align-items: flex-start` e o que alinha os rotulos entre si: sem
+   ele os blocos de alturas diferentes se centrariam e cada rotulo
+   pousaria numa altura. */
+.painel__filtros {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px 20px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.filtro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* por padrao o filtro nao encolhe: o seletor de cliente e o campo de
+     data nao tem como ficar menores sem cortar o proprio conteudo */
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+/* ...menos o de setores, que e o mais largo e o unico que quebra bem.
+   E ele que cede quando falta espaco, e por isso os cinco rotulos
+   continuam na mesma linha. */
+/* A BASE e igual ao mínimo de propósito: quem decide a quebra da linha
+   é a base do flex, não o `min-width`. Com base maior que o mínimo, o
+   bloco descia para a segunda linha antes de tentar encolher — e ele
+   cabia. */
+.filtro--setores {
+  flex: 1 1 180px;
+  min-width: 180px;
+}
+
+.filtro__nome {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.filtro__nome em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+/* A altura de piso é a do controle mais alto da linha — o botão do
+   Seletor, com seus 42px. Sem ela cada filtro tinha a altura do
+   próprio conteúdo, e as pastilhas de Prioridade (31px) ficavam
+   visivelmente mais acima que a lista de clientes e o campo de data
+   ao lado. Com o piso, as três linhas começam e terminam juntas. */
+.filtro__linha {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 42px;
+}
+
+.filtro__data {
+  padding: 8px 13px;
+  border: 1px solid var(--vidro-borda);
+  border-radius: var(--radius-pill);
+  background: var(--vidro-fundo);
+  box-shadow: var(--vidro-realce);
+  backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  color: var(--text-strong);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.filtro__data:hover {
+  background: var(--vidro-fundo-forte);
+}
+
+.filtro__data:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--vidro-realce), 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* o iconezinho do calendario, que nasce preto e some no tema escuro */
+:root[data-theme='dark'] .filtro__data::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.7;
+}
+
+.filtro__dataleg {
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+
+/* o "+N" dos setores: mesma pastilha, so que tracejada */
+.chip--mais {
+  border-style: dashed;
+  font-weight: 700;
+}
+
+/* a lista de clientes e o componente Seletor (src/components/Seletor);
+   aqui so a largura que ela ocupa dentro do filtro */
+.filtro__linha .sel {
+  min-width: 178px;
+  max-width: 210px;
+}
+
+/* ---- membros, agora na mesma linha dos filtros ---- */
+
+/* segunda coluna da grade do painel, no alto: o rotulo "Membros" fica
+   na mesma altura de "Prioridade", "Cliente" e "Setor pendente", e as
+   fotos na altura das pastilhas deles */
+.filtro--membros {
+  flex-shrink: 0;
+}
+
+.equipe {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.equipe:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+.equipe:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.equipe__avatares {
+  display: inline-flex;
+  --avatar-anel: var(--surface);
+}
+
+.equipe__avatares > * + * {
+  margin-left: -9px;
+}
+
+.equipe__resto,
+.equipe__vazio {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.equipe__vazio {
+  padding: 5px 6px;
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+/* ---------------- Barra de acoes ---------------- */
+
+.barra {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.barra__total {
+  margin: 0 6px 0 2px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.barra__total strong {
+  margin-right: 4px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+/* os dois de criar obra: lado a lado, com respiro entre eles. Sem o
+   flex, eram dois inline-flex encostados um no outro — o JSX nao deixa
+   nem o espaco em branco entre as tags */
+.barra__criar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Os dois de criar obra, nas cores dos cards que eles criam: verde
+   claro para a obra padrao, azul (marinho no tema claro, celeste no
+   escuro) para a emergencia. Tinta suave e um pouco transparente,
+   contorno fino e o texto na cor de acento — sem vidro e sem gradiente.
+   So aqui: o .acao--padrao das outras telas continua como era. */
+.acao--obra-padrao,
+.acao--obra-emergencia {
+  border: 1px solid var(--acao-borda);
+  background: var(--acao-bg);
+  color: var(--acao-fg);
+  font-weight: 700;
+  box-shadow: none;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.acao--obra-padrao {
+  --acao-bg: color-mix(in srgb, var(--quadro-ok-acento) 17%, transparent);
+  --acao-borda: color-mix(in srgb, var(--quadro-ok-acento) 42%, transparent);
+  --acao-fg: var(--quadro-ok-acento);
+}
+
+.acao--obra-emergencia {
+  --acao-bg: color-mix(in srgb, var(--quadro-emerg-acento) 16%, transparent);
+  --acao-borda: color-mix(in srgb, var(--quadro-emerg-acento) 42%, transparent);
+  --acao-fg: var(--quadro-emerg-acento);
+}
+
+/* "Editar" (o modelo da obra): neutro, do lado dos dois de criar */
+.acao--modelo {
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+  color: var(--text-base);
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.acao--modelo:hover {
+  filter: none;
+  background: var(--control-bg-hover);
+  border-color: var(--line-strong);
+}
+
+.acao--obra-padrao:hover,
+.acao--obra-emergencia:hover {
+  filter: none;
+  background: color-mix(in srgb, var(--acao-fg) 26%, transparent);
+  border-color: var(--acao-fg);
+}
+
+.barra__direita {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+/* o seletor de ordem precisa caber "Data de conclusão" inteiro */
+.barra__ordem {
+  flex-shrink: 0;
+}
+
+.barra__ordem .sel {
+  min-width: 190px;
+}
+
+/* ---------------- Quadro ---------------- */
+
+/* As etapas LADO A LADO, ocupando a largura. Cada coluna divide o
+   espaco por igual; quando nao cabem (muitas etapas, tela estreita), o
+   quadro desliza para o lado em vez de quebrar linha. */
+.quadro {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(164px, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  min-width: 0;
+  padding-bottom: 6px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 9px;
+  border: 1px solid var(--coluna-borda);
+  border-radius: var(--radius-lg);
+  background: var(--coluna-bg);
+}
+
+.coluna__topo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  min-width: 0;
+}
+
+/* a descricao da etapa ("Comercial"), na linha de baixo do nome — a
+   mesma que aparece embaixo do titulo da etapa dentro da obra */
+.coluna__subtitulo {
+  order: 10;
+  flex: 1 0 100%;
+  padding-left: 2px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.coluna__titulo {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--tom-bg);
+  color: var(--tom-fg);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+/* as etapas: pastilha neutra — quem tem cor sao os cards dentro */
+.coluna__titulo[data-tom='etapa'] {
+  --tom-bg: var(--control-bg-hover);
+  --tom-fg: var(--text-strong);
+}
+
+/* a emergencia no azul suave dela, o mesmo dos cards */
+.coluna__titulo[data-tom='emergencia'] {
+  --tom-bg: var(--quadro-emerg-bg);
+  --tom-fg: var(--quadro-emerg-acento);
+  box-shadow: inset 0 0 0 1px var(--quadro-emerg-borda);
+}
+
+.coluna__contador {
+  display: grid;
+  place-items: center;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  color: var(--text-base);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.coluna__contador {
+  flex-shrink: 0;
+}
+
+.coluna__pilha {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 128px;
+}
+
+.coluna__vazio {
+  margin: auto 0;
+  padding: 16px 6px;
+  text-align: center;
+  font-size: 0.79rem;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+/* ---------------- Responsivo ---------------- */
+
+@media (max-width: 720px) {
+  .painel {
+    padding: 14px;
+  }
+
+  /* ---- os filtros, dois a dois ----
+     Em `flex-wrap` cada um tinha a largura do proprio conteudo, e o que
+     saia era uma escada: um filtro largo sozinho numa linha, dois
+     apertados na outra, um terceiro sobrando. Em GRADE de duas colunas
+     eles ficam lado a lado, do mesmo tamanho, comecando e terminando
+     juntos. */
+  .painel__filtros {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 12px;
+  }
+
+  /* `min-width: 0` desfaz o `flex-shrink: 0` herdado: na grade quem nao
+     pode encolher estoura a coluna */
+  .painel__filtros > .filtro {
+    min-width: 0;
+    flex-shrink: 1;
+  }
+
+  /* As tres pastilhas de prioridade dividem a linha inteira entre
+     elas. Do tamanho do proprio texto, sobrava metade da faixa vazia a
+     direita — e um filtro com um buraco do lado parece filtro cortado. */
+  .filtro--prioridade .filtro__linha > .chip {
+    flex: 1 1 0;
+    min-width: 0;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* os dois de criar obra dividem a linha meio a meio */
+  .barra__criar {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  /* os dois de criar dividem o que sobra; o "Editar" fica do tamanho do
+     proprio texto. Os tres em partes iguais cortavam o "+ Obra
+     emergência" para dar ao Editar uma largura de que ele nao precisa. */
+  .barra__criar .acao {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
+    padding-inline: 12px;
+  }
+
+  .barra__criar .acao--modelo {
+    flex: 0 0 auto;
+    padding-inline: 12px;
+  }
+
+  /* Os filtros de PASTILHA tomam a linha inteira; so os dois de
+     controle unico (a lista de clientes e o campo de data) e que
+     dividem a linha. Espremida em meia tela, uma fila de pastilhas
+     quebra em duas ou tres alturas e desalinha tudo a volta. */
+  .filtro--prioridade,
+  .filtro--setores,
+  .filtro--membros {
+    grid-column: 1 / -1;
+    margin-left: 0;
+    width: auto;
+  }
+
+  /* os controles cedem a largura da coluna em vez de impor a propria:
+     sem isto o campo de data (232px) e a lista de clientes (180px)
+     estouravam a metade da tela e a grade voltava para uma coluna so */
+  .filtro__linha {
+    min-width: 0;
+  }
+
+  .filtro__linha > * {
+    max-width: 100%;
+  }
+
+  .filtro__data,
+  .filtro__linha .sel,
+  .filtro__linha .sel__botao {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .barra__direita {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  /* `min-width: 0` e o que autoriza o botao a encolher. Sem ele um item
+     flex nunca fica menor que o proprio texto — e era assim que
+     "Adicionar obra emergência" passava da borda. */
+  .acao {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+@media (max-width: 520px) {
+  /* na tela estreita a busca ganha a linha inteira; filtro e ordem
+     dividem a de baixo */
+  .barra__direita .procura {
+    flex-basis: 100%;
+  }
+
+  /* Uma coluna so abaixo de 340px. O limite era 380 e pegava o iPhone
+     comum, de 375px — justo o aparelho que precisava das duas. */
+  .painel__filtros {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 340px) {
+  .painel__filtros {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   Quadro + a lateral
+
+   As etapas lado a lado ocupam a largura; na ponta direita, a
+   coluna das obras emergenciais e, EMBAIXO dela, as observacoes
+   do quadro.
+   ============================================================ */
+
+.areaquadro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  gap: 12px;
+  align-items: start;
+}
+
+.lateral {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.quadroobs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: calc(100dvh - 108px);
+  padding: 13px;
+  border: 1px solid var(--coluna-borda);
+  border-radius: var(--radius-lg);
+  background: var(--coluna-bg);
+}
+
+.quadroobs__topo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.quadroobs__titulo {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.quadroobs__contagem {
+  margin-right: auto;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  color: var(--text-base);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.quadroobs__mais,
+.quadroobs__historico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--control-border);
+  border-radius: 50%;
+  background: var(--control-bg);
+  color: var(--text-base);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.quadroobs__mais:hover,
+.quadroobs__historico:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.quadroobs__mais:active,
+.quadroobs__historico:active {
+  transform: scale(0.9);
+}
+
+/* o historico e o mais discreto dos dois: escrever vem primeiro,
+   consultar o que venceu vem depois */
+.quadroobs__historico {
+  color: var(--text-muted);
+}
+
+/* com numero ele deixa de ser circulo e vira pilula — a contagem do
+   que venceu cabe dentro do proprio botao */
+.quadroobs__historico.is-contando {
+  padding: 0 9px 0 7px;
+  border-radius: var(--radius-pill);
+}
+
+.quadroobs__historico em {
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.quadroobs__vazio {
+  margin: 0;
+  padding: 16px 4px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+.quadroobs__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.quadroobs__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 11px;
+  border: 1px solid var(--coluna-borda);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.quadroobs__item > div {
+  min-width: 0;
+}
+
+.quadroobs__quem {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin: 0 0 2px;
+}
+
+.quadroobs__quem strong {
+  font-size: 0.79rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.quadroobs__quem span {
+  font-size: 0.67rem;
+  color: var(--text-faint);
+}
+
+.quadroobs__texto {
+  margin: 0;
+  font-size: 0.81rem;
+  line-height: 1.45;
+  color: var(--text-base);
+  /* ate tres linhas; o resto abre no pop-up */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.quadroobs__ver {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px dashed var(--control-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.quadroobs__ver:hover {
+  border-color: var(--accent);
+  color: var(--text-strong);
+}
+
+/* em tela estreita a lateral desce para baixo do quadro, na mesma
+   ordem: emergencias, depois observacoes */
+@media (max-width: 1180px) {
+  .areaquadro {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quadroobs {
+    max-height: none;
+  }
+}
+
+/* A fila de setores não quebra: o que não couber na linha vira o "+N".
+   Quem conta quantas cabem é o próprio componente, medindo a caixa —
+   ver `FilaDeSetores`, em Obras.jsx. O `overflow: hidden` aqui é só a
+   rede de segurança para o quadro entre a primeira pintura e a medida. */
+.filtro__linha--fila {
+  flex-wrap: nowrap;
+  overflow: hidden;
+  gap: 6px;
+}
+
+.filtro__linha--fila .chip {
+  flex: none;
+  white-space: nowrap;
+}

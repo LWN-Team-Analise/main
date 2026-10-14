@@ -1,0 +1,214 @@
+/* ============================================================
+   A ILHA
+
+   Preta nos DOIS temas, de proposito. Ela nao e um bloco da tela: e
+   uma coisa pousada por cima dela, como a Dynamic Island e por cima do
+   papel de parede. Se ela seguisse o tema, viraria mais um painel — e
+   um painel a gente para de ver depois do segundo dia.
+
+   Por isso as cores daqui sao fixas e nao usam os tokens: nao ha "ilha
+   clara". As unicas medidas que mudam entre os estados sao largura,
+   raio e recheio — as tres que a transicao anima.
+   ============================================================ */
+
+.ilha {
+  position: fixed;
+  /* Instalado como aplicativo, a tela comeca embaixo da barra de status
+     e `top: 12px` jogava a pilula por cima do relogio e da propria
+     Dynamic Island. Com a area segura ela pousa logo ABAIXO da ilha de
+     verdade, encostada nela. No navegador comum a conta da o mesmo 12px
+     de antes, porque ali o inset e zero. */
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  left: 50%;
+  z-index: 60;
+  transform: translateX(-50%);
+  /* so a caixa recebe clique: a faixa ao redor continua sendo da tela */
+  pointer-events: none;
+  animation: ilha-desce 0.52s cubic-bezier(0.2, 1.1, 0.3, 1) both;
+}
+
+@keyframes ilha-desce {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -150%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.ilha__caixa {
+  pointer-events: auto;
+  width: min(88vw, 244px);
+  padding: 5px;
+  border-radius: 999px;
+  background: #000;
+  /* a borda clara e o que separa a ilha do fundo escuro no modo noturno,
+     onde preto sobre preto sumiria */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
+  transition: width 0.46s cubic-bezier(0.2, 0.9, 0.2, 1),
+    padding 0.46s cubic-bezier(0.2, 0.9, 0.2, 1),
+    border-radius 0.46s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+.ilha__caixa.is-aberta {
+  width: min(92vw, 408px);
+  padding: 20px 18px 18px;
+  border-radius: 30px;
+}
+
+/* ---------------- a linha do titulo ----------------
+   Recolhida ela e a pilula inteira; aberta, vira o cabecalho do cartao.
+   E o mesmo botao: clicar nele abre e fecha. */
+
+.ilha__toque {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ilha__caixa.is-aberta .ilha__toque {
+  padding: 0 2px;
+}
+
+.ilha__glifo {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  color: #19d3a2;
+  transition: width 0.34s var(--ease-out), opacity 0.22s var(--ease-out);
+}
+
+/* aberto, o glifo sai de cena e o titulo toma a linha — como no cartao
+   de referencia, onde o texto comeca na margem */
+.ilha__caixa.is-aberta .ilha__glifo {
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.ilha__titulo {
+  min-width: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  /* recolhida, o recado nao pode quebrar a pilula em duas linhas */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: font-size 0.4s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+.ilha__caixa.is-aberta .ilha__titulo {
+  font-size: 1.42rem;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  white-space: normal;
+}
+
+/* ---------------- o corpo ----------------
+   0fr -> 1fr abre a altura sozinho: nenhum max-height chutado, nenhum
+   JS medindo o conteudo. */
+
+.ilha__corpo {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.46s cubic-bezier(0.2, 0.9, 0.2, 1),
+    opacity 0.26s var(--ease-out);
+}
+
+.ilha__caixa.is-aberta .ilha__corpo {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition-delay: 0s, 0.1s;
+}
+
+.ilha__corpo-interno {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ilha__sub {
+  margin: 4px 2px 16px;
+  color: #8d8d92;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+/* ---------------- a bandeja de acoes ----------------
+   As acoes moram num degrau mais claro que o fundo da ilha: e o que as
+   junta num grupo so, em vez de dois botoes soltos no preto. */
+
+.ilha__bandeja {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 7px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.ilha__acao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.ilha__acao:hover {
+  background: rgba(255, 255, 255, 0.17);
+}
+
+.ilha__acao:active {
+  transform: scale(0.985);
+}
+
+.ilha__acaoglifo {
+  display: grid;
+  place-items: center;
+  color: #19d3a2;
+}
+
+/* o anel de foco precisa aparecer sobre o preto */
+.ilha__toque:focus-visible,
+.ilha__acao:focus-visible {
+  outline: 2px solid #19d3a2;
+  outline-offset: 2px;
+}
+
+/* quem pediu menos animacao recebe a troca seca, sem a peca crescendo */
+@media (prefers-reduced-motion: reduce) {
+  .ilha,
+  .ilha__caixa,
+  .ilha__corpo,
+  .ilha__titulo,
+  .ilha__glifo {
+    animation: none;
+    transition: none;
+  }
+}

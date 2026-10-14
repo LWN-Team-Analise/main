@@ -1,0 +1,474 @@
+/* ============================================================
+   Graficos — o traco comum
+
+   A regra da cor: azul para "quanto", verde para "bom", vermelho
+   para "ruim", e uma sequencia categorica curta para quando o item
+   nao traz cor propria. Grafico que usa oito cores obriga a
+   consultar a legenda a cada barra.
+
+   Tudo aqui e SVG desenhado no tamanho real em pixels (ver
+   graficos.jsx), entao as medidas de fonte sao absolutas — nao ha
+   viewBox esticando a letra junto com o desenho.
+   ============================================================ */
+
+:root {
+  --gr-um: #2563c9;
+  --gr-bom: #1f9a63;
+  --gr-ruim: #d93a34;
+
+  /* a sequencia categorica: usada quando o item nao tem cor propria */
+  --gr-c1: #1a56c4;
+  --gr-c2: #0f9aa8;
+  --gr-c3: #7c4dcc;
+  --gr-c4: #e2761b;
+  --gr-c5: #2f8f5b;
+  --gr-c6: #c2417a;
+
+  /* as categorias de despesa: azul, laranja e verde — o mesmo tom que
+     cada uma tem na aba Despesas. Apontam para a sequencia, entao o
+     tema escuro troca junto sem repetir a regra */
+  --gr-despesa: var(--gr-c1);
+  --gr-refeicao: var(--gr-c4);
+  --gr-bonus: var(--gr-c5);
+
+  /* o trilho e a pista cinza que fica ATRAS da barra, do zero ao fim
+     da escala. E ele que mostra "quanto falta" sem escrever nada */
+  --gr-trilho: rgba(13, 13, 13, 0.05);
+  --gr-grade: rgba(13, 13, 13, 0.07);
+  --gr-eixo: rgba(13, 13, 13, 0.2);
+
+  --gr-dica-bg: rgba(17, 21, 30, 0.96);
+  --gr-dica-borda: rgba(255, 255, 255, 0.12);
+  --gr-dica-fg: #ffffff;
+  --gr-dica-fraco: rgba(255, 255, 255, 0.6);
+}
+
+:root[data-theme='dark'] {
+  --gr-um: #5b9bf0;
+  --gr-bom: #4fc98a;
+  --gr-ruim: #f0554c;
+
+  --gr-c1: #5b9bf0;
+  --gr-c2: #3fc7d6;
+  --gr-c3: #a884ea;
+  --gr-c4: #f2913c;
+  --gr-c5: #4fc98a;
+  --gr-c6: #ea6f9e;
+
+  --gr-trilho: rgba(255, 255, 255, 0.06);
+  --gr-grade: rgba(255, 255, 255, 0.07);
+  --gr-eixo: rgba(255, 255, 255, 0.22);
+
+  --gr-dica-bg: rgba(24, 28, 38, 0.97);
+  --gr-dica-borda: rgba(255, 255, 255, 0.14);
+  --gr-dica-fg: #ffffff;
+  --gr-dica-fraco: rgba(255, 255, 255, 0.58);
+}
+
+/* `position: relative` porque a caixinha de dica mora aqui dentro,
+   posicionada em cima do desenho */
+.gr {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.gr svg {
+  display: block;
+  overflow: visible;
+}
+
+/* ---- eixo e grade ----
+
+   A grade fica quase invisivel: ela e regua, nao desenho. Uma grade
+   forte compete com as barras justamente na hora de comparar duas
+   que sao parecidas. */
+
+.gr__grade {
+  stroke: var(--gr-grade);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.gr__eixo {
+  stroke: var(--gr-eixo);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+/* o zero das barras divergentes e mais forte que as outras marcas:
+   e dele que os dois lados saem */
+.gr__eixo--zero {
+  stroke-width: 1.5;
+}
+
+.gr__trilho {
+  fill: var(--gr-trilho);
+}
+
+.gr__tick {
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  fill: var(--text-faint);
+}
+
+/* o nome do item, na coluna da esquerda */
+.gr__nome {
+  font-size: 11.5px;
+  font-weight: 600;
+  fill: var(--text-base);
+}
+
+.gr__sub {
+  font-size: 9.5px;
+  font-weight: 500;
+  fill: var(--text-faint);
+}
+
+.gr__valor {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  fill: var(--text-strong);
+  dominant-baseline: middle;
+}
+
+/* a contagem embaixo do valor — "18 marcacoes" */
+.gr__nota {
+  font-size: 9.5px;
+  font-weight: 600;
+  fill: var(--text-faint);
+  dominant-baseline: middle;
+}
+
+/* a bolinha da cor do setor, ao lado do nome: e ela que carrega a
+   cor quando a barra e de uma cor so */
+.gr__ponta {
+  r: 3.5;
+}
+
+/* ---- as barras ----
+
+   A faixa transparente por cima de cada linha e o que captura o
+   mouse: mirar a barra de 7px de altura para ver a dica seria
+   trabalho, e a linha inteira acende junto de qualquer jeito. */
+
+.gr__alvo {
+  fill: transparent;
+  cursor: default;
+}
+
+.gr__barra {
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.gr__linha .gr__realce {
+  fill: transparent;
+  transition: fill var(--dur-fast) var(--ease-out);
+}
+
+.gr__linha:hover .gr__realce {
+  fill: var(--gr-trilho);
+}
+
+.gr__linha:hover .gr__barra {
+  opacity: 0.85;
+}
+
+.gr__linha:hover .gr__nome,
+.gr__linha:hover .gr__valor {
+  fill: var(--text-strong);
+}
+
+/* ---- a linha da media ---- */
+
+.gr__referencia line {
+  stroke: var(--text-faint);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.gr__referencia text {
+  font-size: 9.5px;
+  font-weight: 600;
+  fill: var(--text-faint);
+  dominant-baseline: middle;
+}
+
+/* o numero da media pesa mais que a palavra "média" — e ele que se
+   compara com a altura das colunas */
+.gr__medianum--forte {
+  font-weight: 800;
+  fill: var(--text-muted);
+}
+
+/* ---- a dica que segue o cursor ----
+
+   Um `<title>` de SVG faz o navegador esperar um segundo e desenhar
+   a tooltip do sistema, que nao acompanha o tema nem cabe mais de
+   uma linha. Esta e HTML, aparece na hora e diz o nome inteiro —
+   que e justamente o que o eixo teve de cortar. */
+
+.gr__dica {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, calc(-100% - 12px));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 260px;
+  padding: 8px 11px;
+  border: 1px solid var(--gr-dica-borda);
+  border-radius: 10px;
+  background: var(--gr-dica-bg);
+  box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.65);
+  color: var(--gr-dica-fg);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.gr__dica strong {
+  display: block;
+  max-width: 236px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.gr__dica b {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.gr__dica b i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--dica-cor, var(--gr-um));
+}
+
+.gr__dica em {
+  font-size: 0.7rem;
+  font-style: normal;
+  color: var(--gr-dica-fraco);
+}
+
+/* o bico, apontando para o item. Quando o balao e empurrado para
+   dentro do grafico, e o bico que anda o tanto que ele andou */
+.gr__dica::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: calc(50% + var(--bico, 0px));
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--gr-dica-borda);
+  border-top: 0;
+  border-left: 0;
+  background: var(--gr-dica-bg);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+/* ---- o pe das barras divergentes ----
+
+   De que lado e cada metade. Fica fora do SVG porque e texto de
+   legenda, e nao parte do desenho: aqui ele herda a fonte da tela. */
+
+.gr__pes {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.gr__pes [data-lado='antes'] {
+  color: var(--gr-bom);
+}
+
+.gr__pes [data-lado='atraso'] {
+  color: var(--gr-ruim);
+}
+
+/* ---- rosca ---- */
+
+/* O anel em cima e a legenda embaixo enquanto o cartao e uma coluna
+   estreita. Quando ele ocupa a largura toda — abaixo do ponto em que
+   o mosaico empilha —, os dois viram uma linha so: um anel de 196px
+   centrado num cartao de 800 deixaria a metade de baixo do cartao
+   vazia so para caber a legenda. */
+/* SEM `flex-wrap`. Com ele, um container de coluna cuja altura ficasse
+   menor que o conteudo quebrava os filhos em DUAS colunas: o anel de um
+   lado, a legenda do outro, atravessados por cima do cartao. E era o
+   caso normal — `.cartao__corpo` da a este bloco uma altura definida
+   (flex: 1), e bastava ela apertar um pouco para o desenho sair do
+   lugar. Sem quebra, o conteudo simplesmente ocupa o que precisa. */
+.gr--rosca {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.gr__aparte {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 280px;
+}
+
+@media (min-width: 1121px) {
+  /* cartao estreito no mosaico: volta a ser coluna */
+  .cartao--estreito .gr--rosca {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 1120px) and (min-width: 620px) {
+  .gr--rosca {
+    flex-direction: row;
+    gap: 40px;
+  }
+}
+
+.gr__fatia {
+  transition: opacity var(--dur-fast) var(--ease-out);
+  cursor: default;
+}
+
+.gr__fatia:hover {
+  opacity: 0.85;
+}
+
+.gr__centro {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  fill: var(--text-strong);
+}
+
+.gr__centrorot {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  fill: var(--text-faint);
+}
+
+/* A legenda e uma TABELINHA, e nao pastilhas soltas: com o nome a
+   esquerda e o numero a direita da para ler os dois de cima para
+   baixo, que e como se compara duas fatias. */
+.gr__legenda {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  max-width: 260px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gr__legenda li {
+  display: grid;
+  grid-template-columns: 10px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-radius: 8px;
+  font-size: 0.79rem;
+  color: var(--text-muted);
+}
+
+.gr__legenda li + li {
+  border-top: 1px solid var(--line);
+}
+
+.gr__legenda strong {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.gr__legenda span:last-child {
+  min-width: 38px;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+  text-align: right;
+}
+
+.gr__ponto {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.gr__rodape {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+/* ---- linha ---- */
+
+.gr__traco {
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* o ponto ganha um anel da cor do cartão: sem ele, dois pontos de
+   séries diferentes que caem no mesmo lugar viram uma bolha só */
+.gr__ponto {
+  stroke: var(--surface);
+  stroke-width: 1.5;
+  transition: r var(--dur-fast) var(--ease-out);
+  cursor: default;
+}
+
+.gr__ponto:hover {
+  r: 6;
+}
+
+.gr__series {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 16px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gr__series li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.gr__ponto2 {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}

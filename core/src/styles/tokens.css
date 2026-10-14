@@ -1,0 +1,503 @@
+/* ============================================================
+   Tokens de design — paleta preto e branco.
+   Tema padrao: CLARO (:root). O escuro entra por
+   [data-theme='dark'] no <html>, ligado pelo botao lua/sol.
+   ============================================================ */
+
+:root {
+  /* ---- Layout ---- */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 26px;
+  --radius-pill: 999px;
+
+  /* ---- Motion ---- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 180ms;
+  --dur-base: 320ms;
+  --dur-slow: 700ms;
+  --dur-theme: 420ms;
+
+  /* ---- Textura de granulacao (ruido) ---- */
+  --grain-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+
+  /* =========================================================
+     TEMA CLARO — fundo branco
+     ========================================================= */
+  color-scheme: light;
+
+  --page-bg: #ffffff;
+  --surface: #ffffff;
+
+  --text-strong: #0d0d0d;
+  --text-base: rgba(13, 13, 13, 0.78);
+  --text-muted: rgba(13, 13, 13, 0.55);
+  --text-faint: rgba(13, 13, 13, 0.38);
+  --link: rgba(13, 13, 13, 0.72);
+  --link-hover: #0d0d0d;
+
+  --line: rgba(13, 13, 13, 0.14);
+  --line-strong: rgba(13, 13, 13, 0.26);
+  --control-bg: rgba(13, 13, 13, 0.05);
+  --control-bg-hover: rgba(13, 13, 13, 0.1);
+  --control-border: rgba(13, 13, 13, 0.16);
+  /* azul escuro: cor das acoes (botoes, foco, checkbox) */
+  --accent: #123b7a;
+  --accent-strong: #0b2a5c;
+  --control-on-bg: var(--accent);
+  --control-on-fg: #ffffff;
+
+  /* ---- Botao primario: azul solido ---- */
+  --btn-bg: #1a56c4;
+  --btn-fg: #ffffff;
+  --btn-border: transparent;
+  --btn-shadow: 0 14px 30px -18px rgba(9, 30, 74, 0.75);
+  --btn-shadow-hover: 0 18px 36px -18px rgba(9, 30, 74, 0.6);
+  --btn-glow: rgba(255, 255, 255, 0.12);
+
+  /* ---- Liquid glass ---- */
+  --glass-bg: linear-gradient(
+    148deg,
+    rgba(255, 255, 255, 0.84) 0%,
+    rgba(255, 255, 255, 0.74) 45%,
+    rgba(246, 249, 255, 0.7) 100%
+  );
+  --glass-border: rgba(13, 13, 13, 0.09);
+  --glass-blur: 18px;
+  --glass-shadow: 0 30px 60px -32px rgba(0, 0, 0, 0.38),
+    0 4px 18px -12px rgba(0, 0, 0, 0.18);
+  --glass-inner: inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.5);
+  --glass-sheen-a: rgba(255, 255, 255, 0.6);
+  --glass-sheen-b: rgba(255, 255, 255, 0.18);
+  --glass-sheen-c: rgba(255, 255, 255, 0.45);
+  --glass-edge-a: rgba(255, 255, 255, 0.95);
+  --glass-edge-b: rgba(13, 13, 13, 0.07);
+  --glass-edge-opacity: 0.8;
+  --glass-fallback: #f7f7f7;
+
+  /* ---- Foto (dentro das faixas) ---- */
+  --photo-veil: rgba(255, 255, 255, 0.7);
+  --photo-rim: rgba(13, 13, 13, 0.1);
+  --photo-sheen: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.42) 0%,
+    rgba(255, 255, 255, 0) 45%,
+    rgba(255, 255, 255, 0.28) 100%
+  );
+
+  /* gradiente animado da palavra CLIENTES */
+  /* grade de quadradinhos do fundo */
+  --grid-line: rgba(37, 82, 152, 0.16);
+  --grid-size: 26px;
+
+  /* gradiente ESCURO no tema claro */
+  --grad-a: #071a3a;
+  --grad-b: #1b4386;
+
+  /* Anel do item atual do menu — azul-marinho correndo para azul claro.
+     Fica igual nos dois temas de proposito: e ele que marca onde a
+     pessoa esta, e trocar de cor com o tema tiraria essa referencia. */
+  --anel-1: #0a2547;
+  --anel-2: #14417f;
+  --anel-3: #3f8bdc;
+  --anel-4: #a5d2ff;
+  /* miolo do botao: cobre o anel e deixa so a borda dele aparecendo */
+  --anel-miolo: rgba(255, 255, 255, 0.94);
+  --anel-cova: rgba(13, 13, 13, 0.09);
+
+
+  --danger: #b3261e;
+  --danger-bg: rgba(179, 38, 30, 0.08);
+  --danger-border: rgba(179, 38, 30, 0.28);
+  --success: #1f6f4a;
+
+  /* ---- Fundo VHS (global.css) ----
+     No branco qualquer cor pesa mais, entao aqui e ainda mais fraco
+     que no escuro. Se quiser o efeito mais visivel, e so subir estes
+     tres numeros — nada mais depende deles. */
+  --vhs-cor: 0.013;
+  --vhs-linha: 0.016;
+  --vhs-lavagem: 0.02;
+}
+
+/* =========================================================
+   TEMA ESCURO — fundo preto
+   ========================================================= */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --page-bg: #000000;
+  --surface: #0d0d0d;
+
+  --text-strong: #ffffff;
+  --text-base: rgba(255, 255, 255, 0.82);
+  --text-muted: rgba(255, 255, 255, 0.55);
+  --text-faint: rgba(255, 255, 255, 0.36);
+  --link: rgba(255, 255, 255, 0.7);
+  --link-hover: #ffffff;
+
+  --line: rgba(255, 255, 255, 0.16);
+  --line-strong: rgba(255, 255, 255, 0.3);
+  --control-bg: rgba(255, 255, 255, 0.07);
+  --control-bg-hover: rgba(255, 255, 255, 0.14);
+  --control-border: rgba(255, 255, 255, 0.2);
+  /* no preto o azul precisa de um pouco mais de luz para se ler */
+  --accent: #2c63bd;
+  --accent-strong: #1b4a90;
+  --control-on-bg: var(--accent);
+  --control-on-fg: #ffffff;
+
+  /* mesmo azul solido, um tom mais claro para se ler no preto */
+  --btn-bg: #2f6ee0;
+  --btn-fg: #ffffff;
+  --btn-border: transparent;
+  --btn-shadow: 0 14px 30px -18px rgba(120, 170, 240, 0.45);
+  --btn-shadow-hover: 0 18px 36px -18px rgba(150, 195, 255, 0.5);
+  --btn-glow: rgba(255, 255, 255, 0.14);
+
+  /* Cartao escuro: uma cor so, CHAPADA.
+     Era um gradiente que ia clareando de um canto ao outro e deixava
+     todo card do modo escuro com aquela mancha diagonal. */
+  --glass-bg: rgba(18, 21, 31, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 34px 70px -34px rgba(0, 0, 0, 1),
+    0 4px 18px -10px rgba(0, 0, 0, 0.85);
+  --glass-inner: inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
+  --glass-sheen-a: rgba(255, 255, 255, 0.05);
+  --glass-sheen-b: rgba(255, 255, 255, 0.02);
+  --glass-sheen-c: rgba(255, 255, 255, 0.04);
+  --glass-edge-a: rgba(255, 255, 255, 0.16);
+  --glass-edge-b: rgba(255, 255, 255, 0.03);
+  --glass-edge-opacity: 0.5;
+  --glass-fallback: #121214;
+
+  --photo-veil: rgba(0, 0, 0, 0.74);
+  --photo-rim: rgba(255, 255, 255, 0.22);
+  --photo-sheen: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0) 45%,
+    rgba(255, 255, 255, 0.07) 100%
+  );
+
+  --grid-line: rgba(255, 255, 255, 0.22);
+
+  /* gradiente CLARO no tema escuro */
+  --grad-a: #4d8ff0;
+  --grad-b: #a5d2ff;
+
+  /* o anel e o mesmo dos dois lados; so o miolo e a cova mudam, porque
+     eles e que precisam sumir contra o fundo de cada tema */
+  --anel-miolo: rgba(14, 18, 28, 0.94);
+  --anel-cova: rgba(0, 0, 0, 0.55);
+
+
+  --danger: #ff8a9c;
+  --danger-bg: rgba(255, 138, 156, 0.12);
+  --danger-border: rgba(255, 138, 156, 0.3);
+  --success: #6fe3b4;
+
+  /* no preto a cor some facil; um tiquinho a mais para o efeito existir */
+  --vhs-cor: 0.026;
+  --vhs-linha: 0.085;
+  --vhs-lavagem: 0.032;
+}
+
+/* =========================================================
+   OBRAS — cores de prioridade, setor e tipo de obra.
+   Mesmos matizes nos dois temas; no claro elas perdem um
+   pouco de saturacao para nao estourar sobre o branco.
+   ========================================================= */
+
+:root {
+  /* prioridade */
+  --pri-alta: #d93a34;
+  --pri-alta-fg: #ffffff;
+  --pri-alta-suave: rgba(217, 58, 52, 0.12);
+  --pri-media: #e08a1e;
+  --pri-media-fg: #ffffff;
+  --pri-media-suave: rgba(224, 138, 30, 0.14);
+  --pri-baixa: #2f8f5b;
+  --pri-baixa-fg: #ffffff;
+  --pri-baixa-suave: rgba(47, 143, 91, 0.13);
+
+  /* setores */
+  --setor-fg: #ffffff;
+  --setor-comercial: #0f9aa8;
+  --setor-adm: #2f9e56;
+  --setor-tecnico: #e2761b;
+  --setor-gq: #2a4fd6;
+  --setor-excelencia: #8244c9;
+
+  /* tipos de obra: fundo do card no quadro.
+     Cor CHAPADA, sem gradiente e sem reflexo — o card do quadro nao
+     leva efeito nenhum. O -grad continua existindo so para a faixa
+     do topo da tela da obra. */
+  --obra-padrao: #12315c;          /* azul marinho */
+  --obra-padrao-fg: #ffffff;
+  --obra-padrao-borda: rgba(255, 255, 255, 0.14);
+  --obra-padrao-grad: linear-gradient(150deg, #1b4478 0%, #0c2246 100%);
+
+  --obra-emerg: #d9542a;
+  --obra-emerg-fg: #ffffff;
+  --obra-emerg-borda: rgba(120, 34, 0, 0.2);
+  --obra-emerg-grad: linear-gradient(150deg, #f0812d 0%, #d33a26 100%);
+
+  --obra-aviso: #f5c518;
+  --obra-aviso-fg: #3a2c00;
+  --obra-aviso-borda: rgba(58, 44, 0, 0.22);
+  --obra-aviso-grad: linear-gradient(150deg, #ffdc4a 0%, #f0b90b 100%);
+
+  /* colunas do quadro e superficies internas */
+  --coluna-bg: rgba(13, 13, 13, 0.035);
+  --coluna-borda: rgba(13, 13, 13, 0.08);
+  --modal-veu: rgba(20, 22, 28, 0.42);
+
+  /* estados das etapas */
+  --etapa-ok: #2f8f5b;
+  --etapa-atual: var(--accent);
+  --etapa-travada: rgba(13, 13, 13, 0.3);
+
+  /* gradiente pedido para o botao de obra emergencia */
+  --btn-emergencia: linear-gradient(120deg, #ff0000 0%, #ff741f 72%);
+
+  /* O card da obra no QUADRO: tinta suave e transparente, com o texto
+     na cor normal do tema. Verde = prazo ok, azul = emergencia, e a
+     escala do prazo: amarelo (atraso de check/etapa, ou prazo chegando),
+     laranja (muito perto), vermelho (amanha/hoje ou vencido). O -acento
+     pinta o fio da esquerda e o selo do motivo. */
+  --quadro-ok-bg: rgba(46, 160, 92, 0.15);
+  --quadro-ok-borda: rgba(46, 160, 92, 0.42);
+  --quadro-ok-acento: #2a8a52;
+  --quadro-emerg-bg: rgba(52, 120, 228, 0.14);
+  --quadro-emerg-borda: rgba(52, 120, 228, 0.42);
+  --quadro-emerg-acento: #2f63c4;
+  /* "Urgente" (a prioridade da emergencia) no azul do botao "Obra
+     emergencia" e do card dela */
+  --pri-urgente: #2f63c4;
+  --pri-urgente-fg: #ffffff;
+  --quadro-atraso-bg: rgba(236, 182, 10, 0.2);
+  --quadro-atraso-borda: rgba(204, 152, 0, 0.55);
+  --quadro-atraso-acento: #9a6f00;
+  --quadro-laranja-bg: rgba(240, 128, 40, 0.17);
+  --quadro-laranja-borda: rgba(222, 110, 20, 0.5);
+  --quadro-laranja-acento: #b45512;
+  --quadro-vermelho-bg: rgba(222, 52, 46, 0.14);
+  --quadro-vermelho-borda: rgba(204, 40, 36, 0.5);
+  --quadro-vermelho-acento: #b3261e;
+
+  /* prazos dentro da obra e a resposta 'Nao' de um check de pergunta */
+  --prazo-vencido: #b3261e;
+  --prazo-perto: #a26f00;
+  --resposta-nao: #5a6b88;
+}
+
+:root[data-theme='dark'] {
+  --pri-alta: #f0554c;
+  --pri-alta-fg: #2a0906;
+  --pri-alta-suave: rgba(240, 85, 76, 0.18);
+  --pri-media: #f0a83c;
+  --pri-media-fg: #2e1c02;
+  --pri-media-suave: rgba(240, 168, 60, 0.18);
+  --pri-baixa: #4fc98a;
+  --pri-baixa-fg: #04240f;
+  --pri-baixa-suave: rgba(79, 201, 138, 0.18);
+
+  --setor-fg: #ffffff;
+  --setor-comercial: #13b7c7;
+  --setor-adm: #35b566;
+  --setor-tecnico: #f2802a;
+  --setor-gq: #3a63e8;
+  --setor-excelencia: #9a5ce0;
+
+  --obra-padrao: #17406f;          /* azul marinho, um tom acima no preto */
+  --obra-padrao-fg: #ffffff;
+  --obra-padrao-borda: rgba(255, 255, 255, 0.16);
+  --obra-padrao-grad: linear-gradient(150deg, #24559c 0%, #102c55 100%);
+
+  --obra-emerg: #e0602c;
+  --obra-emerg-fg: #ffffff;
+  --obra-emerg-borda: rgba(255, 255, 255, 0.16);
+  --obra-emerg-grad: linear-gradient(150deg, #f4882f 0%, #d8452b 100%);
+
+  --obra-aviso: #ffd93d;
+  --obra-aviso-fg: #33260a;
+  --obra-aviso-borda: rgba(255, 255, 255, 0.26);
+  --obra-aviso-grad: linear-gradient(150deg, #ffe25c 0%, #f5bb12 100%);
+
+  --coluna-bg: rgba(255, 255, 255, 0.035);
+  --coluna-borda: rgba(255, 255, 255, 0.08);
+  --modal-veu: rgba(0, 0, 0, 0.62);
+
+  --etapa-ok: #4fc98a;
+  --etapa-atual: #6f9df5;
+  --etapa-travada: rgba(255, 255, 255, 0.28);
+  --btn-emergencia: linear-gradient(120deg, #ff0000 0%, #ff741f 72%);
+
+  --quadro-ok-bg: rgba(79, 201, 138, 0.13);
+  --quadro-ok-borda: rgba(79, 201, 138, 0.38);
+  --quadro-ok-acento: #6fdca3;
+  --quadro-emerg-bg: rgba(111, 157, 245, 0.14);
+  --quadro-emerg-borda: rgba(111, 157, 245, 0.42);
+  --quadro-emerg-acento: #8fb3ff;
+  --pri-urgente: #8fb3ff;
+  --pri-urgente-fg: #0b1a3a;
+  --quadro-atraso-bg: rgba(250, 204, 21, 0.14);
+  --quadro-atraso-borda: rgba(250, 204, 21, 0.45);
+  --quadro-atraso-acento: #f5d04a;
+  --quadro-laranja-bg: rgba(255, 150, 70, 0.15);
+  --quadro-laranja-borda: rgba(255, 150, 70, 0.45);
+  --quadro-laranja-acento: #ffaa6e;
+  --quadro-vermelho-bg: rgba(255, 99, 99, 0.15);
+  --quadro-vermelho-borda: rgba(255, 110, 110, 0.48);
+  --quadro-vermelho-acento: #ff8a80;
+
+  --prazo-vencido: #ff8a80;
+  --prazo-perto: #f5c542;
+  --resposta-nao: #a3b3cf;
+}
+
+/* =========================================================
+   FUNDO EM MALHA AZUL
+   Recria a referencia com radial-gradients: escuro em cima,
+   bolhas azuis embaixo (uma a esquerda, outra a direita).
+   Fica BEM leve de proposito — e o que passa por tras do
+   vidro; se pesar, o efeito bolha some.
+   --modal-* nao usa nada disso: pop-up e superficie opaca.
+   ========================================================= */
+
+:root {
+  --mesh-a: rgba(37, 99, 235, 0.1);
+  --mesh-b: rgba(59, 130, 246, 0.09);
+  --mesh-c: rgba(96, 165, 250, 0.07);
+  --mesh-topo: rgba(15, 23, 42, 0.03);
+
+  /* pop-up: opaco, sem desfoque e sem brilho */
+  --modal-bg: #ffffff;
+  --modal-borda: rgba(13, 13, 13, 0.12);
+  --modal-sombra: 0 30px 70px -28px rgba(0, 0, 0, 0.4),
+    0 6px 20px -10px rgba(0, 0, 0, 0.16);
+}
+
+:root[data-theme='dark'] {
+  --mesh-a: rgba(29, 78, 216, 0.3);
+  --mesh-b: rgba(37, 99, 235, 0.26);
+  --mesh-c: rgba(59, 130, 246, 0.18);
+  --mesh-topo: rgba(2, 6, 23, 0.5);
+
+  --modal-bg: #14161c;
+  --modal-borda: rgba(255, 255, 255, 0.12);
+  --modal-sombra: 0 34px 74px -30px rgba(0, 0, 0, 1),
+    0 6px 20px -10px rgba(0, 0, 0, 0.7);
+}
+
+
+/* =========================================================
+   LIQUID GLASS
+   O vidro que veste o site inteiro — header, menu, botoes,
+   filtros, cards. Pop-up NAO usa: la a superficie e opaca,
+   senao o texto do formulario briga com o que passa por tras.
+
+   Sao quatro camadas, e e a soma delas que da o efeito:
+     1. --vidro-fundo   translucido, para o fundo aparecer
+     2. backdrop-filter  desfoque + saturacao do que esta atras
+     3. --vidro-realce   luz na borda de cima, sombra na de baixo
+     4. --vidro-brilho   o reflexo diagonal, por cima de tudo
+   ========================================================= */
+
+:root {
+  /* Cor CHAPADA e translucida: o efeito de vidro vem do desfoque do
+     que passa por tras (backdrop-filter), nao de um degrade pintado
+     por cima. Era o degrade que deixava a mancha diagonal nos cards. */
+  --vidro-fundo: rgba(255, 255, 255, 0.5);
+  --vidro-fundo-forte: rgba(255, 255, 255, 0.72);
+  --vidro-menu: rgba(255, 255, 255, 0.88);
+  --vidro-borda: rgba(255, 255, 255, 0.55);
+  --vidro-borda-forte: rgba(13, 13, 13, 0.12);
+
+  /* a luz de cima e a sombra de baixo, que dao a espessura do vidro */
+  --vidro-realce: inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 0 rgba(13, 13, 13, 0.05),
+    0 1px 2px -1px rgba(13, 13, 13, 0.1);
+
+  --vidro-sombra: 0 18px 40px -24px rgba(9, 22, 52, 0.42),
+    0 3px 12px -8px rgba(9, 22, 52, 0.18);
+
+  /* O reflexo diagonal SAIU do vidro.
+     Era ele o "gradiente que comeca branco no canto de cima a esquerda"
+     — no menu, no header e em quase todo card do modo escuro. O que
+     ficou e o desfoque do que passa por tras, que e o efeito de fato. */
+
+  /* o reflexo continua existindo so para os botoes coloridos */
+  --vidro-brilho-cor: linear-gradient(
+    138deg,
+    rgba(255, 255, 255, 0.42) 0%,
+    rgba(255, 255, 255, 0.12) 38%,
+    rgba(255, 255, 255, 0) 58%,
+    rgba(255, 255, 255, 0.16) 100%
+  );
+  --vidro-borda-cor: rgba(255, 255, 255, 0.34);
+}
+
+:root[data-theme='dark'] {
+  --vidro-fundo: rgba(255, 255, 255, 0.08);
+  --vidro-fundo-forte: rgba(255, 255, 255, 0.14);
+  --vidro-menu: rgba(22, 25, 34, 0.92);
+  --vidro-borda: rgba(255, 255, 255, 0.16);
+  --vidro-borda-forte: rgba(255, 255, 255, 0.24);
+
+  --vidro-realce: inset 0 1px 0 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.35),
+    0 1px 2px -1px rgba(0, 0, 0, 0.6);
+
+  --vidro-sombra: 0 20px 44px -24px rgba(0, 0, 0, 0.9),
+    0 3px 12px -8px rgba(0, 0, 0, 0.7);
+
+  --vidro-brilho-cor: linear-gradient(
+    138deg,
+    rgba(255, 255, 255, 0.3) 0%,
+    rgba(255, 255, 255, 0.08) 38%,
+    rgba(255, 255, 255, 0) 58%,
+    rgba(255, 255, 255, 0.12) 100%
+  );
+  --vidro-borda-cor: rgba(255, 255, 255, 0.28);
+}
+
+
+/* =========================================================
+   CARD DE AVISO — gradiente que sai da cor da obra e chega
+   no amarelo dos avisos.
+
+   Obra padrao   -> azul (canto superior esquerdo) ate amarelo
+   Obra emergencia -> laranja/vermelho ate o mesmo amarelo
+
+   135deg e exatamente a diagonal: comeca no canto de cima a
+   esquerda e termina no de baixo a direita.
+   ========================================================= */
+
+:root {
+  /* a cor da obra ocupa a maior parte do card; o amarelo dos avisos
+     entra so no ultimo terco, fechando o canto de baixo a direita */
+  --aviso-de-padrao: linear-gradient(135deg, #12315c 0%, #12315c 46%, #2c5f9e 68%, #f0b90b 100%);
+  --aviso-de-emerg: linear-gradient(135deg, #d9542a 0%, #d9542a 46%, #ef8322 70%, #f5c518 100%);
+  /* escurece so a ponta amarela: sem isso o texto branco some la */
+  --aviso-veu: linear-gradient(135deg, rgba(0, 0, 0, 0) 62%, rgba(52, 38, 0, 0.4) 100%);
+}
+
+:root[data-theme='dark'] {
+  --aviso-de-padrao: linear-gradient(135deg, #17406f 0%, #17406f 46%, #33689f 68%, #f5bb12 100%);
+  --aviso-de-emerg: linear-gradient(135deg, #e0602c 0%, #e0602c 46%, #f2892a 70%, #ffd93d 100%);
+  --aviso-veu: linear-gradient(135deg, rgba(0, 0, 0, 0) 62%, rgba(40, 28, 0, 0.44) 100%);
+}
+
+/* A cor da barra do celular. É uma superfície própria, e não o vidro:
+   dentro do filtro que a deixa líquida (ver AppShell.css) o
+   `backdrop-filter` não sobrevive. */
+:root {
+  --barra-cor: #ffffff;
+}
+
+:root[data-theme='dark'] {
+  --barra-cor: #1b1f27;
+}

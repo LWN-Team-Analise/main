@@ -102,6 +102,7 @@ const pt = {
     offices: 'Unidades',
     rights: 'Todos os direitos reservados.',
     privacy: 'Política de Privacidade',
+    team: 'Área do colaborador',
   },
   blog: {
     title: 'Artigos e Notícias da LWN Engenharia',
@@ -266,6 +267,7 @@ const en = {
     offices: 'Offices',
     rights: 'All rights reserved.',
     privacy: 'Privacy Policy',
+    team: 'Employee area',
   },
   blog: {
     title: 'LWN Engenharia Articles and News',

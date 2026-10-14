@@ -1,0 +1,53 @@
+-- ============================================================
+--  ATUALIZACAO 15 — PRAZO DA EXECUCAO
+--
+--  1. PRAZO DA EXECUCAO (obra.execucao_prazo)
+--     O prazo da OBRA (data_conclusao) e o prazo da ETAPA DE
+--     EXECUCAO sao coisas diferentes. A obra pode ter 10 dias e a
+--     execucao, 3: depois da execucao ainda ha a documentacao e a
+--     entrega. Ate aqui o "Periodo de execucao" gravava o fim dele
+--     no prazo final da obra; agora ele tem coluna propria:
+--         execucao_inicio -> execucao_prazo   (so a 3a etapa)
+--         data_inicio     -> data_conclusao   (a obra inteira)
+--
+--     A obra que ja tinha usado o periodo antigo (o historico tem um
+--     'prazo.execucao' com 'prazo_final') leva aquela data para o
+--     prazo da execucao. O prazo final dela fica como esta — o valor
+--     de antes nao ficou guardado em lugar nenhum.
+--
+--  (Esta atualizacao tambem renomeava as etapas fixas para Comercial,
+--  Planejamento...; o passo saiu e a atualizacao 16 desfez a troca:
+--  as etapas continuam "1° Etapa", "2° Etapa"...)
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao apaga nada.
+-- ============================================================
+
+BEGIN;
+
+-- 1. o prazo da execucao
+ALTER TABLE public.obra ADD COLUMN IF NOT EXISTS execucao_prazo date;
+
+COMMENT ON COLUMN public.obra.execucao_prazo IS
+    'Prazo da ETAPA DE EXECUCAO (3a). So ela: a obra continua depois, ate data_conclusao.';
+
+UPDATE public.obra o
+   SET execucao_prazo = o.data_conclusao
+ WHERE o.execucao_prazo IS NULL
+   AND o.data_conclusao IS NOT NULL
+   AND EXISTS (SELECT 1 FROM public.atividade a
+                WHERE a.acao = 'prazo.execucao'
+                  AND a.entidade_id = o.id::text
+                  AND a.detalhes ? 'prazo_final');
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'obra.execucao_prazo' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'obra' AND column_name = 'execucao_prazo') AS ok;

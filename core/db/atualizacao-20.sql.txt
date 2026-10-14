@@ -1,0 +1,42 @@
+-- ============================================================
+--  ATUALIZACAO 20 — OS DIAS DA EXECUCAO
+--
+--  O periodo de execucao era um intervalo corrido:
+--      execucao_inicio -> execucao_prazo
+--  So que uma execucao de 5 dias nao acontece, necessariamente, em 5
+--  dias seguidos: pode ser so nos dias uteis, pular uma semana, cair
+--  num feriado. Agora os dias sao escolhidos um a um no calendario e
+--  ficam guardados aqui:
+--
+--      obra.execucao_dias   date[]   os dias, do primeiro ao ultimo
+--
+--  execucao_inicio e execucao_prazo continuam existindo e passam a ser
+--  o PRIMEIRO e o ULTIMO dia da lista — e deles que o resto do sistema
+--  ja le o prazo (a 3a etapa nao anda sem ele, o "faltam N dias").
+--
+--  NULL = obra que definiu o periodo antes desta atualizacao: os dias
+--  dela sao todos, de execucao_inicio (ou do inicio da obra) ate
+--  execucao_prazo. Nada e convertido aqui.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao apaga nada.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.obra ADD COLUMN IF NOT EXISTS execucao_dias date[];
+
+COMMENT ON COLUMN public.obra.execucao_dias IS
+    'Os dias da execucao, em ordem. execucao_inicio e execucao_prazo sao o primeiro e o ultimo. NULL = periodo corrido (antes da atualizacao 20).';
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'obra.execucao_dias' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'obra' AND column_name = 'execucao_dias') AS ok;

@@ -1,0 +1,26 @@
+{
+  "name": "LWN Core — Plataforma integrada de gestão corporativa",
+  "short_name": "LWN Core",
+  "description": "Um ambiente digital centralizado para conectar processos, informações e operações da LWN.",
+  "lang": "pt-BR",
+  "start_url": "/core/app",
+  "scope": "/core/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#04122c",
+  "theme_color": "#04122c",
+  "icons": [
+    {
+      "src": "/core/icone-lwn.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/core/icone-lwn.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

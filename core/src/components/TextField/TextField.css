@@ -1,0 +1,99 @@
+.field {
+  position: relative;
+  padding-top: 16px;
+  padding-bottom: 18px;
+}
+
+.field__input {
+  width: 100%;
+  padding: 6px 34px 8px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-strong);
+  font-size: 0.98rem;
+  letter-spacing: 0.01em;
+  transition: border-color var(--dur-base) var(--ease-out);
+}
+
+.field__input:focus {
+  outline: none;
+  border-bottom-color: transparent;
+}
+
+.field__input:-webkit-autofill,
+.field__input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-strong);
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.field__label {
+  position: absolute;
+  left: 0;
+  top: 22px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  pointer-events: none;
+  transform-origin: left center;
+  transition: transform var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
+}
+
+.field__input:focus + .field__label,
+.field.is-filled .field__label {
+  transform: translateY(-21px) scale(0.8);
+  color: var(--accent);
+}
+
+/* Linha luminosa que cresce a partir do centro no foco. */
+.field__line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.field__input:focus ~ .field__line {
+  transform: scaleX(1);
+}
+
+.field__toggle {
+  position: absolute;
+  right: 0;
+  top: 20px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.field__toggle:hover {
+  color: var(--text-strong);
+  background: var(--control-bg);
+}
+
+.field__error {
+  position: absolute;
+  left: 0;
+  bottom: 2px;
+  font-size: 0.76rem;
+  color: var(--danger);
+}
+
+.field.has-error .field__input {
+  border-bottom-color: var(--danger-border);
+}

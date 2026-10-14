@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- `viewport-fit=cover` e o que faz a pagina ir ate as bordas do
+         iPhone. Sem ele o `env(safe-area-inset-*)` volta zero, e a ilha
+         do aviso nao tem como se encostar embaixo da Dynamic Island. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#04122c" />
+
+    <!-- Instalado na tela de inicio, abre como aplicativo: sem barra de
+         endereco, com o nome e o icone da empresa. -->
+    <link rel="manifest" href="/core/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="LWN Core" />
+    <!-- `black-translucent`: a tela sobe por BAIXO da barra de status,
+         que e o que permite ao aviso encostar na altura da ilha. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>LWN Core</title>
+    <!-- O icone da aba. O caminho passa pelo src/ de proposito: o Vite
+         resolve, versiona e copia o arquivo no build, entao o icone mora
+         num lugar so (src/assets) em vez de ter uma copia em public/.
+
+         E o MESMO arquivo que o Chat LWN usa como cara do bot: a aba do
+         navegador e a conversa mostram a mesma marca, e trocar o icone
+         um dia e trocar um arquivo so. -->
+    <link rel="icon" type="image/png" href="/core/src/assets/icone-lwn.png" />
+    <link rel="apple-touch-icon" href="/core/src/assets/icone-lwn.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/core/src/main.jsx"></script>
+  </body>
+</html>

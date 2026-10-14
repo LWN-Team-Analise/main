@@ -1,0 +1,206 @@
+/* ============================================================
+   HISTORICO — a linha do tempo da pagina inicial
+
+   Um pingo por acao, na cor do ASSUNTO (obra, check, despesa...),
+   ligado aos outros por um fio vertical. A hora fica a esquerda do
+   fio, como nas agendas: e por ela que o olho corre.
+   ============================================================ */
+
+.hist {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+}
+
+.hist__topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 12px;
+}
+
+.hist__topo h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+/* o filtro: largo o bastante para "Envios de despesas" sem cortar */
+.hist__filtro {
+  width: 210px;
+  max-width: 100%;
+}
+
+.hist__vazio,
+.hist__erro {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+.hist__erro {
+  color: var(--danger);
+}
+
+.hist__erro button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.hist__dia {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hist__data {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.hist__data em {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.hist__lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* hora | pingo | texto. O fio passa por tras dos pingos. */
+.hist__item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 42px 14px minmax(0, 1fr);
+  gap: 10px;
+  padding: 7px 0;
+}
+
+.hist__item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(42px + 10px + 6px);
+  width: 2px;
+  background: var(--line);
+}
+
+.hist__item:first-child::before {
+  top: 14px;
+}
+
+.hist__item:last-child::before {
+  bottom: calc(100% - 14px);
+}
+
+.hist__hora {
+  padding-top: 1px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.hist__ponto {
+  position: relative;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  background: var(--hist-cor, var(--text-faint));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--hist-cor, var(--text-faint)) 40%, transparent);
+}
+
+.hist__corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hist__acao {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.hist__objeto {
+  font-size: 0.8rem;
+  color: var(--text-base);
+  overflow-wrap: anywhere;
+}
+
+.hist__extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  font-size: 0.74rem;
+  color: var(--text-faint);
+}
+
+.hist__extra b {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.hist__mais {
+  align-self: center;
+  justify-content: center;
+}
+
+/* ---- a cor de cada assunto ---- */
+
+.hist__item[data-categoria='obra'] { --hist-cor: var(--accent); }
+.hist__item[data-categoria='check'] { --hist-cor: var(--pri-baixa); }
+.hist__item[data-categoria='despesa'] { --hist-cor: var(--pri-media); }
+.hist__item[data-categoria='cliente'] { --hist-cor: var(--setor-comercial); }
+.hist__item[data-categoria='roteiro'] { --hist-cor: var(--setor-excelencia); }
+.hist__item[data-categoria='equipe'] { --hist-cor: var(--setor-gq); }
+.hist__item[data-categoria='aviso'] { --hist-cor: var(--obra-emerg); }
+.hist__item[data-categoria='avaliacao'] { --hist-cor: var(--pri-media); }
+.hist__item[data-categoria='documento'] { --hist-cor: var(--setor-tecnico); }
+
+:root[data-theme='dark'] .hist__item[data-categoria='obra'] { --hist-cor: var(--grad-a); }
+
+@media (max-width: 520px) {
+  .hist {
+    padding: 15px 14px;
+  }
+
+  .hist__item {
+    grid-template-columns: 38px 14px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .hist__item::before {
+    left: calc(38px + 8px + 6px);
+  }
+}

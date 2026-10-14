@@ -1,0 +1,99 @@
+/* ============================================================
+   Cargos
+
+   A lista tem a mesma forma da de Setor — etiquetas em linha, que
+   quebram no fim do pop-up —, so que SEM COR. Cor aqui e do setor:
+   e por ela que se reconhece um bloco no quadro, e uma segunda
+   paleta competindo pelo mesmo espaco so tiraria a leitura da
+   primeira.
+   ============================================================ */
+
+.titulos {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.titulos__vazio {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-faint);
+}
+
+.titulos__linha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.titulos__etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.titulos__etiqueta:hover {
+  background: var(--control-bg-hover);
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+
+.titulos__etiqueta:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* quantas pessoas estao neste cargo */
+.titulos__quantos {
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.titulos__novo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border: 1.5px dashed var(--control-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.titulos__novo:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.titulos__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}

@@ -1,0 +1,164 @@
+.membros {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.membros__vazio {
+  margin: 0;
+  padding: 30px 10px;
+  text-align: center;
+  font-size: 0.86rem;
+  color: var(--text-faint);
+}
+
+.membros__pessoa {
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  --avatar-anel: var(--surface);
+}
+
+.membros__topo {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.membros__quem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.membros__quem strong {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.membros__cargo {
+  align-self: flex-start;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--cargo-cor);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.membros__contagem {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.membros__semobra {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+.membros__obras {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 11px 0 0;
+  padding: 11px 0 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.membros__obra {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+/* tarjinha da cor do tipo da obra */
+.membros__tipo {
+  flex-shrink: 0;
+  width: 3px;
+  align-self: stretch;
+  min-height: 26px;
+  border-radius: var(--radius-pill);
+  background: var(--obra-padrao);
+}
+
+.membros__tipo[data-tipo='emergencia'] {
+  background: var(--obra-emerg);
+}
+
+.membros__nomeobra {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.membros__nomeobra em {
+  font-style: normal;
+  font-weight: 400;
+  font-size: 0.73rem;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* a etapa agora abre a linha, entao ela precisa de forma propria:
+   solta a esquerda do nome ela seria lida como parte do nome */
+.membros__etapa {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  flex-shrink: 0;
+  min-width: 30px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.membros__etapa em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--text-faint);
+}
+
+.membros__estado {
+  flex-shrink: 0;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.membros__estado.is-ok {
+  background: var(--pri-baixa-suave);
+  color: var(--etapa-ok);
+}
+
+.membros__estado.is-devendo {
+  background: var(--pri-media-suave);
+  color: var(--pri-media);
+}
+
+@media (max-width: 560px) {
+  .membros__obra {
+    flex-wrap: wrap;
+  }
+}

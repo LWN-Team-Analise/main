@@ -1,0 +1,71 @@
+-- ============================================================
+--  ATUALIZACAO 18 — OS CHECKS PROPRIOS DE CADA OBRA
+--
+--  Mexer num check DENTRO de uma obra (criar, editar, excluir,
+--  arrastar) vale so para AQUELA obra — nem para as proximas, nem
+--  para as que ja passaram. Para mudar o roteiro das proximas obras,
+--  o caminho e o "Editar" do quadro (o modelo da obra).
+--
+--  Como: na primeira mudanca de check dentro de uma obra, a obra
+--  ganha uma COPIA dos checks que ela enxerga (etapa_check.obra_id =
+--  a obra; origem_id = o check do roteiro de onde a copia saiu), as
+--  marcas e os prazos dela passam para as copias, e obra.checks_proprios
+--  vira true. Dali em diante a obra le so as copias dela.
+--
+--  Os cards e as etapas continuam sendo do roteiro.
+--
+--  O indice que garante UM check do sistema de cada tipo passa a
+--  olhar so o roteiro (obra_id IS NULL); cada obra pode ter a copia
+--  dela.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao apaga nada.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.etapa_check
+    ADD COLUMN IF NOT EXISTS obra_id bigint REFERENCES public.obra (id) ON DELETE CASCADE;
+
+ALTER TABLE public.etapa_check
+    ADD COLUMN IF NOT EXISTS origem_id bigint REFERENCES public.etapa_check (id) ON DELETE SET NULL;
+
+COMMENT ON COLUMN public.etapa_check.obra_id IS
+    'Check PROPRIO de uma obra (copia feita na primeira mudanca de check dentro dela). NULL = check do roteiro.';
+COMMENT ON COLUMN public.etapa_check.origem_id IS
+    'O check do roteiro de onde a copia da obra saiu.';
+
+ALTER TABLE public.obra
+    ADD COLUMN IF NOT EXISTS checks_proprios boolean NOT NULL DEFAULT false;
+
+COMMENT ON COLUMN public.obra.checks_proprios IS
+    'true = a obra ja tem os checks proprios (etapa_check.obra_id) e le so eles.';
+
+DROP INDEX IF EXISTS public.etapa_check_tipo_unico;
+CREATE UNIQUE INDEX etapa_check_tipo_unico
+    ON public.etapa_check (tipo)
+    WHERE tipo <> 'comum' AND vigente_ate IS NULL AND obra_id IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS etapa_check_tipo_da_obra
+    ON public.etapa_check (obra_id, tipo)
+    WHERE tipo <> 'comum' AND vigente_ate IS NULL AND obra_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS etapa_check_da_obra
+    ON public.etapa_check (obra_id)
+    WHERE obra_id IS NOT NULL;
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'etapa_check.obra_id' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'etapa_check' AND column_name = 'obra_id') AS ok
+UNION ALL
+SELECT 'obra.checks_proprios',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'obra' AND column_name = 'checks_proprios');

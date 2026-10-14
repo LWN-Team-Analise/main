@@ -1,0 +1,344 @@
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.campo--largo {
+  grid-column: 1 / -1;
+}
+
+.campo__rotulo {
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.campo__controle {
+  width: 100%;
+  padding: 10px 13px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font-size: 0.88rem;
+  transition: border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.campo__controle::placeholder {
+  color: var(--text-faint);
+}
+
+.campo__controle:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.campo__controle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Sem alcinha: a caixa se ajusta sozinha ao texto (useAlturaAuto).
+   O teto e daqui — passado ele a caixa para de crescer e o texto rola
+   por dentro, para um texto longo nao empurrar os botoes do
+   formulario para fora da tela. */
+.campo__area {
+  resize: none;
+  min-height: 78px;
+  max-height: 320px;
+  overflow-y: auto;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+/* A escolha de um item e o componente Seletor
+   (src/components/Seletor), e nao o <select> do navegador: dentro do
+   campo ele ja vem com a largura inteira. */
+
+/* ---------------- Dica e erro ---------------- */
+
+.campo__nota {
+  font-size: 0.74rem;
+  color: var(--text-faint);
+}
+
+.campo__nota--erro {
+  color: var(--danger);
+}
+
+.has-erro .campo__controle {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+/* campo em erro que e um Seletor: a borda vermelha vai no botao dele */
+.has-erro .sel__botao {
+  border-color: var(--danger-border);
+}
+
+/* ---------------- Pastilhas ---------------- */
+
+.pastilhas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.pastilha {
+  padding: 8px 15px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.pastilha:hover {
+  color: var(--text-strong);
+  background: var(--control-bg-hover);
+}
+
+.pastilha.is-atual {
+  color: var(--tom-fg, var(--control-on-fg));
+  background: var(--tom-bg, var(--control-on-bg));
+  border-color: transparent;
+}
+
+/* tons: a pastilha ativa assume a cor daquilo que ela representa */
+.pastilha[data-tom='alta'] {
+  --tom-bg: var(--pri-alta);
+  --tom-fg: var(--pri-alta-fg);
+}
+
+/* "Urgente" é a prioridade da emergência. Ela leva o azul do botão
+   "Obra emergência", e não o vermelho da alta: no quadro as duas
+   apareciam iguais, e é justamente a diferença entre elas que a
+   palavra existe para marcar. */
+.pastilha[data-tom='urgente'] {
+  --tom-bg: var(--pri-urgente);
+  --tom-fg: var(--pri-urgente-fg);
+}
+
+.pastilha[data-tom='media'] {
+  --tom-bg: var(--pri-media);
+  --tom-fg: var(--pri-media-fg);
+}
+
+.pastilha[data-tom='baixa'] {
+  --tom-bg: var(--pri-baixa);
+  --tom-fg: var(--pri-baixa-fg);
+}
+
+.pastilha[data-tom='comercial'] {
+  --tom-bg: var(--setor-comercial);
+  --tom-fg: var(--setor-fg);
+}
+
+.pastilha[data-tom='adm'] {
+  --tom-bg: var(--setor-adm);
+  --tom-fg: var(--setor-fg);
+}
+
+.pastilha[data-tom='tecnico'] {
+  --tom-bg: var(--setor-tecnico);
+  --tom-fg: var(--setor-fg);
+}
+
+.pastilha[data-tom='gq'] {
+  --tom-bg: var(--setor-gq);
+  --tom-fg: var(--setor-fg);
+}
+
+.pastilha[data-tom='excelencia'] {
+  --tom-bg: var(--setor-excelencia);
+  --tom-fg: var(--setor-fg);
+}
+
+.pastilha[data-tom='padrao'] {
+  --tom-bg: var(--obra-padrao);
+  --tom-fg: var(--obra-padrao-fg);
+}
+
+.pastilha[data-tom='emergencia'] {
+  --tom-bg: var(--obra-emerg);
+  --tom-fg: var(--obra-emerg-fg);
+}
+
+/* ---------------- Dinheiro ---------------- */
+
+.campo__dinheiro {
+  position: relative;
+  display: block;
+}
+
+.campo__dinheiro .campo__controle {
+  font-variant-numeric: tabular-nums;
+}
+
+/* valor fixo: legivel como um campo, mas com cara de travado — o
+   mesmo apagado do disabled, sem perder o contraste do numero */
+.campo__dinheiro.is-travado .campo__controle {
+  padding-right: 38px;
+  border-style: dashed;
+  background: transparent;
+  color: var(--text-base);
+  cursor: default;
+}
+
+.campo__dinheiro.is-travado .campo__controle:focus {
+  border-color: var(--control-border);
+}
+
+.campo__cadeado {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--text-faint);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* ---------------- Arquivo ---------------- */
+
+.arquivo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 11px 12px 11px 13px;
+  border: 1px dashed var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  transition: border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.arquivo.tem-arquivo {
+  border-style: solid;
+}
+
+.arquivo.is-arrastando {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--control-bg));
+}
+
+.has-erro .arquivo {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+.arquivo__icone {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--control-bg-hover);
+  color: var(--text-muted);
+}
+
+.arquivo.tem-arquivo .arquivo__icone {
+  color: var(--accent);
+}
+
+.arquivo__nome {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.arquivo__nome strong {
+  overflow: hidden;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arquivo__nome span {
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+
+.arquivo__nome--vazio strong {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.arquivo__acoes {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+@media (max-width: 420px) {
+  .arquivo {
+    flex-wrap: wrap;
+  }
+
+  .arquivo__nome {
+    flex-basis: calc(100% - 48px);
+  }
+
+  .arquivo__acoes {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* ---------------- Foto ---------------- */
+
+.foto {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.foto__acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.foto__btn {
+  padding: 7px 13px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-base);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.foto__btn:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.foto__btn--fraco {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-faint);
+}
+
+.foto__btn--fraco:hover {
+  color: var(--danger);
+  background: var(--danger-bg);
+}

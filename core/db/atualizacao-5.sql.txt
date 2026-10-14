@@ -1,0 +1,128 @@
+-- ============================================================
+--  TRAJETORIA DE CLIENTES — ATUALIZACAO 5
+--  Rode DEPOIS de db/atualizacao-4.sql.txt, no banco
+--  "TrajetoClientes".
+--
+--  So ACRESCENTA. Pode rodar de novo sem problema.
+--
+--  O que muda:
+--    1. etapa.descricao          — a etapa passa a ter NOME proprio
+--                                  ("Comercial") com uma descricao
+--                                  embaixo ("aguardando aprovacao").
+--    2. observacao_quadro        — observacao com PRAZO: ela some do
+--                                  painel sozinha quando a data
+--                                  chega, e vai para o historico.
+--    3. usuario.avisos_email     — quem quer (ou nao) receber o aviso
+--                                  por e-mail alem do sininho.
+-- ============================================================
+
+BEGIN;
+
+-- ============================================================
+--  1. NOME E DESCRICAO DA ETAPA
+--
+--  Ate aqui o card da etapa mostrava duas linhas:
+--
+--      1a Etapa            <- rotulo automatico, da posicao
+--      Comercial           <- o nome, em letra menor
+--
+--  O rotulo automatico ocupava o lugar de destaque para dizer uma
+--  coisa que a propria ordem das colunas ja diz. Agora o NOME sobe
+--  para o titulo e a linha de baixo passa a ser texto livre — o
+--  estado em que a etapa esta, que e o que muda de obra para obra:
+--
+--      Comercial
+--      aguardando aprovacao
+--
+--  A posicao (etapa.ordem) continua existindo e continua mandando na
+--  ordem do quadro e no "Liberada quando a 2a fechar". O que ela
+--  deixou de ser e o titulo.
+-- ============================================================
+
+ALTER TABLE public.etapa
+    ADD COLUMN IF NOT EXISTS descricao TEXT;
+
+COMMENT ON COLUMN public.etapa.descricao IS
+    'Linha de apoio embaixo do nome da etapa ("aguardando aprovacao"). Texto livre, pode ser NULL.';
+
+
+-- ============================================================
+--  2. OBSERVACAO DO QUADRO COM PRAZO
+--
+--  A observacao do quadro e um recado da equipe sobre as obras em
+--  geral. Muitos deles valem por um periodo e nao para sempre
+--  ("ate sexta o galpao fica fechado"), e ate hoje quem escrevia
+--  tinha de lembrar de voltar e apagar. Quase nunca lembrava, e o
+--  painel virava um mural de recado vencido.
+--
+--  Agora a observacao pode ter uma JANELA:
+--
+--      inicio_em  <= hoje <= fim_em   -> aparece no painel
+--      hoje > fim_em                  -> sai do painel e vai para
+--                                        o HISTORICO
+--
+--  Sem janela (as duas colunas NULL) nada muda: a observacao fica
+--  no painel ate alguem apagar, como sempre foi.
+--
+--  Duas decisoes que valem explicar:
+--
+--  - a observacao vencida NAO e apagada. Ela sai da vista e continua
+--    inteira no banco, porque a pergunta "o que estava valendo em
+--    marco?" e uma pergunta legitima e a resposta some junto com a
+--    linha.
+--  - apagar na mao (o lixo) continua sendo DELETE de verdade. O
+--    historico e para o que venceu sozinho; o que a pessoa apagou
+--    ela apagou porque nao queria mais ver, e ressuscitar aquilo
+--    numa aba seria o contrario do que o clique pediu.
+--
+--  Sao DATE e nao timestamp de proposito: o prazo e "ate sexta", nao
+--  "ate sexta as 14h32". Comparar so a data evita a observacao sumir
+--  no meio do dia em que ela ainda vale.
+-- ============================================================
+
+ALTER TABLE public.observacao_quadro
+    ADD COLUMN IF NOT EXISTS inicio_em DATE,
+    ADD COLUMN IF NOT EXISTS fim_em    DATE;
+
+COMMENT ON COLUMN public.observacao_quadro.inicio_em IS
+    'Primeiro dia em que a observacao aparece. NULL = sem prazo, aparece sempre.';
+COMMENT ON COLUMN public.observacao_quadro.fim_em IS
+    'Ultimo dia em que a observacao aparece. Passou disso, ela vai para o historico.';
+
+-- o painel le por data toda vez que abre; o indice evita varrer a
+-- tabela inteira quando a lista de recados crescer
+CREATE INDEX IF NOT EXISTS observacao_quadro_prazo_idx
+    ON public.observacao_quadro (fim_em);
+
+-- As duas andam juntas: janela pela metade nao e janela. A tela ja
+-- cobra as duas datas quando o "Adicionar duracao" esta marcado, e
+-- aqui embaixo a regra fica gravada onde ninguem consegue passar por
+-- fora dela (uma chamada direta na API, um INSERT no psql).
+ALTER TABLE public.observacao_quadro
+    DROP CONSTRAINT IF EXISTS observacao_quadro_janela_ck;
+
+ALTER TABLE public.observacao_quadro
+    ADD CONSTRAINT observacao_quadro_janela_ck CHECK (
+        (inicio_em IS NULL AND fim_em IS NULL)
+        OR (inicio_em IS NOT NULL AND fim_em IS NOT NULL AND fim_em >= inicio_em)
+    );
+
+
+-- ============================================================
+--  3. AVISO POR E-MAIL
+--
+--  O botao "Enviar aviso" ja gravava o aviso e acendia o sininho de
+--  quem e do setor cobrado. O que faltava era o e-mail: quem nao
+--  esta com o sistema aberto nao ficava sabendo de nada.
+--
+--  A coluna existe para quem NAO quer o e-mail. O padrao e true —
+--  cobranca que so aparece dentro do sistema nao cobra ninguem.
+-- ============================================================
+
+ALTER TABLE public.usuario
+    ADD COLUMN IF NOT EXISTS avisos_email BOOLEAN NOT NULL DEFAULT true;
+
+COMMENT ON COLUMN public.usuario.avisos_email IS
+    'false = a pessoa recebe o aviso so no sininho, sem e-mail.';
+
+COMMIT;

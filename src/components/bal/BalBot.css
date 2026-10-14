@@ -6,7 +6,7 @@
 ------------------------------------------------------------------- */
 
 .bal {
-  --bal-figure: 104px; /* BAL's height; the image is 283 × 440 */
+  --bal-figure: 74px; /* BAL's height; the image is 283 × 440 */
   --bal-right: max(18px, env(safe-area-inset-right));
   position: fixed;
   right: var(--bal-right);
@@ -18,7 +18,7 @@
 /* Tucked aside while a link or button is under his corner (BalBot.jsx): only
    a sliver of him — his waving hand — stays in view, inside the page margin. */
 .bal[data-tucked] {
-  transform: translateX(calc(100% + var(--bal-right) - 20px));
+  transform: translateX(calc(100% + var(--bal-right) - 16px));
 }
 
 .bal[data-tucked]:focus-within {
@@ -47,6 +47,15 @@
   animation: bal-arrive 0.9s var(--ease-out) 0.6s both;
 }
 
+/* What hops when he is clicked (BalBot.jsx), scaled from his feet. */
+.bal-launcher__body {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 100%;
+  pointer-events: none;
+}
+
 /* Only the figure's own contact shadow, cast by his shape — no backdrop. */
 .bal-launcher__figure {
   display: block;
@@ -58,31 +67,6 @@
     transform 0.5s var(--ease-out),
     filter 0.5s var(--ease-out);
   pointer-events: none;
-}
-
-/* A small × by his head while the panel is open: the same button closes it. */
-.bal-launcher__x {
-  position: absolute;
-  top: 0;
-  right: -8px;
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--c-navy-900);
-  color: #fff;
-  box-shadow: 0 4px 10px -4px rgba(8, 22, 52, 0.6);
-  opacity: 0;
-  transform: scale(0.6);
-  transition:
-    opacity 0.25s var(--ease-out),
-    transform 0.35s var(--ease-out);
-}
-
-.bal[data-open] .bal-launcher__x {
-  opacity: 1;
-  transform: scale(1);
 }
 
 /* A speech bubble on hover / keyboard focus (pointer devices). */
@@ -108,12 +92,8 @@
   pointer-events: none;
 }
 
+/* Hovering him only brings up the bubble: BAL himself stays still. */
 @media (hover: hover) {
-  .bal-launcher:hover .bal-launcher__figure {
-    filter: drop-shadow(0 12px 12px rgba(8, 22, 52, 0.28));
-    transform: translateY(-5px) rotate(-3deg);
-  }
-
   .bal:not([data-open]) .bal-launcher:hover .bal-launcher__hint {
     opacity: 1;
     transform: none;
@@ -125,9 +105,10 @@
   transform: none;
 }
 
+/* A soft press, released into the hop. */
 .bal-launcher:active .bal-launcher__figure {
-  transform: scale(0.96);
-  transition-duration: 0.12s;
+  transform: scale(0.94);
+  transition-duration: 0.2s;
 }
 
 /* Keyboard focus only: a ring around him, as on the site's other controls. */
@@ -626,17 +607,6 @@
   filter: drop-shadow(0 0 1px rgba(200, 220, 255, 0.45)) drop-shadow(0 8px 12px rgba(0, 0, 0, 0.6));
 }
 
-@media (hover: hover) {
-  [data-scheme='dark'] .bal-launcher:hover .bal-launcher__figure {
-    filter: drop-shadow(0 0 1px rgba(200, 220, 255, 0.55)) drop-shadow(0 14px 14px rgba(0, 0, 0, 0.55));
-  }
-}
-
-[data-scheme='dark'] .bal-launcher__x {
-  background: #fff;
-  color: #0d1f45;
-}
-
 [data-scheme='dark'] .bal-panel {
   border-color: rgba(255, 255, 255, 0.12);
   box-shadow:
@@ -665,7 +635,7 @@
 
 @media (max-width: 599px) {
   .bal {
-    --bal-figure: 86px;
+    --bal-figure: 62px;
     --bal-right: max(16px, env(safe-area-inset-right));
     bottom: max(14px, env(safe-area-inset-bottom));
   }

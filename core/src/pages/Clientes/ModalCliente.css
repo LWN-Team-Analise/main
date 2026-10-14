@@ -1,0 +1,41 @@
+.formcli {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ---- Logo e header, lado a lado ----
+
+   A faixa do header e larga (proporcao ~7:1), entao ela pega a maior
+   parte da linha e a logo com os botoes fica com o que precisa. As duas
+   ocupam a linha inteira do formulario, acima dos campos.
+
+   `min-width: 0` na direita e o que impede a faixa de esticar a coluna:
+   sem ele, um item de grid nao encolhe abaixo do proprio conteudo e a
+   previa empurrava o pop-up para fora. */
+.cliimg {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+  grid-column: 1 / -1;
+}
+
+.cliimg__header {
+  min-width: 0;
+}
+
+/* Sem espaco para as duas colunas, a faixa desce para baixo da logo —
+   espremida ao lado dela, viraria uma tira de 80px que nao mostra
+   enquadramento nenhum. */
+@media (max-width: 620px) {
+  .cliimg {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .formcli {
+    grid-template-columns: 1fr;
+  }
+}

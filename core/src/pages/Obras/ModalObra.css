@@ -1,0 +1,81 @@
+.formobra {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.formobra__selo {
+  grid-column: 1 / -1;
+  justify-self: start;
+  padding: 5px 13px;
+  border: 1px solid var(--quadro-ok-borda);
+  border-radius: var(--radius-pill);
+  /* as mesmas tintas dos cards do quadro: verde padrao, azul emergencia */
+  background: var(--quadro-ok-bg);
+  color: var(--quadro-ok-acento);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.formobra__selo.is-emergencia {
+  border-color: var(--quadro-emerg-borda);
+  background: var(--quadro-emerg-bg);
+  color: var(--quadro-emerg-acento);
+}
+
+.formobra__semcliente {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 13px 15px;
+  border: 1px dashed var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.formobra__semcliente a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+:root[data-theme='dark'] .formobra__semcliente a {
+  color: var(--grad-b);
+}
+
+@media (max-width: 560px) {
+  .formobra {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* prioridade da emergencia: mostra o valor, mas nao aceita clique */
+.pastilha.is-travada {
+  cursor: default;
+  opacity: 0.92;
+}
+
+.formobra__erro {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px 13px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* As duas datas dividem a linha: inicio a esquerda, conclusao a
+   direita. No celular elas empilham. */
+.formobra__datas {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 15px;
+}

@@ -1,0 +1,1498 @@
+/* ============================================================
+   Pagina inicial
+
+   Tres modos de olhar a mesma lista de tarefas — Grade, Quadro e
+   Dashboard — com uma faixa de dia em cima que nao muda entre eles.
+   ============================================================ */
+
+.inicio {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ---------------- A faixa do dia ---------------- */
+
+.dia {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 22px;
+  border-radius: var(--radius-lg);
+}
+
+.dia__data {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  margin: 0;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.dia__semana,
+.dia__mes {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+.dia__numero {
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+}
+
+.dia__texto {
+  flex: 1;
+  min-width: 0;
+}
+
+/* a frase do dia ocupa o lugar que era da saudacao: e ela a linha
+   principal da faixa agora */
+.dia__frase {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* o resumo da direita: o numero que resume o dia, e o alerta quando
+   ha prazo vencido — a unica coisa da faixa que muda de cor */
+.dia__resumo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  margin: 0;
+  flex-shrink: 0;
+  max-width: 240px;
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  text-align: right;
+}
+
+.dia__resumo em {
+  font-size: 0.75rem;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.dia__resumo[data-alerta='sim'] em {
+  color: var(--pri-alta);
+}
+
+@media (max-width: 780px) {
+  .dia {
+    flex-wrap: wrap;
+    gap: 12px 16px;
+  }
+
+  .dia__resumo {
+    align-items: flex-start;
+    width: 100%;
+    text-align: left;
+  }
+}
+
+/* ---------------- Abas e escopo ---------------- */
+
+.inicio__barra {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.abas {
+  display: flex;
+  gap: 8px;
+}
+
+/* pastilha vazada, e nao aba colada: elas trocam a TELA inteira, e
+   uma aba grudada na borda sugere que so o miolo muda */
+.abas__aba {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.abas__aba:hover {
+  color: var(--text-strong);
+  background: var(--control-bg);
+}
+
+.abas__aba.is-atual {
+  border-color: var(--accent);
+  background: var(--control-bg);
+  color: var(--accent);
+}
+
+/* ---- O mês, no meio da barra ----
+
+   Entre as abas (esquerda) e o Minhas/Todas (direita). As margens
+   automáticas dos dois lados é que o centram no espaço que sobra. */
+.mes {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 auto;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+}
+
+.mes button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.mes button:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.mes button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.mes__rotulo {
+  min-width: 96px;
+  font-size: 0.79rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* mês diferente do corrente: o rótulo avisa que a tela voltou no tempo */
+.mes__rotulo:not([data-atual='sim']) {
+  color: var(--accent);
+}
+
+/* o recado de que a pendência continua sendo de hoje */
+.inicio__nota {
+  margin: 0;
+  padding: 9px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.escopo {
+  display: flex;
+  gap: 2px;
+  margin-left: 0;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+}
+
+.escopo button {
+  padding: 6px 14px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.79rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.escopo button.is-atual {
+  background: var(--surface);
+  color: var(--text-strong);
+  box-shadow: 0 2px 6px -3px rgba(0, 0, 0, 0.4);
+}
+
+.escopo--peq {
+  margin-left: 0;
+}
+
+/* ---------------- Pecas que Grade e Quadro dividem ---------------- */
+
+.tsetores {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tsetores__um {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--setor-cor) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--setor-cor) 45%, transparent);
+  color: var(--setor-cor);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tpri {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  white-space: nowrap;
+  background: var(--tom-bg);
+  color: var(--tom-fg);
+}
+
+.tpri[data-pri='urgente'] { --tom-bg: var(--pri-urgente); --tom-fg: var(--pri-urgente-fg); }
+.tpri[data-pri='alta'] { --tom-bg: var(--pri-alta); --tom-fg: #fff; }
+.tpri[data-pri='media'] { --tom-bg: var(--pri-media); --tom-fg: #fff; }
+.tpri[data-pri='baixa'] { --tom-bg: var(--pri-baixa); --tom-fg: #fff; }
+
+.testado {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  color: var(--text-base);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.testado[data-estado='andamento'] {
+  background: color-mix(in srgb, var(--etapa-atual) 16%, transparent);
+  color: var(--etapa-atual);
+}
+
+.testado[data-estado='concluida'] {
+  background: color-mix(in srgb, var(--etapa-ok) 16%, transparent);
+  color: var(--etapa-ok);
+}
+
+.tprazo {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-base);
+  white-space: nowrap;
+}
+
+.tprazo em {
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tprazo[data-tom='vencido'] { color: var(--pri-alta); }
+.tprazo[data-tom='hoje'] { color: var(--pri-media); }
+.tprazo--vazio { color: var(--text-faint); }
+
+/* ---------------- GRADE ---------------- */
+
+.grade {
+  padding: 6px;
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+}
+
+.grade__tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+/* ---- onde a sobra de largura vai parar ----
+
+   A tabela ocupa a tela inteira, e o navegador reparte o que sobra
+   entre TODAS as colunas. Numa tela larga isso afastava etapa, setor,
+   prioridade, prazo e estado uns dos outros e do texto da tarefa —
+   cinco pedacos de informacao curta boiando em vaos de cem pixels,
+   com o cabecalho la em cima como unica pista do que era cada um.
+
+   Agora a sobra vai toda para as duas colunas de TEXTO (a obra e a
+   tarefa), e as cinco curtas encolhem ate o tamanho do que carregam,
+   encostadas umas nas outras. O "1%" e o jeito de dizer "o minimo
+   possivel" numa tabela: qualquer valor pequeno serve, e o navegador
+   estica ate caber o conteudo. */
+.grade__tabela th:nth-child(-n + 2),
+.grade__tabela td:nth-child(-n + 2) {
+  width: 50%;
+}
+
+.grade__tabela th:nth-child(n + 3),
+.grade__tabela td:nth-child(n + 3) {
+  width: 1%;
+  white-space: nowrap;
+  /* o recuo de 14px era metade do vao entre uma coluna curta e a
+     seguinte; com cinco delas lado a lado, virava distancia */
+  padding-left: 9px;
+  padding-right: 9px;
+}
+
+.grade__tabela th {
+  padding: 10px 14px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.grade__tabela td {
+  padding: 11px 14px;
+  border-top: 1px solid var(--line);
+  color: var(--text-base);
+  vertical-align: middle;
+}
+
+.grade__linha {
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.grade__linha:hover,
+.grade__linha:focus-visible {
+  background: var(--control-bg);
+  outline: none;
+}
+
+.grade__tarefa {
+  min-width: 190px;
+}
+
+/* o caminho de teclado da linha; visualmente e so o texto da tarefa */
+.grade__link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.grade__link:hover {
+  text-decoration: underline;
+}
+
+/* a barrinha de cor diz de que tipo e a obra sem gastar uma coluna */
+.grade__obra {
+  display: inline-block;
+  padding-left: 10px;
+  border-left: 3px solid var(--obra-padrao);
+  line-height: 1.3;
+}
+
+.grade__obra[data-tipo='emergencia'] {
+  border-left-color: var(--obra-emerg);
+}
+
+.grade__etapa {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.grade__etapa em {
+  display: block;
+  font-size: 0.72rem;
+  font-style: normal;
+  color: var(--text-faint);
+}
+
+/* a coluna do setor, centrada — cabeçalho e etiquetas no mesmo eixo */
+.grade__setor {
+  text-align: center;
+}
+
+.grade__setor .tsetores {
+  justify-content: center;
+}
+
+/* ---- A linha TRAVADA ----
+
+   A tarefa existe e está escrita por inteiro; o que ela não tem é o
+   clique, porque marcar aquele check não é de quem está olhando.
+   Mais clara que as outras de propósito: ela não pede ação, só
+   informa — e uma linha que não pede ação com o mesmo peso das que
+   pedem faz a lista inteira parecer igual. */
+.grade__linha--espera {
+  cursor: default;
+}
+
+.grade__linha--espera td {
+  background: color-mix(in srgb, var(--control-bg) 55%, transparent);
+}
+
+/* o hover da linha clicável não vale aqui: acender no ponteiro é uma
+   promessa de clique que esta linha não cumpre */
+.grade__linha--espera:hover td {
+  background: color-mix(in srgb, var(--control-bg) 55%, transparent);
+}
+
+/* o cadeado no lugar do botão. É ele que diz "isto não é seu de
+   marcar" — sem gastar a coluna inteira com uma frase. */
+.grade__travada {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.grade__travada svg {
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+/* ---------------- QUADRO ---------------- */
+
+.quadrot {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .quadrot {
+    grid-template-columns: 1fr;
+  }
+}
+
+.colunat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.colunat__topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+  color: var(--text-muted);
+}
+
+.colunat__topo h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.colunat__conta {
+  margin-left: auto;
+  padding: 1px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-base);
+}
+
+/* cada coluna marca o proprio estado com um risco em cima da pilha */
+.colunat__pilha {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  max-height: 62vh;
+  padding: 10px 4px 4px;
+  border-top: 2px solid var(--marca);
+  overflow-y: auto;
+}
+
+.colunat[data-coluna='espera'] { --marca: var(--etapa-travada); }
+.colunat[data-coluna='andamento'] { --marca: var(--etapa-atual); }
+.colunat[data-coluna='concluida'] { --marca: var(--etapa-ok); }
+
+.colunat__vazio {
+  margin: 0;
+  padding: 18px 8px;
+  font-size: 0.8rem;
+  color: var(--text-faint);
+}
+
+.tcard {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 12px 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: 0 8px 20px -18px rgba(0, 0, 0, 0.8);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.tcard:hover,
+.tcard:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 26px -18px rgba(0, 0, 0, 0.9);
+  outline: none;
+}
+
+.tcard__titulo {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+/* concluida: o texto continua legivel, mas sai da frente do que falta */
+.colunat[data-coluna='concluida'] .tcard__titulo {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--text-faint) 60%, transparent);
+}
+
+.tcard__obra {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding-left: 8px;
+  border-left: 3px solid var(--obra-padrao);
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.tcard__obra[data-tipo='emergencia'] {
+  border-left-color: var(--obra-emerg);
+}
+
+.tcard__meio,
+.tcard__pe {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+
+.tcard__pe {
+  justify-content: space-between;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+}
+
+/* o "Não iniciado" diz quem segura a fila: cada etapa que ainda nao
+   fechou, com os setores que ainda devem check nela */
+.tcard__espera {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 7px 9px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--text-strong) 5%, transparent);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.tcard__esperatit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+}
+
+.tcard__esperatit svg {
+  flex: none;
+  width: 13px;
+  height: 13px;
+}
+
+.tcard__esperaetapa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+
+.tcard__esperaetapa strong {
+  font-weight: 700;
+  color: var(--text-base);
+}
+
+.tcard__etapa {
+  font-size: 0.71rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* ---- O card concluído, com os checks dentro ----
+
+   A coluna de concluídas mostra o CARD, não o check: um card fechado
+   conta uma história ("o Comercial terminou"), e seis checks soltos
+   contam seis vezes a mesma. Cada check aparece dentro dele, com a
+   hora em que foi marcado e por quem; o rodapé traz a hora em que o
+   card inteiro fechou. */
+
+.cardfeito {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 12px 14px;
+  border: 1px solid var(--glass-border);
+  border-left: 3px solid var(--etapa-ok);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: 0 8px 20px -18px rgba(0, 0, 0, 0.8);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.cardfeito:hover,
+.cardfeito:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 26px -18px rgba(0, 0, 0, 0.9);
+  outline: none;
+}
+
+/* card ainda pela metade: a borda perde o verde, porque ele não fechou */
+.cardfeito[data-parcial='sim'] {
+  border-left-color: var(--etapa-atual);
+}
+
+.cardfeito__topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.cardfeito__topo strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.cardfeito__placar {
+  flex-shrink: 0;
+  padding: 1px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-base);
+}
+
+.cardfeito__checks {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 2px 0 0;
+  padding: 9px 0 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.cardfeito__checks li {
+  display: grid;
+  grid-template-columns: 15px 1fr;
+  gap: 3px 7px;
+  align-items: start;
+}
+
+.cardfeito__ok {
+  display: grid;
+  place-items: center;
+  color: var(--etapa-ok);
+}
+
+.cardfeito__nome {
+  font-size: 0.79rem;
+  line-height: 1.35;
+  color: var(--text-base);
+  overflow-wrap: anywhere;
+}
+
+/* a hora fica na segunda linha, alinhada com o texto do check —
+   pendurada na direita ela brigaria com o nome em card estreito */
+.cardfeito__quando {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 0.7rem;
+  color: var(--text-faint);
+}
+
+.cardfeito__quando em {
+  font-style: normal;
+  font-weight: 600;
+}
+
+.cardfeito__pe {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--etapa-ok);
+}
+
+.cardfeito[data-parcial='sim'] .cardfeito__pe {
+  color: var(--text-faint);
+  font-weight: 500;
+}
+
+/* ---------------- Vazio ---------------- */
+
+.vaziot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 54px 24px;
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.vaziot strong {
+  font-size: 1.02rem;
+  color: var(--text-strong);
+}
+
+.vaziot p {
+  max-width: 420px;
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   DASHBOARD
+
+   Um mosaico de doze colunas: os cartoes ficam LADO A LADO quando
+   cabem e EMPILHADOS quando nao cabem, e a linha inteira tem a
+   altura do cartao mais alto.
+
+   Antes eram duas colunas iguais alinhadas pelo topo, e era dai que
+   vinha o desalinho: numa linha com o grafico de barras (que cresce
+   um pouco a cada setor) ao lado da rosca (que tem tamanho fixo), um
+   cartao terminava dezenas de pixels antes do outro e a linha ficava
+   com um degrau no pe.
+   ============================================================ */
+
+.dash {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------------- Os numeros de cima ---------------- */
+
+/* Quatro colunas FIXAS, e nao `auto-fit`: com o encaixe automatico a
+   largura de tablet cabia tres caixas e a quarta ficava sozinha numa
+   linha so para ela. Quatro, duas ou uma — nunca tres e uma orfa. */
+.dash__tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 1000px) {
+  .dash__tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .dash__tiles {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 15px 18px 16px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* o fio de cor no topo do cartao. E o que dá a cada numero uma
+   identidade sem precisar pintar o numero inteiro */
+.tile::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--tile-cor, var(--gr-um));
+  opacity: 0.9;
+}
+
+.tile[data-tom='bom'] { --tile-cor: var(--gr-bom); }
+.tile[data-tom='ruim'] { --tile-cor: var(--gr-ruim); }
+
+.tile__rotulo {
+  margin: 0;
+  font-size: 0.69rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.tile__valor {
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-strong);
+}
+
+/* a cor entra SO onde ela quer dizer alguma coisa: atraso e prazo.
+   Pintar os quatro numeros faria o painel parecer um semaforo. */
+.tile[data-tom='bom'] .tile__valor { color: var(--gr-bom); }
+.tile[data-tom='ruim'] .tile__valor { color: var(--gr-ruim); }
+
+.tile__nota {
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+/* ---------------- O mosaico ---------------- */
+
+.dash__grade {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 14px;
+}
+
+/* `stretch` (o padrao) e o que faz os vizinhos de linha terminarem
+   na mesma altura; `min-width: 0` e o que permite ao SVG medir a
+   coluna em vez de esticar a coluna ate caber no SVG */
+.cartao {
+  display: flex;
+  flex-direction: column;
+  grid-column: span 12;
+  min-width: 0;
+  padding: 18px 20px 20px;
+  border-radius: var(--radius-lg);
+}
+
+/* Os dois de uma linha so: o de barras leva 7 das doze colunas
+   porque cada barra precisa de curso para ser comparada; a rosca
+   leva 5, que e o que um anel e uma legenda de duas linhas pedem. */
+.cartao--largo { grid-column: span 7; }
+.cartao--estreito { grid-column: span 5; }
+/* Atraso e Adiantamento: metade e metade, sempre um ao lado do
+   outro. Sao a MESMA pergunta vista dos dois lados, e ler uma
+   embaixo da outra faria comparar de memoria. */
+.cartao--metade { grid-column: span 6; }
+/* Despesas, Refeicoes e Bonus por tipo: os tres lado a lado. Sao poucas
+   colunas cada (dois a quatro tipos), e um terco da largura sobra */
+.cartao--terco { grid-column: span 4; }
+
+/* abaixo disto, sete colunas deixam o grafico com menos de 400px
+   uteis — o eixo e os nomes nao cabem, e o desenho para de comparar */
+@media (max-width: 1120px) {
+  .cartao--largo,
+  .cartao--estreito,
+  .cartao--metade,
+  .cartao--terco {
+    grid-column: span 12;
+  }
+}
+
+/* ---------------- A secao de despesas ----------------
+
+   Vem depois dos graficos de obra, com titulo proprio: e outro
+   assunto (dinheiro, nao prazo), e sem o titulo os quatro numeros
+   dela pareceriam continuacao dos quatro de cima. */
+.dash__secao {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.dash__titulo {
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--control-border);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-strong);
+}
+
+.dash__aviso {
+  margin: 0;
+  padding: 18px 0;
+}
+
+.cartao__topo {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+/* o titulo cresce, o Setor/Pessoa nao.
+   Sem o `flex: 0 0 auto` o grupo de botoes esticava com a linha e
+   virava uma barra cinza atravessada no cabecalho do cartao. */
+.cartao__topo > div:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cartao__topo .escopo {
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+.cartao__titulo {
+  margin: 0 0 3px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-strong);
+}
+
+/* o subtitulo diz O QUE esta sendo medido. Num painel de tempo isso
+   nao e enfeite: "tempo de resposta" pode ser cinco coisas, e sem a
+   frase cada um le a sua. */
+.cartao__sub {
+  max-width: 62ch;
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* O corpo estica para ocupar a sobra de altura que o cartao ganhou
+   do vizinho mais alto da linha — sem isso, igualar as alturas so
+   acrescentaria um vao branco embaixo do grafico. */
+.cartao__corpo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.cartao__vazio {
+  margin: auto;
+  padding: 26px 0;
+  font-size: 0.84rem;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+
+/* ---- O card travado do Quadro ----
+
+   Mesma leitura da linha travada da Grade: a informação continua
+   inteira, o que sai é o clique. O cadeado antes do título é o que
+   diz isso — sem ele o card só pareceria apagado, que se lê como
+   "carregando". */
+.tcard--travado {
+  cursor: default;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  box-shadow: none;
+}
+
+.tcard--travado:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.tcard--travado .tcard__titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.tcard--travado .tcard__titulo svg {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--text-faint);
+}
+
+/* o número no canto do cartão: quantas obras aquela lista tem. Ele
+   substitui o subtítulo que dizia a mesma coisa em uma frase. */
+.cartao__selo {
+  flex-shrink: 0;
+  align-self: center;
+  min-width: 26px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  background: color-mix(in srgb, var(--selo-cor) 16%, transparent);
+  color: var(--selo-cor);
+}
+
+.cartao__selo[data-tom='ruim'] { --selo-cor: var(--gr-ruim); }
+.cartao__selo[data-tom='bom'] { --selo-cor: var(--gr-bom); }
+
+/* o globo do vazio da grade: ocupa a largura do painel e tem altura
+   propria — o canvas precisa de uma caixa medida para se desenhar */
+.vaziot__globo {
+  width: min(100%, 340px);
+  height: 340px;
+  margin-bottom: 2px;
+  cursor: grab;
+}
+
+.vaziot__globo:active {
+  cursor: grabbing;
+}
+
+/* a legenda das marcas do globo */
+.vaziot__legenda {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 2px 0 0;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+/* O pingo da legenda, do mesmo azul dos pingos do globo. O valor esta
+   escrito a mao nos dois lugares de proposito: o canvas nao le variavel
+   de CSS, entao a cor de la e texto — e duas cores parecidas seriam pior
+   que uma repetida. */
+.vaziot__ponto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4d8ff0;
+}
+
+/* ============================================================
+   A GRADE NO CELULAR
+
+   Sete colunas nao cabem em 375px. Ate aqui a tabela rolava para o
+   lado dentro do painel, e ler uma tarefa exigia empurrar a tabela de
+   um lado para o outro duas vezes — o prazo e o estado, que sao o
+   motivo de olhar a lista, ficavam justamente no fim do trilho.
+
+   Entao no celular a tabela deixa de ser tabela: cada linha vira um
+   cartao e cada celula vira "rotulo → valor". O rotulo sai do
+   \`data-rotulo\` da propria celula, porque o cabecalho some.
+
+   E so apresentacao: o HTML continua sendo uma tabela, com thead e
+   scope nas colunas, e no computador ela volta a ser lida como tabela.
+   ============================================================ */
+
+@media (max-width: 620px) {
+  .grade {
+    padding: 4px 10px;
+    overflow-x: visible;
+  }
+
+  .grade__tabela thead {
+    display: none;
+  }
+
+  .grade__tabela,
+  .grade__tabela tbody,
+  .grade__tabela tr,
+  .grade__tabela td,
+  /* mais especifico que a regra de largura la de cima, senao as cinco
+     colunas curtas continuariam com 1% dentro do cartao */
+  .grade__tabela td:nth-child(-n + 2),
+  .grade__tabela td:nth-child(n + 3) {
+    display: block;
+    width: 100%;
+    white-space: normal;
+  }
+
+  .grade__linha,
+  .grade__linha--espera {
+    padding: 12px 2px;
+    border-top: 1px solid var(--line);
+  }
+
+  .grade__tabela tbody tr:first-child {
+    border-top: 0;
+  }
+
+  /* Tudo a ESQUERDA: o rotulo numa coluna de largura fixa e o valor
+     logo depois dele. Com o valor empurrado para a direita, a obra (e
+     ate o titulo da tarefa) caia na ponta oposta do cartao, longe do
+     rotulo dela. */
+  /* `:nth-child(n)` so para empatar com as regras de coluna la de cima
+     (que tem um :nth-child cada) e ganhar por vir depois: sem isso a
+     celula continuava `block` e o rotulo nao tinha largura */
+  .grade__tabela td:nth-child(n) {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 4px 0;
+    border-top: 0;
+    text-align: left;
+  }
+
+  .grade__tabela td[data-rotulo]::before {
+    content: attr(data-rotulo);
+    flex: none;
+    width: 76px;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  /* a tarefa e o titulo do cartao: linha inteira, sem rotulo. Na
+     tabela a obra vem antes dela; no cartao a tarefa sobe para o topo,
+     que e onde o titulo mora (`order`), e a obra vira a primeira linha
+     com rotulo logo abaixo. */
+  .grade__tabela tr {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .grade__tarefa {
+    order: -1;
+    min-width: 0;
+    padding-bottom: 6px;
+    text-align: left;
+  }
+
+  .grade__etapa em {
+    display: inline;
+    margin-left: 6px;
+  }
+}
+
+/* o globo gira no arrasto — e so isso. O pingo nao abre nada, entao o
+   cursor nao promete clique: ele mostra a mao de arrastar e mais nada. */
+.vaziot__globo canvas {
+  cursor: grab;
+}
+
+/* os dois grupos de escolha do cartao de tempo de resposta: em tela
+   estreita eles caem um embaixo do outro em vez de espremer */
+.cartao__escolhas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* o passo do painel, alinhado a direita como os outros controles */
+.dash__passo {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+/* No celular o seletor de mês só existe no Dashboard — ver o comentário
+   do `SeletorMes`, em Home.jsx. Na Grade e no Quadro ele saía como mais
+   um controle disputando a largura da barra sem filtrar o que está na
+   tela. */
+@media (max-width: 860px) {
+  .mes[data-fora-do-painel='sim'] {
+    display: none;
+  }
+}
+
+/* ---------------- Exportar para o Power BI ---------------- */
+
+.inicio__exportar {
+  margin-left: auto;
+}
+
+.powerbi {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.powerbi__lead {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.powerbi__lead strong {
+  color: var(--text-strong);
+}
+
+.powerbi__opcoes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.powerbi__opcoes legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* cada escolha e um cartao inteiro clicavel: o nome e, embaixo, o que
+   vai no arquivo — e a descricao que decide, nao o nome */
+.powerbi__opcao {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.powerbi__opcao:hover {
+  background: var(--control-bg-hover);
+}
+
+.powerbi__opcao.is-atual {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--control-bg));
+}
+
+:root[data-theme='dark'] .powerbi__opcao.is-atual {
+  border-color: var(--grad-a);
+  background: color-mix(in srgb, var(--grad-a) 14%, var(--control-bg));
+}
+
+.powerbi__opcao input {
+  flex-shrink: 0;
+  margin: 3px 0 0;
+  accent-color: var(--accent);
+}
+
+:root[data-theme='dark'] .powerbi__opcao input {
+  accent-color: var(--grad-a);
+}
+
+.powerbi__opcao span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.powerbi__opcao strong {
+  font-size: 0.88rem;
+  color: var(--text-strong);
+}
+
+.powerbi__opcao em {
+  font-size: 0.78rem;
+  font-style: normal;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.powerbi__nota {
+  margin: 0;
+  padding: 10px 13px;
+  border: 1px dashed var(--control-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.powerbi__erro {
+  margin: 0;
+  padding: 10px 13px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* no celular o botao ocupa a propria linha: espremido ao lado das
+   abas, ele cortava o rotulo */
+@media (max-width: 620px) {
+  .inicio__exportar {
+    justify-content: center;
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+/* ============================================================
+   Atraso e adiantamento: o resumo do topo do Dashboard
+
+   Dois grupos lado a lado — as obras em andamento hoje e as
+   concluidas no mes — cada um com tres contadores: adiantadas
+   (verde), no prazo (azul) e atrasadas (vermelho). Embaixo dos
+   de hoje, as atrasadas pelo nome.
+   ============================================================ */
+
+.situacoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 14px 22px;
+  margin-top: 14px;
+}
+
+.situacoes__grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.situacoes__nome {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.situacoes__linha {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 8px;
+}
+
+.situacao {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--sit-cor) 38%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--sit-cor) 12%, transparent);
+  --sit-cor: var(--text-muted);
+}
+
+.situacao strong {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--sit-cor);
+  font-variant-numeric: tabular-nums;
+}
+
+.situacao span {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-base);
+}
+
+.situacao[data-tom='bom'] { --sit-cor: var(--gr-bom); }
+.situacao[data-tom='ok'] { --sit-cor: var(--quadro-emerg-acento); }
+.situacao[data-tom='ruim'] { --sit-cor: var(--gr-ruim); }
+
+.situacoes__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.situacoes__lista li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.8rem;
+  color: var(--text-base);
+}
+
+.situacoes__lista li:last-child {
+  border-bottom: 0;
+}
+
+.situacoes__lista li > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.situacoes__lista em {
+  flex-shrink: 0;
+  font-style: normal;
+  font-weight: 700;
+  color: var(--gr-ruim);
+}
+
+.situacoes__mais {
+  color: var(--text-faint);
+}

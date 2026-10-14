@@ -1,0 +1,262 @@
+-- ============================================================
+--  TRAJETORIA DE CLIENTES — ATUALIZACAO 2
+--  Rode este arquivo INTEIRO no banco "TrajetoClientes",
+--  DEPOIS de db/usuario.sql.txt, db/sistema.sql.txt,
+--  db/quadro.sql.txt e db/atualizacao.sql.txt.
+--
+--  Ele so ACRESCENTA e AFROUXA: nenhuma tabela e apagada e
+--  nenhum dado se perde. Pode rodar de novo sem problema.
+--
+--  O que muda:
+--    1. obra.proposta        — o n. da proposta, obrigatorio
+--    2. obra.descricao       — passa a ser opcional
+--    3. conclusao manual     — quem fechou, quando e a observacao
+--    4. usuario.cargo_titulo — o CARGO especifico da pessoa
+--                              (o "setor" continua sendo a tabela cargo)
+--    5. usuario.email        — passa a ser opcional
+--    6. obra_membro          — sai quem desmarcou o ultimo check
+-- ============================================================
+
+BEGIN;
+
+-- ============================================================
+--  1. N. DA PROPOSTA
+--
+--  Toda obra nasce de uma proposta comercial, e e por esse
+--  numero que ela e procurada no resto da empresa. Por isso ele
+--  vem antes do nome do cliente no card: "1042 - Acme".
+--
+--  A coluna nasce com '' para as obras que ja existem (nao da
+--  para inventar numero de proposta antiga); e a API que exige
+--  o preenchimento nas NOVAS.
+-- ============================================================
+
+ALTER TABLE public.obra
+    ADD COLUMN IF NOT EXISTS proposta text NOT NULL DEFAULT '';
+
+COMMENT ON COLUMN public.obra.proposta IS
+    'N. da proposta comercial. Obrigatorio nas obras novas; as antigas ficam vazias.';
+
+CREATE INDEX IF NOT EXISTS obra_proposta_idx ON public.obra (proposta);
+
+
+-- ============================================================
+--  2. DESCRICAO DA OBRA VIRA OPCIONAL
+--
+--  Na pratica a obra ja e identificada pela proposta e pelo
+--  cliente. Obrigar um texto livre so fazia aparecer "obra" e
+--  "-" no lugar da descricao.
+-- ============================================================
+
+ALTER TABLE public.obra ALTER COLUMN descricao DROP NOT NULL;
+ALTER TABLE public.obra ALTER COLUMN descricao SET DEFAULT '';
+
+
+-- ============================================================
+--  3. CONCLUSAO MANUAL DA OBRA
+--
+--  Ate aqui a obra "virava concluida" sozinha, no instante em
+--  que o ultimo check era marcado (view obra_conclusao). Isso
+--  tirava a obra do quadro sem ninguem decidir nada — e um
+--  check marcado por engano a levava junto.
+--
+--  Agora sao dois momentos:
+--
+--    todos os checks marcados  -> a obra fica PRONTA para
+--                                 concluir (o botao aparece);
+--    alguem clica em Concluir  -> a obra FECHA, com o nome de
+--                                 quem fechou, a hora e uma
+--                                 observacao opcional.
+--
+--  A view obra_conclusao continua existindo (e quem responde
+--  "ja marcou tudo?"), mas quem manda na aba Concluidas passa a
+--  ser a coluna concluida_em.
+-- ============================================================
+
+ALTER TABLE public.obra
+    ADD COLUMN IF NOT EXISTS concluida_em  timestamp with time zone,
+    ADD COLUMN IF NOT EXISTS concluida_por bigint,
+    ADD COLUMN IF NOT EXISTS conclusao_obs text;
+
+DO $bloco$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'obra_concluida_por_fk') THEN
+        ALTER TABLE public.obra
+            ADD CONSTRAINT obra_concluida_por_fk
+            FOREIGN KEY (concluida_por) REFERENCES public.usuario(id) ON DELETE SET NULL;
+    END IF;
+END
+$bloco$;
+
+COMMENT ON COLUMN public.obra.concluida_em IS
+    'Quando alguem clicou em Concluir obra. NULL = a obra ainda esta aberta.';
+COMMENT ON COLUMN public.obra.concluida_por IS
+    'Quem confirmou a conclusao. Aparece so na aba Concluidas.';
+COMMENT ON COLUMN public.obra.conclusao_obs IS
+    'Observacao opcional escrita na hora de concluir.';
+
+-- As obras que JA estavam fechadas pela regra antiga (todos os
+-- checks marcados) recebem o carimbo agora, para nao sumirem da
+-- aba Concluidas ao trocar a regra. Quem fechou fica com quem
+-- marcou o ultimo check.
+UPDATE public.obra o
+   SET concluida_em  = c.concluida_em,
+       concluida_por = (SELECT m.feito_por
+                          FROM public.obra_check m
+                         WHERE m.obra_id = o.id
+                         ORDER BY m.feito_em DESC
+                         LIMIT 1)
+  FROM public.obra_conclusao c
+ WHERE c.obra_id = o.id
+   AND o.concluida_em IS NULL;
+
+CREATE INDEX IF NOT EXISTS obra_concluida_idx ON public.obra (concluida_em);
+
+
+-- ============================================================
+--  4. SETOR x CARGO
+--
+--  A tabela `cargo` passa a ser lida como SETOR: e ela que
+--  carrega as permissoes, a cor e os cards da obra. O que a
+--  pessoa E dentro do setor (Analista, Coordenador, Estagiario)
+--  vira texto livre em usuario.cargo_titulo.
+--
+--  Repare que usuario.cargo (a coluna antiga) NAO muda de
+--  sentido: ela continua guardando a copia do nome do setor,
+--  como sempre guardou. Mexer nela quebraria o login de quem
+--  ainda nao rodou os arquivos anteriores.
+-- ============================================================
+
+ALTER TABLE public.usuario
+    ADD COLUMN IF NOT EXISTS cargo_titulo text;
+
+COMMENT ON COLUMN public.usuario.cargo_titulo IS
+    'O cargo especifico da pessoa (Analista, Coordenador...). Opcional. O SETOR e usuario.cargo_id.';
+
+COMMENT ON TABLE public.cargo IS
+    'SETOR da equipe. E aqui que moram as permissoes; o cargo especifico de cada pessoa fica em usuario.cargo_titulo.';
+
+
+-- ============================================================
+--  5. E-MAIL E TELEFONE OPCIONAIS
+--
+--  Obrigatorios no cadastro: nome, nascimento, CPF e setor.
+--  Quem nao tem e-mail corporativo entra pelo CPF.
+--
+--  A checagem de forma continua valendo — so passa a aceitar
+--  NULL. E-mail vazio ('') vira NULL para nao brigar com o
+--  indice unico (varios cadastros sem e-mail conviveriam mal
+--  com '' repetido).
+-- ============================================================
+
+ALTER TABLE public.usuario ALTER COLUMN email DROP NOT NULL;
+
+SET LOCAL app.desbloqueio = 'on';
+UPDATE public.usuario SET email = NULL WHERE btrim(coalesce(email, '')) = '';
+RESET app.desbloqueio;
+
+ALTER TABLE public.usuario DROP CONSTRAINT IF EXISTS usuario_email_forma;
+ALTER TABLE public.usuario
+    ADD CONSTRAINT usuario_email_forma
+    CHECK (email IS NULL OR email ~* '^[^@[:space:]]+@[^@[:space:]]+[.][a-z]{2,}$');
+
+
+-- ============================================================
+--  6. MEMBRO SAI QUANDO DESMARCA O ULTIMO CHECK
+--
+--  A regra pedida: e membro da obra quem marcou algum check
+--  nela — ninguem mais. O gatilho de ENTRADA ja existia
+--  (db/quadro.sql.txt); faltava o de SAIDA, e por isso quem
+--  marcava por engano e desmarcava continuava na lista de
+--  participantes para sempre.
+--
+--  Sai so quem nao tem MAIS NENHUM check na obra.
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.obra_check_sai() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $corpo$
+BEGIN
+    IF OLD.feito_por IS NULL THEN
+        RETURN OLD;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM public.obra_check
+         WHERE obra_id = OLD.obra_id
+           AND feito_por = OLD.feito_por
+    ) THEN
+        DELETE FROM public.obra_membro
+         WHERE obra_id = OLD.obra_id
+           AND usuario_id = OLD.feito_por;
+    END IF;
+
+    RETURN OLD;
+END;
+$corpo$;
+
+DROP TRIGGER IF EXISTS obra_check_sai_tg ON public.obra_check;
+CREATE TRIGGER obra_check_sai_tg
+    AFTER DELETE ON public.obra_check
+    FOR EACH ROW EXECUTE FUNCTION public.obra_check_sai();
+
+COMMENT ON FUNCTION public.obra_check_sai() IS
+    'Tira da obra quem desmarcou o ultimo check dela. O par de obra_check_entra().';
+
+-- Limpeza do que ficou para tras: membro sem nenhum check na
+-- obra sai agora. (Se voce inseriu membro na mao, ele sai aqui
+-- junto — a regra passa a ser so o check.)
+DELETE FROM public.obra_membro m
+ WHERE NOT EXISTS (
+     SELECT 1 FROM public.obra_check c
+      WHERE c.obra_id = m.obra_id
+        AND c.feito_por = m.usuario_id
+ );
+
+
+-- ============================================================
+--  7. PERMISSAO NOVA: EXCLUIR OBRA CONCLUIDA
+--
+--  Apagar uma obra fechada e apagar o registro do que a empresa
+--  fez — nao e a mesma coisa que editar uma obra em andamento.
+--  Por isso ela e permissao propria, e nao um efeito colateral
+--  de "editar_obras".
+--
+--  Ninguem ganha a permissao automaticamente: quem administra
+--  marca no setor. A excecao e o setor com acesso total, que
+--  passa por tudo e ja tem a lista cheia.
+-- ============================================================
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['excluir_concluidas']
+ WHERE acesso_total
+   AND NOT ('excluir_concluidas' = ANY (permissoes));
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+SELECT 'obra.proposta' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'obra' AND column_name = 'proposta') AS ok
+UNION ALL SELECT 'obra.concluida_em',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'obra' AND column_name = 'concluida_em')
+UNION ALL SELECT 'obra.concluida_por',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'obra' AND column_name = 'concluida_por')
+UNION ALL SELECT 'obra.conclusao_obs',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'obra' AND column_name = 'conclusao_obs')
+UNION ALL SELECT 'usuario.cargo_titulo',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'usuario' AND column_name = 'cargo_titulo')
+UNION ALL SELECT 'descricao opcional',
+       (SELECT is_nullable = 'YES' FROM information_schema.columns
+         WHERE table_name = 'obra' AND column_name = 'descricao')
+UNION ALL SELECT 'email opcional',
+       (SELECT is_nullable = 'YES' FROM information_schema.columns
+         WHERE table_name = 'usuario' AND column_name = 'email')
+UNION ALL SELECT 'gatilho obra_check_sai',
+       EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'obra_check_sai_tg');

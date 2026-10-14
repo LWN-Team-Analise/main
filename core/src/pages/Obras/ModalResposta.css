@@ -1,0 +1,79 @@
+.resposta {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.resposta__pergunta {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-base);
+}
+
+.resposta__opcoes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* Os dois botoes grandes, com a cor do que eles marcam: verde e "feito"
+   no sistema inteiro; o "nao" e cinza-azulado, e nao vermelho — ele nao
+   e erro nem atraso, e uma resposta. */
+.resposta__opcao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 12px;
+  border: 1.5px solid var(--opcao-cor);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--opcao-cor) 8%, transparent);
+  color: var(--opcao-cor);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.resposta__opcao:hover {
+  background: color-mix(in srgb, var(--opcao-cor) 16%, transparent);
+}
+
+.resposta__opcao:active {
+  transform: scale(0.98);
+}
+
+.resposta__opcao.is-atual {
+  background: color-mix(in srgb, var(--opcao-cor) 22%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--opcao-cor) 35%, transparent);
+}
+
+.resposta__opcao--sim {
+  --opcao-cor: var(--etapa-ok);
+}
+
+.resposta__opcao--nao {
+  --opcao-cor: var(--resposta-nao);
+}
+
+.resposta__glifo {
+  display: grid;
+  place-items: center;
+}
+
+.resposta__desmarcar {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.resposta__desmarcar:hover {
+  color: var(--danger);
+}
