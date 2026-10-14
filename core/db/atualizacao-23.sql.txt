@@ -1,0 +1,119 @@
+-- ============================================================
+--  ATUALIZACAO 23 — CLIENTES EM PRIMEIRO E RESERVA DE CARRO
+--
+--  1. cliente.ordem_prioridade
+--     Cliente com posicao (1, 2, 3...) vem ANTES dos outros em toda
+--     lista (a aba Clientes, os seletores de cliente), na ordem da
+--     posicao. Sao as unidades da propria LWN, que aparecem em obra e
+--     despesa toda semana. NULL = cliente comum, em ordem alfabetica.
+--
+--  2. A RESERVA DE CARRO da obra
+--
+--       etapa_check.tipo = 'reserva_carro'    "Reserva de carro"
+--         1a etapa, card do Time Tecnico. So o SUPERVISOR (o cargo da
+--         pessoa) — ou o setor com acesso total — marca: o clique abre
+--         a escolha de um carro da frota que nao esteja em uso. Reservar
+--         e que marca o check.
+--
+--       etapa_check.tipo = 'retirada_carro'   "Retirada do carro"
+--         3a etapa (execucao), card do Time Tecnico. So existe na obra
+--         que reservou um carro: sem reserva ele nem aparece e nao
+--         conta. O clique abre a saida do carro reservado (a mesma da
+--         aba Frotas, com o carro e a obra ja escolhidos); registrar a
+--         saida e que marca o check, e ela fica salva em Frotas.
+--
+--     obra_reserva_veiculo guarda a reserva de cada obra: o carro (ou
+--     NULL = "esta obra nao vai usar carro da frota"), quem reservou e
+--     a saida que retirou o carro.
+--
+--  Os dois checks valem a partir de AGORA (vigente_de = now()): so as
+--  obras criadas daqui em diante os enxergam. As que ja existem nao
+--  ganham um check novo na 1a etapa — o que faria voltar de etapa quem
+--  ja passou dela.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao duplica nada.
+-- ============================================================
+
+BEGIN;
+
+-- ---- 1. a posicao do cliente prioritario ----
+ALTER TABLE public.cliente ADD COLUMN IF NOT EXISTS ordem_prioridade smallint;
+
+COMMENT ON COLUMN public.cliente.ordem_prioridade IS
+    '1, 2, 3... = aparece antes dos outros em toda lista de clientes, nessa ordem (as unidades da LWN). NULL = cliente comum.';
+
+-- ---- 2. os tipos novos de check ----
+ALTER TABLE public.etapa_check DROP CONSTRAINT IF EXISTS etapa_check_tipo_valido;
+ALTER TABLE public.etapa_check ADD CONSTRAINT etapa_check_tipo_valido
+    CHECK (tipo IN ('comum', 'planejamento_ensaios', 'execucao_ensaios', 'material_gases',
+                    'prazo_execucao', 'reserva_carro', 'retirada_carro'));
+
+COMMENT ON COLUMN public.etapa_check.tipo IS
+    'comum, planejamento_ensaios, execucao_ensaios, material_gases, prazo_execucao, reserva_carro ou retirada_carro. Todos menos comum sao do sistema: nao se excluem.';
+
+-- "Reserva de carro": no card do Planejamento de ensaios (Time Tecnico,
+-- 1a etapa), depois dos checks que ja estao la
+INSERT INTO public.etapa_check (card_id, ordem, titulo, tipo, vigente_de)
+SELECT pe.card_id,
+       (SELECT coalesce(max(x.ordem), 0) + 1 FROM public.etapa_check x
+         WHERE x.card_id = pe.card_id AND x.vigente_ate IS NULL AND x.obra_id IS NULL),
+       'Reserva de carro', 'reserva_carro', now()
+  FROM public.etapa_check pe
+ WHERE pe.tipo = 'planejamento_ensaios'
+   AND pe.vigente_ate IS NULL
+   AND pe.obra_id IS NULL
+   AND NOT EXISTS (SELECT 1 FROM public.etapa_check x
+                    WHERE x.tipo = 'reserva_carro' AND x.vigente_ate IS NULL AND x.obra_id IS NULL)
+ ORDER BY pe.id
+ LIMIT 1;
+
+-- "Retirada do carro": no card da Execucao dos ensaios (Time Tecnico,
+-- 3a etapa), no fim
+INSERT INTO public.etapa_check (card_id, ordem, titulo, tipo, vigente_de)
+SELECT ex.card_id,
+       (SELECT coalesce(max(x.ordem), 0) + 1 FROM public.etapa_check x
+         WHERE x.card_id = ex.card_id AND x.vigente_ate IS NULL AND x.obra_id IS NULL),
+       'Retirada do carro', 'retirada_carro', now()
+  FROM public.etapa_check ex
+ WHERE ex.tipo = 'execucao_ensaios'
+   AND ex.vigente_ate IS NULL
+   AND ex.obra_id IS NULL
+   AND NOT EXISTS (SELECT 1 FROM public.etapa_check x
+                    WHERE x.tipo = 'retirada_carro' AND x.vigente_ate IS NULL AND x.obra_id IS NULL)
+ ORDER BY ex.id
+ LIMIT 1;
+
+-- ---- 3. a reserva de cada obra ----
+CREATE TABLE IF NOT EXISTS public.obra_reserva_veiculo (
+    obra_id        bigint PRIMARY KEY REFERENCES public.obra(id) ON DELETE CASCADE,
+    -- NULL = a obra nao vai usar carro da frota
+    veiculo_id     bigint REFERENCES public.veiculo(id) ON DELETE RESTRICT,
+    reservado_por  bigint REFERENCES public.usuario(id) ON DELETE SET NULL,
+    reservado_em   timestamp with time zone NOT NULL DEFAULT now(),
+    -- a saida (aba Frotas) que retirou o carro reservado
+    registro_id    bigint REFERENCES public.veiculo_registro(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS obra_reserva_veiculo_veiculo_idx ON public.obra_reserva_veiculo (veiculo_id);
+CREATE INDEX IF NOT EXISTS obra_reserva_veiculo_registro_idx ON public.obra_reserva_veiculo (registro_id);
+
+COMMENT ON TABLE public.obra_reserva_veiculo IS
+    'O carro da frota reservado para a obra (check "Reserva de carro"). veiculo_id NULL = a obra nao usa carro. registro_id = a saida que retirou o carro (check "Retirada do carro").';
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'cliente.ordem_prioridade' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'cliente' AND column_name = 'ordem_prioridade') AS ok
+UNION ALL SELECT 'check Reserva de carro',
+       EXISTS (SELECT 1 FROM public.etapa_check WHERE tipo = 'reserva_carro' AND vigente_ate IS NULL)
+UNION ALL SELECT 'check Retirada do carro',
+       EXISTS (SELECT 1 FROM public.etapa_check WHERE tipo = 'retirada_carro' AND vigente_ate IS NULL)
+UNION ALL SELECT 'obra_reserva_veiculo', to_regclass('public.obra_reserva_veiculo') IS NOT NULL;

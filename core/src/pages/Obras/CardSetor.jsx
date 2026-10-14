@@ -6,10 +6,15 @@ import {
   CHECK_GASES,
   CHECK_PLANEJAMENTO,
   CHECK_PRAZO_EXECUCAO,
+  CHECK_RESERVA,
+  CHECK_RETIRADA,
   checksExigidos,
   checkTemDonoProprio,
+  anexoDaProposta,
   corDoSetorDoCard,
+  ehPropostaTecnica,
   estadoDoPrazo,
+  nomeDaProposta,
   nomeDoCard,
   podeEditarCheck,
 } from '@/domain/obras'
@@ -30,6 +35,8 @@ import { Icone } from './IconesObra'
  *    X e a palavra "Nao"; o "sim", com o tique e "Sim";
  *  - os dois do sistema (Planejamento e Execucao dos ensaios) abrem o
  *    proprio pop-up e mostram quantos ensaios / quanto ja foi executado;
+ *  - a "Proposta tecnica" da 1a etapa abre o pop-up do documento e
+ *    mostra o arquivo anexado;
  *  - as informacoes do check aparecem ao passar o mouse nele.
  *
  * As informacoes do card (card.informacoes) aparecem ao passar o mouse
@@ -206,9 +213,17 @@ export default function CardSetor({
           const planejamento = check.tipo === CHECK_PLANEJAMENTO
           const execucaoDosEnsaios = check.tipo === CHECK_EXECUCAO
           const doSistema = planejamento || execucaoDosEnsaios
-          /* os dois do sistema abrem o pop-up mesmo para quem nao marca:
-             la a pessoa VE os ensaios, so nao mexe */
-          const abreSemPermissao = doSistema && !travado
+          /* a proposta tecnica (1a etapa) abre o pop-up do documento */
+          const proposta = !modelo && ehPropostaTecnica(etapa, check)
+          const documento = proposta ? anexoDaProposta(obra) : null
+          /* os dois do sistema e a proposta abrem o pop-up mesmo para quem
+             nao marca: la a pessoa VE os ensaios ou o documento, so nao mexe */
+          /* o carro da obra (atualizacao 23): quem nao reserva ve a reserva,
+             e a retirada pede so a permissao de registrar saida na Frotas */
+          const reservaCarro = !modelo && check.tipo === CHECK_RESERVA
+          const retiradaCarro = !modelo && check.tipo === CHECK_RETIRADA
+          const doCarro = reservaCarro || retiradaCarro
+          const abreSemPermissao = (doSistema || proposta || doCarro) && !travado
           /* "Material de gases": obrigatorio so com ensaio de GASES na obra.
              O porque vai na dica, antes das informacoes do check. */
           const gases = check.tipo === CHECK_GASES
@@ -249,13 +264,21 @@ export default function CardSetor({
                 type="button"
                 className={`tarefa ${feito ? 'is-feita' : ''} ${resposta === false ? 'is-nao' : ''} ${
                   !modelo && !meu && !abreSemPermissao ? 'is-deoutro' : ''
-                } ${doSistema ? 'is-sistema' : ''} ${modelo ? 'is-modelo' : ''}`.trim()}
+                } ${doSistema || proposta || doCarro ? 'is-sistema' : ''} ${modelo ? 'is-modelo' : ''}`.trim()}
                 onClick={() => !travadoAqui && aoMarcar(check)}
                 aria-disabled={travadoAqui || undefined}
                 title={
                   modelo || travado || dicaDoCheck
                     ? undefined
-                    : planejamento
+                    : proposta
+                      ? documento
+                        ? `Proposta técnica: ${nomeDaProposta(documento)}`
+                        : 'Anexar a proposta técnica'
+                      : reservaCarro
+                      ? 'Reservar o carro da obra'
+                      : retiradaCarro
+                      ? 'Registrar a retirada do carro reservado'
+                      : planejamento
                       ? 'Escolher os ensaios desta obra'
                       : execucaoDosEnsaios
                         ? 'Registrar a execução dos ensaios'
@@ -298,6 +321,38 @@ export default function CardSetor({
                 )}
                 {execucaoDosEnsaios && !modelo && (
                   <span className="tarefa__ensaios">{execucao ? `${execucao.geral}%` : 'sem ensaios'}</span>
+                )}
+                {/* a proposta tecnica: o documento anexado, ou o convite a anexar */}
+                {proposta && (
+                  <span className="tarefa__ensaios tarefa__anexo">
+                    {documento ? (
+                      <>
+                        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="m20.5 11.5-8.6 8.6a5.3 5.3 0 0 1-7.5-7.5l8.6-8.6a3.5 3.5 0 0 1 5 5l-8.6 8.6a1.8 1.8 0 0 1-2.5-2.5l7.9-7.9" />
+                        </svg>
+                        <span>{nomeDaProposta(documento)}</span>
+                      </>
+                    ) : (
+                      'anexar'
+                    )}
+                  </span>
+                )}
+                {/* o carro da obra: o reservado, ou o convite a reservar / retirar */}
+                {reservaCarro && (
+                  <span className="tarefa__ensaios tarefa__anexo">
+                    <span>
+                      {obra.reserva?.veiculoId
+                        ? obra.reserva.veiculoNome
+                        : obra.reserva
+                          ? 'sem carro'
+                          : 'reservar'}
+                    </span>
+                  </span>
+                )}
+                {retiradaCarro && (
+                  <span className="tarefa__ensaios tarefa__anexo">
+                    <span>{obra.reserva?.retirada ? 'retirado' : `retirar ${obra.reserva?.veiculoNome ?? ''}`.trim()}</span>
+                  </span>
                 )}
                 {/* o prazo da execucao, que vale para a etapa de execucao */}
                 {prazoDaExecucao && !modelo && (

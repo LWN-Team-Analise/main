@@ -12,6 +12,8 @@ import Configuracoes from '@/pages/Configuracoes/Configuracoes'
 import Despesas from '@/pages/Despesas/Despesas'
 import MeusEnvios from '@/pages/Despesas/MeusEnvios'
 import EnviosGerais, { EnviosDaPessoa } from '@/pages/Despesas/EnviosGerais'
+import Frotas from '@/pages/Frotas/Frotas'
+import Registros from '@/pages/Frotas/Registros'
 import RetornoOutlook from '@/pages/Login/RetornoOutlook'
 import ProtectedRoute from './ProtectedRoute'
 
@@ -134,6 +136,24 @@ export default function AppRoutes() {
         element={
           <Interna permissao="revisar_despesa_geral">
             <EnviosDaPessoa />
+          </Interna>
+        }
+      />
+      {/* Frotas abre com ver_frotas, e a lista de registros tambem: a API
+          confere a mesma chave em cada chamada de /api/frotas. */}
+      <Route
+        path="/app/frotas"
+        element={
+          <Interna permissao="ver_frotas">
+            <Frotas />
+          </Interna>
+        }
+      />
+      <Route
+        path="/app/frotas/registros"
+        element={
+          <Interna permissao="ver_frotas">
+            <Registros />
           </Interna>
         }
       />

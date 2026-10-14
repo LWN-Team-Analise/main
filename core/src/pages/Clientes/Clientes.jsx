@@ -16,6 +16,7 @@ import {
   CutoutCardPin,
 } from '@/components/CutoutCard/CutoutCard'
 import { useDados } from '@/context/DadosContext'
+import { ordemDosClientes } from '@/domain/obras'
 import Estrelas from '@/components/Estrelas/Estrelas'
 import { dataBR, dataHora, formatarCEP } from '@/utils/formato'
 import useCorDaLogo from '@/hooks/useCorDaLogo'
@@ -108,7 +109,8 @@ export default function Clientes() {
       filtrados = filtrados.filter((c) => String(c.setorId) === String(setorFiltro))
     }
 
-    return [...filtrados].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+    /* as unidades da LWN (prioritarias) sempre na frente */
+    return [...filtrados].sort(ordemDosClientes)
   }, [clientes, busca, setorFiltro])
 
   /* quantas obras cada cliente tem, e quantas ainda estao abertas */

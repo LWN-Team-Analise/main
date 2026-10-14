@@ -135,12 +135,12 @@ export default function Login() {
 
         {/* alinhado verticalmente com o meio do cartao de login */}
         <div className="hero__brand">
-          <h1 className="hero__wordmark">LWN Core</h1>
+          <h1 className="hero__wordmark">Atmosfera LWN</h1>
           <p className="hero__tagline">Plataforma integrada de gestão corporativa.</p>
           <p className="hero__pitch">
-            Um ambiente digital centralizado para conectar processos, informações e
-            operações, promovendo mais integração, organização e eficiência no dia a dia
-            da LWN.
+            Ambiente digital centralizado para conectar processos, informações e
+            operações, promovendo mais integração, organização e eficiência no dia a
+            dia.
           </p>
           {isMobile && head}
         </div>

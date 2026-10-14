@@ -139,7 +139,7 @@
   transform: translateY(-50%);
 }
 
-/* "LWN Core" inteiro num gradiente azul escuro -> azul meio escuro
+/* "Atmosfera LWN" inteiro num gradiente azul escuro -> azul meio escuro
    correndo da direita para a esquerda. Os cinco pontos fecham um ciclo
    exato a cada meia imagem, entao o loop nao tem salto.
 
@@ -182,7 +182,7 @@
   }
 }
 
-/* o que o LWN Core e, em uma linha, logo abaixo do nome */
+/* o que a Atmosfera LWN e, em uma linha, logo abaixo do nome */
 .hero__tagline {
   margin: 0 0 clamp(12px, 1.8vh, 18px);
   font-size: clamp(0.95rem, 1.2vw, 1.12rem);

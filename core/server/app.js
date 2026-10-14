@@ -7,6 +7,7 @@ import dadosRouter from './routes/dados.js'
 import roteiroRouter from './routes/roteiro.js'
 import botRouter from './routes/bot.js'
 import despesasRouter from './routes/despesas.js'
+import frotasRouter from './routes/frotas.js'
 import atividadesRouter from './routes/atividades.js'
 import cargaRouter, { cargaJunto } from './carga.js'
 import { logger } from './logger.js'
@@ -83,6 +84,7 @@ app.use('/api/dados', dadosRouter)
 app.use('/api/roteiro', roteiroRouter)
 app.use('/api/bot', botRouter)
 app.use('/api/despesas', despesasRouter)
+app.use('/api/frotas', frotasRouter)
 app.use('/api/atividades', atividadesRouter)
 
 app.use((erro, req, res, _next) => {

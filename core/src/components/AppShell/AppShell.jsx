@@ -64,6 +64,14 @@ const Icone = {
       <path d="M9 8h6M9 11.5h6M9 15h3.5" />
     </svg>
   ),
+  frotas: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <path d="M5 16.5V12l1.7-4.6A1.6 1.6 0 0 1 8.2 6.3h7.6a1.6 1.6 0 0 1 1.5 1.1L19 12v4.5" />
+      <path d="M4 16.5h16M5 12h14" />
+      <circle cx="8" cy="16.6" r="1.7" />
+      <circle cx="16" cy="16.6" r="1.7" />
+    </svg>
+  ),
   usuarios: () => (
     <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
       <circle cx="9" cy="8" r="3.3" />
@@ -156,6 +164,7 @@ const MENU = [
   { id: 'clientes', rotulo: 'Clientes', rota: '/app/clientes', permissao: 'ver_clientes' },
   { id: 'concluidas', rotulo: 'Concluídas', rota: '/app/concluidas', permissao: 'ver_concluidas' },
   { id: 'despesas', rotulo: 'Despesas', rota: '/app/despesas', permissao: 'ver_despesas' },
+  { id: 'frotas', rotulo: 'Frotas', rota: '/app/frotas', permissao: 'ver_frotas' },
   { id: 'avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes', permissao: 'ver_avaliacoes' },
   {
     id: 'usuarios',

@@ -31,7 +31,7 @@ const NADA = {
 
 /* a ordem em que os detalhes aparecem, e o rotulo de cada um. Os da
    primeira linha sao "o que" (sem rotulo); os outros vao com rotulo. */
-const PRINCIPAIS = ['tipo', 'check', 'card', 'etapa', 'obra', 'cliente', 'setor', 'pessoa', 'cargo', 'arquivo', 'etiqueta', 'avaliacao']
+const PRINCIPAIS = ['tipo', 'check', 'card', 'etapa', 'obra', 'cliente', 'setor', 'pessoa', 'cargo', 'arquivo', 'etiqueta', 'avaliacao', 'veiculo']
 const ROTULOS = {
   valor: 'Valor',
   nota: 'Nota',
@@ -58,6 +58,12 @@ const ROTULOS = {
   ensaio: 'Ensaio',
   ensaios: 'Ensaios',
   motivo: 'Motivo',
+  veiculo: 'Veículo',
+  condutor: 'Condutor',
+  km: 'KM',
+  destino: 'Destino',
+  placa: 'Placa',
+  pendencias: 'Pendências',
 }
 
 function horaDe(iso) {

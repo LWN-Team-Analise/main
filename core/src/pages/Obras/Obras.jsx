@@ -7,6 +7,7 @@ import { useDados } from '@/context/DadosContext'
 import { useAuth } from '@/context/AuthContext'
 import {
   cargosDoCheck,
+  ordemDosClientes,
   PRIORIDADES,
   PRIORIDADE_PESO,
   situacaoDaObra,
@@ -220,7 +221,7 @@ export default function Obras() {
     )
     return clientes
       .filter((c) => ativos.has(String(c.id)) || String(c.id) === String(clienteId))
-      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+      .sort(ordemDosClientes)
   }, [obras, clientes, concluida, clienteId])
 
   /**

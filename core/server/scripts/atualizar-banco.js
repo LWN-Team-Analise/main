@@ -48,6 +48,8 @@ const ARQUIVOS = [
   'db/atualizacao-19.sql.txt',
   'db/atualizacao-20.sql.txt',
   'db/atualizacao-21.sql.txt',
+  'db/atualizacao-22.sql.txt',
+  'db/atualizacao-23.sql.txt',
 ]
 
 /**
@@ -131,6 +133,14 @@ const CONFERENCIA = [
   ],
   ['obra.execucao_dias', col('obra', 'execucao_dias')],
   ['tentativa_acesso', "SELECT to_regclass('public.tentativa_acesso') IS NOT NULL AS ok"],
+  ['veiculo', "SELECT to_regclass('public.veiculo') IS NOT NULL AS ok"],
+  ['veiculo_registro', "SELECT to_regclass('public.veiculo_registro') IS NOT NULL AS ok"],
+  ['veiculo_foto', "SELECT to_regclass('public.veiculo_foto') IS NOT NULL AS ok"],
+  ['ver_frotas no acesso total', permissaoNoAcessoTotal('ver_frotas')],
+  ['cliente.ordem_prioridade', col('cliente', 'ordem_prioridade')],
+  ['check Reserva de carro', "SELECT EXISTS (SELECT 1 FROM etapa_check WHERE tipo = 'reserva_carro' AND vigente_ate IS NULL) AS ok"],
+  ['check Retirada do carro', "SELECT EXISTS (SELECT 1 FROM etapa_check WHERE tipo = 'retirada_carro' AND vigente_ate IS NULL) AS ok"],
+  ['obra_reserva_veiculo', "SELECT to_regclass('public.obra_reserva_veiculo') IS NOT NULL AS ok"],
 ]
 
 function col(tabela, coluna) {

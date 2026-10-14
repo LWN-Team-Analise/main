@@ -360,6 +360,92 @@ export function checkDoPrazoDaExecucao(roteiro) {
   return null
 }
 
+/* ------------------------------------------------------------
+   A "Proposta tecnica" (1a etapa)
+
+   O check "Proposta tecnica" da 1a etapa pede o documento: o clique
+   abre o pop-up de anexo, e e anexar que marca ele. O arquivo vai para
+   os Anexos da obra com o nome comecando por PREFIXO_PROPOSTA — e por
+   esse nome que o check acha o seu documento, sem coluna nova no banco.
+   ------------------------------------------------------------ */
+
+export const PREFIXO_PROPOSTA = 'Proposta técnica - '
+
+const semAcento = (texto) =>
+  String(texto ?? '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim()
+
+/** true para o check "Proposta tecnica" da 1a etapa. */
+export function ehPropostaTecnica(etapa, check) {
+  return etapa?.numero === 1 && semAcento(check?.titulo).startsWith('proposta tecnica')
+}
+
+/** O documento da proposta tecnica desta obra: o anexo mais recente dela (ou null). */
+export function anexoDaProposta(obra) {
+  return (
+    (obra?.anexos ?? [])
+      .filter((a) => String(a.nome ?? '').startsWith(PREFIXO_PROPOSTA))
+      .sort((a, b) => String(b.enviadoEm ?? '').localeCompare(String(a.enviadoEm ?? '')))[0] ?? null
+  )
+}
+
+/** O nome do arquivo como a pessoa o enviou, sem o prefixo da proposta. */
+export const nomeDaProposta = (anexo) => String(anexo?.nome ?? '').slice(PREFIXO_PROPOSTA.length)
+
+/* ------------------------------------------------------------
+   A reserva de carro (atualizacao 23)
+
+   "Reserva de carro" (1a etapa, Time Tecnico): o SUPERVISOR escolhe um
+   carro da frota que esteja na garagem; reservar e que marca o check.
+   "Retirada do carro" (3a etapa): so existe na obra que reservou um
+   carro — sem reserva ele sai do roteiro dela (nao aparece e nao
+   conta). Registrar a saida do carro, ali mesmo, e que marca o check,
+   e a saida fica salva na aba Frotas.
+   ------------------------------------------------------------ */
+
+export const CHECK_RESERVA = 'reserva_carro'
+export const CHECK_RETIRADA = 'retirada_carro'
+
+/** O roteiro da obra sem o "Retirada do carro" quando ela nao reservou carro. */
+export function aplicarRegraDaReserva(roteiro, obra) {
+  if (obra?.reserva?.veiculoId) return roteiro
+  const tem = (roteiro ?? []).some((e) =>
+    (e.cards ?? []).some((c) => (c.checks ?? []).some((k) => k.tipo === CHECK_RETIRADA)),
+  )
+  if (!tem) return roteiro
+  return roteiro.map((etapa) => ({
+    ...etapa,
+    cards: etapa.cards.map((card) => ({
+      ...card,
+      checks: card.checks.filter((check) => check.tipo !== CHECK_RETIRADA),
+    })),
+  }))
+}
+
+/**
+ * Quem reserva o carro: o SUPERVISOR — o cargo da pessoa (Supervisor),
+ * nao o setor — ou quem esta num setor com acesso total. `cargoTitulo`
+ * e o nome do cargo como a equipe o le (src/context/DadosContext).
+ */
+export function podeReservarCarro(usuario, cargoTitulo) {
+  if (usuario?.acessoTotal) return true
+  return semAcento(cargoTitulo ?? usuario?.cargoTitulo).startsWith('supervisor')
+}
+
+/**
+ * A ordem das listas de clientes: os PRIORITARIOS primeiro, na posicao
+ * deles (as unidades da LWN, atualizacao 23), depois o resto em ordem
+ * alfabetica.
+ */
+export function ordemDosClientes(a, b) {
+  const pa = a.ordemPrioridade ?? Infinity
+  const pb = b.ordemPrioridade ?? Infinity
+  return pa !== pb ? pa - pb : a.nome.localeCompare(b.nome, 'pt-BR')
+}
+
 /** true para os checks do sistema (nao se excluem nem se renomeiam). */
 export function checkDoSistema(check) {
   return Boolean(check?.tipo) && check.tipo !== 'comum'

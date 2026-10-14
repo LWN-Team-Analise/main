@@ -1,5 +1,5 @@
 /**
- * A porta de entrada da API do LWN Core (lwnengenharia.com.br/core) na
+ * A porta de entrada da API da Atmosfera LWN (lwnengenharia.com.br/core) na
  * Vercel.
  *
  * Tudo que chega em /api/... cai aqui (o desvio esta no vercel.json) e

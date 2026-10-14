@@ -12,20 +12,15 @@
          endereco, com o nome e o icone da empresa. -->
     <link rel="manifest" href="/core/manifest.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="LWN Core" />
+    <meta name="apple-mobile-web-app-title" content="Atmosfera LWN" />
     <!-- `black-translucent`: a tela sobe por BAIXO da barra de status,
          que e o que permite ao aviso encostar na altura da ilha. -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>LWN Core</title>
-    <!-- O icone da aba. O caminho passa pelo src/ de proposito: o Vite
-         resolve, versiona e copia o arquivo no build, entao o icone mora
-         num lugar so (src/assets) em vez de ter uma copia em public/.
-
-         E o MESMO arquivo que o Chat LWN usa como cara do bot: a aba do
-         navegador e a conversa mostram a mesma marca, e trocar o icone
-         um dia e trocar um arquivo so. -->
-    <link rel="icon" type="image/png" href="/core/src/assets/icone-lwn.png" />
-    <link rel="apple-touch-icon" href="/core/src/assets/icone-lwn.png" />
+    <title>Atmosfera LWN</title>
+    <!-- O icone da aba e o MESMO do site da LWN (public/assets): o sistema
+         mora dentro do site, e as duas abas mostram a mesma marca. -->
+    <link rel="icon" type="image/png" href="/assets/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/app-icon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

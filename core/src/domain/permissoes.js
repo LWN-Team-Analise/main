@@ -38,6 +38,7 @@ export const VISUALIZACAO = [
   { chave: 'ver_clientes', rotulo: 'Clientes', rota: '/app/clientes' },
   { chave: 'ver_concluidas', rotulo: 'Concluídas', rota: '/app/concluidas' },
   { chave: 'ver_despesas', rotulo: 'Visualizar despesas', rota: '/app/despesas' },
+  { chave: 'ver_frotas', rotulo: 'Frotas', rota: '/app/frotas' },
   { chave: 'ver_avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes' },
   { chave: 'ver_avisos', rotulo: 'Enviar avisos', rota: null },
 ]
@@ -83,6 +84,12 @@ export const ALTERACAO = [
   { chave: 'alterar_despesas', rotulo: 'Alterar despesas', dependeDe: 'ver_despesas' },
   { chave: 'revisar_despesa_geral', rotulo: 'Revisar despesa geral', dependeDe: 'ver_despesas' },
   { chave: 'excluir_despesas', rotulo: 'Excluir lançamento de despesa', dependeDe: 'ver_despesas' },
+  /* Frotas: ver a aba e os registros de todos os veiculos e
+     `ver_frotas`; dar SAIDA e DEVOLUCAO e `registrar_frota`;
+     cadastrar e editar os veiculos (e corrigir o KM atual de um
+     deles) e `editar_veiculos`. */
+  { chave: 'registrar_frota', rotulo: 'Registrar saída e devolução de veículo', dependeDe: 'ver_frotas' },
+  { chave: 'editar_veiculos', rotulo: 'Adicionar / editar veículos', dependeDe: 'ver_frotas' },
 ]
 
 /**

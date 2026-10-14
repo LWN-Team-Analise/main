@@ -10,6 +10,7 @@ import { hojeISO } from '@/utils/formato'
 import { podeFazer } from '@/domain/permissoes'
 import {
   aplicarRegraDosGases,
+  aplicarRegraDaReserva,
   chaveDoCargo,
   ensaiosDeGases,
   estadoDaEtapa,
@@ -942,9 +943,13 @@ export function DadosProvider({ children }) {
    */
   const roteiroDaObra = useCallback(
     (obra) =>
-      aplicarRegraDosGases(
-        roteiroVigente(roteiroBruto, obra?.criadoEm, obra),
-        ensaiosDeGases(obra, ensaioPorId),
+      /* e sem o "Retirada do carro" na obra que nao reservou carro */
+      aplicarRegraDaReserva(
+        aplicarRegraDosGases(
+          roteiroVigente(roteiroBruto, obra?.criadoEm, obra),
+          ensaiosDeGases(obra, ensaioPorId),
+        ),
+        obra,
       ),
     [roteiroBruto, ensaioPorId],
   )

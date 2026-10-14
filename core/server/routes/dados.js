@@ -125,6 +125,8 @@ function diasDaExecucao(o) {
 const paraCliente = (l) => ({
   id: String(l.id),
   nome: l.nome,
+  /* vem antes dos outros em toda lista, nesta ordem (atualizacao 23) */
+  ordemPrioridade: l.ordem_prioridade ?? null,
   /* Na carga LEVE (server/carga.js) a logo e a capa nao vem: so a
      `imagemVersao`, a impressao digital das duas. A tela reaproveita as
      que ja tem quando ela bate — sao ~1 MB que deixam de viajar a cada
@@ -187,12 +189,13 @@ async function lerTermos() {
 /* As colunas do cliente que a tela usa. A logo_original fica de fora
    sempre (ver paraCliente); a logo e a capa, so na carga leve. */
 const COLUNAS_CLIENTE = `id, nome, recorte_logo, recorte_capa, setor_id, endereco, bairro,
-  cidade, estado, cep, criado_em,
+  cidade, estado, cep, criado_em, ordem_prioridade,
   md5(coalesce(logo, '') || '|' || coalesce(capa, '')) AS imagem_versao`
 
 function lerClientes(imagens) {
   return query(
-    `SELECT ${COLUNAS_CLIENTE}${imagens ? ', logo, capa' : ''} FROM cliente ORDER BY lower(nome)`,
+    /* os prioritarios (as unidades da LWN, atualizacao 23) primeiro, na ordem deles */
+    `SELECT ${COLUNAS_CLIENTE}${imagens ? ', logo, capa' : ''} FROM cliente ORDER BY ordem_prioridade NULLS LAST, lower(nome)`,
   ).catch((erro) => {
     /* banco antigo, sem alguma das colunas: tudo, com as imagens */
     if (erro.code !== '42703') throw erro
@@ -226,6 +229,7 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     ensaios,
     obraEnsaios,
     progressos,
+    reservas,
   ] = await Promise.all([
     lerClientes(imagens),
     /* os setores vem junto: sao poucos e a tela de Clientes precisa
@@ -277,6 +281,16 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     ),
     query(`SELECT p.obra_id, p.ensaio_id, p.dia, p.percentual, p.registrado_por, p.registrado_em
              FROM obra_ensaio_progresso p ORDER BY p.dia`).catch(semTabelaVazia),
+    /* a reserva de carro de cada obra (atualizacao 23) e a saida que
+       retirou o carro. Sem a tabela, nenhuma obra tem reserva */
+    query(`SELECT r.obra_id, r.veiculo_id, r.reservado_em, r.registro_id,
+                  v.nome AS veiculo_nome, v.placa, u.name AS reservado_por_nome,
+                  vr.data AS retirada_data, to_char(vr.hora, 'HH24:MI') AS retirada_hora,
+                  vr.condutor_nome AS retirada_condutor, vr.km AS retirada_km
+             FROM obra_reserva_veiculo r
+             LEFT JOIN veiculo v           ON v.id = r.veiculo_id
+             LEFT JOIN usuario u           ON u.id = r.reservado_por
+             LEFT JOIN veiculo_registro vr ON vr.id = r.registro_id`).catch(semTabelaVazia),
   ])
 
   const junta = (linhas, chave, monta) => {
@@ -362,6 +376,28 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
   }))
 
   const etiquetasDaObra = junta(obraEtiquetas.rows, 'obra_id', (l) => String(l.etiqueta_id))
+  /* veiculoId null = a obra nao vai usar carro da frota */
+  const reservaDaObra = Object.fromEntries(
+    reservas.rows.map((l) => [
+      l.obra_id,
+      {
+        veiculoId: l.veiculo_id === null ? null : String(l.veiculo_id),
+        veiculoNome: l.veiculo_nome ?? null,
+        placa: l.placa ?? '',
+        reservadoPorNome: l.reservado_por_nome ?? null,
+        reservadoEm: l.reservado_em,
+        retirada: l.registro_id
+          ? {
+              registroId: String(l.registro_id),
+              data: l.retirada_data,
+              hora: l.retirada_hora,
+              condutorNome: l.retirada_condutor,
+              km: l.retirada_km,
+            }
+          : null,
+      },
+    ]),
+  )
   const anexosDaObra = junta(anexos.rows, 'obra_id', (l) => ({
     id: String(l.id),
     nome: l.nome,
@@ -441,6 +477,7 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
       avisos: avisosDaObra[o.id] ?? [],
       etiquetas: etiquetasDaObra[o.id] ?? [],
       anexos: anexosDaObra[o.id] ?? [],
+      reserva: reservaDaObra[o.id] ?? null,
       notas: notasDaObra[o.id] ?? [],
       avaliacao: media(notasDaObra[o.id]),
     })),
@@ -1330,7 +1367,9 @@ router.post('/obras/:id/concluir', exigeSessao, exige('editar_obras'), async (re
        dentro dela.
 
        O check "Material de gases" (tipo material_gases) so conta na
-       obra que tem ensaio de GASES planejado; nas outras e opcional.
+       obra que tem ensaio de GASES planejado; nas outras e opcional. O
+       "Retirada do carro" (retirada_carro, atualizacao 23) so conta na
+       obra que reservou um carro; nas outras ele nem aparece.
 
        Obra com checks PROPRIOS (atualizacao 18) conta os dela, e nao os
        do roteiro. Os tres degraus: 18, 14/17, e a conta de sempre. */
@@ -1363,15 +1402,24 @@ router.post('/obras/:id/concluir', exigeSessao, exige('editar_obras'), async (re
                    OR EXISTS (SELECT 1 FROM obra_ensaio oe
                                 JOIN ensaio en ON en.id = oe.ensaio_id
                                WHERE oe.obra_id = o.id AND en.classificacao = 'gases'))`
+            : ''}
+          ${nivel >= 3
+            ? `AND (ec.tipo <> 'retirada_carro'
+                   OR EXISTS (SELECT 1 FROM obra_reserva_veiculo rv
+                               WHERE rv.obra_id = o.id AND rv.veiculo_id IS NOT NULL))`
             : ''}`,
         [req.params.id],
       )
     /* banco sem as atualizacoes: o degrau de baixo */
     const semColuna = (erro) => ['42703', '42P01'].includes(erro.code)
-    const conta = await contar(2).catch((erro) =>
-      semColuna(erro)
-        ? contar(1).catch((e) => (semColuna(e) ? contar(0) : Promise.reject(e)))
-        : Promise.reject(erro),
+    const conta = await contar(3).catch((erro3) =>
+      semColuna(erro3)
+        ? contar(2).catch((erro) =>
+            semColuna(erro)
+              ? contar(1).catch((e) => (semColuna(e) ? contar(0) : Promise.reject(e)))
+              : Promise.reject(erro),
+          )
+        : Promise.reject(erro3),
     )
 
     const { total, abertos } = conta.rows[0] ?? { total: 0, abertos: 0 }
@@ -1479,7 +1527,7 @@ async function podeMarcar(usuarioId, checkId, obraId) {
  *           ainda nao tem a atualizacao 13 — ai nao existe pergunta
  *           nem coluna de resposta, e a marcacao segue como sempre;
  *   tipo    'comum', 'planejamento_ensaios', 'execucao_ensaios',
- *           'material_gases' ou 'prazo_execucao';
+ *           'material_gases', 'prazo_execucao', 'reserva_carro' ou 'retirada_carro';
  *   papel   o papel da etapa dele. Na de 'execucao' nada se marca
  *           sem o prazo da execucao.
  */
@@ -1654,6 +1702,19 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
       }
     }
 
+    /* A reserva e a retirada do carro (atualizacao 23) nao se marcam no
+       clique: a reserva marca quando o supervisor escolhe o carro, e a
+       retirada quando a saida do carro e registrada (ver
+       server/routes/frotas.js). */
+    if (regra.tipo === 'reserva_carro' || regra.tipo === 'retirada_carro') {
+      return res.status(409).json({
+        erro:
+          regra.tipo === 'reserva_carro'
+            ? 'Este check marca quando o supervisor reserva o carro da obra.'
+            : 'Este check marca quando a retirada do carro é registrada.',
+      })
+    }
+
     /* O "Prazo da execucao" (1a etapa, atualizacao 19) nao se marca no
        clique: ele marca sozinho quando o prazo e definido (PUT
        /obras/:id/execucao). Sem o prazo, recusa com o motivo. */
@@ -1736,9 +1797,19 @@ router.delete('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req,
       return res.status(403).json({ erro: 'Este check é de outro setor.' })
     }
     /* o do prazo acompanha o prazo: com a data definida, ele fica marcado */
-    if ((await regraDoCheck(req.params.checkId)).tipo === 'prazo_execucao') {
+    const { tipo } = await regraDoCheck(req.params.checkId)
+    if (tipo === 'prazo_execucao') {
       return res.status(409).json({
         erro: 'Este check acompanha o prazo da execução. Para mudar, altere a data no período de execução.',
+      })
+    }
+    /* os do carro acompanham a reserva e a saida (atualizacao 23) */
+    if (tipo === 'reserva_carro' || tipo === 'retirada_carro') {
+      return res.status(409).json({
+        erro:
+          tipo === 'reserva_carro'
+            ? 'Para desfazer, cancele a reserva do carro no próprio check.'
+            : 'A retirada do carro fica registrada na aba Frotas e não se desmarca.',
       })
     }
     const desmarcado = await query('DELETE FROM obra_check WHERE obra_id = $1 AND check_id = $2', [

@@ -332,12 +332,17 @@ export default function Home() {
               de cima, e repeti-la aqui empurrava o que importa — quanto
               falta fazer — para a segunda linha. */}
           <div className="dia__texto">
+            {/* deixa claro que a lista e a do usuario: as tarefas do setor dele */}
+            {soMinhas && faltando.length > 0 && <span className="paravoce paravoce--topo">Para você</span>}
             <h1 className="dia__frase">
               {faltando.length === 0
                 ? 'Nenhuma tarefa pendente hoje'
-                : `Você tem ${faltando.length} tarefa${
-                    faltando.length > 1 ? 's' : ''
-                  } para fazer agora.`}
+                : soMinhas
+                  ? `Você tem ${faltando.length} tarefa${faltando.length > 1 ? 's' : ''} para fazer agora.`
+                  : /* em "Todas" a lista e da empresa: "voce tem" diria que e tudo seu */
+                    `${faltando.length} tarefa${faltando.length > 1 ? 's' : ''} pendente${
+                      faltando.length > 1 ? 's' : ''
+                    } em todos os setores.`}
             </h1>
           </div>
 
@@ -429,7 +434,7 @@ export default function Home() {
                 className={escopo === 'minhas' ? 'is-atual' : ''}
                 onClick={() => setEscopo('minhas')}
               >
-                Minhas
+                Para você
               </button>
               <button
                 type="button"
@@ -456,6 +461,7 @@ export default function Home() {
         {aba === 'grade' && (
           <Grade
             tarefas={faltando}
+            paraVoce={!soMinhas && temMinhas}
             hoje={hoje}
             nomeDoCargo={nomeDoCargo}
             corDoCargo={corDoCargo}
@@ -471,6 +477,7 @@ export default function Home() {
         {aba === 'quadro' && (
           <Quadro
             tarefas={doMes}
+            paraVoce={!soMinhas && temMinhas}
             hoje={hoje}
             mes={mes}
             nomeDoCargo={nomeDoCargo}
@@ -552,7 +559,8 @@ function Prazo({ iso, hoje }) {
    terceira obra. Esses dois moram no Quadro, que e a aba do estado.
    ============================================================ */
 
-function Grade({ tarefas, hoje, nomeDoCargo, corDoCargo, aoAbrir }) {
+/* `paraVoce`: em "Todas", a tarefa do setor do usuario ganha a etiqueta */
+function Grade({ tarefas, hoje, nomeDoCargo, corDoCargo, aoAbrir, paraVoce = false }) {
   if (tarefas.length === 0) {
     return (
       <Vazio titulo="Nada pendente por aqui" arte="globo" />
@@ -618,6 +626,7 @@ function Grade({ tarefas, hoje, nomeDoCargo, corDoCargo, aoAbrir }) {
                   >
                     {t.titulo}
                   </button>
+                  {paraVoce && t.minha && <span className="paravoce">Para você</span>}
                 </td>
                 <td className="grade__etapa" data-rotulo="Etapa">
                   {t.etapaNome || `${t.etapaNumero}ª`}
@@ -701,7 +710,7 @@ function Grade({ tarefas, hoje, nomeDoCargo, corDoCargo, aoAbrir }) {
    tela da obra, onde essa regra vive.
    ============================================================ */
 
-function Quadro({ tarefas, hoje, mes, nomeDoCargo, corDoCargo, pessoaPorId, aoAbrir }) {
+function Quadro({ tarefas, hoje, mes, nomeDoCargo, corDoCargo, pessoaPorId, aoAbrir, paraVoce = false }) {
   const porColuna = useMemo(() => {
     const mapa = { espera: [], andamento: [], concluida: [] }
     tarefas.forEach((t) => mapa[t.status]?.push(t))
@@ -898,6 +907,7 @@ function Quadro({ tarefas, hoje, mes, nomeDoCargo, corDoCargo, pessoaPorId, aoAb
                   <p className="tcard__titulo">
                     {!t.posso && <Icone.cadeado />}
                     {t.titulo}
+                    {paraVoce && t.minha && <span className="paravoce">Para você</span>}
                   </p>
 
                   <p className="tcard__obra" data-tipo={t.obra.tipo}>

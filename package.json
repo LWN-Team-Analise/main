@@ -15,7 +15,8 @@
     "api:dev": "node --watch core/server/index.js",
     "db:senha": "node core/server/scripts/gerar-hash.js",
     "db:validar": "node core/server/scripts/validar-sql.js",
-    "db:atualizar": "node core/server/scripts/atualizar-banco.js"
+    "db:atualizar": "node core/server/scripts/atualizar-banco.js",
+    "db:frota": "node core/server/scripts/importar-frota.js"
   },
   "keywords": [],
   "author": "",

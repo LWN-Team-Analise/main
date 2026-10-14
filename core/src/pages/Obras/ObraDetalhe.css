@@ -1659,6 +1659,26 @@ body.arrastando-check * {
   font-variant-numeric: tabular-nums;
 }
 
+/* a proposta tecnica: o clipe e o nome do documento anexado, cortado
+   com reticencias para nao empurrar o resto da linha */
+.tarefa__anexo {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 9.5rem;
+}
+
+.tarefa__anexo svg {
+  flex-shrink: 0;
+}
+
+.tarefa__anexo span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* o check do sistema abre um pop-up: o texto ganha um sublinhado leve
    para dizer "isto abre alguma coisa" */
 .tarefa.is-sistema .tarefa__texto {
@@ -1670,4 +1690,11 @@ body.arrastando-check * {
 
 .tarefa.is-sistema.is-feita .tarefa__texto {
   text-decoration: line-through;
+}
+
+/* o rodape da Reserva de carro: os dois links do lado esquerdo */
+.reserva__links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
 }

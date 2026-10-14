@@ -10,6 +10,7 @@ import { useDados } from '@/context/DadosContext'
 import { useAuth } from '@/context/AuthContext'
 import { useTheme } from '@/context/ThemeContext'
 import {
+  anexoDaProposta,
   avisoDeEtapa,
   cardConcluido,
   cardsQueValem,
@@ -17,12 +18,17 @@ import {
   CHECK_EXECUCAO,
   CHECK_PLANEJAMENTO,
   CHECK_PRAZO_EXECUCAO,
+  CHECK_RESERVA,
+  CHECK_RETIRADA,
   checkDoPrazoDaExecucao,
   corDoSetorDoCard,
   diasAte,
   diasDaExecucao,
+  ehPropostaTecnica,
   nomeDoCard,
   podeEditarCheck,
+  podeReservarCarro,
+  PREFIXO_PROPOSTA,
   resumoDosDias,
   rotuloPrioridadeObra,
   tituloDaObra,
@@ -33,6 +39,11 @@ import { dataBR, dataExtensa, dataHora, hojeISO } from '@/utils/formato'
 import ModalCard from './ModalCard'
 import ModalCheck from './ModalCheck'
 import ModalResposta from './ModalResposta'
+import ModalProposta from './ModalProposta'
+import ModalReserva from './ModalReserva'
+import ModalRegistro from '@/pages/Frotas/ModalRegistro'
+import * as frotasApi from '@/services/frotasService'
+import { lerArquivo, salvarArquivo } from './arquivos'
 import ModalPrazo from './ModalPrazo'
 import ModalPlanejamento from './ModalPlanejamento'
 import ModalExecucao from './ModalExecucao'
@@ -85,6 +96,8 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
     nomeDoCargo,
     alternarCheck,
     responderCheck,
+    adicionarAnexo,
+    baixarAnexo,
     definirPrazo,
     execucaoDaObra,
     removerObra,
@@ -103,6 +116,8 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
     carregando,
     pode,
     ordenarChecks,
+    equipe,
+    recarregar,
   } = useDados()
 
   const [novaObs, setNovaObs] = useState(false)
@@ -127,6 +142,8 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   const [menuFlutuante, setMenuFlutuante] = useState(false)
   /* a pergunta Sim/Nao de um check de card de pergunta: {card, check} */
   const [respondendo, setRespondendo] = useState(null)
+  /* a "Proposta tecnica" da 1a etapa, que pede o documento: {card, check} */
+  const [propondo, setPropondo] = useState(null)
   /* o prazo sendo definido: {tipo: 'check', id, nome, prazo} —
      ou, pelo "Prazos dos checks" da etapa, {nome, checks: [...]} para a
      pessoa escolher o check */
@@ -138,6 +155,11 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   const [periodo, setPeriodo] = useState(false)
   /* tentou marcar check da execucao sem o prazo da execucao */
   const [faltaPrazoExecucao, setFaltaPrazoExecucao] = useState(false)
+  /* o carro da obra (atualizacao 23): a reserva (1a etapa) e a
+     retirada (3a etapa), que e a saida da aba Frotas aberta aqui */
+  const [reservando, setReservando] = useState(null)
+  const [retirada, setRetirada] = useState(null)
+  const [semFrota, setSemFrota] = useState('')
 
   /* pop-ups da obra */
   const [chat, setChat] = useState(false)
@@ -206,9 +228,41 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
    * diz o motivo. Desmarcar continua livre.
    *
    * O "Prazo da execucao" (1a etapa) nao marca no clique: abre o periodo
-   * de execucao, e definir o prazo e que marca ele.
+   * de execucao, e definir o prazo e que marca ele. A "Proposta tecnica"
+   * (1a etapa) tambem nao: abre o pop-up do documento, e anexar e que
+   * marca ela.
    */
+  /* a Retirada do carro: com o carro ja retirado, mostra a reserva; senao
+     abre a saida da aba Frotas com o carro e a obra ja escolhidos */
+  const abrirRetirada = async (card, check) => {
+    if (obra.reserva?.retirada) {
+      setReservando({ card, check })
+      return
+    }
+    if (!pode('ver_frotas') || !pode('registrar_frota')) {
+      setSemFrota('Registrar a retirada do carro pede as permissões "Frotas" e "Registrar saída e devolução de veículo".')
+      return
+    }
+    try {
+      const [veiculos, rodizio] = await Promise.all([
+        frotasApi.carregarVeiculos(),
+        frotasApi.carregarRodizio().catch(() => null),
+      ])
+      setRetirada({ veiculos, rodizio })
+    } catch (e) {
+      setSemFrota(e.message)
+    }
+  }
+
   const clicarCheck = (etapa, card, check) => {
+    if (check.tipo === CHECK_RESERVA) {
+      setReservando({ card, check })
+      return
+    }
+    if (check.tipo === CHECK_RETIRADA) {
+      abrirRetirada(card, check)
+      return
+    }
     if (check.tipo === CHECK_PRAZO_EXECUCAO) {
       setPeriodo(true)
       return
@@ -221,6 +275,10 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
       setExecutando({ card, check })
       return
     }
+    if (ehPropostaTecnica(etapa, check)) {
+      setPropondo({ card, check })
+      return
+    }
     if (etapa.papel === 'execucao' && !obra.execucaoPrazo && !obra.checks?.[check.id]) {
       setFaltaPrazoExecucao(true)
       return
@@ -230,6 +288,27 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
       return
     }
     marcarCheck(check.id)
+  }
+
+  /* A proposta tecnica: o documento entra nos Anexos da obra (com o
+     prefixo pelo qual o check o acha) e, so depois de gravado, o check
+     e marcado — se o envio falha, nada fica marcado sem documento.
+     Anexar uma nova versao com o check ja marcado so acrescenta o
+     arquivo. */
+  const anexarProposta = async (arquivo) => {
+    const { check } = propondo
+    await adicionarAnexo(obra.id, {
+      nome: `${PREFIXO_PROPOSTA}${arquivo.name}`,
+      tipo: arquivo.type || 'application/octet-stream',
+      tamanho: arquivo.size,
+      conteudo: await lerArquivo(arquivo),
+    })
+    if (!obra.checks?.[check.id]) marcarCheck(check.id)
+  }
+
+  const baixarProposta = async (anexo) => {
+    const { conteudo, nome } = await baixarAnexo(anexo.id)
+    salvarArquivo(conteudo, nome)
   }
 
   /* a resposta tambem pode fechar a sua parte da etapa: o anuncio e o
@@ -1157,6 +1236,58 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
         aoDesmarcar={() => alternarCheck(obra.id, respondendo.check.id)}
         aoFechar={() => setRespondendo(null)}
       />
+
+      <ModalProposta
+        aberto={Boolean(propondo)}
+        check={propondo?.check}
+        nomeCard={propondo?.card ? nomeDoCard(propondo.card, nomeDoCargo) : ''}
+        anexo={anexoDaProposta(obra)}
+        marcado={Boolean(propondo && obra.checks[propondo.check.id])}
+        podeMarcar={Boolean(propondo) && !soLeitura && podeEditarCheck(user, propondo.check, propondo.card, obra)}
+        podeAnexar={pode('editar_obras')}
+        aoAnexar={anexarProposta}
+        aoMarcar={() => marcarCheck(propondo.check.id)}
+        aoBaixar={baixarProposta}
+        aoDesmarcar={() => alternarCheck(obra.id, propondo.check.id)}
+        aoFechar={() => setPropondo(null)}
+      />
+
+      <ModalReserva
+        aberto={Boolean(reservando)}
+        obra={obra}
+        check={reservando?.check}
+        nomeCard={reservando?.card ? nomeDoCard(reservando.card, nomeDoCargo) : ''}
+        podeReservar={
+          !soLeitura &&
+          podeReservarCarro(user, equipe.find((p) => p.souEu)?.cargoTitulo ?? user?.cargoTitulo)
+        }
+        aoMudou={recarregar}
+        aoFechar={() => setReservando(null)}
+      />
+
+      <ModalRegistro
+        modo={retirada ? 'saida' : null}
+        veiculos={retirada?.veiculos ?? []}
+        rodizio={retirada?.rodizio ?? null}
+        fixo={
+          retirada && obra.reserva?.veiculoId
+            ? { veiculoId: obra.reserva.veiculoId, obraId: obra.id, obraNome: tituloDaObra(obra, clientePorId(obra.clienteId)) }
+            : null
+        }
+        aoRegistrado={() => recarregar()}
+        aoFechar={() => setRetirada(null)}
+      />
+
+      <Modal aberto={Boolean(semFrota)} aoFechar={() => setSemFrota('')} titulo="Retirada do carro" largura={430}>
+        <div className="formrot">
+          <p className="formrot__sistema" role="note">
+            {semFrota}
+          </p>
+          <footer className="formobra__acoes">
+            <Button onClick={() => setSemFrota('')}>Entendi</Button>
+          </footer>
+        </div>
+      </Modal>
 
       <ModalPrazo
         aberto={Boolean(prazoAlvo)}

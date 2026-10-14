@@ -1,4 +1,4 @@
-# LWN Core
+# Atmosfera LWN
 
 **Plataforma integrada de gestão corporativa.** Um ambiente digital
 centralizado para conectar processos, informações e operações, promovendo
@@ -10,17 +10,16 @@ Trajetória de Clientes.)
 > e é servido em `lwnengenharia.com.br/core`. A API continua em `/api`
 > (`api/index.js` → `core/server/app.js`).
 >
-> **Por enquanto, em produção** o `/api` é repassado (vercel.json) para a API
-> do projeto `customers` na Vercel (`lwn-customers.vercel.app`), que é onde
-> estão as variáveis de ambiente — elas são "sensíveis" e a Vercel não deixa
-> copiá-las. Para a API rodar aqui mesmo: cadastre as variáveis do
-> `.env.example` no projeto `main` (com `DATABASE_URL` do Neon e
-> `APP_URL=https://www.lwnengenharia.com.br/core`) e volte o desvio de
-> `/api/:path*` no vercel.json para `"/api"`.
+> **Em produção** a API roda no próprio projeto `main` da Vercel, com as
+> variáveis de ambiente cadastradas nele (`DATABASE_URL` do Neon e
+> `APP_URL=https://www.lwnengenharia.com.br/core`, entre outras). O projeto
+> antigo `customers` (`lwn-customers.vercel.app`) não é mais usado pelo site.
+> Falta só `OLLAMA_URL` (o servidor do LWN Bot): sem ela o bot responde que
+> está indisponível.
 >
 > Tudo roda da **raiz do repositório**, com o `.env` também na raiz:
 >
-> - `npm run dev:all` — site e LWN Core em http://localhost:3000 (o sistema
+> - `npm run dev:all` — site e Atmosfera LWN em http://localhost:3000 (o sistema
 >   em `/core`) e a API na porta 3001;
 > - `npm run api:dev`, `npm run db:senha`, `npm run db:validar`,
 >   `npm run db:atualizar` — os mesmos comandos de antes.
@@ -172,7 +171,7 @@ claro atras da frase "Trajetoria de Clientes".
 > `db/atualizacao-11.sql.txt`, `db/atualizacao-12.sql.txt`,
 > `db/atualizacao-13.sql.txt`, `db/atualizacao-14.sql.txt`,
 > `db/atualizacao-15.sql.txt`, `db/atualizacao-16.sql.txt` e, por ultimo,
-> `db/atualizacao-17.sql.txt`, `db/atualizacao-18.sql.txt`, `db/atualizacao-19.sql.txt`, `db/atualizacao-20.sql.txt` e `db/atualizacao-21.sql.txt`.
+> `db/atualizacao-17.sql.txt`, `db/atualizacao-18.sql.txt`, `db/atualizacao-19.sql.txt`, `db/atualizacao-20.sql.txt`, `db/atualizacao-21.sql.txt` e `db/atualizacao-22.sql.txt`.
 >
 > **Banco que JA roda — um comando so:**
 >
@@ -235,6 +234,7 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-19.sql.txt` | check "Prazo da execucao" no card do Time Tecnico da 1a etapa    |
 | `db/atualizacao-20.sql.txt` | dias da execucao escolhidos um a um (`obra.execucao_dias`)        |
 | `db/atualizacao-21.sql.txt` | limite de tentativas: login, codigo de senha e sugestao          |
+| `db/atualizacao-22.sql.txt` | Frotas: veiculos, saidas e devolucoes, fotos e as 3 permissoes   |
 
 Rode o primeiro na ordem indicada dentro dele; depois rode os outros
 inteiros, conectado ao banco `TrajetoClientes`. Todos, do segundo em diante,
@@ -301,6 +301,16 @@ npm run db:atualizar
 Ele cria um banco descartavel, roda **os dois scripts**, testa as restricoes, a
 protecao do usuario id=1, os gatilhos, a media das avaliacoes e as consultas que
 a API usa — e apaga o banco no fim.
+
+Para trazer o historico da planilha antiga do Forms ("Controle Saída e
+Devolução de Veículos.xlsx") para a aba Frotas, depois da atualizacao 22:
+
+```bash
+npm run db:frota -- "C:\caminho\Controle Saída e Devolução de Veículos.xlsx"
+```
+
+Com `--simular` no fim ele so mostra o que faria. Rodar de novo nao duplica
+nada: cada linha guarda o Id do Forms.
 
 ### O que `db/atualizacao-2.sql.txt` acrescenta
 

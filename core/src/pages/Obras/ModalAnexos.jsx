@@ -4,14 +4,14 @@ import { useDados } from '@/context/DadosContext'
 import { useAuth } from '@/context/AuthContext'
 import { chaveDoCargo } from '@/domain/obras'
 import { dataHora } from '@/utils/formato'
+import { BYTES_MAXIMOS, lerArquivo, salvarArquivo, tamanhoLegivel } from './arquivos'
 import './ModalAnexos.css'
 
 /**
  * Documentos da obra.
  *
- * O arquivo e guardado no banco como data URL, igual a foto de perfil.
- * Por isso o teto de 4 MB por arquivo: acima disso o JSON nao passa no
- * limite da API.
+ * O arquivo e guardado no banco como data URL, com teto de 4 MB por
+ * arquivo (ver ./arquivos.js).
  *
  * A lista que chega com o quadro traz so nome, tipo e tamanho — o
  * arquivo em si so e buscado no clique de abrir. Sem isso, cada
@@ -23,8 +23,6 @@ import './ModalAnexos.css'
  * so somem o "Anexar" e o excluir. Baixar nao muda nada; os outros dois
  * mudariam o registro de uma obra ja fechada.
  */
-
-const BYTES_MAXIMOS = 4 * 1024 * 1024
 
 const Icone = {
   mais: () => (
@@ -48,22 +46,6 @@ const Icone = {
       <path d="M4.5 7h15M9.5 7V5.4A1.4 1.4 0 0 1 10.9 4h2.2a1.4 1.4 0 0 1 1.4 1.4V7M6.5 7l.9 12.1A1.5 1.5 0 0 0 8.9 20.5h6.2a1.5 1.5 0 0 0 1.5-1.4L17.5 7" />
     </svg>
   ),
-}
-
-const tamanhoLegivel = (bytes) => {
-  if (!bytes) return ''
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-}
-
-function lerArquivo(arquivo) {
-  return new Promise((resolver, recusar) => {
-    const leitor = new FileReader()
-    leitor.onload = () => resolver(leitor.result)
-    leitor.onerror = () => recusar(new Error('Não foi possível ler este arquivo.'))
-    leitor.readAsDataURL(arquivo)
-  })
 }
 
 export default function ModalAnexos({ aberto, obra, somenteLeitura = false, aoFechar }) {
@@ -163,10 +145,7 @@ export default function ModalAnexos({ aberto, obra, somenteLeitura = false, aoFe
     setErro('')
     try {
       const { conteudo, nome } = await baixarAnexo(anexo.id)
-      const link = document.createElement('a')
-      link.href = conteudo
-      link.download = nome
-      link.click()
+      salvarArquivo(conteudo, nome)
     } catch (e) {
       setErro(e.message)
     }

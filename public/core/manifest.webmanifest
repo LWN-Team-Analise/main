@@ -1,7 +1,7 @@
 {
-  "name": "LWN Core — Plataforma integrada de gestão corporativa",
-  "short_name": "LWN Core",
-  "description": "Um ambiente digital centralizado para conectar processos, informações e operações da LWN.",
+  "name": "Atmosfera LWN — Plataforma integrada de gestão corporativa",
+  "short_name": "Atmosfera LWN",
+  "description": "Ambiente digital centralizado para conectar processos, informações e operações.",
   "lang": "pt-BR",
   "start_url": "/core/app",
   "scope": "/core/",
@@ -11,16 +11,16 @@
   "theme_color": "#04122c",
   "icons": [
     {
-      "src": "/core/icone-lwn.png",
-      "sizes": "512x512",
+      "src": "/assets/app-icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/core/icone-lwn.png",
+      "src": "/assets/app-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any"
     }
   ]
 }

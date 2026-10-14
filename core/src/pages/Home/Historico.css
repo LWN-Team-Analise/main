@@ -187,6 +187,7 @@
 .hist__item[data-categoria='aviso'] { --hist-cor: var(--obra-emerg); }
 .hist__item[data-categoria='avaliacao'] { --hist-cor: var(--pri-media); }
 .hist__item[data-categoria='documento'] { --hist-cor: var(--setor-tecnico); }
+.hist__item[data-categoria='frota'] { --hist-cor: var(--pri-baixa); }
 
 :root[data-theme='dark'] .hist__item[data-categoria='obra'] { --hist-cor: var(--grad-a); }
 

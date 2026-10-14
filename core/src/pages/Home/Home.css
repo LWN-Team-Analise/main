@@ -1496,3 +1496,33 @@
 .situacoes__mais {
   color: var(--text-faint);
 }
+
+/* ---------------- "Para você" ----------------
+   Deixa claro que a tarefa e do usuario (do setor dele): em cima da
+   frase do dia, quando a lista e so a dele, e em cada tarefa dele
+   quando a lista e de todos. */
+
+.paravoce {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+
+:root[data-theme='dark'] .paravoce {
+  background: color-mix(in srgb, var(--grad-b) 18%, transparent);
+  color: var(--grad-b);
+}
+
+.paravoce--topo {
+  margin: 0 0 4px;
+}

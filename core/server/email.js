@@ -190,8 +190,8 @@ export async function enviarCodigo({ para, nome, codigo, minutos = 3 }) {
     'Recuperação de senha',
     `
         <p style="margin:0 0 14px;font-size:15px;color:#33415c;line-height:1.55">
-          ${escapar(primeiro)}, use o código abaixo para criar uma nova senha no
-          LWN Core:
+          ${escapar(primeiro)}, use o código abaixo para criar uma nova senha na
+          Atmosfera LWN:
         </p>
 
         <p style="margin:0 0 16px;text-align:center">

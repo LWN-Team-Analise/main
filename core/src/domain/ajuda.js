@@ -175,6 +175,19 @@ export const ASSUNTOS = [
       'da equipe.',
   },
   {
+    id: 'frotas',
+    titulo: 'Frotas: saída e devolução de veículos',
+    gatilhos: ['frota', 'veiculo', 'carro', 'saida', 'devolucao', 'condutor', 'motorista', 'km', 'quilometragem', 'placa'],
+    resposta:
+      'Na aba Frotas, use Saída para sair com um veículo e Devolução para devolvê-lo na garagem. Tudo é ' +
+      'obrigatório: condutor, carro, KM, data, horário, observação e cinco fotos (os quatro lados e o painel ' +
+      'com o KM). Na saída escolhe-se a obra de destino, só entre as obras ativas; na devolução respondem-se ' +
+      'as verificações (pneus, óleo, água do para-brisa, combustível, Sem Parar, limpeza e faróis). O KM ' +
+      'nunca pode ser menor que o último registrado do veículo. Saída de um carro que já está em uso vira ' +
+      'troca de condutor. Em "Saídas e devoluções" ficam todos os registros, e o "não" das verificações ' +
+      'aparece em vermelho. Cadastrar e editar veículos pede a permissão "Adicionar / editar veículos".',
+  },
+  {
     id: 'concluidas',
     titulo: 'Obras concluídas',
     gatilhos: ['concluida', 'terminada', 'encerrada', 'finalizada', 'arquivo', 'passado'],
