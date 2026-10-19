@@ -4,6 +4,7 @@ import Button from '@/components/Button/Button'
 import { useDados } from '@/context/DadosContext'
 import { diasAte, diasDaExecucao, resumoDosDias, somarDias } from '@/domain/obras'
 import { dataBR, hojeISO } from '@/utils/formato'
+import ModalExecucaoItens from './ModalExecucaoItens'
 import './ModalEnsaios.css'
 
 /* acima disto a fila de dias vira so os dias com registro (o campo de data
@@ -44,7 +45,7 @@ function textoDoPrazo(restam) {
  * O check so fecha com TODOS em 100%. Antes disso o botao de concluir
  * fica travado, e o servidor recusa do mesmo jeito.
  */
-export default function ModalExecucao({
+function ExecucaoPorDia({
   aberto,
   obra,
   /* registra e conclui: quem marca o check (o setor dele) */
@@ -419,4 +420,13 @@ export default function ModalExecucao({
       </div>
     </Modal>
   )
+}
+
+/**
+ * O pop-up do check "Execucao dos ensaios": por LINHA na obra que
+ * planeja por item, dia a dia na que escolheu pela lista solta.
+ */
+export default function ModalExecucao(props) {
+  if ((props.obra?.itens?.length ?? 0) > 0) return <ModalExecucaoItens {...props} />
+  return <ExecucaoPorDia {...props} />
 }

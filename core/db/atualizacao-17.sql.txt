@@ -35,9 +35,10 @@ COMMENT ON COLUMN public.ensaio.classificacao IS
 -- 2. o check de gases vira do sistema
 ALTER TABLE public.etapa_check DROP CONSTRAINT IF EXISTS etapa_check_tipo_valido;
 ALTER TABLE public.etapa_check ADD CONSTRAINT etapa_check_tipo_valido
-    -- 'prazo_execucao' veio na atualizacao 19; ja vai aqui porque o
-    -- db:atualizar roda esta de novo depois dela
-    CHECK (tipo IN ('comum', 'planejamento_ensaios', 'execucao_ensaios', 'material_gases', 'prazo_execucao'));
+    -- 'prazo_execucao' veio na atualizacao 19 e 'reserva_carro'/'retirada_carro'
+    -- na 23; ja vao aqui porque o db:atualizar roda esta de novo depois delas
+    CHECK (tipo IN ('comum', 'planejamento_ensaios', 'execucao_ensaios', 'material_gases', 'prazo_execucao',
+                    'reserva_carro', 'retirada_carro'));
 
 COMMENT ON COLUMN public.etapa_check.tipo IS
     'comum, planejamento_ensaios, execucao_ensaios ou material_gases. Os tres ultimos sao do sistema: nao se excluem.';

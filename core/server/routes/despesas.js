@@ -280,7 +280,13 @@ const paraEnvio = (l) => ({
   obraDescricao: l.obra_descricao ?? '',
   obraConcluida: Boolean(l.obra_concluida_em),
   clienteId: l.cliente_id === null || l.cliente_id === undefined ? null : String(l.cliente_id),
-  clienteNome: l.cliente_nome ?? '',
+  /* o envio que veio da planilha do SharePoint (atualizacao 24) com um
+     cliente que nao esta no cadastro: vale o que a pessoa escreveu */
+  clienteNome: l.cliente_nome ?? l.cliente_texto ?? '',
+  clienteCidade: l.cliente_cidade ?? '',
+  clienteEstado: l.cliente_estado ?? '',
+  /* o "Cliente/Obra" como estava na planilha; vazio no envio do sistema */
+  clienteTexto: l.cliente_texto ?? '',
   criadoEm: l.criado_em,
   /* so nome e tamanho: o arquivo vem em /anexos/:id, no clique */
   anexos: (l.anexos ?? []).map((a) => ({
@@ -297,7 +303,8 @@ const CONSULTA_ENVIOS = `
          s.nome AS usuario_setor, coalesce(t.nome, u.cargo_titulo) AS usuario_cargo,
          e.obra_id, o.proposta AS obra_proposta, o.descricao AS obra_descricao,
          o.concluida_em AS obra_concluida_em,
-         c.id AS cliente_id, c.nome AS cliente_nome,
+         c.id AS cliente_id, c.nome AS cliente_nome, c.cidade AS cliente_cidade, c.estado AS cliente_estado,
+         e.cliente_texto,
          (SELECT coalesce(json_agg(json_build_object(
                    'id', a.id, 'nome', a.nome, 'tipo', a.tipo, 'tamanho', a.tamanho
                  ) ORDER BY a.id), '[]'::json)

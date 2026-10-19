@@ -1309,6 +1309,30 @@
     box-shadow var(--dur-fast) var(--ease-out);
 }
 
+/* as mensagens nao lidas do chat da equipe: o mesmo selo do sininho */
+.bolhachat__botao {
+  position: relative;
+}
+
+.bolhachat__selo {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  display: grid;
+  place-items: center;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--page-bg);
+  background: var(--pri-alta);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1;
+  pointer-events: none;
+}
+
 .bolhachat__botao:hover {
   transform: translateY(-2px);
   box-shadow: var(--btn-shadow-hover), 0 14px 30px -12px rgba(0, 0, 0, 0.6);

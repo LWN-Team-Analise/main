@@ -518,6 +518,18 @@ export function DadosProvider({ children }) {
     [gravar],
   )
 
+  /** O planejamento por item inteiro ({ servico, itens }); `concluir` ja marca o check. */
+  const planejarItens = useCallback(
+    (obraId, campos, concluir) => gravar(() => dados.planejarItens(obraId, campos, concluir)),
+    [gravar],
+  )
+
+  /** O resultado de linhas do planejamento por item; { id, apagar: true } volta a pendente. */
+  const registrarLinhas = useCallback(
+    (obraId, linhas) => gravar(() => dados.registrarLinhas(obraId, linhas)),
+    [gravar],
+  )
+
   const adicionarEnsaio = useCallback((campos) => gravar(() => dados.criarEnsaio(campos)), [gravar])
   const atualizarEnsaio = useCallback(
     (id, campos) => gravar(() => dados.editarEnsaio(id, campos)),
@@ -1161,6 +1173,8 @@ export function DadosProvider({ children }) {
       definirExecucao,
       planejarEnsaios,
       registrarExecucaoDia,
+      planejarItens,
+      registrarLinhas,
       adicionarEnsaio,
       atualizarEnsaio,
       removerEnsaio,
@@ -1280,6 +1294,8 @@ export function DadosProvider({ children }) {
       definirExecucao,
       planejarEnsaios,
       registrarExecucaoDia,
+      planejarItens,
+      registrarLinhas,
       adicionarEnsaio,
       atualizarEnsaio,
       removerEnsaio,

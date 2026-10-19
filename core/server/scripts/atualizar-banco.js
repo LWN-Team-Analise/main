@@ -50,6 +50,9 @@ const ARQUIVOS = [
   'db/atualizacao-21.sql.txt',
   'db/atualizacao-22.sql.txt',
   'db/atualizacao-23.sql.txt',
+  'db/atualizacao-24.sql.txt',
+  'db/atualizacao-25.sql.txt',
+  'db/atualizacao-26.sql.txt',
 ]
 
 /**
@@ -141,6 +144,13 @@ const CONFERENCIA = [
   ['check Reserva de carro', "SELECT EXISTS (SELECT 1 FROM etapa_check WHERE tipo = 'reserva_carro' AND vigente_ate IS NULL) AS ok"],
   ['check Retirada do carro', "SELECT EXISTS (SELECT 1 FROM etapa_check WHERE tipo = 'retirada_carro' AND vigente_ate IS NULL) AS ok"],
   ['obra_reserva_veiculo', "SELECT to_regclass('public.obra_reserva_veiculo') IS NOT NULL AS ok"],
+  ['despesa_envio.cliente_texto', col('despesa_envio', 'cliente_texto')],
+  ['despesa_envio.planilha_chave', col('despesa_envio', 'planilha_chave')],
+  ['obra.servico', col('obra', 'servico')],
+  ['obra_item', "SELECT to_regclass('public.obra_item') IS NOT NULL AS ok"],
+  ['obra_item_ensaio', "SELECT to_regclass('public.obra_item_ensaio') IS NOT NULL AS ok"],
+  ['push_inscricao', "SELECT to_regclass('public.push_inscricao') IS NOT NULL AS ok"],
+  ['chat_site_leitura', "SELECT to_regclass('public.chat_site_leitura') IS NOT NULL AS ok"],
 ]
 
 function col(tabela, coluna) {

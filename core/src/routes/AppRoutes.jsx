@@ -8,6 +8,7 @@ import Clientes from '@/pages/Clientes/Clientes'
 import Concluidas from '@/pages/Concluidas/Concluidas'
 import Avaliacoes from '@/pages/Avaliacoes/Avaliacoes'
 import Usuarios from '@/pages/Usuarios/Usuarios'
+import SetorPagina from '@/pages/Usuarios/SetorPagina'
 import Configuracoes from '@/pages/Configuracoes/Configuracoes'
 import Despesas from '@/pages/Despesas/Despesas'
 import MeusEnvios from '@/pages/Despesas/MeusEnvios'
@@ -15,6 +16,7 @@ import EnviosGerais, { EnviosDaPessoa } from '@/pages/Despesas/EnviosGerais'
 import Frotas from '@/pages/Frotas/Frotas'
 import Registros from '@/pages/Frotas/Registros'
 import RetornoOutlook from '@/pages/Login/RetornoOutlook'
+import ChatEquipe from '@/pages/Chat/ChatEquipe'
 import ProtectedRoute from './ProtectedRoute'
 
 /**
@@ -101,6 +103,15 @@ export default function AppRoutes() {
           </Interna>
         }
       />
+      {/* a tela de um setor (nome, cor e permissoes): so quem edita setor */}
+      <Route
+        path="/app/usuarios/setores/:id"
+        element={
+          <Interna permissao="editar_cargo">
+            <SetorPagina />
+          </Interna>
+        }
+      />
       {/* Despesas abre com ver_despesas — a API confere a mesma chave em
           cada chamada de /api/despesas, entao digitar o endereco ou chamar
           a API na mao da no mesmo. */}
@@ -163,6 +174,15 @@ export default function AppRoutes() {
         element={
           <Interna>
             <Configuracoes />
+          </Interna>
+        }
+      />
+      {/* o chat da equipe tambem nao: conversar e de todo mundo que entra */}
+      <Route
+        path="/app/chat"
+        element={
+          <Interna>
+            <ChatEquipe />
           </Interna>
         }
       />

@@ -64,6 +64,11 @@ const ROTULOS = {
   destino: 'Destino',
   placa: 'Placa',
   pendencias: 'Pendências',
+  servico: 'Serviço',
+  itens: 'Itens',
+  linhas: 'Linhas',
+  itens_removidos: 'Itens removidos',
+  resultados_apagados: 'Resultados apagados',
 }
 
 function horaDe(iso) {

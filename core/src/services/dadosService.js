@@ -76,6 +76,12 @@ export async function enviarNoChatDoSite(campos) {
 export const apagarDoChatDoSite = (id, escopo = 'mim') =>
   del(`/dados/chat/${id}?escopo=${escopo}`)
 
+/** Quantas mensagens de outras pessoas eu ainda nao li no chat da equipe. */
+export const naoLidasDoChat = async () => (await get('/dados/chat/nao-lidas')).naoLidas ?? 0
+
+/** Li o chat da equipe ate esta mensagem. */
+export const marcarChatLido = (ateId) => post('/dados/chat/lido', { ateId })
+
 /* ---------------- Clientes ---------------- */
 
 export async function criarCliente(campos) {
@@ -152,6 +158,17 @@ export const planejarEnsaios = (obraId, ensaioIds, concluir = false) =>
 /** Um dia da execucao: valores = [{ ensaioId, percentual (0-100 ou null) }]. */
 export const registrarExecucaoDia = (obraId, dia, valores) =>
   put(`/dados/obras/${obraId}/execucao/dia`, { dia, valores })
+
+/**
+ * O planejamento POR ITEM (atualizacao 25): { servico, itens: [{ id?, tipo,
+ * nome, tag, classe, gas, observacao, ensaios: [{ ensaioId, condicoes }] }] }.
+ * `concluir` ja marca o check.
+ */
+export const planejarItens = (obraId, campos, concluir = false) =>
+  put(`/dados/obras/${obraId}/planejamento-itens`, { ...campos, concluir })
+
+/** O resultado de linhas: [{ id, data, resultado, conforme, observacao }] ou [{ id, apagar: true }]. */
+export const registrarLinhas = (obraId, linhas) => put(`/dados/obras/${obraId}/execucao-itens`, { linhas })
 
 export const criarEnsaio = (campos) => post('/dados/ensaios', campos)
 export const editarEnsaio = (id, campos) => patch(`/dados/ensaios/${id}`, campos)

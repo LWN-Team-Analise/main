@@ -37,9 +37,9 @@ import { IconeBaixar, IconeCategoria, IconeLixo, IconePlanilha, IconeSeta } from
  * clique num mes da visao anual, e o link copiado abre no mesmo lugar.
  *
  * "Exportar para o Excel" baixa EXATAMENTE o que esta na tela: o mesmo
- * periodo, o mesmo tipo e as mesmas pessoas. Com `usuarios='todos'` a
- * planilha sai com uma aba por pessoa. `quem` e o nome que vai no
- * titulo e no arquivo.
+ * periodo, o mesmo tipo e as mesmas pessoas, no formato das listas do
+ * SharePoint (ver planilhaDespesas.js). `quem` e o nome que vai no
+ * arquivo.
  *
  * A lixeira de cada envio so aparece para quem tem `excluir_despesas`.
  */

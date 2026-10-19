@@ -1,22 +1,29 @@
-import { CATEGORIAS, CHAVES_CATEGORIA, MESES, rotuloDaCategoria, rotuloDoTipo } from '@/domain/despesas'
+import { CATEGORIAS, MESES } from '@/domain/despesas'
 import * as despesasApi from '@/services/despesasService'
-import { dataHora } from '@/utils/formato'
 import { baixarPlanilha, paraNomeDeArquivo } from '@/utils/planilha'
 
 /* ============================================================
    A planilha de despesas — "Exportar para o Excel"
 
-   Dois formatos, conforme de quem e a planilha:
+   O MESMO formato das listas do SharePoint que a empresa usava
+   ("Despesas.xlsx"): tres abas, cada uma uma Tabela do Excel, com as
+   mesmas colunas, na mesma ordem e com os mesmos nomes —
 
-     UMA pessoa (Meus envios, ou uma pessoa de Envios gerais)
-       Resumo   o total por categoria e tipo, com quem, periodo e tipo
-                no topo;
-       Envios   um envio por linha, com a soma no fim.
+     Refeicoes  Criado por | Data da refeição | Cliente/Obra? (Refeição) |
+                Tipo de refeição | Valor da refeição | Criado | Tipo de Item | Caminho
+     Bonus      Criado por | Data do bônus | Tipo de bônus |
+                Cliente Obra - Bônus Viagem? | Cliente Obra - Bônus apartamento? |
+                Valor do Bônus Apartamento | Valor do Bônus Viagem | Criado | Tipo de Item | Caminho
+     Despesas   Criado por | Data da despesa | Cliente/Obra | Tipo de despesa |
+                Valor da Despesa | Tem alguma observação? | Criado | Tipo de Item | Caminho
 
-     TODOS (Envios gerais > todos os usuarios)
-       Resumo   uma linha por pessoa: setor, cargo, quanto em cada
-                categoria e o total — e a soma da equipe no fim;
-       + uma aba por pessoa, com os envios dela.
+   Assim o que ja lia aquela planilha (filtros, tabelas dinamicas, o
+   Power BI) continua lendo esta. "Tipo de Item" e "Caminho" sao os
+   valores fixos que o SharePoint gravava; ficam iguais pelo mesmo
+   motivo.
+
+   Os filtros da tela continuam valendo (periodo, tipo, de quem): sai
+   so a aba do tipo escolhido, e so as abas que tem envio.
 
    Quem decide o que entra e a API (GET /despesas/exportar), com as
    mesmas travas da tela: sem revisar, a pessoa so exporta os proprios
@@ -33,125 +40,129 @@ export function rotuloDoPeriodo(periodo = {}) {
   return 'Todo o período'
 }
 
-const rotuloDoFiltro = (categoria) => (categoria ? CATEGORIAS[categoria].plural : 'Todos')
-
-/* as colunas de um envio; `comPessoa` liga a coluna de quem enviou */
-function colunasDoEnvio(comPessoa) {
-  return [
-    { titulo: 'Data', tipo: 'data' },
-    ...(comPessoa ? [{ titulo: 'Pessoa', tipo: 'texto' }] : []),
-    { titulo: 'Categoria', tipo: 'texto' },
-    { titulo: 'Tipo', tipo: 'texto', largura: 24 },
-    { titulo: 'Cliente', tipo: 'texto' },
-    { titulo: 'Proposta', tipo: 'texto' },
-    { titulo: 'Obra', tipo: 'texto' },
-    { titulo: 'Valor (R$)', tipo: 'reais', soma: true },
-    { titulo: 'Justificativa', tipo: 'texto' },
-    { titulo: 'Observação', tipo: 'texto' },
-    { titulo: 'Comprovante', tipo: 'texto' },
-    { titulo: 'Enviado em', tipo: 'dataHora' },
-  ]
+/* os nomes dos tipos como a planilha do SharePoint os escrevia */
+const TIPO_NA_PLANILHA = {
+  almoco: 'Almoço',
+  janta: 'Janta',
+  bonus_viagem: 'Bônus viagem',
+  bonus_apartamento: 'Bônus apartamento',
+  vale_transporte: 'Vale Transporte',
+  transporte_intermunicipal: 'Transporte Intermunicipal',
+  combustivel: 'Combustível',
+  outros: 'Outros',
 }
 
-function linhaDoEnvio(e, comPessoa) {
-  /* a obra e opcional: sem ela, as duas colunas ficam vazias */
-  const obra = e.obraId ? `${e.obraDescricao || ''}${e.obraConcluida ? ' (concluída)' : ''}`.trim() : ''
-  return [
-    e.data,
-    ...(comPessoa ? [e.usuarioNome] : []),
-    rotuloDaCategoria(e.categoria),
-    rotuloDoTipo(e.tipo),
-    e.clienteNome || (e.obraId ? '' : 'Cliente removido'),
-    e.obraProposta || '',
-    obra,
-    e.valor,
-    e.justificativa || '',
-    e.observacao || '',
-    e.anexos.map((a) => a.nome).join(', '),
-    e.criadoEm,
-  ]
+/**
+ * O "Cliente/Obra" do jeito da planilha: 'Libbs - Embu das Artes/SP'.
+ * O envio que veio da planilha antiga volta com o texto que tinha.
+ */
+function clienteDoEnvio(e) {
+  if (e.clienteTexto) return e.clienteTexto
+  if (!e.clienteNome) return ''
+  const onde = e.clienteCidade ? ` - ${e.clienteCidade}${e.clienteEstado ? `/${e.clienteEstado}` : ''}` : ''
+  return `${e.clienteNome}${onde}`
 }
 
-/** A aba com os envios de uma pessoa (ou de todas, com `comPessoa`). */
-function abaDeEnvios(nome, envios, { comPessoa = false, titulo, info } = {}) {
-  return {
-    nome,
-    titulo,
-    info,
-    colunas: colunasDoEnvio(comPessoa),
-    linhas: envios.map((e) => linhaDoEnvio(e, comPessoa)),
-    total: 'Total',
-  }
-}
+/* as colunas fixas do fim de toda aba */
+const CRIADO = { titulo: 'Criado', tipo: 'dataHora', largura: 15.57 }
+const TIPO_DE_ITEM = { titulo: 'Tipo de Item', tipo: 'texto', largura: 14.43 }
+const CAMINHO = (largura) => ({ titulo: 'Caminho', tipo: 'texto', largura })
 
-/** O resumo de UMA pessoa: categoria x tipo, com quantos envios e quanto. */
-function resumoPorTipo(envios, categoria, info, titulo) {
-  const categorias = categoria ? [categoria] : CHAVES_CATEGORIA
-  const linhas = categorias.flatMap((c) =>
-    CATEGORIAS[c].tipos.map((t) => {
-      const doTipo = envios.filter((e) => e.tipo === t.chave)
-      const total = doTipo.reduce((s, e) => s + e.valor, 0)
-      return [CATEGORIAS[c].rotulo, t.rotulo, doTipo.length, Math.round(total * 100) / 100]
-    }),
-  )
-  return {
-    nome: 'Resumo',
-    titulo,
-    info,
+/**
+ * As tres abas, na ordem e com os nomes (das abas e das Tabelas) da
+ * planilha do SharePoint. `linha` monta a linha de um envio.
+ */
+const ABAS = {
+  refeicao: {
+    nome: 'Refeicoes',
+    tabela: 'Tabela_query__8',
+    caminho: 'sites/administracao/Lists/Refeies',
     colunas: [
-      { titulo: 'Categoria', tipo: 'texto', largura: 16 },
-      { titulo: 'Tipo', tipo: 'texto', largura: 28 },
-      { titulo: 'Envios', tipo: 'inteiro', soma: true },
-      { titulo: 'Total (R$)', tipo: 'reais', soma: true },
+      { titulo: 'Criado por', tipo: 'texto', largura: 38.57 },
+      { titulo: 'Data da refeição', tipo: 'data', largura: 18 },
+      { titulo: 'Cliente/Obra? (Refeição)', tipo: 'texto', largura: 60.71 },
+      { titulo: 'Tipo de refeição', tipo: 'texto', largura: 17.86 },
+      { titulo: 'Valor da refeição', tipo: 'reais', largura: 18.43 },
+      CRIADO,
+      TIPO_DE_ITEM,
+      CAMINHO(31.29),
     ],
-    linhas,
-    total: 'Total',
-  }
-}
-
-/** O resumo de TODOS: uma linha por pessoa. */
-function resumoPorPessoa(pessoas, categoria, info, titulo) {
-  const categorias = categoria ? [categoria] : CHAVES_CATEGORIA
-  return {
-    nome: 'Resumo',
-    titulo,
-    info,
+    linha: (e, caminho) => [
+      e.usuarioNome,
+      e.data,
+      clienteDoEnvio(e),
+      TIPO_NA_PLANILHA[e.tipo] ?? e.tipo,
+      e.valor,
+      e.criadoEm,
+      'Item',
+      caminho,
+    ],
+  },
+  bonus: {
+    nome: 'Bonus',
+    tabela: 'Tabela_query__7',
+    caminho: 'sites/administracao/Lists/Bonus',
     colunas: [
-      { titulo: 'Pessoa', tipo: 'texto' },
-      { titulo: 'Setor', tipo: 'texto' },
-      { titulo: 'Cargo', tipo: 'texto' },
-      ...categorias.map((c) => ({ titulo: `${CATEGORIAS[c].plural} (R$)`, tipo: 'reais', soma: true })),
-      { titulo: 'Envios', tipo: 'inteiro', soma: true },
-      { titulo: 'Total (R$)', tipo: 'reais', soma: true },
+      { titulo: 'Criado por', tipo: 'texto', largura: 38.57 },
+      { titulo: 'Data do bônus', tipo: 'data', largura: 16.29 },
+      { titulo: 'Tipo de bônus', tipo: 'texto', largura: 18.71 },
+      { titulo: 'Cliente Obra - Bônus Viagem?', tipo: 'texto', largura: 38.57 },
+      { titulo: 'Cliente Obra - Bônus apartamento?', tipo: 'texto', largura: 41.71 },
+      { titulo: 'Valor do Bônus Apartamento', tipo: 'reais', largura: 29.14 },
+      { titulo: 'Valor do Bônus Viagem', tipo: 'reais', largura: 24 },
+      CRIADO,
+      TIPO_DE_ITEM,
+      CAMINHO(30.57),
     ],
-    linhas: pessoas.map((p) => {
-      const porCategoria = categorias.map((c) =>
-        Math.round(p.envios.filter((e) => e.categoria === c).reduce((s, e) => s + e.valor, 0) * 100) / 100,
-      )
-      const total = Math.round(p.envios.reduce((s, e) => s + e.valor, 0) * 100) / 100
-      return [p.nome, p.setor, p.cargo, ...porCategoria, p.envios.length, total]
-    }),
-    total: 'Total da equipe',
-  }
+    /* o bonus de viagem preenche as colunas de viagem; o de apartamento, as dele */
+    linha: (e, caminho) => {
+      const viagem = e.tipo === 'bonus_viagem'
+      return [
+        e.usuarioNome,
+        e.data,
+        TIPO_NA_PLANILHA[e.tipo] ?? e.tipo,
+        viagem ? clienteDoEnvio(e) : null,
+        viagem ? null : clienteDoEnvio(e),
+        viagem ? null : e.valor,
+        viagem ? e.valor : null,
+        e.criadoEm,
+        'Item',
+        caminho,
+      ]
+    },
+  },
+  despesa: {
+    nome: 'Despesas',
+    tabela: 'Tabela_query__6',
+    caminho: 'sites/administracao/Lists/Despesas',
+    colunas: [
+      { titulo: 'Criado por', tipo: 'texto', largura: 38.57 },
+      { titulo: 'Data da despesa', tipo: 'data', largura: 18.14 },
+      { titulo: 'Cliente/Obra', tipo: 'texto', largura: 60.71 },
+      { titulo: 'Tipo de despesa', tipo: 'texto', largura: 24.43 },
+      { titulo: 'Valor da Despesa', tipo: 'reais', largura: 18.86 },
+      { titulo: 'Tem alguma observação?', tipo: 'texto', largura: 81.14 },
+      CRIADO,
+      TIPO_DE_ITEM,
+      CAMINHO(33.57),
+    ],
+    /* a justificativa (so do tipo Outros) entra na frente da observacao */
+    linha: (e, caminho) => [
+      e.usuarioNome,
+      e.data,
+      clienteDoEnvio(e),
+      TIPO_NA_PLANILHA[e.tipo] ?? e.tipo,
+      e.valor,
+      [e.justificativa, e.observacao].filter(Boolean).join(' — '),
+      e.criadoEm,
+      'Item',
+      caminho,
+    ],
+  },
 }
 
-/** Os envios separados por pessoa, em ordem de nome. */
-function agruparPorPessoa(envios) {
-  const mapa = new Map()
-  envios.forEach((e) => {
-    if (!mapa.has(e.usuarioId)) {
-      mapa.set(e.usuarioId, {
-        id: e.usuarioId,
-        nome: e.usuarioNome || 'Usuário removido',
-        setor: e.usuarioSetor || '',
-        cargo: e.usuarioCargo || '',
-        envios: [],
-      })
-    }
-    mapa.get(e.usuarioId).envios.push(e)
-  })
-  return [...mapa.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
-}
+/* a ordem das abas na planilha */
+const ORDEM = ['refeicao', 'bonus', 'despesa']
 
 /**
  * Busca os envios e baixa a planilha.
@@ -159,10 +170,9 @@ function agruparPorPessoa(envios) {
  *   usuarios   undefined (os meus) | 'todos' | ['7']
  *   categoria  undefined (todas) | 'despesa' | 'refeicao' | 'bonus'
  *   periodo    { mes: 'AAAA-MM' } | { ano: 2026 } | {} (tudo)
- *   quem       o nome que vai no titulo e no arquivo ("Luis Pyim")
+ *   quem       o nome que vai no arquivo ("Luis Pyim")
  *
- * Com `usuarios: 'todos'`, sai o formato de equipe (uma aba por
- * pessoa). Lanca Error com recado quando nao ha nada no periodo.
+ * Lanca Error com recado quando nao ha nada no periodo.
  */
 export async function exportarEnvios({ usuarios, categoria, periodo = {}, quem }) {
   const envios = await despesasApi.carregarParaExportar(periodo, { usuarios, categoria })
@@ -174,53 +184,27 @@ export async function exportarEnvios({ usuarios, categoria, periodo = {}, quem }
     throw new Error(`Nenhum envio${doTipo}${quando} — não há o que exportar.`)
   }
 
-  const gerado = dataHora(new Date().toISOString())
+  /* do mais novo para o mais antigo, como a lista do SharePoint mostrava */
+  const ordenados = [...envios].sort(
+    (a, b) => String(b.data).localeCompare(String(a.data)) || String(b.criadoEm).localeCompare(String(a.criadoEm)),
+  )
+
+  const abas = ORDEM.filter((c) => !categoria || c === categoria)
+    .map((c) => {
+      const aba = ABAS[c]
+      const daCategoria = ordenados.filter((e) => e.categoria === c)
+      return {
+        nome: aba.nome,
+        tabela: aba.tabela,
+        colunas: aba.colunas,
+        linhas: daCategoria.map((e) => aba.linha(e, aba.caminho)),
+      }
+    })
+    .filter((aba) => aba.linhas.length > 0)
+
   const total = Math.round(envios.reduce((s, e) => s + e.valor, 0) * 100) / 100
-  const arquivo = (partes) => partes.map(paraNomeDeArquivo).filter(Boolean).join('-')
-
-  if (usuarios === 'todos') {
-    const pessoas = agruparPorPessoa(envios)
-    const info = [
-      ['Período', rotuloPeriodo],
-      ['Tipo', rotuloDoFiltro(categoria)],
-      ['Pessoas', String(pessoas.length)],
-      ['Envios', String(envios.length)],
-      ['Gerado em', gerado],
-    ]
-    const abas = [
-      resumoPorPessoa(pessoas, categoria, info, `Envios gerais — todos os usuários`),
-      ...pessoas.map((p) =>
-        abaDeEnvios(p.nome, p.envios, {
-          titulo: p.nome,
-          info: [
-            ['Setor', [p.setor, p.cargo].filter(Boolean).join(' · ') || 'Sem setor'],
-            ['Período', rotuloPeriodo],
-            ['Tipo', rotuloDoFiltro(categoria)],
-          ],
-        }),
-      ),
-    ]
-    baixarPlanilha(abas, arquivo(['envios-gerais', 'todos', rotuloPeriodo, categoria]))
-    return { envios: envios.length, total }
-  }
-
-  /* uma pessoa so: o nome vem da propria lista quando quem chamou nao disse */
-  const nome = quem || envios[0].usuarioNome || 'Meus envios'
-  const pessoa = envios[0]
-  const info = [
-    ['Pessoa', nome],
-    ...(pessoa.usuarioSetor
-      ? [['Setor', [pessoa.usuarioSetor, pessoa.usuarioCargo].filter(Boolean).join(' · ')]]
-      : []),
-    ['Período', rotuloPeriodo],
-    ['Tipo', rotuloDoFiltro(categoria)],
-    ['Envios', String(envios.length)],
-    ['Gerado em', gerado],
-  ]
-  const abas = [
-    resumoPorTipo(envios, categoria, info, `Despesas — ${nome}`),
-    abaDeEnvios('Envios', envios, { titulo: `Envios — ${rotuloPeriodo}` }),
-  ]
-  baixarPlanilha(abas, arquivo(['despesas', nome, rotuloPeriodo, categoria]))
+  const nome = usuarios === 'todos' ? 'todos' : quem || envios[0].usuarioNome || 'meus-envios'
+  const arquivo = ['despesas', nome, rotuloPeriodo, categoria].map(paraNomeDeArquivo).filter(Boolean).join('-')
+  baixarPlanilha(abas, arquivo)
   return { envios: envios.length, total }
 }

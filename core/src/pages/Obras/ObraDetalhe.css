@@ -1698,3 +1698,12 @@ body.arrastando-check * {
   flex-wrap: wrap;
   gap: 6px 14px;
 }
+
+/* o carro escolhido cai no rodizio em algum dia da execucao */
+.proposta__aviso.reserva__rodizio {
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  background: var(--danger-bg);
+  color: var(--text-strong);
+}

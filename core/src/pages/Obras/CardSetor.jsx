@@ -314,9 +314,11 @@ export default function CardSetor({
                 {/* os do sistema dizem em que pe estao */}
                 {planejamento && !modelo && (
                   <span className="tarefa__ensaios">
-                    {(obra.ensaios ?? []).length === 0
-                      ? 'escolher'
-                      : `${obra.ensaios.length} ensaio${obra.ensaios.length > 1 ? 's' : ''}`}
+                    {(obra.itens ?? []).length > 0
+                      ? `${obra.itens.length} ${obra.itens.length > 1 ? 'itens' : 'item'}`
+                      : (obra.ensaios ?? []).length === 0
+                        ? 'escolher'
+                        : `${obra.ensaios.length} ensaio${obra.ensaios.length > 1 ? 's' : ''}`}
                   </span>
                 )}
                 {execucaoDosEnsaios && !modelo && (
@@ -345,7 +347,9 @@ export default function CardSetor({
                         ? obra.reserva.veiculoNome
                         : obra.reserva
                           ? 'sem carro'
-                          : 'reservar'}
+                          : obra.execucaoPrazo
+                            ? 'reservar'
+                            : 'defina o prazo'}
                     </span>
                   </span>
                 )}

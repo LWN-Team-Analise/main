@@ -5,9 +5,13 @@ import { useDados } from '@/context/DadosContext'
 import { TIPOS, kmLegivel } from '@/domain/frotas'
 import * as frotasApi from '@/services/frotasService'
 import { dataBR } from '@/utils/formato'
+import { finalDaPlaca, horaCurta, horarioDe } from '@/domain/rodizio'
+import useHoraAgora from '@/hooks/useHoraAgora'
 import ModalRegistro from './ModalRegistro'
 import ModalVeiculo from './ModalVeiculo'
 import PainelRodizio from './PainelRodizio'
+import PainelCondicoes from './PainelCondicoes'
+import PainelReservas from './PainelReservas'
 import { Falta, IconeCarro, IconeDevolucao, IconeEditar, IconeLista, IconeMais, IconeSaida } from './icones'
 import './Frotas.css'
 
@@ -19,9 +23,27 @@ const DESCRICAO = {
 /** O cadastro esta completo? (os carros da planilha antiga nao tinham placa, ano nem cor) */
 const incompleto = (v) => !v.marca || !v.modelo || !v.placa || !v.ano || !v.cor
 
+/**
+ * O horario do rodizio que esta valendo AGORA para o carro ({ de, ate }),
+ * ou null. O final da placa tem de ser um dos finais do dia (fim de
+ * semana e feriado nao tem rodizio) e a hora tem de estar num dos dois
+ * horarios: das 10h as 17h e depois das 20h o carro circula, e o aviso
+ * some ate o proximo horario.
+ */
+function rodizioAgora(veiculo, rodizio, agora) {
+  const hoje = rodizio?.hoje
+  if (!hoje || hoje.livre || !veiculo.ativo) return null
+  const final = finalDaPlaca(veiculo.placa)
+  if (final === null || !hoje.finais.includes(final)) return null
+  return horarioDe(agora)
+}
+
 /** O cartao de um veiculo: nome, placa, se esta em uso e com quem. */
-function CartaoVeiculo({ veiculo, editavel, aoEditar }) {
+function CartaoVeiculo({ veiculo, editavel, aoEditar, rodizio, agora }) {
   const { ultimo } = veiculo
+  /* no horario do rodizio: na garagem ele nao aparece como disponivel */
+  const horario = rodizioAgora(veiculo, rodizio, agora)
+  const estado = !veiculo.ativo ? 'Desativado' : veiculo.emUso ? 'Em uso' : horario ? 'Rodízio agora' : 'Disponível'
   /* cada informacao que falta vira o "!" piscando, no lugar dela, com o
      nome do que falta do lado — so o "!" solto nao diz o que e */
   const ou = (valor, nome, oque) =>
@@ -31,7 +53,11 @@ function CartaoVeiculo({ veiculo, editavel, aoEditar }) {
       </span>
     )
   return (
-    <li className={`veiculo ${veiculo.emUso ? 'is-uso' : ''} ${veiculo.ativo ? '' : 'is-inativo'}`.trim()}>
+    <li
+      className={`veiculo ${veiculo.emUso ? 'is-uso' : ''} ${horario && !veiculo.emUso ? 'is-rodizio' : ''} ${
+        veiculo.ativo ? '' : 'is-inativo'
+      }`.trim()}
+    >
       <div className="veiculo__topo">
         <span className="veiculo__icone" aria-hidden="true">
           <IconeCarro />
@@ -56,9 +82,7 @@ function CartaoVeiculo({ veiculo, editavel, aoEditar }) {
       </p>
 
       <div className="veiculo__linha">
-        <span className={`veiculo__estado ${veiculo.ativo ? '' : 'is-inativo'}`.trim()}>
-          {!veiculo.ativo ? 'Desativado' : veiculo.emUso ? 'Em uso' : 'Disponível'}
-        </span>
+        <span className={`veiculo__estado ${veiculo.ativo ? '' : 'is-inativo'}`.trim()}>{estado}</span>
         <span className={`veiculo__placa ${veiculo.placa ? '' : 'is-vazia'}`.trim()}>
           {veiculo.placa || (
             <>
@@ -84,10 +108,22 @@ function CartaoVeiculo({ veiculo, editavel, aoEditar }) {
         )}
       </p>
 
+      {/* o porque do "Rodizio agora" (e o aviso para quem esta com ele na rua) */}
+      {horario && (
+        <p className="veiculo__rodizio">
+          Placa final {finalDaPlaca(veiculo.placa)}: não pode circular no centro expandido de São Paulo agora, até
+          as {horaCurta(horario.ate)}.
+        </p>
+      )}
+
       {/* reservado para uma obra que ainda nao o retirou (atualizacao 23) */}
       {veiculo.reservadoPara && (
         <p className="veiculo__reserva">
           Reservado para <strong>{veiculo.reservadoPara.nome}</strong>
+          {veiculo.reservadoPara.de
+            ? ` de ${dataBR(veiculo.reservadoPara.de).slice(0, 5)} a ${dataBR(veiculo.reservadoPara.ate).slice(0, 5)}`
+            : ''}
+          {veiculo.reservas?.length > 1 ? ` (+${veiculo.reservas.length - 1})` : ''}
         </p>
       )}
 
@@ -120,9 +156,14 @@ export default function Frotas() {
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [registrando, setRegistrando] = useState(null)
+  /* a saida de um carro reservado: { veiculoId, obraId } fixos no formulario */
+  const [retirando, setRetirando] = useState(null)
+  const [reservas, setReservas] = useState(null)
   const [editando, setEditando] = useState(null)
   const [recado, setRecado] = useState(null)
   const [rodizio, setRodizio] = useState(null)
+  const [condicoes, setCondicoes] = useState(null)
+  const agora = useHoraAgora()
 
   const carregar = useCallback(async () => {
     /* o rodizio vem a parte: se ele falhar, a frota continua de pe */
@@ -130,6 +171,16 @@ export default function Frotas() {
       .carregarRodizio()
       .then(setRodizio)
       .catch(() => setRodizio(null))
+    /* o transito e os alertas tambem: fontes de fora, que podem demorar */
+    frotasApi
+      .carregarCondicoes()
+      .then(setCondicoes)
+      .catch(() => setCondicoes(null))
+    /* as reservas das obras que ainda nao deram a saida do carro */
+    frotasApi
+      .carregarReservas()
+      .then(setReservas)
+      .catch(() => setReservas(null))
     try {
       setVeiculos(await frotasApi.carregarVeiculos())
       setErro('')
@@ -145,6 +196,7 @@ export default function Frotas() {
   }, [carregar])
 
   const registrado = (registro) => {
+    setRetirando(null)
     const qual = TIPOS[registro.tipo]?.rotulo ?? 'Registro'
     setRecado(
       `${qual} do ${registro.veiculoNome} registrada: ${registro.condutorNome}, ${kmLegivel(registro.km)}.` +
@@ -161,6 +213,9 @@ export default function Frotas() {
   const ativos = veiculos.filter((v) => v.ativo)
   const inativos = veiculos.filter((v) => !v.ativo)
   const emUso = ativos.filter((v) => v.emUso).length
+  /* na garagem, mas no horario do rodizio: nao conta como disponivel */
+  const noRodizio = ativos.filter((v) => !v.emUso && rodizioAgora(v, rodizio, agora)).length
+  const disponiveis = ativos.length - emUso - noRodizio
 
   return (
     <AppShell>
@@ -212,6 +267,13 @@ export default function Frotas() {
 
         <PainelRodizio rodizio={rodizio} veiculos={veiculos} />
 
+        <PainelReservas
+          reservas={reservas?.reservas}
+          hoje={reservas?.hoje}
+          podeRegistrar={registra}
+          aoDarSaida={(r) => setRetirando({ veiculoId: r.veiculoId, obraId: r.obraId, obraNome: r.obra })}
+        />
+
         <section className="frotas__veiculos" aria-labelledby="frotas-veiculos">
           <header className="frotas__cabeca">
             <div>
@@ -221,7 +283,8 @@ export default function Frotas() {
               {!carregando && !erro && (
                 <p className="frotas__resumo">
                   {ativos.length} {ativos.length === 1 ? 'veículo' : 'veículos'} · {emUso} em uso ·{' '}
-                  {ativos.length - emUso} {ativos.length - emUso === 1 ? 'disponível' : 'disponíveis'}
+                  {noRodizio > 0 && `${noRodizio} no rodízio agora · `}
+                  {disponiveis} {disponiveis === 1 ? 'disponível' : 'disponíveis'}
                 </p>
               )}
             </div>
@@ -245,7 +308,7 @@ export default function Frotas() {
 
           <ul className="frotas__grade">
             {ativos.map((v) => (
-              <CartaoVeiculo key={v.id} veiculo={v} editavel={edita} aoEditar={setEditando} />
+              <CartaoVeiculo key={v.id} veiculo={v} editavel={edita} aoEditar={setEditando} rodizio={rodizio} agora={agora} />
             ))}
           </ul>
 
@@ -256,19 +319,26 @@ export default function Frotas() {
               </summary>
               <ul className="frotas__grade">
                 {inativos.map((v) => (
-                  <CartaoVeiculo key={v.id} veiculo={v} editavel={edita} aoEditar={setEditando} />
+                  <CartaoVeiculo key={v.id} veiculo={v} editavel={edita} aoEditar={setEditando} rodizio={rodizio} agora={agora} />
                 ))}
               </ul>
             </details>
           )}
         </section>
+
+        {/* o transito e os alertas vem depois dos veiculos */}
+        <PainelCondicoes condicoes={condicoes} />
       </section>
 
       <ModalRegistro
-        modo={registra ? registrando : null}
+        modo={registra ? (retirando ? 'saida' : registrando) : null}
+        fixo={retirando}
         veiculos={veiculos}
         rodizio={rodizio}
-        aoFechar={() => setRegistrando(null)}
+        aoFechar={() => {
+          setRegistrando(null)
+          setRetirando(null)
+        }}
         aoRegistrado={registrado}
       />
       <ModalVeiculo

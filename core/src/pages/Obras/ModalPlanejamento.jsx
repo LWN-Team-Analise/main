@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
 import { useDados } from '@/context/DadosContext'
+import { usaItens } from '@/domain/itensEnsaio'
 import ModalEnsaios from './ModalEnsaios'
+import ModalPlanejamentoItens from './ModalPlanejamentoItens'
 import './ModalEnsaios.css'
 
 /**
@@ -34,7 +36,7 @@ function ClasseDoEnsaio({ valor }) {
   )
 }
 
-export default function ModalPlanejamento({
+function PlanejamentoLista({
   aberto,
   obra,
   /* pode mexer: e quem marca o check (o setor dele), e a obra esta aberta */
@@ -42,6 +44,8 @@ export default function ModalPlanejamento({
   marcado,
   aoDesmarcar,
   aoFechar,
+  /* passa esta obra para o planejamento por item (so sem execucao registrada) */
+  aoPlanejarPorItem,
 }) {
   const { ensaiosAtivos, ensaioPorId, planejarEnsaios, execucaoDaObra, pode } = useDados()
 
@@ -291,6 +295,16 @@ export default function ModalPlanejamento({
               Gerenciar ensaios
             </button>
           )}
+          {podeEditar && aoPlanejarPorItem && comRegistro.size === 0 && (
+            <button
+              type="button"
+              className="formobra__cancelar"
+              onClick={aoPlanejarPorItem}
+              title="Ligar cada ensaio a um ambiente, equipamento, sistema ou ponto de uso"
+            >
+              Planejar por item
+            </button>
+          )}
           {podeEditar && marcado && (
             <button
               type="button"
@@ -337,6 +351,23 @@ export default function ModalPlanejamento({
       <ModalEnsaios aberto={catalogo} aoFechar={() => setCatalogo(false)} />
     </Modal>
   )
+}
+
+/**
+ * O pop-up do check "Planejamento de ensaios". A obra que planeja por
+ * item (ou que ainda nao planejou nada) abre o planejamento por item;
+ * a que escolheu ensaios pela lista solta continua nela — e, enquanto
+ * nao tiver execucao registrada, pode passar para itens.
+ */
+export default function ModalPlanejamento(props) {
+  const [porItem, setPorItem] = useState(false)
+
+  useEffect(() => {
+    if (!props.aberto) setPorItem(false)
+  }, [props.aberto])
+
+  if (usaItens(props.obra) || porItem) return <ModalPlanejamentoItens {...props} />
+  return <PlanejamentoLista {...props} aoPlanejarPorItem={() => setPorItem(true)} />
 }
 
 /** Os seis pontinhos de "isto se arrasta". */

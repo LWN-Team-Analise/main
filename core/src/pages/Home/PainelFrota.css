@@ -1,0 +1,82 @@
+/* ============================================================
+   Uso da frota no Painel: a tabela de km por carro e por mes.
+   Uma cor so (a dos km por mes); o tom mais forte e o mes que mais
+   rodou. O numero fica sempre na cor do texto, nunca na da celula.
+   ============================================================ */
+
+.cartao--inteiro {
+  grid-column: 1 / -1;
+}
+
+.frotadash {
+  overflow-x: auto;
+}
+
+.frotadash__tabela {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.frotadash__tabela th,
+.frotadash__tabela td {
+  padding: 7px 8px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.frotadash__tabela thead th {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.frotadash__tabela th[scope='row'],
+.frotadash__tabela thead th:first-child {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.frotadash__tabela tbody td {
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--gr-c2) var(--forca, 0%), transparent);
+  color: var(--text-strong);
+}
+
+.frotadash__tabela td[data-vazio] {
+  color: var(--text-faint);
+}
+
+.frotadash__tabela .frotadash__total {
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.frotadash__tabela tfoot th,
+.frotadash__tabela tfoot td {
+  border-top: 1px solid var(--line);
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.frotadash__nota {
+  margin: 10px 2px 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--text-faint);
+}
+
+/* rolando a tabela para o lado (celular), o nome do carro fica parado */
+.frotadash__tabela th[scope='row'],
+.frotadash__tabela thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+}

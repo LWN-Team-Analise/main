@@ -13,8 +13,7 @@ import { exportarEnvios, rotuloDoPeriodo } from './planilhaDespesas'
  * Ali ainda nao ha recorte nenhum na tela — e a lista de pessoas —,
  * entao o recorte e escolhido aqui:
  *
- *   De quem   todos os usuarios (uma aba por pessoa, mais o resumo da
- *             equipe) ou um usuario so;
+ *   De quem   todos os usuarios ou um usuario so;
  *   Periodo   um mes, um ano ou tudo o que ja foi enviado;
  *   Tipo      todos, ou so despesa, refeicao ou bonus.
  *
@@ -121,11 +120,7 @@ export default function ModalExportar({ aberto, aoFechar, pessoas = [], aoExport
           valor={form.quem}
           aoMudar={mudar('quem')}
           opcoes={QUEM}
-          dica={
-            form.quem === 'todos'
-              ? 'Uma aba de resumo com o total de cada pessoa, e uma aba com os envios de cada uma.'
-              : undefined
-          }
+          dica="No formato das listas do SharePoint: as abas Refeicoes, Bonus e Despesas."
         />
 
         {form.quem === 'um' && (

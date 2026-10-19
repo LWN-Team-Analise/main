@@ -83,3 +83,23 @@ export async function checarConexao() {
   )
   return rows[0]
 }
+
+/**
+ * Roda `gravar(cliente)` numa transacao: ou entra tudo, ou nada entra.
+ * Dentro dela, use `cliente.query` (e nao `query`): so ele esta na
+ * transacao.
+ */
+export async function emTransacao(gravar) {
+  const cliente = await pool.connect()
+  try {
+    await cliente.query('BEGIN')
+    const resultado = await gravar(cliente)
+    await cliente.query('COMMIT')
+    return resultado
+  } catch (erro) {
+    await cliente.query('ROLLBACK').catch(() => {})
+    throw erro
+  } finally {
+    cliente.release()
+  }
+}

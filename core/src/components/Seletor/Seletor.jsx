@@ -103,11 +103,11 @@ function useListaFlutuante(aberto, fechar) {
 }
 
 /** A lista aberta, sempre no <body> para nao ser cortada por nada. */
-function Lista({ posicao, emPopup, children, ...rest }) {
+function Lista({ posicao, emPopup, centralizado = false, children, ...rest }) {
   if (!posicao) return null
   return createPortal(
     <ul
-      className={`sel__lista ${emPopup ? 'is-solida' : ''}`.trim()}
+      className={`sel__lista ${emPopup ? 'is-solida' : ''} ${centralizado ? 'is-centro' : ''}`.trim()}
       style={posicao}
       {...rest}
     >
@@ -130,6 +130,8 @@ export default function Seletor({
   vazio = 'Selecione...',
   desabilitado = false,
   largo = false,
+  /* o valor escolhido e as opcoes no meio, e nao encostados a esquerda */
+  centralizado = false,
   id: idFora,
   'aria-label': rotuloAria,
 }) {
@@ -165,7 +167,7 @@ export default function Seletor({
   }
 
   return (
-    <div className={`sel ${largo ? 'sel--largo' : ''}`.trim()} ref={caixa}>
+    <div className={`sel ${largo ? 'sel--largo' : ''} ${centralizado ? 'sel--centro' : ''}`.trim()} ref={caixa}>
       <button
         type="button"
         id={id}
@@ -185,7 +187,7 @@ export default function Seletor({
       </button>
 
       {aberto && (
-        <Lista posicao={posicao} emPopup={emPopup} role="listbox" aria-labelledby={id}>
+        <Lista posicao={posicao} emPopup={emPopup} centralizado={centralizado} role="listbox" aria-labelledby={id}>
           {opcoes.length === 0 && <li className="sel__nada">Nada para escolher</li>}
           {opcoes.map((o) => {
             const atual = String(o.valor) === String(valor)

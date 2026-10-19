@@ -56,7 +56,7 @@ export const ALTERACAO = [
      de obra, prazo, despesas) e a exportacao para o Power BI. Nao e de
      todo mundo — por isso tem chave propria, embaixo de "Pagina inicial":
      sem ela, a pessoa ve a Grade e o Quadro, e a aba Dashboard some. */
-  { chave: 'ver_dashboard', rotulo: 'Ver dashboard', dependeDe: 'ver_inicio' },
+  { chave: 'ver_dashboard', rotulo: 'Ver painel (gráficos)', dependeDe: 'ver_inicio' },
   { chave: 'editar_usuario', rotulo: 'Adicionar / editar usuário', dependeDe: null },
   { chave: 'editar_cargo', rotulo: 'Adicionar / editar setor', dependeDe: null },
   { chave: 'editar_cargo_titulo', rotulo: 'Adicionar / editar cargo', dependeDe: null },

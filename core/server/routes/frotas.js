@@ -1,7 +1,8 @@
 import { Router } from 'express'
-import { pool, query } from '../db.js'
+import { emTransacao, query } from '../db.js'
 import { exige, exigeSessao, tratar } from '../sessao.js'
 import { registrarAtividade } from '../atividade.js'
+import { logger } from '../logger.js'
 /* as perguntas, as posicoes das fotos e os limites sao os MESMOS da
    tela: um arquivo so, sem React dentro, importado pelos dois lados */
 import {
@@ -19,7 +20,8 @@ import {
   lerKm,
   lerSimNao,
 } from '../../src/domain/frotas.js'
-import { AREA, HORARIOS, finaisDoDia } from '../../src/domain/rodizio.js'
+import { AREA, HORARIOS, finaisDoDia, finalDaPlaca } from '../../src/domain/rodizio.js'
+import { CORREDORES, MUNICIPIOS_RMSP, REGIOES, nivelPelaVelocidade } from '../../src/domain/transito.js'
 
 /* ============================================================
    FROTAS — /api/frotas
@@ -224,24 +226,28 @@ router.get('/veiculos', exigeSessao, exige(VER), async (_req, res) => {
   try {
     const [{ rows }, reservas] = await Promise.all([
       query(`${CONSULTA_VEICULOS} ORDER BY v.ativo DESC, lower(v.nome)`),
-      /* a reserva de obra que ainda nao retirou o carro (atualizacao 23).
-         Sem a tabela, nenhum carro esta reservado */
-      query(
-        `SELECT rv.veiculo_id, o.id AS obra_id, cl.nome AS cliente, o.proposta
-           FROM obra_reserva_veiculo rv
-           JOIN obra o     ON o.id = rv.obra_id
-           JOIN cliente cl ON cl.id = o.cliente_id
-          WHERE rv.veiculo_id IS NOT NULL AND rv.registro_id IS NULL AND o.concluida_em IS NULL`,
-      ).catch((erro) => (erro.code === '42P01' ? { rows: [] } : Promise.reject(erro))),
+      /* as reservas de obra que ainda nao retiraram o carro, com o periodo
+         de cada uma (o mesmo carro pode ter mais de uma, em semanas
+         diferentes). Sem a tabela, nenhum carro esta reservado */
+      reservasAbertas(),
     ])
-    const reservaDo = new Map(
-      reservas.rows.map((r) => [
-        String(r.veiculo_id),
-        { obraId: String(r.obra_id), nome: [r.cliente, texto(r.proposta)].filter(Boolean).join(' — ') },
-      ]),
-    )
+    const hoje = hojeNoBrasil()
+    const reservasDo = new Map()
+    for (const r of reservas) {
+      /* periodo que ja acabou sem a saida nao prende mais ninguem */
+      const ate = r.dias?.at(-1) ?? null
+      if (ate && ate < hoje) continue
+      const lista = reservasDo.get(String(r.veiculo_id)) ?? []
+      lista.push({ obraId: String(r.obra_id), nome: nomeDaReserva(r), de: r.dias?.[0] ?? null, ate })
+      reservasDo.set(String(r.veiculo_id), lista)
+    }
+    for (const lista of reservasDo.values()) lista.sort((a, b) => String(a.de ?? '').localeCompare(String(b.de ?? '')))
     return res.json({
-      veiculos: rows.map((l) => ({ ...paraVeiculo(l), reservadoPara: reservaDo.get(String(l.id)) ?? null })),
+      veiculos: rows.map((l) => {
+        const lista = reservasDo.get(String(l.id)) ?? []
+        /* reservadoPara = a reserva mais proxima; reservas = todas */
+        return { ...paraVeiculo(l), reservadoPara: lista[0] ?? null, reservas: lista }
+      }),
     })
   } catch (erro) {
     return falhou(erro, res, 'frotas/veiculos')
@@ -488,25 +494,6 @@ async function lerUmRegistro(id) {
   return rows[0] ? paraRegistro(rows[0]) : null
 }
 
-/**
- * Roda `gravar` numa transacao: ou entra o registro, as fotos e o KM
- * novo do veiculo, ou nada entra.
- */
-async function emTransacao(gravar) {
-  const cliente = await pool.connect()
-  try {
-    await cliente.query('BEGIN')
-    const resultado = await gravar(cliente)
-    await cliente.query('COMMIT')
-    return resultado
-  } catch (erro) {
-    await cliente.query('ROLLBACK').catch(() => {})
-    throw erro
-  } finally {
-    cliente.release()
-  }
-}
-
 /* ------------------------------------------------------------
    Saida (ou troca de condutor)
    ------------------------------------------------------------ */
@@ -739,34 +726,179 @@ async function exigeReservador(req, res, next) {
   }
 }
 
-/* os carros que a obra $1 pode reservar (a reserva dela mesma conta como livre) */
-const CARROS_LIVRES = `
-  SELECT v.id, v.nome, v.marca, v.modelo, v.placa, v.km_atual
-    FROM veiculo v
-   WHERE v.ativo
-     AND coalesce((SELECT r.tipo FROM veiculo_registro r WHERE r.veiculo_id = v.id
-                    ORDER BY ${ORDEM_DESC} LIMIT 1), 'devolucao') = 'devolucao'
-     AND NOT EXISTS (SELECT 1 FROM obra_reserva_veiculo rv JOIN obra o ON o.id = rv.obra_id
-                      WHERE rv.veiculo_id = v.id AND rv.registro_id IS NULL
-                        AND o.concluida_em IS NULL AND rv.obra_id <> $1)
-`
+/* ------------------------------------------------------------
+   A reserva e POR PERIODO
+
+   O carro fica preso a obra so nos dias da execucao dela (o "Prazo da
+   execucao", 1a etapa): duas obras em semanas diferentes podem reservar
+   o mesmo carro. Por isso a reserva so abre depois que a obra tem o
+   prazo da execucao, e a lista mostra so o que esta livre NAQUELES dias.
+
+   Situacao de cada carro para a obra:
+     livre      ninguem o reservou em dia nenhum do periodo
+     reservado  outra obra o reservou em algum dia do periodo (e ainda
+                nao deu a saida); reserva antiga, sem periodo, prende
+                o carro sempre
+     em_uso     esta na rua agora e o periodo ja comecou (se o periodo
+                ainda vai comecar, ele aparece livre, com o aviso de que
+                esta em uso agora)
+     esta       e o carro ja reservado para esta obra
+   ------------------------------------------------------------ */
+
+const diaIso = (v) => (v ? String(v).slice(0, 10) : null)
+
+/** Os dias da execucao de uma linha de obra, ou null sem o prazo da execucao. */
+function diasDaLinha(o) {
+  if (!o?.execucao_prazo) return null
+  const marcados = Array.isArray(o.execucao_dias) ? o.execucao_dias.map(diaIso).filter(Boolean) : []
+  if (marcados.length > 0) return [...new Set(marcados)].sort()
+  const fim = diaIso(o.execucao_prazo)
+  const lista = []
+  for (let d = diaIso(o.execucao_inicio) ?? diaIso(o.data_inicio) ?? fim; d <= fim && lista.length < 120; d = somarDiasIso(d, 1)) {
+    lista.push(d)
+  }
+  return lista
+}
+
+/** Os dias da execucao da obra ('AAAA-MM-DD'), ou null quando ainda nao tem o prazo da execucao. */
+async function diasDaExecucao(obraId, db = { query }) {
+  const { rows } = await db
+    .query('SELECT data_inicio, execucao_inicio, execucao_prazo, execucao_dias FROM obra WHERE id = $1', [obraId])
+    .catch((e) => (e.code === '42703' ? { rows: [] } : Promise.reject(e)))
+  return diasDaLinha(rows[0])
+}
+
+/** As reservas de carro ainda nao retiradas das obras abertas (menos a `exceto`), cada uma com os dias. */
+async function reservasAbertas(db = { query }, exceto = null) {
+  const { rows } = await db
+    .query(
+      `SELECT rv.obra_id, rv.veiculo_id, rv.reservado_em, u.name AS reservado_por_nome,
+              v.nome AS veiculo_nome, v.placa, cl.nome AS cliente, o.proposta,
+              o.data_inicio, o.execucao_inicio, o.execucao_prazo, o.execucao_dias
+         FROM obra_reserva_veiculo rv
+         JOIN obra o         ON o.id = rv.obra_id
+         JOIN cliente cl     ON cl.id = o.cliente_id
+         JOIN veiculo v      ON v.id = rv.veiculo_id
+         LEFT JOIN usuario u ON u.id = rv.reservado_por
+        WHERE rv.veiculo_id IS NOT NULL AND rv.registro_id IS NULL AND o.concluida_em IS NULL
+          AND ($1::bigint IS NULL OR rv.obra_id <> $1)`,
+      [exceto],
+    )
+    .catch((e) => (e.code === '42P01' ? { rows: [] } : Promise.reject(e)))
+  return rows.map((r) => ({ ...r, dias: diasDaLinha(r) }))
+}
+
+/** 'Cliente — proposta', como a obra aparece nas listas da frota. */
+const nomeDaReserva = (r) => [r.cliente, texto(r.proposta)].filter(Boolean).join(' — ')
+
+/** O rodizio de cada dia da lista: { data, diaSemana, finais, livre } (fim de semana e feriado = livre). */
+async function rodizioDosDias(dias) {
+  if (!dias?.length) return []
+  const anos = [...new Set(dias.map((d) => Number(d.slice(0, 4))))]
+  const feriados = new Map((await Promise.all(anos.map(feriadosDoAno))).flatMap((a) => a.lista.map((f) => [f.data, f.nome])))
+  return dias.map((data) => {
+    const dia = diaDaSemanaIso(data)
+    const feriado = feriados.get(data) ?? null
+    const fimDeSemana = dia === 0 || dia === 6
+    return {
+      data,
+      diaSemana: dia,
+      finais: fimDeSemana || feriado ? [] : finaisDoDia(dia),
+      livre: fimDeSemana ? 'Fim de semana' : feriado ? `Feriado: ${feriado}` : null,
+    }
+  })
+}
+
+/**
+ * Todos os carros ativos com a situacao deles para a obra (ver acima),
+ * os dias de rodizio de cada um no periodo e o rodizio de cada dia.
+ * Sem o prazo da execucao, recusa: e ele que diz quais dias olhar.
+ */
+async function carrosParaObra(obraId, db = { query }) {
+  const dias = await diasDaExecucao(obraId, db)
+  if (!dias?.length) {
+    throw new Recusa(
+      null,
+      'Defina o prazo da execução da obra antes de reservar o carro: é pelo período que o sistema sabe quais carros estão livres.',
+      409,
+    )
+  }
+  const [{ rows }, outras, propria, rodizio] = await Promise.all([
+    db.query(`${CONSULTA_VEICULOS} WHERE v.ativo ORDER BY lower(v.nome)`),
+    reservasAbertas(db, obraId),
+    db
+      .query('SELECT veiculo_id FROM obra_reserva_veiculo WHERE obra_id = $1', [obraId])
+      .catch((e) => (e.code === '42P01' ? { rows: [] } : Promise.reject(e))),
+    rodizioDosDias(dias).catch(() => []),
+  ])
+  const doPeriodo = new Set(dias)
+  const comecou = dias[0] <= hojeNoBrasil()
+  const finaisNoDia = new Map(rodizio.map((r) => [r.data, r.finais]))
+  const minhaReserva = propria.rows[0]?.veiculo_id ? String(propria.rows[0].veiculo_id) : null
+
+  const veiculos = rows.map((l) => {
+    const v = paraVeiculo(l)
+    const conflito = outras.find((r) => String(r.veiculo_id) === v.id && (!r.dias || r.dias.some((d) => doPeriodo.has(d))))
+    const final = finalDaPlaca(v.placa)
+    const situacao = v.id === minhaReserva ? 'esta' : conflito ? 'reservado' : v.emUso && comecou ? 'em_uso' : 'livre'
+    return {
+      id: v.id,
+      nome: v.nome,
+      marca: v.marca,
+      modelo: v.modelo,
+      ano: v.ano,
+      cor: v.cor,
+      placa: v.placa,
+      kmAtual: v.kmAtual,
+      situacao,
+      /* na rua agora (quem esta com ele), mesmo quando o periodo ainda nao comecou */
+      emUsoCom: v.emUso ? (v.ultimo?.condutorNome ?? 'alguém') : null,
+      conflito: conflito
+        ? { obra: nomeDaReserva(conflito), de: conflito.dias?.[0] ?? null, ate: conflito.dias?.at(-1) ?? null }
+        : null,
+      rodizio:
+        final === null ? [] : dias.filter((d) => (finaisNoDia.get(d) ?? finaisDoDia(diaDaSemanaIso(d))).includes(final)),
+    }
+  })
+  return { dias, rodizio, veiculos }
+}
 
 router.get('/reservas/disponiveis', exigeSessao, exigeReservador, async (req, res) => {
-  const obraId = idValido(req.query.obra) ? req.query.obra : '0'
+  if (!idValido(req.query.obra)) return res.status(400).json({ erro: 'Obra inválida.' })
   try {
-    const { rows } = await query(`${CARROS_LIVRES} ORDER BY lower(v.nome)`, [obraId])
-    return res.json({
-      veiculos: rows.map((v) => ({
-        id: String(v.id),
-        nome: v.nome,
-        marca: v.marca ?? '',
-        modelo: v.modelo ?? '',
-        placa: v.placa ?? '',
-        kmAtual: v.km_atual ?? null,
-      })),
-    })
+    const { dias, rodizio, veiculos } = await carrosParaObra(req.query.obra)
+    return res.json({ execucao: { dias: dias.length, de: dias[0], ate: dias.at(-1) }, rodizio, veiculos })
   } catch (erro) {
+    if (erro instanceof Recusa) return res.status(erro.status).json({ erro: erro.message })
     return falhou(erro, res, 'frotas/reservas-disponiveis')
+  }
+})
+
+/* ------------------------------------------------------------
+   As reservas para a aba Frotas: o que ja foi reservado e ainda nao
+   saiu, do periodo mais proximo ao mais distante. A tela avisa quando
+   o periodo chega e a saida do carro ainda nao foi registrada.
+   ------------------------------------------------------------ */
+
+router.get('/reservas', exigeSessao, exige(VER), async (_req, res) => {
+  try {
+    const lista = (await reservasAbertas())
+      .map((r) => ({
+        obraId: String(r.obra_id),
+        obra: nomeDaReserva(r),
+        veiculoId: String(r.veiculo_id),
+        veiculoNome: r.veiculo_nome,
+        placa: r.placa ?? '',
+        de: r.dias?.[0] ?? null,
+        ate: r.dias?.at(-1) ?? null,
+        dias: r.dias?.length ?? 0,
+        reservadoPorNome: r.reservado_por_nome ?? null,
+        reservadoEm: r.reservado_em,
+      }))
+      .sort((a, b) => String(a.de ?? '9999').localeCompare(String(b.de ?? '9999')))
+    return res.json({ reservas: lista, hoje: hojeNoBrasil() })
+  } catch (erro) {
+    return falhou(erro, res, 'frotas/reservas')
   }
 })
 
@@ -803,9 +935,19 @@ router.put('/reservas/:obraId', exigeSessao, exigeReservador, async (req, res) =
       if (veiculoId) {
         /* trava o carro: duas reservas ao mesmo tempo nao levam o mesmo */
         await cliente.query('SELECT id FROM veiculo WHERE id = $1 FOR UPDATE', [veiculoId])
-        const { rows: livre } = await cliente.query(`${CARROS_LIVRES} AND v.id = $2`, [obraId, veiculoId])
-        if (!livre[0]) throw new Recusa('veiculoId', 'Este carro não está mais disponível. Escolha outro.', 409)
-        nome = livre[0].nome
+        /* livre NOS DIAS da execucao desta obra (ver carrosParaObra) */
+        const { veiculos } = await carrosParaObra(obraId, cliente)
+        const carro = veiculos.find((v) => v.id === String(veiculoId))
+        if (!carro || !['livre', 'esta'].includes(carro.situacao)) {
+          throw new Recusa(
+            'veiculoId',
+            carro?.situacao === 'reservado'
+              ? `Este carro já está reservado para ${carro.conflito.obra} em dias deste período. Escolha outro.`
+              : 'Este carro não está disponível no período da execução. Escolha outro.',
+            409,
+          )
+        }
+        nome = carro.nome
       }
 
       await cliente.query(
@@ -1082,6 +1224,85 @@ const diaDaSemanaIso = (iso) => {
   return new Date(Date.UTC(a, m - 1, d)).getUTCDay()
 }
 
+/* ============================================================
+   O USO DA FROTA — GET /uso?de=AAAA-MM&ate=AAAA-MM (o Painel da
+   pagina inicial)
+
+   Cada VIAGEM e uma saida (ou troca de condutor) e o registro seguinte
+   do mesmo carro: o km rodado e a diferenca entre os dois KMs, e conta
+   para quem estava com o carro, no mes em que a viagem terminou. Carro
+   que ainda esta na rua nao entra (a viagem nao acabou).
+
+   Viagem com mais de 3.000 km ou com KM voltando fica de fora: e erro
+   de digitacao da planilha antiga, e um so desses estragaria o grafico.
+   ============================================================ */
+
+const MAIOR_VIAGEM = 3000
+
+router.get('/uso', exigeSessao, exige(VER), async (req, res) => {
+  const mes = /^\d{4}-\d{2}$/
+  const de = String(req.query.de ?? '')
+  const ate = String(req.query.ate ?? '')
+  if (!mes.test(de) || !mes.test(ate) || de > ate) {
+    return res.status(400).json({ erro: 'Período inválido.' })
+  }
+  try {
+    const { rows } = await query(
+      `WITH r AS (
+         SELECT vr.veiculo_id, vr.tipo, vr.km, vr.condutor_id, vr.condutor_nome,
+                LEAD(vr.km)   OVER w AS km_fim,
+                LEAD(vr.data) OVER w AS data_fim
+           FROM veiculo_registro vr
+         WINDOW w AS (PARTITION BY vr.veiculo_id ORDER BY vr.data, vr.hora, vr.id)
+       )
+       SELECT r.veiculo_id, v.nome AS veiculo, to_char(r.data_fim, 'YYYY-MM') AS mes,
+              r.condutor_id, coalesce(u.name, r.condutor_nome) AS condutor,
+              (r.km_fim - r.km) AS km
+         FROM r
+         JOIN veiculo v      ON v.id = r.veiculo_id
+         LEFT JOIN usuario u ON u.id = r.condutor_id
+        WHERE r.tipo IN ('saida', 'troca')
+          AND r.km_fim IS NOT NULL
+          AND r.km_fim > r.km AND r.km_fim - r.km <= $3
+          AND to_char(r.data_fim, 'YYYY-MM') BETWEEN $1 AND $2`,
+      [de, ate, MAIOR_VIAGEM],
+    )
+
+    const meses = []
+    for (let [a, m] = de.split('-').map(Number); `${a}-${String(m).padStart(2, '0')}` <= ate; m === 12 ? ((a += 1), (m = 1)) : (m += 1)) {
+      meses.push(`${a}-${String(m).padStart(2, '0')}`)
+    }
+
+    const carros = new Map()
+    const pessoas = new Map()
+    for (const l of rows) {
+      const km = Number(l.km)
+      const c = carros.get(l.veiculo_id) ?? { id: String(l.veiculo_id), nome: l.veiculo, km: {}, total: 0, viagens: 0 }
+      c.km[l.mes] = (c.km[l.mes] ?? 0) + km
+      c.total += km
+      c.viagens += 1
+      carros.set(l.veiculo_id, c)
+      /* quem dirigiu: pelo cadastro quando ha; senao pelo nome da planilha */
+      const chave = l.condutor_id ? `u${l.condutor_id}` : `n${String(l.condutor ?? '').trim().toLowerCase()}`
+      const p = pessoas.get(chave) ?? { id: l.condutor_id ? String(l.condutor_id) : null, nome: l.condutor || 'Sem nome', km: 0, viagens: 0 }
+      p.km += km
+      p.viagens += 1
+      pessoas.set(chave, p)
+    }
+
+    const ordenar = (lista) => lista.sort((x, y) => (y.total ?? y.km) - (x.total ?? x.km))
+    return res.json({
+      meses,
+      carros: ordenar([...carros.values()]),
+      pessoas: ordenar([...pessoas.values()]),
+      total: rows.reduce((s, l) => s + Number(l.km), 0),
+      viagens: rows.length,
+    })
+  } catch (erro) {
+    return falhou(erro, res, 'frotas/uso')
+  }
+})
+
 router.get('/rodizio', exigeSessao, exige(VER), async (_req, res) => {
   try {
     const hoje = hojeNoBrasil()
@@ -1120,6 +1341,269 @@ router.get('/rodizio', exigeSessao, exige(VER), async (_req, res) => {
   } catch (erro) {
     return falhou(erro, res, 'frotas/rodizio')
   }
+})
+
+/* ============================================================
+   AS CONDICOES DA GRANDE SAO PAULO — GET /condicoes
+
+     transito  TomTom (Traffic Flow): o nivel do transito — Livre,
+               Moderado, Intenso, Muito intenso — de cada corredor da
+               regiao metropolitana, por sentido, e de cada regiao
+               (Capital, Norte, Leste, ABC, Oeste, Sudoeste). Precisa
+               da chave TOMTOM_KEY; sem ela vem `erro` e o painel
+               mostra so a CET.
+     cet       CET (cetsp.com.br): o quadro "Transito Agora" da pagina
+               inicial — km de LENTIDAO (vias paradas ou lentas) por
+               zona da capital, a parte de cada uma no total e se esta
+               subindo, estavel ou caindo. So a capital.
+     alertas   INMET (apiprevmet3.inmet.gov.br/avisos/ativos): os
+               avisos meteorologicos oficiais em vigor (tempestade,
+               chuvas intensas, ventos...), os mesmos que a Defesa Civil
+               divulga. Filtrados para os 39 municipios da regiao
+               metropolitana (MUNICIPIOS_RMSP), com as cidades que cada
+               um pega; o mesmo aviso em graus diferentes no mesmo dia
+               (uma parte em "Perigo", outra em "Perigo potencial")
+               vira um so, com o grau mais alto.
+     cge       CGE da Prefeitura (cgesp.org): os pontos de alagamento
+               ativos, o estado de atencao/alerta (quando ha) e o
+               potencial de tempestade de cada periodo do dia. So a
+               capital: os outros municipios nao publicam isso.
+
+   Cada uma fica alguns minutos na memoria, e cada uma pode falhar
+   sozinha: a resposta traz `erro` na que nao respondeu e as outras
+   seguem. Como CET e CGE sao paginas, e nao API, uma mudanca no site
+   deles pode exigir ajuste aqui — o painel mostra o recado em vez de
+   dado errado.
+   ============================================================ */
+
+const condicoesEmCache = new Map()
+
+async function lembrar(chave, minutos, buscar) {
+  const guardado = condicoesEmCache.get(chave)
+  if (guardado && guardado.ate > Date.now()) return guardado.valor
+  try {
+    const valor = { ...(await buscar()), consultadoEm: new Date().toISOString() }
+    condicoesEmCache.set(chave, { valor, ate: Date.now() + minutos * 60 * 1000 })
+    return valor
+  } catch (erro) {
+    logger.warn('frotas/condicoes', `${chave}: ${erro.message}`)
+    /* a ultima resposta boa, se houver, vale mais que nada */
+    if (guardado) return { ...guardado.valor, antigo: true }
+    return { erro: erro.publico ?? 'Fonte indisponível agora. Tente de novo em alguns minutos.' }
+  }
+}
+
+async function baixar(url, comoTexto = true) {
+  const resposta = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (Atmosfera LWN)', Accept: comoTexto ? 'text/html' : 'application/json' },
+    signal: AbortSignal.timeout(10000),
+  })
+  if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`)
+  return comoTexto ? resposta.text() : resposta.json()
+}
+
+const TENDENCIA = { ALTA: 'subindo', ESTAVEL: 'estável', BAIXA: 'caindo' }
+
+async function transitoDaCet() {
+  const html = await baixar('https://www.cetsp.com.br/')
+  const regioes = []
+  const padrao =
+    /class="info (\w+)">\s*<h3>([^<]+)<\/h3>\s*<h4>([\d.,]+)\s*km<\/h4>[\s\S]*?class="desc">\s*\(([\d.,]+)%\)\s*<img[^>]*ico\/(\w+)\.gif/g
+  for (const m of html.matchAll(padrao)) {
+    regioes.push({
+      chave: m[1].toLowerCase(),
+      nome: m[2].trim(),
+      km: Number(m[3].replace(/\./g, '').replace(',', '.')),
+      parte: Number(m[4].replace(',', '.')),
+      tendencia: TENDENCIA[m[5].toUpperCase()] ?? null,
+    })
+  }
+  if (regioes.length === 0) throw new Error('o quadro "Trânsito Agora" da CET mudou de formato')
+  return { regioes, total: regioes.reduce((s, r) => s + r.km, 0), fonte: 'CET' }
+}
+
+/* ------------------------------------------------------------
+   Transito da GRANDE SAO PAULO (TomTom)
+
+   Para cada corredor (domain/transito.js), um ponto em cada pista:
+   o Traffic Flow do TomTom devolve a velocidade de agora e a sem
+   transito daquele trecho, e a regua de domain/transito.js diz o
+   nivel. A regiao leva o nivel da media dos trechos dela.
+
+   O plano gratis do TomTom da 2.500 consultas por dia, e cada
+   atualizacao gasta uma por ponto (~40). Por isso fica 20 minutos na
+   memoria e so e buscado quando alguem abre a aba. A chave fica em
+   TOMTOM_KEY (no .env e na Vercel).
+   ------------------------------------------------------------ */
+
+const recusado = (mensagem, publico) => Object.assign(new Error(mensagem), { publico })
+
+async function velocidadeNoPonto(chave, ponto) {
+  const url =
+    'https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/18/json' +
+    `?unit=KMPH&point=${ponto.lat},${ponto.lon}&key=${encodeURIComponent(chave)}`
+  const resposta = await fetch(url, { signal: AbortSignal.timeout(8000) })
+  if (resposta.status === 429) {
+    throw recusado('TomTom 429', 'O limite diário de consultas do TomTom acabou. Volta a funcionar amanhã.')
+  }
+  if (resposta.status === 401 || resposta.status === 403) {
+    throw recusado(`TomTom ${resposta.status}`, 'A chave do TomTom foi recusada. Confira TOMTOM_KEY.')
+  }
+  if (!resposta.ok) throw new Error(`TomTom HTTP ${resposta.status}`)
+  const f = (await resposta.json())?.flowSegmentData
+  if (!f || !(f.freeFlowSpeed > 0)) throw new Error('TomTom sem dados no ponto')
+  return {
+    atual: Math.round(f.currentSpeed),
+    semTransito: Math.round(f.freeFlowSpeed),
+    interditado: f.roadClosure === true,
+    nivel: nivelPelaVelocidade(f.currentSpeed, f.freeFlowSpeed, f.roadClosure === true),
+  }
+}
+
+/** Roda `fazer` em cada item, `juntos` de cada vez (o TomTom limita por segundo). */
+async function emLotes(itens, juntos, fazer) {
+  const saida = new Array(itens.length)
+  let proximo = 0
+  const trabalhador = async () => {
+    while (proximo < itens.length) {
+      const i = proximo++
+      saida[i] = await fazer(itens[i]).then(
+        (valor) => ({ valor }),
+        (erro) => ({ erro }),
+      )
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(juntos, itens.length) }, trabalhador))
+  return saida
+}
+
+async function transitoDaRegiao() {
+  const chave = process.env.TOMTOM_KEY
+  if (!chave) throw recusado('sem TOMTOM_KEY', 'O trânsito da região metropolitana ainda não foi configurado (TOMTOM_KEY).')
+
+  const pontos = CORREDORES.flatMap((c) => c.pontos.map((p) => ({ corredor: c, ...p })))
+  /* limite estourado ou chave recusada: para de gastar consulta nos outros pontos */
+  let parou = null
+  const lidos = await emLotes(pontos, 4, async (p) => {
+    if (parou) throw parou
+    try {
+      return await velocidadeNoPonto(chave, p)
+    } catch (erro) {
+      if (erro.publico) parou = erro
+      throw erro
+    }
+  })
+
+  /* limite ou chave recusada: o motivo vale mais que "indisponivel" */
+  const recusa = lidos.find((l) => l.erro?.publico)?.erro
+  if (recusa && lidos.every((l) => l.erro)) throw recusa
+  if (lidos.every((l) => l.erro)) throw lidos[0].erro
+
+  const corredores = CORREDORES.map((c) => ({
+    id: c.id,
+    nome: c.nome,
+    regiao: c.regiao,
+    sentidos: [],
+  }))
+  const porId = Object.fromEntries(corredores.map((c) => [c.id, c]))
+  const razoes = {}
+  pontos.forEach((p, i) => {
+    const lido = lidos[i].valor
+    if (!lido) return
+    porId[p.corredor.id].sentidos.push({ sentido: p.sentido, ...lido })
+    ;(razoes[p.corredor.regiao] ??= []).push(lido.interditado ? 0 : Math.min(1, lido.atual / lido.semTransito))
+  })
+
+  const regioes = REGIOES.map((r) => {
+    const lista = razoes[r.id] ?? []
+    const media = lista.length ? lista.reduce((s, x) => s + x, 0) / lista.length : null
+    return {
+      id: r.id,
+      nome: r.nome,
+      cidades: r.cidades,
+      nivel: media === null ? null : nivelPelaVelocidade(media, 1),
+      trechos: lista.length,
+    }
+  })
+
+  return {
+    regioes,
+    corredores: corredores.filter((c) => c.sentidos.length > 0),
+    faltaram: lidos.filter((l) => l.erro).length,
+    fonte: 'TomTom',
+  }
+}
+
+const GRAU = { 'Perigo Potencial': 1, Perigo: 2, 'Grande Perigo': 3 }
+
+/* os avisos do INMET que pegam algum municipio da regiao metropolitana */
+async function alertasDoInmet() {
+  const dados = await baixar('https://apiprevmet3.inmet.gov.br/avisos/ativos', false)
+  const naRegiao = [...(dados.hoje ?? []), ...(dados.futuro ?? [])]
+    .map((a) => ({
+      ...a,
+      cidades: String(a.geocodes ?? '')
+        .split(',')
+        .map((g) => MUNICIPIOS_RMSP[g.trim()])
+        .filter(Boolean),
+    }))
+    .filter((a) => a.cidades.length > 0)
+  /* um por aviso e dia, com o grau mais alto e as cidades de todos os graus */
+  const porChave = new Map()
+  for (const a of naRegiao) {
+    const chave = `${a.descricao}|${String(a.inicio ?? '').slice(0, 10)}`
+    const atual = porChave.get(chave)
+    const cidades = new Set([...(atual?.cidades ?? []), ...a.cidades])
+    const vence = !atual || (GRAU[a.severidade] ?? 0) > (GRAU[atual.severidade] ?? 0)
+    porChave.set(chave, { ...(vence ? a : atual), cidades: [...cidades] })
+  }
+  const ordemDasCidades = Object.values(MUNICIPIOS_RMSP)
+  const avisos = [...porChave.values()]
+    .sort((x, y) => String(x.inicio).localeCompare(String(y.inicio)) || (GRAU[y.severidade] ?? 0) - (GRAU[x.severidade] ?? 0))
+    .map((a) => ({
+      descricao: a.descricao,
+      severidade: a.severidade,
+      cor: /^#[0-9a-f]{6}$/i.test(a.aviso_cor ?? '') ? a.aviso_cor : null,
+      inicio: a.inicio,
+      fim: a.fim,
+      /* Sao Paulo primeiro, depois na ordem da lista */
+      cidades: [...a.cidades].sort((x, y) => ordemDasCidades.indexOf(x) - ordemDasCidades.indexOf(y)),
+      riscos: (a.riscos ?? []).map((r) => String(r).trim()).filter(Boolean),
+      instrucoes: (a.instrucoes ?? []).map((r) => String(r).trim()).filter(Boolean),
+    }))
+  return { avisos, fonte: 'INMET' }
+}
+
+async function situacaoDoCge() {
+  const html = await baixar('https://www.cgesp.org/v3/')
+  const texto = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+  const alagamentos = texto.match(/Pontos de Alagamento:\s*(\d+)\s*ativos?/i)
+  if (!alagamentos) throw new Error('a página do CGE mudou de formato')
+  const potencial = [...texto.matchAll(/(Madrug\.|Manh[ãa]|Tarde|Noite)\s+.{0,60}?PT:\s*(Muito alto|Baixo|Moderado|Alto)/gi)].map(
+    (m) => ({ periodo: m[1].startsWith('Madrug') ? 'Madrugada' : m[1], nivel: m[2] }),
+  )
+  const estado = texto.match(/Estado de (Alerta M[áa]ximo|Alerta|Aten[çc][ãa]o)/i)
+  return {
+    alagamentos: Number(alagamentos[1]),
+    estado: estado ? `Estado de ${estado[1]}` : null,
+    potencial: potencial.slice(0, 4),
+    fonte: 'CGE',
+  }
+}
+
+router.get('/condicoes', exigeSessao, exige(VER), async (_req, res) => {
+  const [transito, cet, alertas, cge] = await Promise.all([
+    lembrar('transito', 20, transitoDaRegiao),
+    lembrar('cet', 5, transitoDaCet),
+    lembrar('alertas', 10, alertasDoInmet),
+    lembrar('cge', 10, situacaoDoCge),
+  ])
+  return res.json({ transito, cet, alertas, cge })
 })
 
 export default router

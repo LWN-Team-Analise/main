@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
 import { useTheme } from '@/context/ThemeContext'
 import useOutlook from '@/hooks/useOutlook'
+import useNotificacoesCelular from '@/hooks/useNotificacoesCelular'
 import { carregarFotoOriginal, editarUsuario, trocarSenha } from '@/services/equipeService'
 import { validateCPF, vincularOutlook } from '@/services/authService'
 import { tokenAtual } from '@/services/api'
@@ -412,6 +413,8 @@ export default function Configuracoes() {
           </div>
         </form>
 
+        <BlocoNotificacoes />
+
         <TrocarSenha chamado={local.state?.focar === 'senha' ? local.key : null} />
       </section>
 
@@ -559,6 +562,82 @@ function BlocoOutlook() {
               : 'Entrar com o Outlook'}
         </button>
       </div>
+      </div>
+    </article>
+  )
+}
+
+/* o que dizer em cada estado do aparelho (ver useNotificacoesCelular) */
+const TEXTO_NOTIFICACAO = {
+  carregando: 'Conferindo este aparelho...',
+  'sem-suporte': 'Este navegador não recebe notificações. No celular, use o Chrome (Android) ou o app instalado (iPhone).',
+  'iphone-instalar':
+    'No iPhone, as notificações só funcionam com o app instalado: toque em Compartilhar e em "Adicionar à Tela de Início", abra o Atmosfera LWN por lá e volte aqui.',
+  'sem-servidor': 'As notificações ainda não foram configuradas no servidor.',
+  bloqueado:
+    'As notificações estão bloqueadas para este site. Libere nas configurações do navegador (ou do celular, em Notificações) e volte aqui.',
+  desligado: 'Este aparelho não recebe notificações.',
+  ligado: 'Este aparelho recebe notificações.',
+}
+
+/**
+ * Notificacoes no celular (server/push.js).
+ *
+ * Valem POR APARELHO: ligar no celular nao liga no computador. Chegam
+ * mesmo com o app fechado: mensagem no chat da equipe, mensagem no
+ * chat de uma obra da qual a pessoa participa, mencao com @ e aviso
+ * de etapa para o setor dela.
+ */
+function BlocoNotificacoes() {
+  const notif = useNotificacoesCelular()
+  const [recado, setRecado] = useState('')
+
+  const testar = async () => {
+    setRecado('')
+    const enviados = await notif.testar()
+    if (enviados) setRecado('Notificação de teste enviada. Ela deve aparecer em alguns segundos.')
+  }
+
+  return (
+    <article className="config__bloco config__bloco--notificacoes vidro">
+      <h2 className="config__titulo">Notificações no celular</h2>
+      <div className="config__outlookcorpo">
+        <div className="config__outlooktexto">
+          <p className="config__nota">
+            Avisos na tela do celular, mesmo com o app fechado: mensagens no chat da equipe e no chat das obras de
+            que você participa, quando alguém citar você com @ e avisos de etapa para o seu setor.
+          </p>
+          <p className="config__nota">
+            <strong>{TEXTO_NOTIFICACAO[notif.estado]}</strong>
+          </p>
+          {notif.erro && (
+            <p className="config__recado config__recado--erro" role="alert">
+              {notif.erro}
+            </p>
+          )}
+          {recado && (
+            <p className="config__recado" role="status">
+              {recado}
+            </p>
+          )}
+        </div>
+        <div className="config__outlookacao config__notifacoes">
+          {notif.estado === 'desligado' && (
+            <Button type="button" onClick={notif.ligar} loading={notif.ocupado}>
+              Ligar neste aparelho
+            </Button>
+          )}
+          {notif.estado === 'ligado' && (
+            <>
+              <Button type="button" variant="ghost" onClick={testar} disabled={notif.ocupado}>
+                Mandar um teste
+              </Button>
+              <button type="button" className="config__semfoto" onClick={notif.desligar} disabled={notif.ocupado}>
+                Desligar neste aparelho
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </article>
   )

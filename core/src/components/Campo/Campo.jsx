@@ -79,12 +79,14 @@ export function CampoSelecao({
   value,
   onChange,
   disabled,
+  centralizado = false,
   'aria-label': rotuloAria,
 }) {
   const id = useId()
   return (
     <Moldura id={id} rotulo={rotulo} dica={dica} erro={erro} largo={largo}>
       <Seletor
+        centralizado={centralizado}
         id={id}
         largo
         valor={value}
