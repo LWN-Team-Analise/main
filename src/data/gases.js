@@ -3,8 +3,10 @@
 export const gasesPage = {
   eyebrow: 'A LWN agora também valida gases industriais',
   title: 'Certificação e Qualificação de Gases Industriais com Excelência Técnica',
-  lead:
-    'Oferecemos serviços especializados de certificação e qualificação de gases, garantindo a segurança, qualidade e conformidade dos processos industriais de nossos clientes. Com tecnologia avançada e uma equipe técnica experiente, asseguramos resultados precisos e confiáveis, em conformidade com as normas vigentes.',
+  lead: [
+    'A LWN Engenharia oferece soluções especializadas em qualificação e certificação de gases industriais, com foco na avaliação de parâmetros de qualidade, na confiabilidade dos resultados e no atendimento aos requisitos técnicos e normativos aplicáveis.',
+    'Com profissionais especializados e instrumentos de medição adequados, contribuímos para o controle de riscos, a segurança operacional e a qualidade dos processos industriais.',
+  ],
   gases: ['Ar comprimido', 'Ar respirável', 'Nitrogênio', 'Oxigênio', 'Dióxido de carbono', 'Hidrogênio', 'Hélio', 'Acetileno', 'Argônio'],
   norms: ['ANVISA', 'RDC 658/2022', 'ISO 8573', 'BPF'],
   why: {

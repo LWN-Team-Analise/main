@@ -92,6 +92,10 @@
   font-size: clamp(0.98rem, 0.9rem + 0.3vw, 1.125rem);
 }
 
+.gases-hero__lead p + p {
+  margin-top: 0.75em;
+}
+
 .gases-hero__actions {
   display: flex;
   flex-wrap: wrap;
@@ -683,9 +687,9 @@
     background: linear-gradient(0deg, rgba(var(--veil), 0.92) 0%, rgba(var(--veil), 0.62) 60%, rgba(var(--veil), 0.4) 100%);
   }
 
-  .gases-hero__lead {
+  .gases-hero__lead p {
     display: -webkit-box;
-    -webkit-line-clamp: 5;
+    -webkit-line-clamp: 6;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
@@ -708,5 +712,16 @@
 
   .gases-story__kicker-title {
     font-size: 0.9rem;
+  }
+}
+
+/* Short phones: only the first paragraph fits on the opening screen. */
+@media (max-width: 599px) and (max-height: 799px) {
+  .gases-hero__lead p {
+    -webkit-line-clamp: 5;
+  }
+
+  .gases-hero__lead p + p {
+    display: none;
   }
 }

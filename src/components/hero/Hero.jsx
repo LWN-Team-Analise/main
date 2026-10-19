@@ -54,8 +54,9 @@ function HeroVideo({ play }) {
 /**
  * Homepage hero.
  *
- * Wide screens: one viewport over the video, with the whole copy fixed in
- * place from the start — only the sections below are revealed by the scroll.
+ * Wide screens: one viewport. The video takes the upper part (a little over
+ * half the screen) and fades into the brand navy, where the whole copy sits —
+ * in place from the start; only the sections below are revealed by the scroll.
  *
  * Phones and small tablets: no video — a compact opening on the brand navy with
  * the whole copy visible from the first paint, without entrance animations.
@@ -68,8 +69,12 @@ export default function Hero() {
   return (
     <section id="inicio" className={`hero${wide ? '' : ' hero--compact'}`} data-theme="dark" aria-label={t.hero.label}>
       <div className="hero__stage">
-        {wide && <HeroVideo play={!reducedMotion} />}
-        <div className="hero__grade" aria-hidden="true" />
+        {wide && (
+          <div className="hero__media">
+            <HeroVideo play={!reducedMotion} />
+            <div className="hero__grade" aria-hidden="true" />
+          </div>
+        )}
 
         <div className="hero__content">
           <HeroText />

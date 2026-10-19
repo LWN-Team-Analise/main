@@ -40,7 +40,11 @@ function Hero() {
             {page.eyebrow}
           </p>
           <h1 className="gases-hero__title">{page.title}</h1>
-          <p className="gases-hero__lead">{page.lead}</p>
+          <div className="gases-hero__lead">
+            {page.lead.map((paragraph, i) => (
+              <p key={i}>{paragraph}</p>
+            ))}
+          </div>
           <div className="gases-hero__actions">
             <Link to={{ pathname: '/', hash: '#contato' }} className="button button--dark">
               {t.gases.certify}
@@ -282,9 +286,9 @@ function Differentials() {
             </Reveal>
           ))}
           <Reveal>
-            <Link to={{ pathname: '/', hash: '#sobre' }} className="service__link">
+            <Link to={{ pathname: '/', hash: '#sobre' }} className="button button--dark service__link">
               {t.gases.learnMore}
-              <ArrowRight size={16} aria-hidden="true" />
+              <ArrowRight size={18} aria-hidden="true" />
             </Link>
           </Reveal>
         </div>

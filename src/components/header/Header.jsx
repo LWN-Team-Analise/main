@@ -74,11 +74,13 @@ export default function Header() {
       {liquid && <LiquidGlassFilter target={barRef} />}
       <div ref={barRef} className={`site-header__bar glass${liquid ? ' glass--liquid' : ''}`}>
         <Link to="/" className="site-header__brand" aria-label={t.header.home} onClick={close}>
+          {/* The full LWN logo (assets/LogoLWN): the coloured mark with the white
+              wordmark of assets/LogoLWNWhite, so it reads on the dark glass. */}
           <img
-            src="/assets/logo-mark.png"
-            alt="LWN Engenharia"
-            width="170"
-            height="160"
+            src="/assets/logo-header.png"
+            alt="LWN Engenharia · Team Análise"
+            width="383"
+            height="132"
             className="site-header__logo"
             fetchPriority="high"
           />

@@ -94,12 +94,6 @@
   text-transform: uppercase;
 }
 
-.commitment__tag--strong {
-  border-color: transparent;
-  background: #fff;
-  color: var(--c-navy-900);
-}
-
 @media (max-width: 767px) {
   .commitment__pillars {
     grid-template-columns: minmax(0, 1fr);

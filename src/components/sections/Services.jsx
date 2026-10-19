@@ -25,9 +25,9 @@ function ServiceGroup({ group, index }) {
           </ul>
         )}
         {group.link && (
-          <Link className="service__link" to={group.link.route}>
+          <Link className="button button--dark service__link" to={group.link.route}>
             {group.link.label}
-            <ArrowRight size={16} aria-hidden="true" />
+            <ArrowRight size={18} aria-hidden="true" />
           </Link>
         )}
       </Reveal>

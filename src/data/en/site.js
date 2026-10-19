@@ -20,34 +20,37 @@ export const hero = {
   headline: 'The National Reference in Qualification and Certification of Cleanrooms and Industrial Gases',
   emphasis: ['Cleanrooms', 'Industrial Gases'],
   description: [
-    { text: 'LWN Engenharia specializes in the qualification and certification of' },
-    { text: 'cleanrooms,', strong: true },
-    { text: 'Smoke Test, Medical Gases', strong: true },
-    { text: 'and' },
-    { text: 'HVAC-R Systems,', strong: true },
-    { text: 'ensuring quality, safety and compliance with the most rigorous standards.' },
+    { text: 'We work in the qualification and certification of' },
+    { text: 'controlled environments, technical testing', strong: true },
+    { text: 'and the assessment of' },
+    { text: 'HVAC-R systems and industrial gases,', strong: true },
+    { text: 'with a focus on reliable results, traceability and meeting the applicable requirements.' },
   ],
 };
 
 export const about = {
   eyebrow: 'Who we are',
-  title: 'National reference in the Qualification and Certification of Cleanrooms, Medical Gases, Smoke Test and HVAC-R systems',
+  title: 'A track record built on technical knowledge, trust and a commitment to excellence.',
   paragraphs: [
-    'Since 2014, LWN Engenharia has established itself as a reference in cleanroom certification, offering specialized Certification, Qualification and TAB services for HVAC systems. Founded by Willian Ito, the company stands out for its technical excellence and data integrity, ensuring compliance with the most rigorous standards in the industry.',
-    'With a solid track record of serving more than 50 clients, LWN reinforces its position as a leader in the cleanroom certification market. In March 2024, Análise Consultoria e Testes de Sistemas de Ar joined Grupo LWN Engenharia, forming one of the largest specialists in cleanroom certification and HVAC-R testing in Brazil.',
-    'Today, Grupo LWN Engenharia has more than 30 highly qualified employees, 10 complete sets of measuring instruments and 28 years of combined experience. We work with technical rigor to meet ANVISA regulations and international standards, delivering efficient, high-quality services.',
-    'This union strengthens our leadership and increases our clients’ confidence, allowing us to keep delivering innovative, excellent solutions in the sector.',
+    'Since 2014, LWN Engenharia has built its track record with a focus on technical excellence, reliability and innovation. Founded by Willian Ito, the company specializes in the qualification and certification of cleanrooms, as well as testing and technical services for HVAC-R systems, including TAB. Its work is guided by technical rigor, data integrity and a commitment to safety and regulatory compliance, meeting the demands of controlled industrial environments.',
+    'With an established track record and more than 50 clients served, LWN Engenharia has strengthened its position in the market for the qualification and certification of cleanrooms and HVAC-R systems.',
+    'In March 2024, the integration of Análise Consultoria e Testes de Sistemas de Ar into Grupo LWN Engenharia marked a new stage of expansion, broadening the technical and operational capacity and the scope of the services offered.',
+    'Today, the Group brings together more than 30 qualified professionals, more than 15 complete sets of measuring instruments and 28 years of combined experience. This structure supports work guided by technical rigor, data integrity and compliance with ANVISA regulatory requirements and the applicable international standards.',
+    'More than expanding our structure, this evolution reinforces our commitment to reliable results, continuous improvement and excellence in every delivery.',
   ],
   timeline: [
-    { when: '2014', what: 'LWN Engenharia is founded by Willian Ito' },
-    { when: 'Mar. 2024', what: 'Análise Consultoria e Testes de Sistemas de Ar joins Grupo LWN Engenharia' },
-    { when: 'Today', what: 'One of the largest specialists in cleanroom certification and HVAC-R testing in Brazil' },
+    { when: '2014', what: 'LWN Engenharia is founded' },
+    { when: '2019', what: 'Expansion and restructuring of the company' },
+    { when: '2023', what: 'Services provided in Georgia, USA' },
+    { when: '2024', what: 'Merger with Análise Consultoria' },
+    { when: '2025', what: 'Consolidation of the group and 2 more offices' },
+    { when: '2026', what: 'Opening of Avanbio, part of the group' },
   ],
   stats: [
     { value: 100, label: ['Active', 'Clients'] },
     { value: 30, label: ['Years of', 'Experience'] },
     { value: 1100, label: ['Services', 'Completed'] },
-    { value: 10, label: ['Instrument', 'Sets'] },
+    { value: 15, label: ['Instrument', 'Sets'] },
     { value: 30, label: ['Specialized', 'Technicians'] },
   ],
 };
@@ -76,12 +79,12 @@ const SERVICE_GROUPS = {
   certificacao: {
     title: 'Certification & Qualification',
     summary:
-      'A complete portfolio of services for the certification and qualification of cleanrooms, clean-air equipment and HVAC-R systems — from developing IQ, OQ and PQ protocols to ongoing requalification contracts.',
+      'Specialized services for the qualification and certification of cleanrooms, clean-air equipment and HVAC-R systems, including technical testing, the preparation and execution of qualification protocols and periodic requalification programs.',
     items: [
-      { title: 'Cleanrooms and controlled environments', text: 'Qualification and maintenance focused on performance, safety and compliance.' },
-      { title: 'Clean-air equipment', text: 'Tests on filters, hoods, cabinets and AHUs to ensure air purity and control.' },
-      { title: 'IQ, OQ, PQ protocols', text: 'Development and execution of Installation, Operation and Performance protocols.' },
-      { title: 'Requalification contracts', text: 'Tailored plans to keep environments qualified, with ongoing technical support.' },
+      { title: 'Cleanrooms and controlled environments', text: 'Tests and qualifications to assess environmental conditions and meet the applicable requirements.' },
+      { title: 'Clean-air equipment', text: 'Technical tests on filters, hoods, cabinets and air handling units, according to the scope of each piece of equipment.' },
+      { title: 'IQ, OQ and PQ protocols', text: 'Preparation and execution of installation, operational and performance qualification protocols.' },
+      { title: 'Requalification contracts', text: 'Periodic requalification programs, structured around each client’s operational and regulatory needs.' },
     ],
   },
   ensaios: {
@@ -89,28 +92,28 @@ const SERVICE_GROUPS = {
     summary:
       'Tests that follow rigorous technical standards and current legislation, such as Technical Instruction IT-13 of the Fire Department — from the installation phase through final validation.',
     items: [
-      { title: 'TAB', text: 'Balancing of air systems for optimal air-conditioning and ventilation performance.' },
-      { title: 'Smoke tests (Smoke Test)', text: 'Visual assessment of air movement and detection of faults in critical environments.' },
-      { title: 'Stairwell pressurization', text: 'Tests in accordance with IT-13 for safety in emergencies.' },
-      { title: 'Duct leakage', text: 'Leak detection to ensure airtightness and efficiency.' },
-      { title: 'Thermal mapping', text: 'Temperature analysis of chambers and rooms for precise thermal control.' },
+      { title: 'TAB — Testing, Adjusting and Balancing', text: 'Assessment and adjustment of air flow rates for the balancing and performance of air-conditioning and ventilation systems.' },
+      { title: 'Smoke tests (Smoke Test)', text: 'Visualization of air flow patterns to assess aerodynamic behavior in controlled environments.' },
+      { title: 'Stairwell pressurization', text: 'Performance tests of pressurization systems, in line with the applicable technical and regulatory requirements.' },
+      { title: 'Duct airtightness tests', text: 'Assessment of leaks in duct networks to verify their airtightness.' },
+      { title: 'Thermal mapping', text: 'Monitoring and analysis of temperature distribution in rooms and equipment with controlled thermal conditions.' },
     ],
   },
   consultoria: {
     title: 'HVAC Consulting and Projects',
     summary:
-      'Tailored solutions so that air-conditioning and ventilation systems meet regulatory requirements and each client’s operational demands, with a focus on energy efficiency and high performance.',
+      'We develop engineering and consulting solutions for HVAC systems, taking into account the technical, regulatory and operational requirements of each project, with a focus on performance, efficiency and reliability.',
     items: [
-      { title: 'HVAC system retrofit', text: 'Complete modernization focused on performance, savings and regulatory compliance.' },
-      { title: 'Technical projects and descriptive reports', text: 'Clear, traceable documentation, fully compliant with regulatory requirements.' },
-      { title: 'On-site resident team', text: 'Dedicated professionals working directly in the field, for ongoing support and integration with the plant’s routine.' },
-      { title: 'Solutions for GMP Annex 1', text: 'Specialized consulting and implementation of practices in line with the pharmaceutical industry’s updated guidelines.' },
+      { title: 'HVAC system retrofit', text: 'Modernization of existing systems to improve performance, operational efficiency and compliance with the applicable requirements.' },
+      { title: 'Technical projects and descriptive reports', text: 'Development of projects and technical documentation, taking into account engineering criteria, regulatory requirements and operational needs.' },
+      { title: 'Resident technical team', text: 'Specialized professionals for ongoing technical support and follow-up of the activities at the client’s facilities.' },
+      { title: 'Consulting for GMP Annex 1 compliance', text: 'Technical assessment and support in bringing critical rooms and systems in line with the applicable requirements of GMP Annex 1.' },
     ],
   },
   gases: {
     title: 'Gas Qualification',
     summary:
-      'Impurities, microbiological contaminants, moisture, solid particles or oil residues in gases can compromise product quality, process safety and patient health.',
+      'We test and qualify the gases used in industrial processes and controlled environments, assessing quality parameters according to the application, the technical requirements and the applicable standards. Our work contributes to the reliability of the systems and the safety of the processes.',
     gases: ['Compressed air', 'Breathing air', 'Nitrogen', 'Oxygen', 'Carbon dioxide', 'Hydrogen', 'Helium', 'Acetylene', 'Argon'],
     norms: ['ANVISA', 'RDC 658/2022', 'ISO 8573', 'GMP'],
     items: [
@@ -125,7 +128,7 @@ const SERVICE_GROUPS = {
 
 export const services = {
   intro:
-    'Controlled environments demand more than equipment: they demand precision, traceability and a rigorous commitment to national and international standards.',
+    'Controlled environments demand precision, reliability and compliance with rigorous technical requirements. LWN Engenharia offers specialized solutions to ensure system performance, traceable results and compliance with the applicable standards.',
   groups: servicesPt.groups.map((group) => ({ ...group, ...SERVICE_GROUPS[group.id] })),
 };
 

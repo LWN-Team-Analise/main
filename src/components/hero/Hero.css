@@ -1,5 +1,6 @@
-/* Wide screens: one viewport over the background video, with the copy in place
-   from the start. (Phones: .hero--compact below.) */
+/* Wide screens: the video across the upper part of the screen (a little over
+   half of it), fading into the brand navy where the copy sits, in place from
+   the start. The next section already shows below. (Phones: .hero--compact.) */
 .hero {
   position: relative;
   background: var(--c-navy-950);
@@ -7,16 +8,23 @@
 
 .hero__stage {
   position: relative;
-  height: 100vh;
-  height: 100svh;
-  min-height: 560px;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   isolation: isolate;
 }
 
-/* ---------- Background video ---------- */
+/* ---------- Video ---------- */
 
-/* Fills the stage without distortion (cropped, never stretched). */
+.hero__media {
+  position: relative;
+  flex: none;
+  height: clamp(320px, 56vh, 640px);
+  height: clamp(320px, 56svh, 640px);
+  overflow: hidden;
+}
+
+/* Fills its band without distortion (cropped, never stretched). */
 .hero__video {
   position: absolute;
   inset: 0;
@@ -27,24 +35,25 @@
   pointer-events: none;
 }
 
-/* Colour grade: calms the bright footage so the white copy reads. */
+/* Colour grade: calms the bright footage and melts its lower edge into the
+   navy below, so the video never ends on a hard line. */
 .hero__grade {
   position: absolute;
   inset: 0;
   z-index: 2;
   pointer-events: none;
   /* The same in both colour schemes: a soft shade at the top under the dark
-     header, and a deep bottom so the white copy keeps its contrast. */
+     header, and a bottom that reaches the solid navy of the copy. */
   background:
-    linear-gradient(180deg, rgba(4, 11, 28, 0.5) 0%, rgba(4, 11, 28, 0.12) 20%, rgba(4, 11, 28, 0) 34%),
+    linear-gradient(180deg, rgba(4, 11, 28, 0.5) 0%, rgba(4, 11, 28, 0.12) 22%, rgba(4, 11, 28, 0) 38%),
     linear-gradient(
       0deg,
-      rgba(4, 11, 28, 0.92) 0%,
-      rgba(4, 11, 28, 0.66) 26%,
-      rgba(4, 11, 28, 0.14) 52%,
-      rgba(4, 11, 28, 0) 66%
-    ),
-    radial-gradient(110% 80% at 0% 100%, rgba(8, 20, 48, 0.5) 0%, rgba(8, 20, 48, 0) 62%);
+      var(--c-navy-950) 0%,
+      rgba(4, 11, 28, 0.88) 12%,
+      rgba(4, 11, 28, 0.55) 28%,
+      rgba(4, 11, 28, 0.18) 48%,
+      rgba(4, 11, 28, 0) 64%
+    );
 }
 
 .hero__grade::after {
@@ -58,18 +67,13 @@
 
 /* ---------- Copy ---------- */
 
+/* Below the video, on the navy; its first line rests on the fade. */
 .hero__content {
-  position: absolute;
-  inset: 0;
+  position: relative;
   z-index: 3;
-  display: flex;
-  align-items: flex-end;
-  padding: calc(var(--header-top) + var(--header-h) + 2rem) var(--gutter) clamp(3.25rem, 12.5vh, 7.5rem);
-  pointer-events: none;
-}
-
-.hero__content > * {
-  pointer-events: auto;
+  margin-top: -1.75rem;
+  padding: 0 var(--gutter) clamp(3rem, 9vh, 5.5rem);
+  background: radial-gradient(70% 120% at 0% 100%, rgba(42, 82, 190, 0.14), rgba(42, 82, 190, 0) 70%);
 }
 
 /* ---------- Phones and small tablets: no video, a compact opening ---------- */
@@ -109,6 +113,8 @@
 .hero--compact .hero__content {
   position: relative;
   inset: auto;
+  margin-top: 0;
+  background: none;
   padding: calc(var(--header-top) + var(--header-h) + clamp(2.25rem, 9vw, 3.5rem)) var(--gutter)
     clamp(3rem, 12vw, 4.5rem);
 }
