@@ -347,7 +347,9 @@ export default function CardSetor({
                         ? obra.reserva.veiculoNome
                         : obra.reserva
                           ? 'sem carro'
-                          : 'reservar'}
+                          : obra.execucaoPrazo
+                            ? 'reservar'
+                            : 'defina o prazo'}
                     </span>
                   </span>
                 )}

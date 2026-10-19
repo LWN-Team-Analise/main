@@ -131,7 +131,9 @@ export default function Usuarios() {
 
   useEffect(() => {
     if (state?.busca) setBusca(state.busca)
-  }, [state])
+    /* quem volta da tela de um setor cai de novo na lista de setores */
+    if (state?.abrir === 'setores' && podeCargos) setModalCargos(true)
+  }, [state, podeCargos])
   const [filtros, setFiltros] = useState([])
 
   const alternarCargo = (chave) =>

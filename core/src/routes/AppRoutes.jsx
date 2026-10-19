@@ -8,6 +8,7 @@ import Clientes from '@/pages/Clientes/Clientes'
 import Concluidas from '@/pages/Concluidas/Concluidas'
 import Avaliacoes from '@/pages/Avaliacoes/Avaliacoes'
 import Usuarios from '@/pages/Usuarios/Usuarios'
+import SetorPagina from '@/pages/Usuarios/SetorPagina'
 import Configuracoes from '@/pages/Configuracoes/Configuracoes'
 import Despesas from '@/pages/Despesas/Despesas'
 import MeusEnvios from '@/pages/Despesas/MeusEnvios'
@@ -99,6 +100,15 @@ export default function AppRoutes() {
         element={
           <Interna permissoes={['editar_usuario', 'editar_cargo', 'editar_cargo_titulo']}>
             <Usuarios />
+          </Interna>
+        }
+      />
+      {/* a tela de um setor (nome, cor e permissoes): so quem edita setor */}
+      <Route
+        path="/app/usuarios/setores/:id"
+        element={
+          <Interna permissao="editar_cargo">
+            <SetorPagina />
           </Interna>
         }
       />

@@ -155,6 +155,7 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   const [periodo, setPeriodo] = useState(false)
   /* tentou marcar check da execucao sem o prazo da execucao */
   const [faltaPrazoExecucao, setFaltaPrazoExecucao] = useState(false)
+  const [faltaPrazoReserva, setFaltaPrazoReserva] = useState(false)
   /* o carro da obra (atualizacao 23): a reserva (1a etapa) e a
      retirada (3a etapa), que e a saida da aba Frotas aberta aqui */
   const [reservando, setReservando] = useState(null)
@@ -256,6 +257,13 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
 
   const clicarCheck = (etapa, card, check) => {
     if (check.tipo === CHECK_RESERVA) {
+      /* a reserva e por periodo: sem o prazo da execucao nao ha dias
+         para saber quais carros estao livres (a reserva que ja existe
+         continua podendo ser vista) */
+      if (!obra.execucaoPrazo && !obra.reserva) {
+        setFaltaPrazoReserva(true)
+        return
+      }
       setReservando({ card, check })
       return
     }
@@ -1216,6 +1224,41 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                 type="button"
                 onClick={() => {
                   setFaltaPrazoExecucao(false)
+                  setPeriodo(true)
+                }}
+              >
+                Definir período
+              </Button>
+            )}
+          </footer>
+        </div>
+      </Modal>
+
+      <Modal
+        aberto={faltaPrazoReserva}
+        aoFechar={() => setFaltaPrazoReserva(false)}
+        titulo="Reserva de carro"
+        largura={440}
+      >
+        <div className="formrot">
+          <p className="formrot__sistema" role="note">
+            A reserva de carro abre depois do prazo da execução: é pelos dias da execução que o sistema mostra só os
+            carros livres naquele período.{' '}
+            {prazoNaPrimeira
+              ? `Ele é o check "${prazoNaPrimeira.check.titulo}", na ${prazoNaPrimeira.etapa.numero}ª etapa.`
+              : podePrazos
+                ? 'Defina o período de execução e volte aqui.'
+                : 'Peça a quem pode definir prazos para preenchê-lo.'}
+          </p>
+          <footer className="formobra__acoes">
+            <button type="button" className="formobra__cancelar" onClick={() => setFaltaPrazoReserva(false)}>
+              Fechar
+            </button>
+            {podePrazos && (
+              <Button
+                type="button"
+                onClick={() => {
+                  setFaltaPrazoReserva(false)
                   setPeriodo(true)
                 }}
               >

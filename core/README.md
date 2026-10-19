@@ -96,6 +96,11 @@ site — e dele que sai o link do "esqueci minha senha"), `GRAPH_TENANT_ID`,
 Outlook estiver ligado, `OUTLOOK_CLIENT_ID`, `OUTLOOK_CLIENT_SECRET` e
 `OUTLOOK_TENANT`.
 
+`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` e `VAPID_ASSUNTO` ligam as notificacoes no
+celular (ver "Notificacoes no celular"). Gere um par novo com
+`npx web-push generate-vapid-keys`; trocar o par desliga quem ja tinha
+ligado, e cada um liga de novo em Configuracoes.
+
 `TOMTOM_KEY` liga o transito da Grande Sao Paulo na aba Frotas (conta gratis
 em developer.tomtom.com; o plano gratis da 2.500 consultas por dia). Sem
 ela, o painel mostra so a lentidao da capital, pela CET.
@@ -110,6 +115,19 @@ regiao (Capital, Norte, Leste, ABC, Oeste, Sudoeste) leva o nivel da media
 dos trechos dela. A consulta gasta uma chamada por ponto e fica 20 minutos
 na memoria. Os "km" da CET sao **km de lentidao** (vias paradas ou lentas),
 e nao distancia. Os avisos do INMET valem para os 39 municipios da regiao.
+
+**Rodizio na reserva de carro.** Ao reservar o carro de uma obra, a lista diz
+em quantos dias da execucao cada carro cai no rodizio de Sao Paulo (final da
+placa x dia da semana, sem fim de semana e feriado; `GET
+/api/frotas/reservas/disponiveis`). Os que nao caem vem primeiro, e escolher um
+que cai mostra os dias. Sem o prazo da execucao, a tela pede para definir o
+periodo; carro sem placa vai para o fim, sem conferencia.
+
+**Uso da frota no Painel.** A pagina inicial (aba Painel, para quem tambem
+tem Frotas) mostra os km rodados por mes, quem mais dirigiu e a tabela de km
+por carro e por mes, sempre em doze meses (`GET /api/frotas/uso`). Cada
+viagem vai da saida (ou troca) ate o registro seguinte do carro e conta no mes
+em que terminou; viagem com KM voltando ou acima de 3.000 km fica de fora.
 
 `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` e `DB_NAME` **nao** vao para a
 Vercel: elas apontam para o Postgres da sua maquina, que a nuvem nao alcanca.
@@ -253,6 +271,7 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-23.sql.txt` | clientes prioritarios; reserva e retirada do carro da obra         |
 | `db/atualizacao-24.sql.txt` | historico de despesas do SharePoint (cliente_texto, planilha_chave) |
 | `db/atualizacao-25.sql.txt` | ensaios por item: servico da obra, itens (ambiente/TAG/ponto de uso) e linhas com o resultado |
+| `db/atualizacao-26.sql.txt` | notificacoes no celular (push_inscricao) e mensagens nao lidas do chat (chat_site_leitura) |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
 Rode o primeiro na ordem indicada dentro dele; depois rode os outros
@@ -870,6 +889,46 @@ no aplicativo, ou o consentimento do administrador.
 
 O segundo caso importa: sem ele a tela dizia "enviado" e o e-mail morria em
 silencio, e so o log do servidor sabia.
+
+## Notificacoes no celular
+
+Avisos na tela do celular (ou do computador), mesmo com o app fechado. Cada
+pessoa liga em **Configuracoes > Notificacoes no celular**, aparelho por
+aparelho; a tela do chat da equipe tambem convida a ligar. Chegam:
+
+| O que | Para quem |
+|---|---|
+| mensagem no chat da equipe | todo mundo (menos quem escreveu) |
+| mensagem no chat de uma obra | quem participa da obra |
+| mencao com @ (em qualquer chat) | quem foi citado, com "Fulano mencionou voce" |
+| aviso de etapa | as pessoas dos setores avisados |
+
+Como funciona: `public/core/sw.js` (o service worker, registrado em
+`src/main.jsx`, que NAO guarda pagina em cache) recebe e mostra a
+notificacao; o toque abre o app na tela dela. O servidor manda pelo
+`server/push.js` (biblioteca `web-push`, chaves VAPID nas variaveis da
+Vercel) para cada linha de `push_inscricao`; inscricao que o navegador diz
+que morreu (404/410) sai sozinha.
+
+No **iPhone** so funciona com o app instalado na Tela de Inicio (Compartilhar
+> Adicionar a Tela de Inicio) e aberto por ela; a tela de Configuracoes
+explica isso a quem abre pelo Safari.
+
+**O icone do app** e o mesmo desenho do favicon, em fundo branco
+(`public/core/icone-app-*.png`, gerados do `public/assets/favicon.png`; o
+iPhone pinta de preto o que e transparente). Os nomes sao novos para o
+celular que guardou o icone antigo buscar este. No Android ele troca sozinho
+em alguns dias; no iPhone, so tirando o app da Tela de Inicio e pondo de novo.
+
+### Mensagens nao lidas
+
+O botao do chat da equipe mostra quantas mensagens de outras pessoas a
+pessoa ainda nao leu (`GET /api/dados/chat/nao-lidas`, conferido a cada 45s,
+ao voltar para a aba e na hora em que chega uma notificacao). Abrir a tela do
+chat marca como lido (`POST /api/dados/chat/lido`). Quem ainda nao tinha
+leitura comeca "em dia". A tela do chat busca mensagens novas sozinha a cada
+12s.
+
 
 ## Setores do cliente
 

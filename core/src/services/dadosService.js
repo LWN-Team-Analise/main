@@ -76,6 +76,12 @@ export async function enviarNoChatDoSite(campos) {
 export const apagarDoChatDoSite = (id, escopo = 'mim') =>
   del(`/dados/chat/${id}?escopo=${escopo}`)
 
+/** Quantas mensagens de outras pessoas eu ainda nao li no chat da equipe. */
+export const naoLidasDoChat = async () => (await get('/dados/chat/nao-lidas')).naoLidas ?? 0
+
+/** Li o chat da equipe ate esta mensagem. */
+export const marcarChatLido = (ateId) => post('/dados/chat/lido', { ateId })
+
 /* ---------------- Clientes ---------------- */
 
 export async function criarCliente(campos) {

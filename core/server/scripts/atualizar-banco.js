@@ -52,6 +52,7 @@ const ARQUIVOS = [
   'db/atualizacao-23.sql.txt',
   'db/atualizacao-24.sql.txt',
   'db/atualizacao-25.sql.txt',
+  'db/atualizacao-26.sql.txt',
 ]
 
 /**
@@ -148,6 +149,8 @@ const CONFERENCIA = [
   ['obra.servico', col('obra', 'servico')],
   ['obra_item', "SELECT to_regclass('public.obra_item') IS NOT NULL AS ok"],
   ['obra_item_ensaio', "SELECT to_regclass('public.obra_item_ensaio') IS NOT NULL AS ok"],
+  ['push_inscricao', "SELECT to_regclass('public.push_inscricao') IS NOT NULL AS ok"],
+  ['chat_site_leitura', "SELECT to_regclass('public.chat_site_leitura') IS NOT NULL AS ok"],
 ]
 
 function col(tabela, coluna) {

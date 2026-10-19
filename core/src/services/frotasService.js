@@ -51,11 +51,19 @@ export async function carregarFotos(id) {
 
 /* ---- a reserva de carro da obra (atualizacao 23) ---- */
 
-/** Os carros que a obra pode reservar (so supervisor / acesso total). */
+/**
+ * A frota vista pelo periodo de execucao da obra (so supervisor / acesso
+ * total): { execucao: { dias, de, ate }, rodizio: [{ data, finais, livre }],
+ * veiculos: [{ ..., situacao: livre|reservado|em_uso|esta, conflito,
+ * emUsoCom, rodizio: [dias] }] }. Sem o prazo da execucao, a API recusa.
+ */
 export async function carregarDisponiveis(obraId) {
-  const { veiculos } = await get(`/frotas/reservas/disponiveis?obra=${encodeURIComponent(obraId)}`)
-  return veiculos ?? []
+  const r = await get(`/frotas/reservas/disponiveis?obra=${encodeURIComponent(obraId)}`)
+  return { execucao: r.execucao ?? null, rodizio: r.rodizio ?? [], veiculos: r.veiculos ?? [] }
 }
+
+/** As reservas ainda sem saida, da mais proxima a mais distante ({ reservas, hoje }). */
+export const carregarReservas = () => get('/frotas/reservas')
 
 /** { veiculoId } reserva o carro; { semCarro: true } marca que a obra nao usa carro. */
 export const reservar = (obraId, campos) => put(`/frotas/reservas/${encodeURIComponent(obraId)}`, campos)
@@ -71,3 +79,10 @@ export const carregarRodizio = () => get('/frotas/rodizio')
 
 /** { transito, alertas, cge } — ver GET /frotas/condicoes. Cada parte pode vir com `erro`. */
 export const carregarCondicoes = () => get('/frotas/condicoes')
+
+/**
+ * O uso da frota de `de` a `ate` ('AAAA-MM'): km por carro e por mes,
+ * e quem mais dirigiu — ver GET /frotas/uso.
+ */
+export const carregarUso = (de, ate) =>
+  get(`/frotas/uso?de=${encodeURIComponent(de)}&ate=${encodeURIComponent(ate)}`)

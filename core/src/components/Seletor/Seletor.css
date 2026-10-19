@@ -209,3 +209,21 @@
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
+
+/* centralizado: o valor escolhido e as opcoes no meio da largura. A seta
+   continua na ponta direita; um espaco do mesmo tamanho a esquerda deixa
+   o texto no centro de verdade, e nao deslocado pela seta. */
+.sel--centro .sel__botao::before {
+  content: '';
+  flex-shrink: 0;
+  width: 15px;
+}
+
+.sel--centro .sel__valor {
+  text-align: center;
+}
+
+.sel__lista.is-centro .sel__item {
+  justify-content: center;
+  text-align: center;
+}

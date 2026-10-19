@@ -391,3 +391,21 @@
     box-shadow: 0 0 0 2px var(--accent);
   }
 }
+
+/* ---------------- Notificacoes no celular ----------------
+   O mesmo desenho do bloco do Outlook: o texto de um lado, os botoes
+   do outro (no celular, embaixo). */
+.config__bloco--notificacoes {
+  grid-column: 1 / -1;
+}
+
+.config__notifacoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.config__notifacoes .btn {
+  width: auto;
+}

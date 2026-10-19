@@ -9,6 +9,7 @@ import IlhaAviso from '@/components/IlhaAviso/IlhaAviso'
 import Confirma from '@/components/Confirma/Confirma'
 import Estrelas from '@/components/Estrelas/Estrelas'
 import { ehAplicativo } from '@/utils/dispositivo'
+import useNaoLidasChat from '@/hooks/useNaoLidasChat'
 import { primeiroNome, saudacao } from '@/utils/pessoa'
 import { dataHora } from '@/utils/formato'
 /* O nome do arquivo diz para QUAL FUNDO a logo foi feita:
@@ -613,7 +614,7 @@ function dentroDaTela({ x, y }, larg, alt) {
  * Dentro de uma obra ele nao aparece: la o chat que vale e o da obra, e
  * dois botoes de chat na mesma tela so confundiriam.
  */
-function BotaoChat({ acoes = [], aoAbrirChat }) {
+function BotaoChat({ acoes = [], aoAbrirChat, naoLidas = 0 }) {
   const [aberto, setAberto] = useState(false)
   /* com opcoes extras o botao vira menu; sem elas, atalho direto */
   const temMenu = acoes.length > 0
@@ -739,7 +740,7 @@ function BotaoChat({ acoes = [], aoAbrirChat }) {
     ...acoes,
     {
       id: 'chat',
-      rotulo: 'Chat da equipe',
+      rotulo: naoLidas > 0 ? `Chat da equipe (${naoLidas > 99 ? '99+' : naoLidas})` : 'Chat da equipe',
       Glifo: Icone.chatPequeno,
       aoClicar: aoAbrirChat,
     },
@@ -786,7 +787,9 @@ function BotaoChat({ acoes = [], aoAbrirChat }) {
         }}
         aria-haspopup={temMenu ? 'menu' : undefined}
         aria-expanded={temMenu ? aberto : undefined}
-        aria-label={temMenu ? 'Adicionar observação ou abrir o chat da equipe' : 'Abrir o chat da equipe'}
+        aria-label={`${temMenu ? 'Adicionar observação ou abrir o chat da equipe' : 'Abrir o chat da equipe'}${
+          naoLidas > 0 ? ` — ${naoLidas} ${naoLidas === 1 ? 'mensagem não lida' : 'mensagens não lidas'}` : ''
+        }`}
         title={
           temMenu
             ? 'Adicionar — arraste para mudar de lugar, dois cliques voltam ao canto'
@@ -794,6 +797,12 @@ function BotaoChat({ acoes = [], aoAbrirChat }) {
         }
       >
         {temMenu ? <Icone.mais /> : <Icone.chat />}
+        {/* as mensagens do chat da equipe que a pessoa ainda nao leu */}
+        {naoLidas > 0 && (
+          <span className="bolhachat__selo" aria-hidden="true">
+            {naoLidas > 99 ? '99+' : naoLidas}
+          </span>
+        )}
       </button>
     </div>
   )
@@ -819,6 +828,22 @@ export default function AppShell({
   const { isDark } = useTheme()
   const { erro, limparErro, pode } = useDados()
   const navegar = useNavigate()
+  /* fora da tela do chat, o botao mostra quantas mensagens faltam ler */
+  const naoLidas = useNaoLidasChat(!semChat)
+
+  /* o toque numa notificacao do celular com o app ja aberto: o service
+     worker manda o endereco, e a tela troca sem recarregar o app */
+  useEffect(() => {
+    const sw = navigator.serviceWorker
+    if (!sw) return undefined
+    const abrir = (e) => {
+      if (e.data?.tipo !== 'abrir' || !e.data.url) return
+      const caminho = new URL(e.data.url, window.location.origin).pathname.replace(/^\/core/, '')
+      navegar(caminho || '/app')
+    }
+    sw.addEventListener('message', abrir)
+    return () => sw.removeEventListener('message', abrir)
+  }, [navegar])
 
   /* a tela pode assumir o campo de busca; se nao assumir, ele e do
      sistema e abre a lista de resultados por conta propria */
@@ -1140,6 +1165,7 @@ export default function AppShell({
         <BotaoChat
           acoes={acoesFlutuantes}
           aoAbrirChat={() => navegar('/app/chat')}
+          naoLidas={naoLidas}
         />
       )}
 

@@ -505,6 +505,7 @@ export default function ModalPlanejamentoItens({
               onChange={(e) => mudarServico(e.target.value)}
               opcoes={SERVICOS.map((s) => ({ valor: s.id, rotulo: s.rotulo }))}
               disabled={!podeEditar || salvando}
+              centralizado
             />
           </div>
 

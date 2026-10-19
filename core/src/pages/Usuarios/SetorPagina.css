@@ -1,0 +1,150 @@
+/* ============================================================
+   A tela de um setor (/app/usuarios/setores/:id): o "Voltar" e o nome
+   em cima, a identificacao de um lado e as permissoes do outro, e a
+   barra de salvar presa embaixo da tela.
+   ============================================================ */
+
+.setorpag {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 8px;
+}
+
+.setorpag__topo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.setorpag__voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 8px 14px 8px 11px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.setorpag__voltar:hover {
+  background: var(--control-bg-hover);
+}
+
+.setorpag__titulos {
+  min-width: 0;
+}
+
+.setorpag__titulo {
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.setorpag__titulo .cargos__etiqueta {
+  font-size: 1rem;
+  cursor: default;
+}
+
+.setorpag__sub {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.setorpag__vazio {
+  margin: 0;
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* identificacao estreita a esquerda, permissoes largas a direita */
+.setorpag__grade {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.setorpag__bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+}
+
+.setorpag__subtitulo {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+/* a identificacao acompanha a rolagem: as permissoes sao compridas */
+.setorpag__grade > .setorpag__bloco:first-child {
+  position: sticky;
+  top: 96px;
+}
+
+/* as permissoes ja estao no cartao da tela: sem a moldura do pop-up */
+.perm--solta {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.setorpag__rodape {
+  position: sticky;
+  bottom: 12px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+}
+
+.setorpag__rodape .btn {
+  width: auto;
+}
+
+.setorpag__recados {
+  flex: 1;
+  min-width: 200px;
+}
+
+.setorpag__recados p {
+  margin: 0;
+}
+
+.setorpag__recado {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--success);
+}
+
+@media (max-width: 900px) {
+  .setorpag__grade {
+    grid-template-columns: 1fr;
+  }
+
+  .setorpag__grade > .setorpag__bloco:first-child {
+    position: static;
+  }
+
+  /* no celular a barra de baixo do sistema tambem e presa: a do setor
+     fica logo acima dela */
+  .setorpag__rodape {
+    bottom: 96px;
+  }
+}

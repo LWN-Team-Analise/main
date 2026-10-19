@@ -11,6 +11,7 @@ import ModalRegistro from './ModalRegistro'
 import ModalVeiculo from './ModalVeiculo'
 import PainelRodizio from './PainelRodizio'
 import PainelCondicoes from './PainelCondicoes'
+import PainelReservas from './PainelReservas'
 import { Falta, IconeCarro, IconeDevolucao, IconeEditar, IconeLista, IconeMais, IconeSaida } from './icones'
 import './Frotas.css'
 
@@ -119,6 +120,10 @@ function CartaoVeiculo({ veiculo, editavel, aoEditar, rodizio, agora }) {
       {veiculo.reservadoPara && (
         <p className="veiculo__reserva">
           Reservado para <strong>{veiculo.reservadoPara.nome}</strong>
+          {veiculo.reservadoPara.de
+            ? ` de ${dataBR(veiculo.reservadoPara.de).slice(0, 5)} a ${dataBR(veiculo.reservadoPara.ate).slice(0, 5)}`
+            : ''}
+          {veiculo.reservas?.length > 1 ? ` (+${veiculo.reservas.length - 1})` : ''}
         </p>
       )}
 
@@ -151,6 +156,9 @@ export default function Frotas() {
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [registrando, setRegistrando] = useState(null)
+  /* a saida de um carro reservado: { veiculoId, obraId } fixos no formulario */
+  const [retirando, setRetirando] = useState(null)
+  const [reservas, setReservas] = useState(null)
   const [editando, setEditando] = useState(null)
   const [recado, setRecado] = useState(null)
   const [rodizio, setRodizio] = useState(null)
@@ -168,6 +176,11 @@ export default function Frotas() {
       .carregarCondicoes()
       .then(setCondicoes)
       .catch(() => setCondicoes(null))
+    /* as reservas das obras que ainda nao deram a saida do carro */
+    frotasApi
+      .carregarReservas()
+      .then(setReservas)
+      .catch(() => setReservas(null))
     try {
       setVeiculos(await frotasApi.carregarVeiculos())
       setErro('')
@@ -183,6 +196,7 @@ export default function Frotas() {
   }, [carregar])
 
   const registrado = (registro) => {
+    setRetirando(null)
     const qual = TIPOS[registro.tipo]?.rotulo ?? 'Registro'
     setRecado(
       `${qual} do ${registro.veiculoNome} registrada: ${registro.condutorNome}, ${kmLegivel(registro.km)}.` +
@@ -253,6 +267,13 @@ export default function Frotas() {
 
         <PainelRodizio rodizio={rodizio} veiculos={veiculos} />
 
+        <PainelReservas
+          reservas={reservas?.reservas}
+          hoje={reservas?.hoje}
+          podeRegistrar={registra}
+          aoDarSaida={(r) => setRetirando({ veiculoId: r.veiculoId, obraId: r.obraId, obraNome: r.obra })}
+        />
+
         <section className="frotas__veiculos" aria-labelledby="frotas-veiculos">
           <header className="frotas__cabeca">
             <div>
@@ -310,10 +331,14 @@ export default function Frotas() {
       </section>
 
       <ModalRegistro
-        modo={registra ? registrando : null}
+        modo={registra ? (retirando ? 'saida' : registrando) : null}
+        fixo={retirando}
         veiculos={veiculos}
         rodizio={rodizio}
-        aoFechar={() => setRegistrando(null)}
+        aoFechar={() => {
+          setRegistrando(null)
+          setRetirando(null)
+        }}
         aoRegistrado={registrado}
       />
       <ModalVeiculo

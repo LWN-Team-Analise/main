@@ -20,7 +20,7 @@ import {
   lerKm,
   lerSimNao,
 } from '../../src/domain/frotas.js'
-import { AREA, HORARIOS, finaisDoDia } from '../../src/domain/rodizio.js'
+import { AREA, HORARIOS, finaisDoDia, finalDaPlaca } from '../../src/domain/rodizio.js'
 import { CORREDORES, MUNICIPIOS_RMSP, REGIOES, nivelPelaVelocidade } from '../../src/domain/transito.js'
 
 /* ============================================================
@@ -226,24 +226,28 @@ router.get('/veiculos', exigeSessao, exige(VER), async (_req, res) => {
   try {
     const [{ rows }, reservas] = await Promise.all([
       query(`${CONSULTA_VEICULOS} ORDER BY v.ativo DESC, lower(v.nome)`),
-      /* a reserva de obra que ainda nao retirou o carro (atualizacao 23).
-         Sem a tabela, nenhum carro esta reservado */
-      query(
-        `SELECT rv.veiculo_id, o.id AS obra_id, cl.nome AS cliente, o.proposta
-           FROM obra_reserva_veiculo rv
-           JOIN obra o     ON o.id = rv.obra_id
-           JOIN cliente cl ON cl.id = o.cliente_id
-          WHERE rv.veiculo_id IS NOT NULL AND rv.registro_id IS NULL AND o.concluida_em IS NULL`,
-      ).catch((erro) => (erro.code === '42P01' ? { rows: [] } : Promise.reject(erro))),
+      /* as reservas de obra que ainda nao retiraram o carro, com o periodo
+         de cada uma (o mesmo carro pode ter mais de uma, em semanas
+         diferentes). Sem a tabela, nenhum carro esta reservado */
+      reservasAbertas(),
     ])
-    const reservaDo = new Map(
-      reservas.rows.map((r) => [
-        String(r.veiculo_id),
-        { obraId: String(r.obra_id), nome: [r.cliente, texto(r.proposta)].filter(Boolean).join(' — ') },
-      ]),
-    )
+    const hoje = hojeNoBrasil()
+    const reservasDo = new Map()
+    for (const r of reservas) {
+      /* periodo que ja acabou sem a saida nao prende mais ninguem */
+      const ate = r.dias?.at(-1) ?? null
+      if (ate && ate < hoje) continue
+      const lista = reservasDo.get(String(r.veiculo_id)) ?? []
+      lista.push({ obraId: String(r.obra_id), nome: nomeDaReserva(r), de: r.dias?.[0] ?? null, ate })
+      reservasDo.set(String(r.veiculo_id), lista)
+    }
+    for (const lista of reservasDo.values()) lista.sort((a, b) => String(a.de ?? '').localeCompare(String(b.de ?? '')))
     return res.json({
-      veiculos: rows.map((l) => ({ ...paraVeiculo(l), reservadoPara: reservaDo.get(String(l.id)) ?? null })),
+      veiculos: rows.map((l) => {
+        const lista = reservasDo.get(String(l.id)) ?? []
+        /* reservadoPara = a reserva mais proxima; reservas = todas */
+        return { ...paraVeiculo(l), reservadoPara: lista[0] ?? null, reservas: lista }
+      }),
     })
   } catch (erro) {
     return falhou(erro, res, 'frotas/veiculos')
@@ -722,34 +726,179 @@ async function exigeReservador(req, res, next) {
   }
 }
 
-/* os carros que a obra $1 pode reservar (a reserva dela mesma conta como livre) */
-const CARROS_LIVRES = `
-  SELECT v.id, v.nome, v.marca, v.modelo, v.placa, v.km_atual
-    FROM veiculo v
-   WHERE v.ativo
-     AND coalesce((SELECT r.tipo FROM veiculo_registro r WHERE r.veiculo_id = v.id
-                    ORDER BY ${ORDEM_DESC} LIMIT 1), 'devolucao') = 'devolucao'
-     AND NOT EXISTS (SELECT 1 FROM obra_reserva_veiculo rv JOIN obra o ON o.id = rv.obra_id
-                      WHERE rv.veiculo_id = v.id AND rv.registro_id IS NULL
-                        AND o.concluida_em IS NULL AND rv.obra_id <> $1)
-`
+/* ------------------------------------------------------------
+   A reserva e POR PERIODO
+
+   O carro fica preso a obra so nos dias da execucao dela (o "Prazo da
+   execucao", 1a etapa): duas obras em semanas diferentes podem reservar
+   o mesmo carro. Por isso a reserva so abre depois que a obra tem o
+   prazo da execucao, e a lista mostra so o que esta livre NAQUELES dias.
+
+   Situacao de cada carro para a obra:
+     livre      ninguem o reservou em dia nenhum do periodo
+     reservado  outra obra o reservou em algum dia do periodo (e ainda
+                nao deu a saida); reserva antiga, sem periodo, prende
+                o carro sempre
+     em_uso     esta na rua agora e o periodo ja comecou (se o periodo
+                ainda vai comecar, ele aparece livre, com o aviso de que
+                esta em uso agora)
+     esta       e o carro ja reservado para esta obra
+   ------------------------------------------------------------ */
+
+const diaIso = (v) => (v ? String(v).slice(0, 10) : null)
+
+/** Os dias da execucao de uma linha de obra, ou null sem o prazo da execucao. */
+function diasDaLinha(o) {
+  if (!o?.execucao_prazo) return null
+  const marcados = Array.isArray(o.execucao_dias) ? o.execucao_dias.map(diaIso).filter(Boolean) : []
+  if (marcados.length > 0) return [...new Set(marcados)].sort()
+  const fim = diaIso(o.execucao_prazo)
+  const lista = []
+  for (let d = diaIso(o.execucao_inicio) ?? diaIso(o.data_inicio) ?? fim; d <= fim && lista.length < 120; d = somarDiasIso(d, 1)) {
+    lista.push(d)
+  }
+  return lista
+}
+
+/** Os dias da execucao da obra ('AAAA-MM-DD'), ou null quando ainda nao tem o prazo da execucao. */
+async function diasDaExecucao(obraId, db = { query }) {
+  const { rows } = await db
+    .query('SELECT data_inicio, execucao_inicio, execucao_prazo, execucao_dias FROM obra WHERE id = $1', [obraId])
+    .catch((e) => (e.code === '42703' ? { rows: [] } : Promise.reject(e)))
+  return diasDaLinha(rows[0])
+}
+
+/** As reservas de carro ainda nao retiradas das obras abertas (menos a `exceto`), cada uma com os dias. */
+async function reservasAbertas(db = { query }, exceto = null) {
+  const { rows } = await db
+    .query(
+      `SELECT rv.obra_id, rv.veiculo_id, rv.reservado_em, u.name AS reservado_por_nome,
+              v.nome AS veiculo_nome, v.placa, cl.nome AS cliente, o.proposta,
+              o.data_inicio, o.execucao_inicio, o.execucao_prazo, o.execucao_dias
+         FROM obra_reserva_veiculo rv
+         JOIN obra o         ON o.id = rv.obra_id
+         JOIN cliente cl     ON cl.id = o.cliente_id
+         JOIN veiculo v      ON v.id = rv.veiculo_id
+         LEFT JOIN usuario u ON u.id = rv.reservado_por
+        WHERE rv.veiculo_id IS NOT NULL AND rv.registro_id IS NULL AND o.concluida_em IS NULL
+          AND ($1::bigint IS NULL OR rv.obra_id <> $1)`,
+      [exceto],
+    )
+    .catch((e) => (e.code === '42P01' ? { rows: [] } : Promise.reject(e)))
+  return rows.map((r) => ({ ...r, dias: diasDaLinha(r) }))
+}
+
+/** 'Cliente — proposta', como a obra aparece nas listas da frota. */
+const nomeDaReserva = (r) => [r.cliente, texto(r.proposta)].filter(Boolean).join(' — ')
+
+/** O rodizio de cada dia da lista: { data, diaSemana, finais, livre } (fim de semana e feriado = livre). */
+async function rodizioDosDias(dias) {
+  if (!dias?.length) return []
+  const anos = [...new Set(dias.map((d) => Number(d.slice(0, 4))))]
+  const feriados = new Map((await Promise.all(anos.map(feriadosDoAno))).flatMap((a) => a.lista.map((f) => [f.data, f.nome])))
+  return dias.map((data) => {
+    const dia = diaDaSemanaIso(data)
+    const feriado = feriados.get(data) ?? null
+    const fimDeSemana = dia === 0 || dia === 6
+    return {
+      data,
+      diaSemana: dia,
+      finais: fimDeSemana || feriado ? [] : finaisDoDia(dia),
+      livre: fimDeSemana ? 'Fim de semana' : feriado ? `Feriado: ${feriado}` : null,
+    }
+  })
+}
+
+/**
+ * Todos os carros ativos com a situacao deles para a obra (ver acima),
+ * os dias de rodizio de cada um no periodo e o rodizio de cada dia.
+ * Sem o prazo da execucao, recusa: e ele que diz quais dias olhar.
+ */
+async function carrosParaObra(obraId, db = { query }) {
+  const dias = await diasDaExecucao(obraId, db)
+  if (!dias?.length) {
+    throw new Recusa(
+      null,
+      'Defina o prazo da execução da obra antes de reservar o carro: é pelo período que o sistema sabe quais carros estão livres.',
+      409,
+    )
+  }
+  const [{ rows }, outras, propria, rodizio] = await Promise.all([
+    db.query(`${CONSULTA_VEICULOS} WHERE v.ativo ORDER BY lower(v.nome)`),
+    reservasAbertas(db, obraId),
+    db
+      .query('SELECT veiculo_id FROM obra_reserva_veiculo WHERE obra_id = $1', [obraId])
+      .catch((e) => (e.code === '42P01' ? { rows: [] } : Promise.reject(e))),
+    rodizioDosDias(dias).catch(() => []),
+  ])
+  const doPeriodo = new Set(dias)
+  const comecou = dias[0] <= hojeNoBrasil()
+  const finaisNoDia = new Map(rodizio.map((r) => [r.data, r.finais]))
+  const minhaReserva = propria.rows[0]?.veiculo_id ? String(propria.rows[0].veiculo_id) : null
+
+  const veiculos = rows.map((l) => {
+    const v = paraVeiculo(l)
+    const conflito = outras.find((r) => String(r.veiculo_id) === v.id && (!r.dias || r.dias.some((d) => doPeriodo.has(d))))
+    const final = finalDaPlaca(v.placa)
+    const situacao = v.id === minhaReserva ? 'esta' : conflito ? 'reservado' : v.emUso && comecou ? 'em_uso' : 'livre'
+    return {
+      id: v.id,
+      nome: v.nome,
+      marca: v.marca,
+      modelo: v.modelo,
+      ano: v.ano,
+      cor: v.cor,
+      placa: v.placa,
+      kmAtual: v.kmAtual,
+      situacao,
+      /* na rua agora (quem esta com ele), mesmo quando o periodo ainda nao comecou */
+      emUsoCom: v.emUso ? (v.ultimo?.condutorNome ?? 'alguém') : null,
+      conflito: conflito
+        ? { obra: nomeDaReserva(conflito), de: conflito.dias?.[0] ?? null, ate: conflito.dias?.at(-1) ?? null }
+        : null,
+      rodizio:
+        final === null ? [] : dias.filter((d) => (finaisNoDia.get(d) ?? finaisDoDia(diaDaSemanaIso(d))).includes(final)),
+    }
+  })
+  return { dias, rodizio, veiculos }
+}
 
 router.get('/reservas/disponiveis', exigeSessao, exigeReservador, async (req, res) => {
-  const obraId = idValido(req.query.obra) ? req.query.obra : '0'
+  if (!idValido(req.query.obra)) return res.status(400).json({ erro: 'Obra inválida.' })
   try {
-    const { rows } = await query(`${CARROS_LIVRES} ORDER BY lower(v.nome)`, [obraId])
-    return res.json({
-      veiculos: rows.map((v) => ({
-        id: String(v.id),
-        nome: v.nome,
-        marca: v.marca ?? '',
-        modelo: v.modelo ?? '',
-        placa: v.placa ?? '',
-        kmAtual: v.km_atual ?? null,
-      })),
-    })
+    const { dias, rodizio, veiculos } = await carrosParaObra(req.query.obra)
+    return res.json({ execucao: { dias: dias.length, de: dias[0], ate: dias.at(-1) }, rodizio, veiculos })
   } catch (erro) {
+    if (erro instanceof Recusa) return res.status(erro.status).json({ erro: erro.message })
     return falhou(erro, res, 'frotas/reservas-disponiveis')
+  }
+})
+
+/* ------------------------------------------------------------
+   As reservas para a aba Frotas: o que ja foi reservado e ainda nao
+   saiu, do periodo mais proximo ao mais distante. A tela avisa quando
+   o periodo chega e a saida do carro ainda nao foi registrada.
+   ------------------------------------------------------------ */
+
+router.get('/reservas', exigeSessao, exige(VER), async (_req, res) => {
+  try {
+    const lista = (await reservasAbertas())
+      .map((r) => ({
+        obraId: String(r.obra_id),
+        obra: nomeDaReserva(r),
+        veiculoId: String(r.veiculo_id),
+        veiculoNome: r.veiculo_nome,
+        placa: r.placa ?? '',
+        de: r.dias?.[0] ?? null,
+        ate: r.dias?.at(-1) ?? null,
+        dias: r.dias?.length ?? 0,
+        reservadoPorNome: r.reservado_por_nome ?? null,
+        reservadoEm: r.reservado_em,
+      }))
+      .sort((a, b) => String(a.de ?? '9999').localeCompare(String(b.de ?? '9999')))
+    return res.json({ reservas: lista, hoje: hojeNoBrasil() })
+  } catch (erro) {
+    return falhou(erro, res, 'frotas/reservas')
   }
 })
 
@@ -786,9 +935,19 @@ router.put('/reservas/:obraId', exigeSessao, exigeReservador, async (req, res) =
       if (veiculoId) {
         /* trava o carro: duas reservas ao mesmo tempo nao levam o mesmo */
         await cliente.query('SELECT id FROM veiculo WHERE id = $1 FOR UPDATE', [veiculoId])
-        const { rows: livre } = await cliente.query(`${CARROS_LIVRES} AND v.id = $2`, [obraId, veiculoId])
-        if (!livre[0]) throw new Recusa('veiculoId', 'Este carro não está mais disponível. Escolha outro.', 409)
-        nome = livre[0].nome
+        /* livre NOS DIAS da execucao desta obra (ver carrosParaObra) */
+        const { veiculos } = await carrosParaObra(obraId, cliente)
+        const carro = veiculos.find((v) => v.id === String(veiculoId))
+        if (!carro || !['livre', 'esta'].includes(carro.situacao)) {
+          throw new Recusa(
+            'veiculoId',
+            carro?.situacao === 'reservado'
+              ? `Este carro já está reservado para ${carro.conflito.obra} em dias deste período. Escolha outro.`
+              : 'Este carro não está disponível no período da execução. Escolha outro.',
+            409,
+          )
+        }
+        nome = carro.nome
       }
 
       await cliente.query(
@@ -1064,6 +1223,85 @@ const diaDaSemanaIso = (iso) => {
   const [a, m, d] = iso.split('-').map(Number)
   return new Date(Date.UTC(a, m - 1, d)).getUTCDay()
 }
+
+/* ============================================================
+   O USO DA FROTA — GET /uso?de=AAAA-MM&ate=AAAA-MM (o Painel da
+   pagina inicial)
+
+   Cada VIAGEM e uma saida (ou troca de condutor) e o registro seguinte
+   do mesmo carro: o km rodado e a diferenca entre os dois KMs, e conta
+   para quem estava com o carro, no mes em que a viagem terminou. Carro
+   que ainda esta na rua nao entra (a viagem nao acabou).
+
+   Viagem com mais de 3.000 km ou com KM voltando fica de fora: e erro
+   de digitacao da planilha antiga, e um so desses estragaria o grafico.
+   ============================================================ */
+
+const MAIOR_VIAGEM = 3000
+
+router.get('/uso', exigeSessao, exige(VER), async (req, res) => {
+  const mes = /^\d{4}-\d{2}$/
+  const de = String(req.query.de ?? '')
+  const ate = String(req.query.ate ?? '')
+  if (!mes.test(de) || !mes.test(ate) || de > ate) {
+    return res.status(400).json({ erro: 'Período inválido.' })
+  }
+  try {
+    const { rows } = await query(
+      `WITH r AS (
+         SELECT vr.veiculo_id, vr.tipo, vr.km, vr.condutor_id, vr.condutor_nome,
+                LEAD(vr.km)   OVER w AS km_fim,
+                LEAD(vr.data) OVER w AS data_fim
+           FROM veiculo_registro vr
+         WINDOW w AS (PARTITION BY vr.veiculo_id ORDER BY vr.data, vr.hora, vr.id)
+       )
+       SELECT r.veiculo_id, v.nome AS veiculo, to_char(r.data_fim, 'YYYY-MM') AS mes,
+              r.condutor_id, coalesce(u.name, r.condutor_nome) AS condutor,
+              (r.km_fim - r.km) AS km
+         FROM r
+         JOIN veiculo v      ON v.id = r.veiculo_id
+         LEFT JOIN usuario u ON u.id = r.condutor_id
+        WHERE r.tipo IN ('saida', 'troca')
+          AND r.km_fim IS NOT NULL
+          AND r.km_fim > r.km AND r.km_fim - r.km <= $3
+          AND to_char(r.data_fim, 'YYYY-MM') BETWEEN $1 AND $2`,
+      [de, ate, MAIOR_VIAGEM],
+    )
+
+    const meses = []
+    for (let [a, m] = de.split('-').map(Number); `${a}-${String(m).padStart(2, '0')}` <= ate; m === 12 ? ((a += 1), (m = 1)) : (m += 1)) {
+      meses.push(`${a}-${String(m).padStart(2, '0')}`)
+    }
+
+    const carros = new Map()
+    const pessoas = new Map()
+    for (const l of rows) {
+      const km = Number(l.km)
+      const c = carros.get(l.veiculo_id) ?? { id: String(l.veiculo_id), nome: l.veiculo, km: {}, total: 0, viagens: 0 }
+      c.km[l.mes] = (c.km[l.mes] ?? 0) + km
+      c.total += km
+      c.viagens += 1
+      carros.set(l.veiculo_id, c)
+      /* quem dirigiu: pelo cadastro quando ha; senao pelo nome da planilha */
+      const chave = l.condutor_id ? `u${l.condutor_id}` : `n${String(l.condutor ?? '').trim().toLowerCase()}`
+      const p = pessoas.get(chave) ?? { id: l.condutor_id ? String(l.condutor_id) : null, nome: l.condutor || 'Sem nome', km: 0, viagens: 0 }
+      p.km += km
+      p.viagens += 1
+      pessoas.set(chave, p)
+    }
+
+    const ordenar = (lista) => lista.sort((x, y) => (y.total ?? y.km) - (x.total ?? x.km))
+    return res.json({
+      meses,
+      carros: ordenar([...carros.values()]),
+      pessoas: ordenar([...pessoas.values()]),
+      total: rows.reduce((s, l) => s + Number(l.km), 0),
+      viagens: rows.length,
+    })
+  } catch (erro) {
+    return falhou(erro, res, 'frotas/uso')
+  }
+})
 
 router.get('/rodizio', exigeSessao, exige(VER), async (_req, res) => {
   try {

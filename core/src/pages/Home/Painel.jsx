@@ -4,6 +4,7 @@ import { chaveDoCargo, checksExigidos, diasAte, progressoDaObra, situacaoDaObra 
 import { hojeISO } from '@/utils/formato'
 import { Colunas, Linha, Rosca } from './graficos'
 import PainelDespesas from './PainelDespesas'
+import PainelFrota from './PainelFrota'
 import Tile from './Tile'
 import {
   diasEntre,
@@ -787,6 +788,8 @@ export function PainelVista({
       </div>
 
       <PainelDespesas fatias={fatias} passo={passo} rotuloDaFatia={rotuloDaFatia} />
+
+      <PainelFrota fatias={fatias} passo={passo} />
     </div>
   )
 }

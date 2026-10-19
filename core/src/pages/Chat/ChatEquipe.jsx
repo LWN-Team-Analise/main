@@ -1,10 +1,54 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '@/components/AppShell/AppShell'
 import Conversa from '@/components/Chat/Conversa'
 import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
+import { CHAT_LIDO } from '@/hooks/useNaoLidasChat'
+import useNotificacoesCelular from '@/hooks/useNotificacoesCelular'
+import { marcarChatLido } from '@/services/dadosService'
 import './ChatEquipe.css'
+
+/* de quanto em quanto tempo a conversa e conferida com a tela aberta */
+const INTERVALO = 12_000
+
+/* o convite para ligar as notificacoes, fechado uma vez, nao volta */
+const SEM_CONVITE = 'atmosfera.chat-sem-convite'
+
+const lerSemConvite = () => {
+  try {
+    return localStorage.getItem(SEM_CONVITE) === '1'
+  } catch {
+    return false
+  }
+}
+
+/** "Receber no celular": so aparece quando este aparelho pode ligar e ainda nao ligou. */
+function ConviteNotificacao() {
+  const notif = useNotificacoesCelular()
+  const [fechado, setFechado] = useState(lerSemConvite)
+  if (fechado || notif.estado !== 'desligado') return null
+  const fechar = () => {
+    setFechado(true)
+    try {
+      localStorage.setItem(SEM_CONVITE, '1')
+    } catch {
+      /* sem storage, o convite volta na proxima visita */
+    }
+  }
+  return (
+    <div className="chatpag__convite" role="note">
+      <span>Receba as mensagens no celular, mesmo com o app fechado.</span>
+      <button type="button" className="chatpag__ligar" onClick={notif.ligar} disabled={notif.ocupado}>
+        {notif.ocupado ? 'Ligando...' : 'Ligar notificações'}
+      </button>
+      <button type="button" className="chatpag__fechar" onClick={fechar} aria-label="Fechar o convite">
+        ×
+      </button>
+      {notif.erro && <span className="chatpag__erro">{notif.erro}</span>}
+    </div>
+  )
+}
 
 /**
  * A CONVERSA GERAL da equipe, numa tela propria (/app/chat).
@@ -41,20 +85,53 @@ export default function ChatEquipe() {
     [equipe],
   )
 
-  /* a conversa so e buscada quando a tela abre: ela nao entra na carga
-     do quadro, que ja e grande */
-  const buscar = useCallback(async () => {
-    setCarregando(true)
-    try {
-      setMensagens(await carregarChatDoSite())
-    } finally {
-      setCarregando(false)
-    }
-  }, [carregarChatDoSite])
+  /* a conversa so e buscada aqui: ela nao entra na carga do quadro, que
+     ja e grande. A lista so e trocada quando algo mudou — trocar a cada
+     busca faria a conversa pular para o fim enquanto alguem le */
+  const assinatura = useRef('')
+  const buscar = useCallback(
+    async (primeira = false) => {
+      if (primeira) setCarregando(true)
+      try {
+        const lista = await carregarChatDoSite()
+        const nova = lista.map((m) => `${m.id}${m.apagada ? 'x' : ''}`).join(',')
+        if (nova !== assinatura.current) {
+          assinatura.current = nova
+          setMensagens(lista)
+        }
+      } catch {
+        /* sem rede: tenta de novo na proxima volta */
+      } finally {
+        if (primeira) setCarregando(false)
+      }
+    },
+    [carregarChatDoSite],
+  )
 
+  /* mensagens novas aparecem sozinhas: a cada 12s com a tela visivel, ao
+     voltar para a aba e na hora em que chega a notificacao do chat */
   useEffect(() => {
-    buscar()
+    buscar(true)
+    const relogio = setInterval(() => document.visibilityState === 'visible' && buscar(), INTERVALO)
+    const visivel = () => document.visibilityState === 'visible' && buscar()
+    const doServiceWorker = (e) => e.data?.tipo === 'push' && e.data.tag === 'chat-equipe' && buscar()
+    document.addEventListener('visibilitychange', visivel)
+    navigator.serviceWorker?.addEventListener('message', doServiceWorker)
+    return () => {
+      clearInterval(relogio)
+      document.removeEventListener('visibilitychange', visivel)
+      navigator.serviceWorker?.removeEventListener('message', doServiceWorker)
+    }
   }, [buscar])
+
+  /* o que esta na tela foi lido: o botao do chat zera em todas as telas */
+  useEffect(() => {
+    const ultima = mensagens.at(-1)
+    if (!ultima || document.visibilityState !== 'visible') return
+    marcarChatLido(ultima.id)
+      .then(() => window.dispatchEvent(new Event(CHAT_LIDO)))
+      .catch(() => {})
+  }, [mensagens])
 
   const enviar = async (campos) => {
     const nova = await enviarNoChatDoSite(campos)
@@ -91,6 +168,8 @@ export default function ChatEquipe() {
             <p className="chatpag__sub">A conversa geral, para toda a equipe. O chat de cada obra fica dentro dela.</p>
           </div>
         </header>
+
+        <ConviteNotificacao />
 
         <div className="chatpag__caixa">
           <Conversa

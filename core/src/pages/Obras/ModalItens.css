@@ -23,8 +23,9 @@
   align-items: start;
 }
 
+/* o servico ocupa a linha inteira, com o texto no meio */
 .itens__servico {
-  max-width: 360px;
+  width: 100%;
 }
 
 /* ---------------- os tipos e as condicoes ---------------- */
@@ -627,10 +628,6 @@
 @media (max-width: 640px) {
   .itens__par {
     grid-template-columns: 1fr;
-  }
-
-  .itens__servico {
-    max-width: none;
   }
 
   .itens__legenda {

@@ -4,6 +4,7 @@ import { cargoPode, exige, exigeSessao, meuCargo, tratar } from '../sessao.js'
 import { enviarAviso, temEmail } from '../email.js'
 import { logger } from '../logger.js'
 import { descreverObra, registrarAtividade } from '../atividade.js'
+import { notificar, pessoasDosSetores, todosAtivos } from '../push.js'
 import { IMAGEM_INVALIDA, imagemValida } from '../utils/imagem.js'
 import {
   CONDICOES,
@@ -937,6 +938,79 @@ const paraMensagemSite = (l) => {
    mil mensagens para tras, e mandar todas engorda a resposta a toa. */
 const LIMITE_CHAT = 300
 
+/**
+ * A mensagem nova no celular de quem deve saber dela (server/push.js):
+ * `destinos` recebem "Fulano: texto"; quem foi citado com @ recebe
+ * "Fulano mencionou voce". Quem escreveu nao recebe nada.
+ */
+async function avisarNoCelular({ destinos, mencoes, linha, onde, url, tag }) {
+  const fala = linha.texto || (linha.arquivo_nome ? `enviou ${linha.arquivo_nome}` : 'enviou um arquivo')
+  const citados = (mencoes ?? []).map(String)
+  const autor = linha.usuario_id
+  await Promise.all([
+    notificar(
+      (destinos ?? []).map(String).filter((id) => !citados.includes(id)),
+      { titulo: onde, corpo: `${linha.autor_nome}: ${fala}`, url, tag },
+      { exceto: autor },
+    ),
+    notificar(citados, { titulo: `${linha.autor_nome} mencionou você`, corpo: `${onde}: ${fala}`, url, tag }, { exceto: autor }),
+  ])
+}
+
+/* ------------------------------------------------------------
+   Mensagens NAO LIDAS do chat da equipe (atualizacao 26)
+
+   chat_site_leitura guarda ate qual mensagem cada pessoa leu. As nao
+   lidas sao as de OUTRAS pessoas depois dela (as que a pessoa apagou
+   para si nao contam). Quem ainda nao tem linha comeca "em dia": a
+   primeira consulta grava a ultima mensagem de agora — senao, no dia
+   em que isto entrasse no ar, cada um teria 300 nao lidas.
+   ------------------------------------------------------------ */
+
+router.get('/chat/nao-lidas', exigeSessao, async (req, res) => {
+  try {
+    const { rows: leu } = await query('SELECT lido_ate FROM chat_site_leitura WHERE usuario_id = $1', [req.dono.sub])
+    if (!leu[0]) {
+      await query(
+        `INSERT INTO chat_site_leitura (usuario_id, lido_ate)
+         SELECT $1, coalesce(max(id), 0) FROM chat_site
+         ON CONFLICT (usuario_id) DO NOTHING`,
+        [req.dono.sub],
+      )
+      return res.json({ naoLidas: 0 })
+    }
+    const { rows } = await query(
+      `SELECT count(*)::int AS n FROM chat_site c
+        WHERE c.id > $2 AND c.usuario_id IS DISTINCT FROM $1 AND c.apagada_em IS NULL
+          AND NOT EXISTS (SELECT 1 FROM chat_site_oculta o WHERE o.mensagem_id = c.id AND o.usuario_id = $1)`,
+      [req.dono.sub, leu[0].lido_ate],
+    )
+    return res.json({ naoLidas: rows[0].n })
+  } catch (e) {
+    /* banco sem a atualizacao 26: o botao so nao mostra o numero */
+    if (e.code === '42P01' || e.code === '42703') return res.json({ naoLidas: 0 })
+    return tratar(e, res, 'dados/chat-nao-lidas')
+  }
+})
+
+/** { ateId } — li ate esta mensagem. So anda para a frente. */
+router.post('/chat/lido', exigeSessao, async (req, res) => {
+  const ateId = String(req.body?.ateId ?? '')
+  if (!/^\d+$/.test(ateId)) return res.status(400).json({ erro: 'Mensagem inválida.' })
+  try {
+    await query(
+      `INSERT INTO chat_site_leitura (usuario_id, lido_ate) VALUES ($1, $2)
+       ON CONFLICT (usuario_id) DO UPDATE
+          SET lido_ate = GREATEST(chat_site_leitura.lido_ate, EXCLUDED.lido_ate), atualizado_em = now()`,
+      [req.dono.sub, ateId],
+    )
+    return res.json({ ok: true })
+  } catch (e) {
+    if (e.code === '42P01') return res.json({ ok: true })
+    return tratar(e, res, 'dados/chat-lido')
+  }
+})
+
 router.get('/chat', exigeSessao, async (req, res) => {
   try {
     const [mensagens, mencoes] = await Promise.all([
@@ -1024,6 +1098,15 @@ router.post('/chat', exigeSessao, async (req, res) => {
         [rows[0].id, mencoes],
       )
     }
+
+    await avisarNoCelular({
+      destinos: await todosAtivos(),
+      mencoes,
+      linha: rows[0],
+      onde: 'Chat da equipe',
+      url: '/core/app/chat',
+      tag: 'chat-equipe',
+    })
 
     return res.status(201).json({
       mensagem: { ...paraMensagemSite(rows[0]), mencoes: mencoes.map(String) },
@@ -3334,6 +3417,19 @@ router.post('/obras/:id/avisos', exigeSessao, exige('enviar_avisos'), obraAberta
       return { enviados: 0, motivo: erro.message }
     })
 
+    /* e no celular de quem e dos setores avisados (menos quem mandou) */
+    const sobre = await descreverObra(req.params.id)
+    await notificar(
+      await pessoasDosSetores(setores),
+      {
+        titulo: `Aviso — ${[sobre.obra, sobre.cliente].filter(Boolean).join(' - ') || 'obra'}`,
+        corpo: mensagem || `Novo aviso da ${etapa}ª etapa.`,
+        url: `/core/app/obras/${req.params.id}`,
+        tag: `aviso-${rows[0].id}`,
+      },
+      { exceto: req.dono.sub },
+    )
+
     const nomesSetores = await query('SELECT nome FROM cargo WHERE chave = ANY($1)', [setores])
     await registrarAtividade(req, {
       acao: 'aviso.enviado',
@@ -3865,6 +3961,18 @@ router.post('/obras/:id/chat', exigeSessao, obraAberta, async (req, res) => {
         [rows[0].id, mencoes],
       )
     }
+
+    /* quem participa da obra recebe; quem foi citado recebe com o @ */
+    const membros = await query('SELECT usuario_id FROM obra_membro WHERE obra_id = $1', [req.params.id])
+    const { obra: proposta, cliente } = await descreverObra(req.params.id)
+    await avisarNoCelular({
+      destinos: membros.rows.map((l) => l.usuario_id),
+      mencoes,
+      linha: rows[0],
+      onde: `Chat da obra ${[proposta, cliente].filter(Boolean).join(' - ')}`.trim(),
+      url: `/core/app/obras/${req.params.id}`,
+      tag: `chat-obra-${req.params.id}`,
+    })
 
     return res.status(201).json({
       mensagem: { ...paraMensagem(rows[0]), mencoes: mencoes.map(String) },
