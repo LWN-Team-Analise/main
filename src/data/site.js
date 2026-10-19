@@ -49,37 +49,39 @@ export const hero = {
   emphasis: ['Salas Limpas', 'Gases Industriais'],
   // Segments marked `strong` are emphasised.
   description: [
-    { text: 'A LWN Engenharia é especialista em qualificação e certificação de' },
-    { text: 'salas limpas,', strong: true },
-    { text: 'Smoke Test, Gases Medicinais', strong: true },
-    { text: 'e' },
-    { text: 'Sistemas HVAC-R,', strong: true },
-    { text: 'garantindo qualidade, segurança e conformidade com as normas mais rigorosas.' },
+    { text: 'Atuamos na qualificação e certificação de' },
+    { text: 'ambientes controlados, ensaios técnicos', strong: true },
+    { text: 'e avaliação de' },
+    { text: 'sistemas HVAC-R e gases industriais,', strong: true },
+    { text: 'com foco em confiabilidade dos resultados, rastreabilidade e atendimento aos requisitos aplicáveis.' },
   ],
 };
 
 export const about = {
   eyebrow: 'Quem somos',
-  title:
-    'Referência nacional em Qualificação e Certificação de Salas limpas, Gases Medicinais, Smoke Test e sistemas HVAC-R',
+  title: 'Uma trajetória construída com conhecimento técnico, confiança e compromisso com a excelência.',
   paragraphs: [
-    'Desde 2014, a LWN Engenharia se consolidou como referência em certificação de salas limpas, oferecendo serviços especializados em Certificação, Qualificação e TAB de sistemas HVAC. Fundada por Willian Ito, a empresa destaca-se pela excelência técnica e pela integridade de dados, garantindo conformidade com as normas mais rigorosas do setor.',
-    'Com um sólido histórico de atendimento a mais de 50 clientes, a LWN reforça sua posição como líder no mercado de certificação de salas limpas. Em março de 2024, a Análise Consultoria e Testes de Sistemas de Ar passou a integrar o Grupo LWN Engenharia, formando uma das maiores especialistas em certificação de salas limpas e ensaios em HVAC-R do Brasil.',
-    'Hoje, o Grupo LWN Engenharia conta com mais de 30 colaboradores altamente capacitados, 10 conjuntos completos de instrumentos de medição e 28 anos de experiência acumulada. Atuamos com rigor técnico para atender às normas da ANVISA e aos padrões internacionais, oferecendo serviços eficientes e de alta qualidade.',
-    'Essa união fortalece nossa liderança e aumenta a confiança dos clientes, permitindo que continuemos a entregar soluções inovadoras e de excelência no setor.',
+    'Desde 2014, a LWN Engenharia constrói sua trajetória com foco em excelência técnica, confiabilidade e inovação. Fundada por Willian Ito, a empresa é especializada em qualificação e certificação de salas limpas, além de ensaios e serviços técnicos em sistemas HVAC-R, incluindo TAB. Sua atuação é pautada pelo rigor técnico, pela integridade dos dados e pelo compromisso com a segurança e a conformidade regulatória, atendendo às exigências de ambientes industriais controlados.',
+    'Com uma trajetória consolidada e mais de 50 clientes atendidos, a LWN Engenharia fortaleceu sua atuação no mercado de qualificação e certificação de salas limpas e sistemas HVAC-R.',
+    'Em março de 2024, a integração da Análise Consultoria e Testes de Sistemas de Ar ao Grupo LWN Engenharia marcou uma nova etapa de expansão, ampliando a capacidade técnica, operacional e a abrangência dos serviços oferecidos.',
+    'Atualmente, o Grupo reúne mais de 30 profissionais capacitados, mais de 15 conjuntos completos de instrumentos de medição e 28 anos de experiência acumulada. Essa estrutura sustenta uma atuação orientada pelo rigor técnico, pela integridade dos dados e pelo atendimento aos requisitos regulatórios da ANVISA e às normas internacionais aplicáveis.',
+    'Mais do que ampliar nossa estrutura, essa evolução reforça nosso compromisso com a confiabilidade dos resultados, a melhoria contínua e a excelência em cada entrega.',
   ],
-  // Milestones and figures quoted from the paragraphs above.
+  // The group's evolution, as in LWN's own "Evolução do Grupo" chart.
   timeline: [
-    { when: '2014', what: 'Fundação da LWN Engenharia por Willian Ito' },
-    { when: 'Mar. 2024', what: 'A Análise Consultoria e Testes de Sistemas de Ar passa a integrar o Grupo LWN Engenharia' },
-    { when: 'Hoje', what: 'Uma das maiores especialistas em certificação de salas limpas e ensaios em HVAC-R do Brasil' },
+    { when: '2014', what: 'Fundação da LWN Engenharia' },
+    { when: '2019', what: 'Expansão e estruturação da empresa' },
+    { when: '2023', what: 'Prestação de serviço na Geórgia, EUA' },
+    { when: '2024', what: 'Fusão com a Análise Consultoria' },
+    { when: '2025', what: 'Consolidação do grupo e +2 escritórios' },
+    { when: '2026', what: 'Abertura da Avanbio, pertencente ao grupo' },
   ],
   // The key-number counters of the official "Quem somos" block (lwnengenharia.com.br).
   stats: [
     { value: 100, label: ['Clientes', 'Ativos'] },
     { value: 30, label: ['Anos de', 'Experiência'] },
     { value: 1100, label: ['Serviços', 'Finalizados'] },
-    { value: 10, label: ['Conjuntos de', 'Instrumentos'] },
+    { value: 15, label: ['Conjuntos de', 'Instrumentos'] },
     { value: 30, label: ['Técnicos', 'Especializados'] },
   ],
 };
@@ -98,7 +100,7 @@ export const leaders = [
   { name: 'Willian Ito', role: 'Diretor Executivo', photo: '306a9888', linkedin: 'https://www.linkedin.com/in/willian-ito/' },
   { name: 'Rinaldo Almeida', role: 'Diretor Técnico', photo: '306a9762', linkedin: 'https://www.linkedin.com/in/rinaldo-almeida-0a855840/' },
   { name: 'Erinaldo Jatobá', role: 'Gerente de Operações', photo: '306a0065', linkedin: 'https://www.linkedin.com/in/erinaldo-jatob%C3%A1-573371173/' },
-  { name: 'Cassio Mendonça', role: 'Gerente Comercial', photo: '306a0026', linkedin: 'https://www.linkedin.com/in/cassiocmendonca/' },
+  { name: 'Cassio Mendonça', role: 'Gerente Comercial', photo: '306a0026', linkedin: 'https://www.linkedin.com/in/cassiomendonca/' },
   { name: 'Fabio Santos', role: 'Gerente de Operações', photo: '306a0110' },
   { name: 'Roberto Damasco', role: 'Coordenador Técnico', photo: 'roberto', linkedin: 'https://www.linkedin.com/in/roberto-fonseca-damasco-0685512a1/' },
 ];
@@ -107,18 +109,18 @@ export const leaderPhoto = (id, size) => `/assets/leaders/${id}-${size}.webp`;
 
 export const services = {
   intro:
-    'Ambientes controlados exigem mais do que equipamentos: exigem precisão, rastreabilidade e um compromisso rigoroso com normas nacionais e internacionais.',
+    'Ambientes controlados exigem precisão, confiabilidade e atendimento a requisitos técnicos rigorosos. A LWN Engenharia oferece soluções especializadas para assegurar o desempenho dos sistemas, a rastreabilidade dos resultados e a conformidade com as normas aplicáveis.',
   groups: [
     {
       id: 'certificacao',
       title: 'Certificação & Qualificação',
       summary:
-        'Portfólio completo de serviços voltados à certificação e qualificação de salas limpas, equipamentos de ar limpo e sistemas HVAC-R — desde o desenvolvimento de protocolos QI, QO e QP até contratos de requalificação contínua.',
+        'Serviços especializados em qualificação e certificação de salas limpas, equipamentos de ar limpo e sistemas HVAC-R, incluindo ensaios técnicos, elaboração e execução de protocolos de qualificação e programas de requalificação periódica.',
       items: [
-        { title: 'Salas limpas e ambientes controlados', text: 'Qualificação e manutenção com foco em performance, segurança e conformidade.' },
-        { title: 'Equipamentos de ar limpo', text: 'Ensaios em filtros, capelas, cabines e UTAs para garantir pureza e controle do ar.' },
-        { title: 'Protocolos QI, QO, QP', text: 'Desenvolvimento e execução de protocolos de Instalação, Operação e Performance.' },
-        { title: 'Contratos de requalificação', text: 'Planos sob medida para manter ambientes qualificados com suporte técnico contínuo.' },
+        { title: 'Salas limpas e ambientes controlados', text: 'Ensaios e qualificações para avaliação das condições ambientais e atendimento aos requisitos aplicáveis.' },
+        { title: 'Equipamentos de ar limpo', text: 'Ensaios técnicos em filtros, capelas, cabines e unidades de tratamento de ar, conforme o escopo de cada equipamento.' },
+        { title: 'Protocolos QI, QO e QP', text: 'Elaboração e execução de protocolos de qualificação de instalação, operação e desempenho.' },
+        { title: 'Contratos de requalificação', text: 'Programas periódicos de requalificação, estruturados conforme as necessidades operacionais e regulatórias de cada cliente.' },
       ],
     },
     {
@@ -127,30 +129,30 @@ export const services = {
       summary:
         'Ensaios que seguem rigorosos padrões técnicos e legislações vigentes, como a Instrução Técnica IT-13 do Corpo de Bombeiros — da fase de instalação até a validação final.',
       items: [
-        { title: 'TAB', text: 'Balanceamento de sistemas de ar para desempenho ideal de climatização e ventilação.' },
-        { title: 'Ensaios de fumaça (Smoke Test)', text: 'Avaliação visual da movimentação do ar e detecção de falhas em ambientes críticos.' },
-        { title: 'Pressurização de escadas', text: 'Ensaios conforme a IT-13 para segurança em emergências.' },
-        { title: 'Vazamento em dutos', text: 'Detecção de perdas para garantir estanqueidade e eficiência.' },
-        { title: 'Mapeamento térmico', text: 'Análise de temperatura em câmaras e ambientes para controle térmico preciso.' },
+        { title: 'TAB — Teste, Ajuste e Balanceamento', text: 'Avaliação e ajuste de vazões de ar para o balanceamento e desempenho dos sistemas de climatização e ventilação.' },
+        { title: 'Ensaios de fumaça (Smoke Test)', text: 'Visualização dos padrões de fluxo de ar para avaliação do comportamento aerodinâmico em ambientes controlados.' },
+        { title: 'Pressurização de escadas', text: 'Ensaios de desempenho dos sistemas de pressurização, conforme os requisitos técnicos e regulamentares aplicáveis.' },
+        { title: 'Ensaios de estanqueidade em dutos', text: 'Avaliação de vazamentos em redes de dutos para verificação das condições de estanqueidade.' },
+        { title: 'Mapeamento térmico', text: 'Monitoramento e análise da distribuição de temperatura em ambientes e equipamentos com condições térmicas controladas.' },
       ],
     },
     {
       id: 'consultoria',
       title: 'Consultoria e Projetos HVAC',
       summary:
-        'Soluções personalizadas para que sistemas de climatização e ventilação atendam às exigências normativas e às demandas operacionais de cada cliente, com foco em eficiência energética e alto desempenho.',
+        'Desenvolvemos soluções de engenharia e consultoria para sistemas HVAC, considerando os requisitos técnicos, regulatórios e operacionais de cada projeto, com foco em desempenho, eficiência e confiabilidade.',
       items: [
-        { title: 'Retrofit de sistemas HVAC', text: 'Modernização completa com foco em desempenho, economia e aderência às normas.' },
-        { title: 'Projetos técnicos e memoriais descritivos', text: 'Elaboração clara, rastreável e totalmente em conformidade com os requisitos regulatórios.' },
-        { title: 'Equipe residente no cliente', text: 'Profissionais dedicados, atuando diretamente no campo para suporte contínuo e integração com a rotina da planta.' },
-        { title: 'Soluções para o Anexo 1 da GMP', text: 'Consultoria especializada e implementação de práticas conforme as diretrizes atualizadas da indústria farmacêutica.' },
+        { title: 'Retrofit de sistemas HVAC', text: 'Modernização de sistemas existentes para aprimorar o desempenho, a eficiência operacional e a adequação aos requisitos aplicáveis.' },
+        { title: 'Projetos técnicos e memoriais descritivos', text: 'Desenvolvimento de projetos e documentação técnica, considerando critérios de engenharia, requisitos normativos e necessidades operacionais.' },
+        { title: 'Equipe técnica residente', text: 'Disponibilização de profissionais especializados para suporte técnico contínuo e acompanhamento das atividades nas instalações do cliente.' },
+        { title: 'Consultoria para atendimento ao Anexo 1 das GMP', text: 'Avaliação técnica e suporte à adequação de ambientes e sistemas críticos aos requisitos aplicáveis do Anexo 1 das GMP.' },
       ],
     },
     {
       id: 'gases',
       title: 'Qualificação de Gases',
       summary:
-        'Impurezas, contaminantes microbiológicos, umidade, partículas sólidas ou resíduos de óleo nos gases podem comprometer a qualidade dos produtos, a segurança dos processos e a saúde dos pacientes.',
+        'Realizamos ensaios e qualificação de gases utilizados em processos industriais e ambientes controlados, avaliando parâmetros de qualidade conforme a aplicação, os requisitos técnicos e as normas aplicáveis. Nossa atuação contribui para a confiabilidade dos sistemas e a segurança dos processos.',
       gases: ['Ar comprimido', 'Ar respirável', 'Nitrogênio', 'Oxigênio', 'Dióxido de carbono', 'Hidrogênio', 'Hélio', 'Acetileno', 'Argônio'],
       norms: ['ANVISA', 'RDC 658/2022', 'ISO 8573', 'BPF'],
       items: [

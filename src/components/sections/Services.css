@@ -64,20 +64,16 @@
   letter-spacing: 0.04em;
 }
 
+/* The way into the /gases page: a solid button, so it stands out in the group. */
 .service__link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
   justify-self: start;
-  padding: 10px 0;
-  border-bottom: 1px solid currentColor;
-  color: var(--c-blue-700);
-  font-weight: 600;
-  transition: gap 0.25s var(--ease-out);
-}
-
-.service__link:hover {
-  gap: 12px;
+  max-width: 100%;
+  height: auto;
+  min-height: 48px;
+  margin-top: 0.5rem;
+  padding-block: 12px;
+  white-space: normal;
+  box-shadow: 0 14px 30px -18px rgba(8, 20, 48, 0.7);
 }
 
 /* ---------- Items ---------- */

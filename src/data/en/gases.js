@@ -3,8 +3,10 @@
 export const gasesPage = {
   eyebrow: 'LWN now also validates industrial gases',
   title: 'Certification and Qualification of Industrial Gases with Technical Excellence',
-  lead:
-    'We offer specialized gas certification and qualification services, ensuring the safety, quality and compliance of our clients’ industrial processes. With advanced technology and an experienced technical team, we deliver accurate and reliable results, in compliance with current standards.',
+  lead: [
+    'LWN Engenharia offers specialized solutions for the qualification and certification of industrial gases, focused on assessing quality parameters, on reliable results and on meeting the applicable technical and regulatory requirements.',
+    'With specialized professionals and suitable measuring instruments, we help control risks and ensure operational safety and the quality of industrial processes.',
+  ],
   gases: ['Compressed air', 'Breathing air', 'Nitrogen', 'Oxygen', 'Carbon dioxide', 'Hydrogen', 'Helium', 'Acetylene', 'Argon'],
   norms: ['ANVISA', 'RDC 658/2022', 'ISO 8573', 'GMP'],
   why: {

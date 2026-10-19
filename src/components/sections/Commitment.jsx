@@ -35,7 +35,7 @@ export default function Commitment() {
             </Reveal>
           ))}
           <Reveal className="commitment__tags" delay={0.12}>
-            <span className="commitment__tag commitment__tag--strong">ANVISA</span>
+            <span className="commitment__tag">ANVISA</span>
             <span className="commitment__tag">{t.commitment.standards}</span>
             {commitment.sectors.map((sector) => (
               <span key={sector} className="commitment__tag">

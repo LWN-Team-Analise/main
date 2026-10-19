@@ -89,7 +89,7 @@
 
 .timeline__item {
   display: grid;
-  grid-template-columns: 7.5rem minmax(0, 1fr);
+  grid-template-columns: 5rem minmax(0, 1fr);
   gap: 1.25rem;
   align-items: baseline;
   padding: 1rem 0;
@@ -220,9 +220,11 @@
 }
 
 @media (max-width: 479px) {
+  /* The milestones are years, so the two columns still fit on a phone. */
   .timeline__item {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.35rem;
+    grid-template-columns: 3.25rem minmax(0, 1fr);
+    gap: 0.75rem;
+    padding: 0.85rem 0;
   }
 
   .stat {

@@ -6,12 +6,12 @@
    that same dark look. Everything transitions smoothly while scrolling.
 ------------------------------------------------------------------- */
 
-/* Over dark bands (the hero video, commitment, contact…) the glass stays
-   clear and smoky. */
+/* Over dark bands (the hero video, commitment, contact…) the glass is a deep,
+   nearly solid smoke: the video only glows through, and the white ink stays sharp. */
 .site-header {
   --glass-ink: #fff;
   --glass-ink-soft: rgba(255, 255, 255, 0.74);
-  --glass-tint: rgba(22, 28, 42, 0.34);
+  --glass-tint: rgba(16, 22, 36, 0.76);
   --glass-rim: rgba(255, 255, 255, 0.55);
   --glass-hover: rgba(255, 255, 255, 0.12);
   --glass-active: rgba(255, 255, 255, 0.16);
@@ -26,7 +26,7 @@
 }
 
 .site-header[data-scrolled] {
-  --glass-tint: rgba(22, 28, 42, 0.44);
+  --glass-tint: rgba(16, 22, 36, 0.84);
 }
 
 /* Over a light section the same glass takes more body, so it keeps its deep
@@ -134,7 +134,7 @@
 .site-header__logo {
   display: block;
   width: auto;
-  height: 38px;
+  height: 46px;
 }
 
 .site-header__nav {
@@ -381,7 +381,7 @@
   }
 
   .site-header__logo {
-    height: 32px;
+    height: 38px;
   }
 
   .site-header__social,

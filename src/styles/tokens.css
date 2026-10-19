@@ -30,7 +30,7 @@
   /* Side margin of the page: ~20px on the narrowest phones, 22–24px on common
      ones, up to 40px on large screens. Every section and component sits inside it. */
   --gutter: clamp(20px, 5.6vw, 40px);
-  --header-h: 64px;
+  --header-h: 70px;
   --header-top: 12px;
   --section-y: clamp(5rem, 11vw, 9rem);
 
@@ -47,7 +47,7 @@
 
 @media (max-width: 639px) {
   :root {
-    --header-h: 58px;
+    --header-h: 60px;
     --header-top: 10px;
   }
 }
