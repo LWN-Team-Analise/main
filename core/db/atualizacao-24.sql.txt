@@ -1,0 +1,52 @@
+-- ============================================================
+--  ATUALIZACAO 24 — O HISTORICO DE DESPESAS DO SHAREPOINT
+--
+--  As despesas, refeicoes e bonus de antes do sistema vinham de tres
+--  listas do SharePoint ("Despesas.xlsx"). Elas entram em
+--  despesa_envio pelo server/scripts/importar-despesas.js, e duas
+--  colunas novas guardam o que a planilha tinha e o sistema nao:
+--
+--    cliente_texto   o "Cliente/Obra" como a pessoa escreveu
+--                    ("Apsen - São Paulo/SP"). Quando o cliente existe
+--                    no cadastro, o envio tambem aponta para ele
+--                    (cliente_id); quando nao existe, e o texto que a
+--                    tela mostra. Os envios feitos no sistema deixam
+--                    a coluna vazia.
+--    planilha_chave  a impressao digital da linha da planilha. Rodar a
+--                    importacao de novo nao duplica nada.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao apaga nada.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.despesa_envio ADD COLUMN IF NOT EXISTS cliente_texto text;
+ALTER TABLE public.despesa_envio ADD COLUMN IF NOT EXISTS planilha_chave text;
+
+ALTER TABLE public.despesa_envio DROP CONSTRAINT IF EXISTS despesa_envio_cliente_texto_tam;
+ALTER TABLE public.despesa_envio ADD CONSTRAINT despesa_envio_cliente_texto_tam
+    CHECK (cliente_texto IS NULL OR char_length(cliente_texto) <= 300);
+
+CREATE UNIQUE INDEX IF NOT EXISTS despesa_envio_planilha_un
+    ON public.despesa_envio (planilha_chave) WHERE planilha_chave IS NOT NULL;
+
+COMMENT ON COLUMN public.despesa_envio.cliente_texto IS
+    'O Cliente/Obra como estava escrito na planilha do SharePoint. Vazio nos envios feitos no sistema.';
+COMMENT ON COLUMN public.despesa_envio.planilha_chave IS
+    'Impressao digital da linha da planilha importada (importar-despesas.js); impede duplicar.';
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" nas duas linhas
+-- ============================================================
+
+SELECT 'despesa_envio.cliente_texto' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'despesa_envio' AND column_name = 'cliente_texto') AS ok
+UNION ALL SELECT 'despesa_envio.planilha_chave',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'despesa_envio' AND column_name = 'planilha_chave');

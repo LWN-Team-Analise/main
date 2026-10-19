@@ -1,7 +1,8 @@
 import { Router } from 'express'
-import { pool, query } from '../db.js'
+import { emTransacao, query } from '../db.js'
 import { exige, exigeSessao, tratar } from '../sessao.js'
 import { registrarAtividade } from '../atividade.js'
+import { logger } from '../logger.js'
 /* as perguntas, as posicoes das fotos e os limites sao os MESMOS da
    tela: um arquivo so, sem React dentro, importado pelos dois lados */
 import {
@@ -20,6 +21,7 @@ import {
   lerSimNao,
 } from '../../src/domain/frotas.js'
 import { AREA, HORARIOS, finaisDoDia } from '../../src/domain/rodizio.js'
+import { CORREDORES, MUNICIPIOS_RMSP, REGIOES, nivelPelaVelocidade } from '../../src/domain/transito.js'
 
 /* ============================================================
    FROTAS — /api/frotas
@@ -486,25 +488,6 @@ async function gravarFotos(cliente, registroId, fotos) {
 async function lerUmRegistro(id) {
   const { rows } = await query(`${CONSULTA_REGISTROS} SELECT * FROM base WHERE id = $1`, [id])
   return rows[0] ? paraRegistro(rows[0]) : null
-}
-
-/**
- * Roda `gravar` numa transacao: ou entra o registro, as fotos e o KM
- * novo do veiculo, ou nada entra.
- */
-async function emTransacao(gravar) {
-  const cliente = await pool.connect()
-  try {
-    await cliente.query('BEGIN')
-    const resultado = await gravar(cliente)
-    await cliente.query('COMMIT')
-    return resultado
-  } catch (erro) {
-    await cliente.query('ROLLBACK').catch(() => {})
-    throw erro
-  } finally {
-    cliente.release()
-  }
 }
 
 /* ------------------------------------------------------------
@@ -1120,6 +1103,269 @@ router.get('/rodizio', exigeSessao, exige(VER), async (_req, res) => {
   } catch (erro) {
     return falhou(erro, res, 'frotas/rodizio')
   }
+})
+
+/* ============================================================
+   AS CONDICOES DA GRANDE SAO PAULO — GET /condicoes
+
+     transito  TomTom (Traffic Flow): o nivel do transito — Livre,
+               Moderado, Intenso, Muito intenso — de cada corredor da
+               regiao metropolitana, por sentido, e de cada regiao
+               (Capital, Norte, Leste, ABC, Oeste, Sudoeste). Precisa
+               da chave TOMTOM_KEY; sem ela vem `erro` e o painel
+               mostra so a CET.
+     cet       CET (cetsp.com.br): o quadro "Transito Agora" da pagina
+               inicial — km de LENTIDAO (vias paradas ou lentas) por
+               zona da capital, a parte de cada uma no total e se esta
+               subindo, estavel ou caindo. So a capital.
+     alertas   INMET (apiprevmet3.inmet.gov.br/avisos/ativos): os
+               avisos meteorologicos oficiais em vigor (tempestade,
+               chuvas intensas, ventos...), os mesmos que a Defesa Civil
+               divulga. Filtrados para os 39 municipios da regiao
+               metropolitana (MUNICIPIOS_RMSP), com as cidades que cada
+               um pega; o mesmo aviso em graus diferentes no mesmo dia
+               (uma parte em "Perigo", outra em "Perigo potencial")
+               vira um so, com o grau mais alto.
+     cge       CGE da Prefeitura (cgesp.org): os pontos de alagamento
+               ativos, o estado de atencao/alerta (quando ha) e o
+               potencial de tempestade de cada periodo do dia. So a
+               capital: os outros municipios nao publicam isso.
+
+   Cada uma fica alguns minutos na memoria, e cada uma pode falhar
+   sozinha: a resposta traz `erro` na que nao respondeu e as outras
+   seguem. Como CET e CGE sao paginas, e nao API, uma mudanca no site
+   deles pode exigir ajuste aqui — o painel mostra o recado em vez de
+   dado errado.
+   ============================================================ */
+
+const condicoesEmCache = new Map()
+
+async function lembrar(chave, minutos, buscar) {
+  const guardado = condicoesEmCache.get(chave)
+  if (guardado && guardado.ate > Date.now()) return guardado.valor
+  try {
+    const valor = { ...(await buscar()), consultadoEm: new Date().toISOString() }
+    condicoesEmCache.set(chave, { valor, ate: Date.now() + minutos * 60 * 1000 })
+    return valor
+  } catch (erro) {
+    logger.warn('frotas/condicoes', `${chave}: ${erro.message}`)
+    /* a ultima resposta boa, se houver, vale mais que nada */
+    if (guardado) return { ...guardado.valor, antigo: true }
+    return { erro: erro.publico ?? 'Fonte indisponível agora. Tente de novo em alguns minutos.' }
+  }
+}
+
+async function baixar(url, comoTexto = true) {
+  const resposta = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (Atmosfera LWN)', Accept: comoTexto ? 'text/html' : 'application/json' },
+    signal: AbortSignal.timeout(10000),
+  })
+  if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`)
+  return comoTexto ? resposta.text() : resposta.json()
+}
+
+const TENDENCIA = { ALTA: 'subindo', ESTAVEL: 'estável', BAIXA: 'caindo' }
+
+async function transitoDaCet() {
+  const html = await baixar('https://www.cetsp.com.br/')
+  const regioes = []
+  const padrao =
+    /class="info (\w+)">\s*<h3>([^<]+)<\/h3>\s*<h4>([\d.,]+)\s*km<\/h4>[\s\S]*?class="desc">\s*\(([\d.,]+)%\)\s*<img[^>]*ico\/(\w+)\.gif/g
+  for (const m of html.matchAll(padrao)) {
+    regioes.push({
+      chave: m[1].toLowerCase(),
+      nome: m[2].trim(),
+      km: Number(m[3].replace(/\./g, '').replace(',', '.')),
+      parte: Number(m[4].replace(',', '.')),
+      tendencia: TENDENCIA[m[5].toUpperCase()] ?? null,
+    })
+  }
+  if (regioes.length === 0) throw new Error('o quadro "Trânsito Agora" da CET mudou de formato')
+  return { regioes, total: regioes.reduce((s, r) => s + r.km, 0), fonte: 'CET' }
+}
+
+/* ------------------------------------------------------------
+   Transito da GRANDE SAO PAULO (TomTom)
+
+   Para cada corredor (domain/transito.js), um ponto em cada pista:
+   o Traffic Flow do TomTom devolve a velocidade de agora e a sem
+   transito daquele trecho, e a regua de domain/transito.js diz o
+   nivel. A regiao leva o nivel da media dos trechos dela.
+
+   O plano gratis do TomTom da 2.500 consultas por dia, e cada
+   atualizacao gasta uma por ponto (~40). Por isso fica 20 minutos na
+   memoria e so e buscado quando alguem abre a aba. A chave fica em
+   TOMTOM_KEY (no .env e na Vercel).
+   ------------------------------------------------------------ */
+
+const recusado = (mensagem, publico) => Object.assign(new Error(mensagem), { publico })
+
+async function velocidadeNoPonto(chave, ponto) {
+  const url =
+    'https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/18/json' +
+    `?unit=KMPH&point=${ponto.lat},${ponto.lon}&key=${encodeURIComponent(chave)}`
+  const resposta = await fetch(url, { signal: AbortSignal.timeout(8000) })
+  if (resposta.status === 429) {
+    throw recusado('TomTom 429', 'O limite diário de consultas do TomTom acabou. Volta a funcionar amanhã.')
+  }
+  if (resposta.status === 401 || resposta.status === 403) {
+    throw recusado(`TomTom ${resposta.status}`, 'A chave do TomTom foi recusada. Confira TOMTOM_KEY.')
+  }
+  if (!resposta.ok) throw new Error(`TomTom HTTP ${resposta.status}`)
+  const f = (await resposta.json())?.flowSegmentData
+  if (!f || !(f.freeFlowSpeed > 0)) throw new Error('TomTom sem dados no ponto')
+  return {
+    atual: Math.round(f.currentSpeed),
+    semTransito: Math.round(f.freeFlowSpeed),
+    interditado: f.roadClosure === true,
+    nivel: nivelPelaVelocidade(f.currentSpeed, f.freeFlowSpeed, f.roadClosure === true),
+  }
+}
+
+/** Roda `fazer` em cada item, `juntos` de cada vez (o TomTom limita por segundo). */
+async function emLotes(itens, juntos, fazer) {
+  const saida = new Array(itens.length)
+  let proximo = 0
+  const trabalhador = async () => {
+    while (proximo < itens.length) {
+      const i = proximo++
+      saida[i] = await fazer(itens[i]).then(
+        (valor) => ({ valor }),
+        (erro) => ({ erro }),
+      )
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(juntos, itens.length) }, trabalhador))
+  return saida
+}
+
+async function transitoDaRegiao() {
+  const chave = process.env.TOMTOM_KEY
+  if (!chave) throw recusado('sem TOMTOM_KEY', 'O trânsito da região metropolitana ainda não foi configurado (TOMTOM_KEY).')
+
+  const pontos = CORREDORES.flatMap((c) => c.pontos.map((p) => ({ corredor: c, ...p })))
+  /* limite estourado ou chave recusada: para de gastar consulta nos outros pontos */
+  let parou = null
+  const lidos = await emLotes(pontos, 4, async (p) => {
+    if (parou) throw parou
+    try {
+      return await velocidadeNoPonto(chave, p)
+    } catch (erro) {
+      if (erro.publico) parou = erro
+      throw erro
+    }
+  })
+
+  /* limite ou chave recusada: o motivo vale mais que "indisponivel" */
+  const recusa = lidos.find((l) => l.erro?.publico)?.erro
+  if (recusa && lidos.every((l) => l.erro)) throw recusa
+  if (lidos.every((l) => l.erro)) throw lidos[0].erro
+
+  const corredores = CORREDORES.map((c) => ({
+    id: c.id,
+    nome: c.nome,
+    regiao: c.regiao,
+    sentidos: [],
+  }))
+  const porId = Object.fromEntries(corredores.map((c) => [c.id, c]))
+  const razoes = {}
+  pontos.forEach((p, i) => {
+    const lido = lidos[i].valor
+    if (!lido) return
+    porId[p.corredor.id].sentidos.push({ sentido: p.sentido, ...lido })
+    ;(razoes[p.corredor.regiao] ??= []).push(lido.interditado ? 0 : Math.min(1, lido.atual / lido.semTransito))
+  })
+
+  const regioes = REGIOES.map((r) => {
+    const lista = razoes[r.id] ?? []
+    const media = lista.length ? lista.reduce((s, x) => s + x, 0) / lista.length : null
+    return {
+      id: r.id,
+      nome: r.nome,
+      cidades: r.cidades,
+      nivel: media === null ? null : nivelPelaVelocidade(media, 1),
+      trechos: lista.length,
+    }
+  })
+
+  return {
+    regioes,
+    corredores: corredores.filter((c) => c.sentidos.length > 0),
+    faltaram: lidos.filter((l) => l.erro).length,
+    fonte: 'TomTom',
+  }
+}
+
+const GRAU = { 'Perigo Potencial': 1, Perigo: 2, 'Grande Perigo': 3 }
+
+/* os avisos do INMET que pegam algum municipio da regiao metropolitana */
+async function alertasDoInmet() {
+  const dados = await baixar('https://apiprevmet3.inmet.gov.br/avisos/ativos', false)
+  const naRegiao = [...(dados.hoje ?? []), ...(dados.futuro ?? [])]
+    .map((a) => ({
+      ...a,
+      cidades: String(a.geocodes ?? '')
+        .split(',')
+        .map((g) => MUNICIPIOS_RMSP[g.trim()])
+        .filter(Boolean),
+    }))
+    .filter((a) => a.cidades.length > 0)
+  /* um por aviso e dia, com o grau mais alto e as cidades de todos os graus */
+  const porChave = new Map()
+  for (const a of naRegiao) {
+    const chave = `${a.descricao}|${String(a.inicio ?? '').slice(0, 10)}`
+    const atual = porChave.get(chave)
+    const cidades = new Set([...(atual?.cidades ?? []), ...a.cidades])
+    const vence = !atual || (GRAU[a.severidade] ?? 0) > (GRAU[atual.severidade] ?? 0)
+    porChave.set(chave, { ...(vence ? a : atual), cidades: [...cidades] })
+  }
+  const ordemDasCidades = Object.values(MUNICIPIOS_RMSP)
+  const avisos = [...porChave.values()]
+    .sort((x, y) => String(x.inicio).localeCompare(String(y.inicio)) || (GRAU[y.severidade] ?? 0) - (GRAU[x.severidade] ?? 0))
+    .map((a) => ({
+      descricao: a.descricao,
+      severidade: a.severidade,
+      cor: /^#[0-9a-f]{6}$/i.test(a.aviso_cor ?? '') ? a.aviso_cor : null,
+      inicio: a.inicio,
+      fim: a.fim,
+      /* Sao Paulo primeiro, depois na ordem da lista */
+      cidades: [...a.cidades].sort((x, y) => ordemDasCidades.indexOf(x) - ordemDasCidades.indexOf(y)),
+      riscos: (a.riscos ?? []).map((r) => String(r).trim()).filter(Boolean),
+      instrucoes: (a.instrucoes ?? []).map((r) => String(r).trim()).filter(Boolean),
+    }))
+  return { avisos, fonte: 'INMET' }
+}
+
+async function situacaoDoCge() {
+  const html = await baixar('https://www.cgesp.org/v3/')
+  const texto = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+  const alagamentos = texto.match(/Pontos de Alagamento:\s*(\d+)\s*ativos?/i)
+  if (!alagamentos) throw new Error('a página do CGE mudou de formato')
+  const potencial = [...texto.matchAll(/(Madrug\.|Manh[ãa]|Tarde|Noite)\s+.{0,60}?PT:\s*(Muito alto|Baixo|Moderado|Alto)/gi)].map(
+    (m) => ({ periodo: m[1].startsWith('Madrug') ? 'Madrugada' : m[1], nivel: m[2] }),
+  )
+  const estado = texto.match(/Estado de (Alerta M[áa]ximo|Alerta|Aten[çc][ãa]o)/i)
+  return {
+    alagamentos: Number(alagamentos[1]),
+    estado: estado ? `Estado de ${estado[1]}` : null,
+    potencial: potencial.slice(0, 4),
+    fonte: 'CGE',
+  }
+}
+
+router.get('/condicoes', exigeSessao, exige(VER), async (_req, res) => {
+  const [transito, cet, alertas, cge] = await Promise.all([
+    lembrar('transito', 20, transitoDaRegiao),
+    lembrar('cet', 5, transitoDaCet),
+    lembrar('alertas', 10, alertasDoInmet),
+    lembrar('cge', 10, situacaoDoCge),
+  ])
+  return res.json({ transito, cet, alertas, cge })
 })
 
 export default router

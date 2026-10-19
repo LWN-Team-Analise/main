@@ -16,6 +16,7 @@
    ============================================================ */
 
 import { podeFazer } from './permissoes'
+import { resumoDasLinhas } from './itensEnsaio'
 
 export const PRIORIDADES = [
   { id: 'baixa', rotulo: 'Baixa' },
@@ -535,7 +536,13 @@ export function progressoExecucao(obra, nomeDoEnsaio = (id) => id) {
       dias,
     }
   })
-  const geral = Math.round(itens.reduce((soma, i) => soma + i.percentual, 0) / itens.length)
+  /* na obra que planeja por item a execucao inteira e a parte das
+     LINHAS feitas (cada linha pesa igual), e nao a media dos ensaios */
+  const linhas = resumoDasLinhas(obra.itens)
+  const geral =
+    linhas.total > 0
+      ? linhas.percentual
+      : Math.round(itens.reduce((soma, i) => soma + i.percentual, 0) / itens.length)
   const dias = [...new Set(itens.flatMap((i) => i.dias.map((d) => d.dia)))].sort()
   return { itens, geral, dias, completo: itens.every((i) => i.percentual >= 100) }
 }

@@ -153,6 +153,17 @@ export const planejarEnsaios = (obraId, ensaioIds, concluir = false) =>
 export const registrarExecucaoDia = (obraId, dia, valores) =>
   put(`/dados/obras/${obraId}/execucao/dia`, { dia, valores })
 
+/**
+ * O planejamento POR ITEM (atualizacao 25): { servico, itens: [{ id?, tipo,
+ * nome, tag, classe, gas, observacao, ensaios: [{ ensaioId, condicoes }] }] }.
+ * `concluir` ja marca o check.
+ */
+export const planejarItens = (obraId, campos, concluir = false) =>
+  put(`/dados/obras/${obraId}/planejamento-itens`, { ...campos, concluir })
+
+/** O resultado de linhas: [{ id, data, resultado, conforme, observacao }] ou [{ id, apagar: true }]. */
+export const registrarLinhas = (obraId, linhas) => put(`/dados/obras/${obraId}/execucao-itens`, { linhas })
+
 export const criarEnsaio = (campos) => post('/dados/ensaios', campos)
 export const editarEnsaio = (id, campos) => patch(`/dados/ensaios/${id}`, campos)
 export const apagarEnsaio = (id) => del(`/dados/ensaios/${id}`)

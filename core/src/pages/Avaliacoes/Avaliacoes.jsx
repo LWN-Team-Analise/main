@@ -14,8 +14,10 @@ import { dataBR, dataHora } from '@/utils/formato'
 const soDia = (valor) => (valor ? String(valor).slice(0, 10) : null)
 import './Avaliacoes.css'
 
+/* A tela abre no que pede acao — as obras ainda sem nota. As avaliadas
+   so aparecem no filtro delas: misturadas, empurravam as pendentes para
+   baixo e a lista virava arquivo. */
 const FILTROS = [
-  { valor: 'todas', rotulo: 'Todas' },
   { valor: 'sem', rotulo: 'Sem avaliação' },
   { valor: 'com', rotulo: 'Avaliadas' },
 ]
@@ -52,23 +54,20 @@ const Lixo = () => (
  */
 export default function Avaliacoes() {
   const { obras, clientePorId, pessoaPorId } = useDados()
-  const [filtro, setFiltro] = useState('todas')
+  const [filtro, setFiltro] = useState('sem')
   const [abrindo, setAbrindo] = useState(null)
 
-  const lista = useMemo(() => {
-    const filtradas = obras.filter((o) => {
-      if (filtro === 'sem') return !o.avaliacao
-      if (filtro === 'com') return Boolean(o.avaliacao)
-      return true
-    })
-    // sem avaliacao primeiro: sao as que pedem acao
-    return [...filtradas].sort((a, b) => {
-      if (Boolean(a.avaliacao) !== Boolean(b.avaliacao)) return a.avaliacao ? 1 : -1
-      return String(b.criadoEm).localeCompare(String(a.criadoEm))
-    })
-  }, [obras, filtro])
+  /* da obra cadastrada por ultimo ate a primeira */
+  const lista = useMemo(
+    () =>
+      obras
+        .filter((o) => (filtro === 'com' ? Boolean(o.avaliacao) : !o.avaliacao))
+        .sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm))),
+    [obras, filtro],
+  )
 
   const avaliadas = obras.filter((o) => o.avaliacao)
+  const contagem = { sem: obras.length - avaliadas.length, com: avaliadas.length }
   const media =
     avaliadas.length > 0
       ? avaliadas.reduce((soma, o) => soma + Number(o.avaliacao.nota), 0) / avaliadas.length
@@ -98,13 +97,15 @@ export default function Avaliacoes() {
               className={`chip ${filtro === f.valor ? 'is-atual' : ''}`.trim()}
               onClick={() => setFiltro(f.valor)}
             >
-              {f.rotulo}
+              {f.rotulo} ({contagem[f.valor]})
             </button>
           ))}
         </div>
 
         {lista.length === 0 ? (
-          <p className="avaliacoes__vazio">Nenhuma obra nesta seleção.</p>
+          <p className="avaliacoes__vazio">
+            {filtro === 'com' ? 'Nenhuma obra avaliada ainda.' : 'Todas as obras já foram avaliadas.'}
+          </p>
         ) : (
           <ul className="avaliacoes__grade">
             {lista.map((obra) => (

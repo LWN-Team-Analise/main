@@ -1,0 +1,663 @@
+/* ============================================================
+   Ensaios POR ITEM: o Planejamento (os itens da obra e os ensaios de
+   cada um) e a Execucao por linha (o resultado de cada item + ensaio
+   + condicao). Os dois pop-ups dividem este arquivo e usam as pecas
+   de ModalEnsaios.css (o aviso, o contador, a barra, o periodo).
+   ============================================================ */
+
+.itens {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.itens--editor {
+  gap: 16px;
+}
+
+/* dois campos lado a lado; no celular, um embaixo do outro */
+.itens__par {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.itens__servico {
+  max-width: 360px;
+}
+
+/* ---------------- os tipos e as condicoes ---------------- */
+
+.itens__tipo {
+  flex-shrink: 0;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+
+.itens__tipo[data-tipo='ambiente'] {
+  background: var(--quadro-ok-bg);
+  box-shadow: inset 0 0 0 1px var(--quadro-ok-borda);
+}
+
+.itens__tipo[data-tipo='equipamento'] {
+  background: var(--quadro-emerg-bg);
+  box-shadow: inset 0 0 0 1px var(--quadro-emerg-borda);
+}
+
+.itens__tipo[data-tipo='sistema'] {
+  background: var(--control-bg);
+  box-shadow: inset 0 0 0 1px var(--control-border);
+}
+
+.itens__tipo[data-tipo='ponto_uso'] {
+  background: color-mix(in srgb, var(--prazo-perto) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--prazo-perto) 40%, transparent);
+}
+
+/* Como encontrado: o antes (ambar). Como certificado: o depois (verde) */
+.itens__sigla,
+.itens__condicao {
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.itens__sigla {
+  padding: 1px 7px;
+  color: var(--text-strong);
+}
+
+.itens__sigla[data-condicao='as_found'],
+.itens__condicao[data-condicao='as_found'][aria-pressed='true'] {
+  background: var(--quadro-atraso-bg);
+  box-shadow: inset 0 0 0 1px var(--quadro-atraso-borda);
+}
+
+.itens__sigla[data-condicao='como_certificado'],
+.itens__condicao[data-condicao='como_certificado'][aria-pressed='true'] {
+  background: var(--quadro-ok-bg);
+  box-shadow: inset 0 0 0 1px var(--quadro-ok-borda);
+}
+
+.itens__condicao {
+  padding: 5px 11px;
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+  color: var(--text-muted);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.itens__condicao[aria-pressed='true'] {
+  border-color: transparent;
+  color: var(--text-strong);
+}
+
+.itens__condicao:hover {
+  color: var(--text-strong);
+}
+
+/* ---------------- a lista de itens ---------------- */
+
+.itens__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.itens__lista > .ensaios__topo {
+  flex-wrap: wrap;
+}
+
+.itens__lista > .ensaios__topo h3 {
+  white-space: nowrap;
+}
+
+.itens__legenda {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  text-align: right;
+}
+
+.itens__busca {
+  max-width: 320px;
+}
+
+.itens__vazio {
+  padding: 22px 12px;
+  border: 1.5px dashed var(--line);
+  border-radius: var(--radius-md);
+}
+
+.itens__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.itens__card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.itens__cabeca {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+
+.itens__nome {
+  flex: 1;
+  min-width: 140px;
+  font-size: 0.9rem;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.itens__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.itens__resumo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.itens__resumo li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 3px 4px 3px 9px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  font-size: 0.76rem;
+  color: var(--text-base);
+}
+
+.itens__resumo li > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.itens__semensaio,
+.itens__obs {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.itens__semensaio {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.itens__novo {
+  padding: 12px;
+  border: 1.5px dashed var(--quadro-ok-borda);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--quadro-ok-bg) 55%, transparent);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.itens__novo:hover:not(:disabled) {
+  border-style: solid;
+  border-color: var(--quadro-ok-acento);
+  background: var(--quadro-ok-bg);
+}
+
+.itens__novo:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ---------------- o editor de item: os ensaios ---------------- */
+
+.itens__ensaios {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.itens__ensaiostopo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.itens__ensaiostopo h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+}
+
+.itens__todos {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-left: auto;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.itens__todos button {
+  padding: 4px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-base);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.itens__todos button:hover {
+  background: var(--control-bg-hover);
+}
+
+/* o que quer dizer cada condicao, logo abaixo do titulo dos ensaios */
+.itens__explica {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  list-style: none;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.itens__explica .itens__sigla {
+  margin-right: 2px;
+}
+
+.itens__grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.itens__grupotitulo {
+  align-self: flex-start;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--quadro-emerg-bg);
+  color: var(--text-strong);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.itens__grupotitulo[data-classe='gases'] {
+  background: color-mix(in srgb, var(--prazo-perto) 20%, transparent);
+  color: var(--prazo-perto);
+}
+
+.itens__grupotitulo[data-classe='outros'] {
+  background: var(--control-bg-hover);
+  color: var(--text-muted);
+}
+
+.itens__opcoes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.itens__opcao {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+
+.itens__opcao.is-marcado {
+  border-color: var(--quadro-ok-borda);
+  background: color-mix(in srgb, var(--quadro-ok-bg) 45%, var(--surface));
+}
+
+.itens__marca {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  flex: 1;
+  min-width: 200px;
+  padding: 3px 0;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.itens__marca input {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--quadro-ok-acento);
+}
+
+.itens__marca span {
+  overflow-wrap: anywhere;
+}
+
+.itens__fora {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--text-faint);
+}
+
+.itens__condicoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-left: auto;
+}
+
+/* ---------------- a execucao por linha ---------------- */
+
+.linhas__conta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.linhas__nc {
+  color: var(--danger);
+}
+
+.linhas__filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.linhas__filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.linhas__filtro span {
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+.linhas__filtro:hover {
+  color: var(--text-strong);
+}
+
+.linhas__filtro[aria-selected='true'] {
+  border-color: transparent;
+  background: var(--control-on-bg);
+  color: var(--control-on-fg);
+}
+
+.linhas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.linhas__item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.linhas__cabeca {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.linhas__cabeca .itens__tipo {
+  font-size: 0.74rem;
+}
+
+.linhas__fracao {
+  margin-left: auto;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.linhas__fracao[data-pronto='sim'] {
+  color: var(--success);
+}
+
+.linhas__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* uma linha: o ensaio, a condicao e a situacao — o toque abre o resultado */
+.linha {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 0.9fr);
+  align-items: center;
+  gap: 8px 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.linha:hover {
+  background: var(--control-bg-hover);
+}
+
+.linha[data-situacao='conforme'] {
+  border-left-color: var(--success);
+}
+
+.linha[data-situacao='nao-conforme'] {
+  border-left-color: var(--danger);
+  background: color-mix(in srgb, var(--danger-bg) 55%, var(--surface));
+}
+
+.linha__ensaio {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.linha__situacao {
+  justify-self: end;
+  text-align: right;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.linha[data-situacao='pendente'] .linha__situacao {
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+.linha[data-situacao='conforme'] .linha__situacao b {
+  color: var(--success);
+}
+
+.linha[data-situacao='nao-conforme'] .linha__situacao b {
+  color: var(--danger);
+}
+
+.linha__situacao small {
+  color: var(--text-faint);
+}
+
+/* o formulario de uma linha */
+.linha__sobre {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+}
+
+.linha__sobre strong {
+  font-size: 0.92rem;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.linha__sobre .itens__condicao {
+  cursor: default;
+}
+
+.linha__lida {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.linha__lida dt {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.linha__lida dd {
+  margin: 2px 0 0;
+  font-size: 0.9rem;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.linha__apagar {
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+.linha__apagar:hover:not(:disabled) {
+  background: var(--danger-bg);
+}
+
+/* Conforme / Nao conforme nas pastilhas */
+.pastilha[data-tom='conforme'] {
+  --tom-bg: var(--success);
+  --tom-fg: #fff;
+}
+
+.pastilha[data-tom='nao-conforme'] {
+  --tom-bg: var(--danger);
+  --tom-fg: #fff;
+}
+
+/* ---------------- celular ---------------- */
+
+@media (max-width: 640px) {
+  .itens__par {
+    grid-template-columns: 1fr;
+  }
+
+  .itens__servico {
+    max-width: none;
+  }
+
+  .itens__legenda {
+    flex-basis: 100%;
+    margin-left: 0;
+    text-align: left;
+  }
+
+  .itens__acoes {
+    margin-left: 0;
+  }
+
+  .itens__condicoes {
+    margin-left: 25px;
+  }
+
+  .itens__todos {
+    margin-left: 0;
+  }
+
+  .linha {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .linha__situacao {
+    grid-column: 1 / -1;
+    justify-self: start;
+    text-align: left;
+  }
+}

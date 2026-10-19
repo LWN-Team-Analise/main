@@ -109,21 +109,31 @@
   border-color: var(--accent);
 }
 
-/* editar e excluir aparecem ao passar o mouse pelo card */
+/* editar e excluir aparecem ao passar o mouse pelo card (ou ao tocar
+   nele, no celular). Escondidos, nao ocupam lugar: largura zero e sem
+   margem, e a setinha fica encostada na borda do card. Antes so ficavam
+   transparentes e deixavam um vao vazio do lado da setinha. */
 .pessoa__botoes {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
+  max-width: 0;
+  margin-left: 0;
+  overflow: hidden;
   opacity: 0;
-  transition: opacity var(--dur-fast) var(--ease-out);
+  transition: opacity var(--dur-fast) var(--ease-out), max-width var(--dur-fast) var(--ease-out),
+    margin-left var(--dur-fast) var(--ease-out);
 }
 
 .pessoa:hover .pessoa__botoes,
 .pessoa:focus-within .pessoa__botoes {
+  max-width: 64px;
+  margin-left: 8px;
   opacity: 1;
 }
 
 .pessoa__botoes button {
+  flex-shrink: 0;
   display: grid;
   place-items: center;
   width: 27px;
@@ -149,7 +159,6 @@
 .pessoa__topo {
   display: flex;
   align-items: center;
-  gap: 12px;
 }
 
 /* o botao que abre o card: foto, nome, setor, cargo e a setinha */
@@ -245,15 +254,20 @@
   }
 }
 
+/* o nome quebra entre as palavras, nunca no meio de uma (o "anywhere"
+   de antes partia "Guilher-me" quando o card ficava estreito); so uma
+   palavra maior que o card inteiro ainda quebra, para nao vazar */
 .pessoa__nome {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 7px;
+  gap: 2px 7px;
   margin: 0 0 5px;
-  font-size: 0.96rem;
+  font-size: 0.9rem;
   font-weight: 600;
+  line-height: 1.3;
   color: var(--text-strong);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .pessoa__eu {

@@ -5,7 +5,6 @@ import { useTheme } from '@/context/ThemeContext'
 import { useDados } from '@/context/DadosContext'
 import Avatar from '@/components/Avatar/Avatar'
 import Busca from '@/components/Busca/Busca'
-import ChatSite from '@/components/ChatSite/ChatSite'
 import IlhaAviso from '@/components/IlhaAviso/IlhaAviso'
 import Confirma from '@/components/Confirma/Confirma'
 import Estrelas from '@/components/Estrelas/Estrelas'
@@ -66,10 +65,10 @@ const Icone = {
   ),
   frotas: () => (
     <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
-      <path d="M5 16.5V12l1.7-4.6A1.6 1.6 0 0 1 8.2 6.3h7.6a1.6 1.6 0 0 1 1.5 1.1L19 12v4.5" />
-      <path d="M4 16.5h16M5 12h14" />
-      <circle cx="8" cy="16.6" r="1.7" />
-      <circle cx="16" cy="16.6" r="1.7" />
+      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+      <circle cx="7" cy="17" r="2" />
+      <path d="M9 17h6" />
+      <circle cx="17" cy="17" r="2" />
     </svg>
   ),
   usuarios: () => (
@@ -802,7 +801,8 @@ function BotaoChat({ acoes = [], aoAbrirChat }) {
 
 /**
  * `semChat` tira o botao flutuante da tela — e o que a tela da obra usa,
- * porque la o chat que vale e o da obra.
+ * porque la o chat que vale e o da obra, e a propria tela do chat da
+ * equipe. Fora delas, o botao leva para a tela do chat (/app/chat).
  *
  * `acoesFlutuantes` acrescenta opcoes ao botao; com elas ele vira um "+"
  * com menu, sem elas continua sendo o atalho do chat.
@@ -819,7 +819,6 @@ export default function AppShell({
   const { isDark } = useTheme()
   const { erro, limparErro, pode } = useDados()
   const navegar = useNavigate()
-  const [chatAberto, setChatAberto] = useState(false)
 
   /* a tela pode assumir o campo de busca; se nao assumir, ele e do
      sistema e abre a lista de resultados por conta propria */
@@ -1140,11 +1139,9 @@ export default function AppShell({
       {!semChat && (
         <BotaoChat
           acoes={acoesFlutuantes}
-          aoAbrirChat={() => setChatAberto(true)}
+          aoAbrirChat={() => navegar('/app/chat')}
         />
       )}
-
-      <ChatSite aberto={chatAberto} aoFechar={() => setChatAberto(false)} />
 
       {/* ---------------- a senha ainda e a padrao ----------------
 

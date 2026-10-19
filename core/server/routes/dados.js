@@ -1,10 +1,18 @@
 import { Router } from 'express'
-import { query } from '../db.js'
+import { emTransacao, query } from '../db.js'
 import { cargoPode, exige, exigeSessao, meuCargo, tratar } from '../sessao.js'
 import { enviarAviso, temEmail } from '../email.js'
 import { logger } from '../logger.js'
 import { descreverObra, registrarAtividade } from '../atividade.js'
 import { IMAGEM_INVALIDA, imagemValida } from '../utils/imagem.js'
+import {
+  CONDICOES,
+  LIMITES_ITEM,
+  SERVICOS,
+  TIPOS_DE_ITEM,
+  rotuloDaCondicao,
+  rotuloDoServico,
+} from '../../src/domain/itensEnsaio.js'
 
 const router = Router()
 
@@ -230,6 +238,8 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     obraEnsaios,
     progressos,
     reservas,
+    itensObra,
+    linhasItem,
   ] = await Promise.all([
     lerClientes(imagens),
     /* os setores vem junto: sao poucos e a tela de Clientes precisa
@@ -291,6 +301,14 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
              LEFT JOIN veiculo v           ON v.id = r.veiculo_id
              LEFT JOIN usuario u           ON u.id = r.reservado_por
              LEFT JOIN veiculo_registro vr ON vr.id = r.registro_id`).catch(semTabelaVazia),
+    /* os ensaios POR ITEM (atualizacao 25): os itens de cada obra e as
+       linhas (item + ensaio + condicao), com o resultado da execucao.
+       Sem as tabelas, nenhuma obra tem item */
+    query('SELECT * FROM obra_item ORDER BY ordem, id').catch(semTabelaVazia),
+    query(`SELECT l.*, u.name AS registrado_por_nome
+             FROM obra_item_ensaio l
+             LEFT JOIN usuario u ON u.id = l.registrado_por
+            ORDER BY l.item_id, l.ordem, l.id`).catch(semTabelaVazia),
   ])
 
   const junta = (linhas, chave, monta) => {
@@ -376,6 +394,31 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
   }))
 
   const etiquetasDaObra = junta(obraEtiquetas.rows, 'obra_id', (l) => String(l.etiqueta_id))
+
+  /* os itens de cada obra, cada um com as linhas dele. Linha com data
+     = feita: o resultado, o conforme e a observacao vem junto */
+  const linhasDoItem = junta(linhasItem.rows, 'item_id', (l) => ({
+    id: String(l.id),
+    ensaioId: String(l.ensaio_id),
+    condicao: l.condicao,
+    data: soData(l.data ?? null),
+    resultado: l.resultado ?? '',
+    conforme: l.conforme ?? null,
+    observacao: l.observacao ?? '',
+    registradoPor: l.registrado_por === null ? null : String(l.registrado_por),
+    registradoPorNome: l.registrado_por_nome ?? null,
+    registradoEm: l.registrado_em ?? null,
+  }))
+  const itensDaObra = junta(itensObra.rows, 'obra_id', (l) => ({
+    id: String(l.id),
+    tipo: l.tipo,
+    nome: l.nome,
+    tag: l.tag ?? '',
+    classe: l.classe ?? '',
+    gas: l.gas ?? '',
+    observacao: l.observacao ?? '',
+    linhas: linhasDoItem[l.id] ?? [],
+  }))
   /* veiculoId null = a obra nao vai usar carro da frota */
   const reservaDaObra = Object.fromEntries(
     reservas.rows.map((l) => [
@@ -472,6 +515,10 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
       prazos: prazosDaObra[o.id] ?? { etapas: {}, checks: {} },
       ensaios: ensaiosDaObra[o.id] ?? [],
       execucao: execucaoDaObra[o.id] ?? {},
+      /* o tipo de servico (atualizacao 25) e os itens com as linhas.
+         itens vazio = a obra nao planeja por item */
+      servico: o.servico ?? null,
+      itens: itensDaObra[o.id] ?? [],
       membros: membrosDaObra[o.id] ?? [],
       observacoes: obsDaObra[o.id] ?? [],
       avisos: avisosDaObra[o.id] ?? [],
@@ -2102,6 +2149,10 @@ router.put('/obras/:id/ensaios', exigeSessao, obraAberta, async (req, res) => {
     if (!(await podeMarcar(req.dono.sub, checkId, req.params.id))) {
       return res.status(403).json({ erro: 'O Planejamento de ensaios é de outro setor.' })
     }
+    /* a lista daqui sai das linhas na obra que planeja por item */
+    if (await usaItens(req.params.id)) {
+      return res.status(409).json({ erro: 'Esta obra planeja os ensaios por item: a lista sai dos itens.' })
+    }
     if (concluir && ids.length === 0) {
       return res.status(400).json({ erro: 'Escolha ao menos um ensaio para concluir o planejamento.' })
     }
@@ -2214,6 +2265,12 @@ router.put('/obras/:id/execucao/dia', exigeSessao, obraAberta, async (req, res) 
     if (!(await podeMarcar(req.dono.sub, checkId, req.params.id))) {
       return res.status(403).json({ erro: 'A Execução dos ensaios é de outro setor.' })
     }
+    /* na obra que planeja por item o % sai das linhas feitas */
+    if (await usaItens(req.params.id)) {
+      return res.status(409).json({
+        erro: 'Esta obra registra a execução por linha (item, ensaio e condição): o percentual sai delas.',
+      })
+    }
 
     const datas = await datasDaObra(req.params.id)
     if (!datas?.execucaoPrazo) {
@@ -2279,6 +2336,535 @@ router.put('/obras/:id/execucao/dia', exigeSessao, obraAberta, async (req, res) 
     }
     if (e.code === '23503') return res.status(404).json({ erro: 'Obra ou ensaio não encontrado.' })
     return tratar(e, res, 'dados/execucao-dia')
+  }
+})
+
+/* ============================================================
+   ENSAIOS POR ITEM (atualizacao 25)
+
+   A obra cadastra O QUE vai ser ensaiado — ambientes (com a classe),
+   sistemas, equipamentos (com a TAG) e pontos de uso (com o gas) — e,
+   em cada item, os ensaios com a condicao: Como encontrado, Como
+   Certificado ou as duas. Cada item + ensaio + condicao e uma LINHA,
+   e e na linha que a execucao grava o resultado: a data, o valor
+   medido, se ficou conforme e a observacao.
+
+   O resto do sistema continua lendo as tabelas da lista solta: depois
+   de qualquer mudanca, `sincronizarItens` refaz obra_ensaio (os
+   ensaios distintos das linhas) e obra_ensaio_progresso (por ensaio e
+   por dia: as linhas feitas ate aquele dia / as linhas do ensaio). O
+   quadro, o check "Material de gases", a conclusao e as regras dos
+   dois checks dos ensaios nao mudam.
+
+   A obra que planejou pela lista solta e ja registrou execucao
+   continua nela: passar para itens apagaria os dias registrados.
+   ============================================================ */
+
+/** A obra planeja por item? (banco sem a atualizacao 25: nao) */
+async function usaItens(obraId) {
+  const { rows } = await query('SELECT EXISTS (SELECT 1 FROM obra_item WHERE obra_id = $1) AS sim', [
+    obraId,
+  ]).catch(semTabelaVazia)
+  return rows[0]?.sim === true
+}
+
+/** Pedido recusado no meio da transacao: vira a resposta com o status. */
+const recusa = (status, erro) => Object.assign(new Error(erro), { recusa: { status, erro } })
+
+/**
+ * Refaz obra_ensaio e obra_ensaio_progresso a partir das linhas da
+ * obra. Roda dentro da transacao (`db`) de quem mexeu nas linhas.
+ */
+async function sincronizarItens(db, obraId, usuarioId) {
+  const { rows } = await db.query(
+    `SELECT l.ensaio_id, l.data, l.registrado_por
+       FROM obra_item_ensaio l JOIN obra_item i ON i.id = l.item_id
+      WHERE i.obra_id = $1
+      ORDER BY i.ordem, i.id, l.ordem, l.id`,
+    [obraId],
+  )
+  /* ensaio -> as linhas dele, na ordem em que o ensaio aparece primeiro */
+  const porEnsaio = new Map()
+  for (const l of rows) {
+    const id = String(l.ensaio_id)
+    if (!porEnsaio.has(id)) porEnsaio.set(id, [])
+    porEnsaio.get(id).push(l)
+  }
+  const ids = [...porEnsaio.keys()]
+
+  await db.query('DELETE FROM obra_ensaio WHERE obra_id = $1 AND NOT (ensaio_id = ANY($2::bigint[]))', [
+    obraId,
+    ids,
+  ])
+  await db.query(
+    `INSERT INTO obra_ensaio (obra_id, ensaio_id, ordem, definido_por)
+     SELECT $1, t.ensaio_id, t.ordem - 1, $3
+       FROM unnest($2::bigint[]) WITH ORDINALITY AS t(ensaio_id, ordem)
+     ON CONFLICT (obra_id, ensaio_id) DO UPDATE SET ordem = EXCLUDED.ordem`,
+    [obraId, ids, usuarioId],
+  )
+
+  /* o % de um ensaio num dia = as linhas dele feitas ate aquele dia /
+     todas as linhas dele. Arredonda para baixo: 100% so com todas */
+  const ensaios = []
+  const dias = []
+  const percentuais = []
+  const quem = []
+  for (const [ensaioId, linhas] of porEnsaio) {
+    const feitas = linhas
+      .filter((l) => l.data)
+      .sort((a, b) => String(a.data).localeCompare(String(b.data)))
+    const porDia = new Map()
+    feitas.forEach((l, k) => porDia.set(soData(l.data), { feitas: k + 1, quem: l.registrado_por }))
+    for (const [dia, valor] of porDia) {
+      ensaios.push(ensaioId)
+      dias.push(dia)
+      percentuais.push(Math.floor((100 * valor.feitas) / linhas.length))
+      quem.push(valor.quem)
+    }
+  }
+  await db.query('DELETE FROM obra_ensaio_progresso WHERE obra_id = $1', [obraId])
+  if (ensaios.length > 0) {
+    await db.query(
+      `INSERT INTO obra_ensaio_progresso (obra_id, ensaio_id, dia, percentual, registrado_por)
+       SELECT $1, t.e, t.d, t.p, t.u
+         FROM unnest($2::bigint[], $3::date[], $4::smallint[], $5::bigint[]) AS t(e, d, p, u)`,
+      [obraId, ensaios, dias, percentuais, quem],
+    )
+  }
+}
+
+/** O texto aparado; vazio vira null. */
+const opcional = (valor) => texto(valor) || null
+
+const CAMPOS_DO_ITEM = [
+  ['nome', 'o nome'],
+  ['tag', 'a TAG'],
+  ['classe', 'a classe'],
+  ['gas', 'o gás'],
+  ['observacao', 'a observação'],
+]
+
+/**
+ * Le e confere os itens do corpo do planejamento. Devolve { itens } ou
+ * { erro } — o erro ja diz qual item. Cada item sai com as linhas dele
+ * (ensaio + condicao), na ordem: ensaio a ensaio, Como encontrado antes.
+ */
+function lerItensDoCorpo(lista) {
+  if (!Array.isArray(lista)) return { erro: 'Lista de itens inválida.' }
+  if (lista.length > LIMITES_ITEM.itens) {
+    return { erro: `Uma obra tem no máximo ${LIMITES_ITEM.itens} itens.` }
+  }
+  const tipos = new Set(TIPOS_DE_ITEM.map((t) => t.id))
+  const condicoes = CONDICOES.map((c) => c.id)
+  const vistos = new Set()
+  const itens = []
+
+  for (const [k, bruto] of lista.entries()) {
+    const nome = texto(bruto?.nome)
+    const qual = nome ? `"${resumo(nome).slice(0, 40)}"` : `O item ${k + 1}`
+    const id = bruto?.id === undefined || bruto?.id === null || bruto?.id === '' ? null : String(bruto.id)
+    if (id !== null && (!/^\d+$/.test(id) || vistos.has(id))) return { erro: 'Item inválido.' }
+    if (id) vistos.add(id)
+
+    const tipo = texto(bruto?.tipo)
+    if (!tipos.has(tipo)) return { erro: `${qual}: escolha o tipo do item.` }
+    if (!nome) return { erro: `O item ${k + 1} está sem nome.` }
+
+    const campos = {
+      nome,
+      tag: opcional(bruto?.tag),
+      classe: tipo === 'ambiente' ? opcional(bruto?.classe) : null,
+      gas: tipo === 'ponto_uso' ? opcional(bruto?.gas) : null,
+      observacao: opcional(bruto?.observacao),
+    }
+    for (const [campo, rotulo] of CAMPOS_DO_ITEM) {
+      if (campos[campo] && campos[campo].length > LIMITES_ITEM[campo]) {
+        return { erro: `${qual}: ${rotulo} passa de ${LIMITES_ITEM[campo]} caracteres.` }
+      }
+    }
+    if (tipo === 'ponto_uso' && !campos.gas) return { erro: `${qual}: diga qual é o gás do ponto de uso.` }
+
+    if (!Array.isArray(bruto?.ensaios)) return { erro: `${qual}: lista de ensaios inválida.` }
+    const linhas = []
+    const ensaiosVistos = new Set()
+    for (const e of bruto.ensaios) {
+      const ensaioId = String(e?.ensaioId ?? '')
+      if (!/^\d+$/.test(ensaioId) || ensaiosVistos.has(ensaioId)) return { erro: `${qual}: ensaio inválido.` }
+      ensaiosVistos.add(ensaioId)
+      const pedidas = Array.isArray(e?.condicoes) ? e.condicoes.map(String) : []
+      if (pedidas.length === 0 || pedidas.some((c) => !condicoes.includes(c))) {
+        return { erro: `${qual}: cada ensaio precisa de ao menos uma condição (Como encontrado ou Como certificado).` }
+      }
+      for (const c of condicoes) if (pedidas.includes(c)) linhas.push({ ensaioId, condicao: c })
+    }
+
+    itens.push({ id, tipo, ...campos, linhas })
+  }
+  return { itens }
+}
+
+/* ------------------------------------------------------------
+   Planejamento POR ITEM (1a etapa)
+
+   Corpo: { servico, itens: [{ id?, tipo, nome, tag, classe, gas,
+   observacao, ensaios: [{ ensaioId, condicoes: ['as_found',
+   'como_certificado'] }] }], concluir }.
+
+   Troca o planejamento inteiro pelo que veio. Item com id e o mesmo
+   item (as linhas que continuam guardam o resultado); sem id e novo.
+   Item e linha que nao vieram saem — e o resultado deles sai junto,
+   o que a tela avisa antes de salvar.
+
+   Quem pode e quem marca o "Planejamento de ensaios" (a mesma regra
+   da lista solta). `concluir` exige o servico, ao menos um item e
+   todo item com ensaio, e ja marca o check.
+   ------------------------------------------------------------ */
+
+router.put('/obras/:id/planejamento-itens', exigeSessao, obraAberta, async (req, res) => {
+  const obraId = req.params.id
+  const corpo = req.body ?? {}
+  const concluir = corpo.concluir === true
+  const servico = texto(corpo.servico) || null
+  if (servico && !SERVICOS.some((s) => s.id === servico)) {
+    return res.status(400).json({ erro: 'Escolha o serviço da obra na lista.' })
+  }
+  const { itens, erro } = lerItensDoCorpo(corpo.itens)
+  if (erro) return res.status(400).json({ erro })
+
+  if (concluir) {
+    if (!servico) return res.status(400).json({ erro: 'Escolha o serviço da obra para concluir o planejamento.' })
+    if (itens.length === 0) {
+      return res.status(400).json({ erro: 'Cadastre ao menos um item para concluir o planejamento.' })
+    }
+    const vazio = itens.find((i) => i.linhas.length === 0)
+    if (vazio) {
+      return res.status(400).json({
+        erro: `"${vazio.nome}" está sem ensaio. Escolha os ensaios dele ou tire o item para concluir.`,
+      })
+    }
+  }
+
+  try {
+    const checkId = await checkDoSistema(obraId, 'planejamento_ensaios')
+    if (!checkId) {
+      return res.status(501).json({ erro: 'O roteiro não tem o check "Planejamento de ensaios" (atualização 14).' })
+    }
+    if (!(await podeMarcar(req.dono.sub, checkId, obraId))) {
+      return res.status(403).json({ erro: 'O Planejamento de ensaios é de outro setor.' })
+    }
+
+    /* a lista solta com execucao registrada nao passa para itens */
+    const jaPorItem = await usaItens(obraId)
+    if (!jaPorItem && itens.length > 0) {
+      const { rows } = await query(
+        'SELECT EXISTS (SELECT 1 FROM obra_ensaio_progresso WHERE obra_id = $1) AS tem',
+        [obraId],
+      ).catch(semTabelaVazia)
+      if (rows[0]?.tem) {
+        return res.status(409).json({
+          erro: 'Esta obra já registrou execução pela lista de ensaios e continua nela: passar para itens apagaria os dias registrados.',
+        })
+      }
+    }
+
+    /* so entra ensaio que existe e esta no catalogo — ou que ja estava
+       nesta obra (um ensaio retirado do catalogo nao some da obra) */
+    const ensaioIds = [...new Set(itens.flatMap((i) => i.linhas.map((l) => l.ensaioId)))]
+    if (ensaioIds.length > 0) {
+      const { rows } = await query(
+        `SELECT e.id FROM ensaio e
+          WHERE e.id = ANY($1::bigint[])
+            AND (e.ativo OR EXISTS (SELECT 1 FROM obra_ensaio oe
+                                     WHERE oe.obra_id = $2 AND oe.ensaio_id = e.id))`,
+        [ensaioIds, obraId],
+      )
+      if (rows.length !== ensaioIds.length) return res.status(400).json({ erro: 'Ensaio não encontrado no catálogo.' })
+    }
+
+    const { removidos, apagados } = await emTransacao(async (db) => {
+      await db.query('UPDATE obra SET servico = $2 WHERE id = $1', [obraId, servico])
+
+      const { rows: antes } = await db.query(
+        'SELECT id, nome FROM obra_item WHERE obra_id = $1 ORDER BY ordem, id FOR UPDATE',
+        [obraId],
+      )
+      const daObra = new Set(antes.map((l) => String(l.id)))
+      if (itens.some((i) => i.id && !daObra.has(i.id))) {
+        throw recusa(404, 'Um dos itens não existe mais nesta obra. Feche e abra o planejamento de novo.')
+      }
+      const { rows: linhasAntes } = await db.query(
+        `SELECT l.id, l.item_id, l.ensaio_id, l.condicao, l.data IS NOT NULL AS feita
+           FROM obra_item_ensaio l JOIN obra_item i ON i.id = l.item_id
+          WHERE i.obra_id = $1`,
+        [obraId],
+      )
+
+      /* os itens que nao vieram saem, com as linhas (e os resultados) */
+      const ficam = new Set(itens.filter((i) => i.id).map((i) => i.id))
+      const saem = antes.filter((l) => !ficam.has(String(l.id)))
+      const idsQueSaem = new Set(saem.map((l) => String(l.id)))
+      let resultadosApagados = linhasAntes.filter((l) => idsQueSaem.has(String(l.item_id)) && l.feita).length
+      if (saem.length > 0) {
+        await db.query('DELETE FROM obra_item WHERE id = ANY($1::bigint[])', [saem.map((l) => l.id)])
+      }
+
+      const comOrdem = itens.map((i, ordem) => ({ ...i, ordem }))
+      const colunas = (lista) => [
+        lista.map((i) => i.tipo),
+        lista.map((i) => i.nome),
+        lista.map((i) => i.tag),
+        lista.map((i) => i.classe),
+        lista.map((i) => i.gas),
+        lista.map((i) => i.observacao),
+        lista.map((i) => i.ordem),
+      ]
+
+      const existentes = comOrdem.filter((i) => i.id)
+      if (existentes.length > 0) {
+        await db.query(
+          `UPDATE obra_item i
+              SET tipo = t.tipo, nome = t.nome, tag = t.tag, classe = t.classe, gas = t.gas,
+                  observacao = t.observacao, ordem = t.ordem
+             FROM unnest($2::bigint[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[],
+                         $8::text[], $9::int[])
+                  AS t(id, tipo, nome, tag, classe, gas, observacao, ordem)
+            WHERE i.id = t.id AND i.obra_id = $1`,
+          [obraId, existentes.map((i) => i.id), ...colunas(existentes)],
+        )
+      }
+
+      const novos = comOrdem.filter((i) => !i.id)
+      if (novos.length > 0) {
+        const { rows } = await db.query(
+          `INSERT INTO obra_item (obra_id, tipo, nome, tag, classe, gas, observacao, ordem, criado_por)
+           SELECT $1, t.tipo, t.nome, t.tag, t.classe, t.gas, t.observacao, t.ordem, $9
+             FROM unnest($2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[], $8::int[])
+                  AS t(tipo, nome, tag, classe, gas, observacao, ordem)
+           RETURNING id, ordem`,
+          [obraId, ...colunas(novos), req.dono.sub],
+        )
+        const porOrdem = new Map(rows.map((l) => [Number(l.ordem), String(l.id)]))
+        novos.forEach((i) => {
+          i.id = porOrdem.get(i.ordem)
+        })
+      }
+
+      /* as linhas: as que continuam guardam o resultado; as tiradas saem */
+      const chave = (itemId, ensaioId, condicao) => `${itemId}|${ensaioId}|${condicao}`
+      const desejadas = comOrdem.flatMap((i) =>
+        i.linhas.map((l, ordem) => ({ itemId: i.id, ensaioId: l.ensaioId, condicao: l.condicao, ordem })),
+      )
+      const querem = new Set(desejadas.map((d) => chave(d.itemId, d.ensaioId, d.condicao)))
+      const tiradas = linhasAntes.filter(
+        (l) => !idsQueSaem.has(String(l.item_id)) && !querem.has(chave(l.item_id, l.ensaio_id, l.condicao)),
+      )
+      if (tiradas.length > 0) {
+        await db.query('DELETE FROM obra_item_ensaio WHERE id = ANY($1::bigint[])', [tiradas.map((l) => l.id)])
+        resultadosApagados += tiradas.filter((l) => l.feita).length
+      }
+      if (desejadas.length > 0) {
+        await db.query(
+          `INSERT INTO obra_item_ensaio (item_id, ensaio_id, condicao, ordem)
+           SELECT t.item_id, t.ensaio_id, t.condicao, t.ordem
+             FROM unnest($1::bigint[], $2::bigint[], $3::text[], $4::int[]) AS t(item_id, ensaio_id, condicao, ordem)
+           ON CONFLICT (item_id, ensaio_id, condicao) DO UPDATE SET ordem = EXCLUDED.ordem`,
+          [
+            desejadas.map((d) => d.itemId),
+            desejadas.map((d) => d.ensaioId),
+            desejadas.map((d) => d.condicao),
+            desejadas.map((d) => d.ordem),
+          ],
+        )
+      }
+
+      /* a obra que tinha (ou passou a ter) item: a lista solta sai das linhas */
+      if (jaPorItem || itens.length > 0) await sincronizarItens(db, obraId, req.dono.sub)
+      return { removidos: saem.map((l) => l.nome), apagados: resultadosApagados }
+    })
+
+    const linhas = itens.reduce((n, i) => n + i.linhas.length, 0)
+    await registrarAtividade(req, {
+      acao: 'ensaios.planejados',
+      categoria: 'check',
+      entidade: ['obra', obraId],
+      descricao: 'Planejamento de ensaios por item atualizado',
+      detalhes: {
+        ...(await descreverObra(obraId)),
+        servico: rotuloDoServico(servico) ?? 'não escolhido',
+        itens: itens.map((i) => `${i.nome} (${i.linhas.length})`).join(', ') || 'nenhum',
+        linhas,
+        ...(removidos.length > 0 ? { itens_removidos: removidos.join(', ') } : {}),
+        ...(apagados > 0 ? { resultados_apagados: apagados } : {}),
+      },
+    })
+
+    if (concluir) {
+      const marcado = await query(
+        `INSERT INTO obra_check (obra_id, check_id, feito_por) VALUES ($1, $2, $3)
+         ON CONFLICT (obra_id, check_id) DO NOTHING RETURNING check_id`,
+        [obraId, checkId, req.dono.sub],
+      )
+      if (marcado.rowCount > 0) {
+        await registrarAtividade(req, {
+          acao: 'check.marcado',
+          categoria: 'check',
+          entidade: ['obra', obraId],
+          descricao: 'Check concluído',
+          detalhes: { ...(await descreverObra(obraId)), ...(await descreverCheck(checkId)) },
+        })
+      }
+    }
+
+    await conferirEnsaios(req, obraId)
+    return res.json({ ok: true })
+  } catch (e) {
+    if (e.recusa) return res.status(e.recusa.status).json({ erro: e.recusa.erro })
+    if (e.code === '42P01' || e.code === '42703') {
+      return res.status(501).json({ erro: 'Os ensaios por item ainda não existem no banco (atualização 25).' })
+    }
+    if (e.code === '23503') return res.status(404).json({ erro: 'Obra ou ensaio não encontrado.' })
+    return tratar(e, res, 'dados/planejamento-itens')
+  }
+})
+
+/* ------------------------------------------------------------
+   Execucao POR LINHA (3a etapa)
+
+   Corpo: { linhas: [{ id, data, resultado, conforme, observacao }] }
+   — ou { id, apagar: true }, que volta a linha para pendente.
+
+   A data segue a regra da execucao dia a dia: precisa do prazo da
+   execucao, nao vem antes da entrada em campo (ou do inicio da obra)
+   e nao passa de hoje. "Nao conforme" e resultado, nao pendencia: a
+   linha conta como feita.
+   Quem registra e quem marca o check "Execucao dos ensaios".
+   ------------------------------------------------------------ */
+
+router.put('/obras/:id/execucao-itens', exigeSessao, obraAberta, async (req, res) => {
+  const obraId = req.params.id
+  const brutas = Array.isArray(req.body?.linhas) ? req.body.linhas : null
+  if (!brutas || brutas.length === 0) return res.status(400).json({ erro: 'Informe ao menos uma linha.' })
+  if (brutas.length > 500) return res.status(400).json({ erro: 'Linhas demais de uma vez.' })
+
+  const linhas = []
+  const vistas = new Set()
+  for (const l of brutas) {
+    const id = String(l?.id ?? '')
+    if (!/^\d+$/.test(id) || vistas.has(id)) return res.status(400).json({ erro: 'Linha inválida.' })
+    vistas.add(id)
+    if (l.apagar === true) {
+      linhas.push({ id, apagar: true })
+      continue
+    }
+    const data = texto(l.data)
+    if (!dataValida(data)) return res.status(400).json({ erro: 'Escolha a data em que o ensaio foi feito.' })
+    const resultado = texto(l.resultado)
+    if (!resultado) return res.status(400).json({ erro: 'Informe o resultado medido.' })
+    if (resultado.length > LIMITES_ITEM.resultado) {
+      return res.status(400).json({ erro: `O resultado passa de ${LIMITES_ITEM.resultado} caracteres.` })
+    }
+    if (typeof l.conforme !== 'boolean') {
+      return res.status(400).json({ erro: 'Diga se o resultado ficou conforme ou não conforme.' })
+    }
+    const observacao = opcional(l.observacao)
+    if (observacao && observacao.length > LIMITES_ITEM.observacao) {
+      return res.status(400).json({ erro: `A observação passa de ${LIMITES_ITEM.observacao} caracteres.` })
+    }
+    linhas.push({ id, data, resultado, conforme: l.conforme, observacao })
+  }
+
+  try {
+    const checkId = await checkDoSistema(obraId, 'execucao_ensaios')
+    if (!checkId) {
+      return res.status(501).json({ erro: 'O roteiro não tem o check "Execução dos ensaios" (atualização 14).' })
+    }
+    if (!(await podeMarcar(req.dono.sub, checkId, obraId))) {
+      return res.status(403).json({ erro: 'A Execução dos ensaios é de outro setor.' })
+    }
+
+    const comData = linhas.filter((l) => !l.apagar)
+    if (comData.length > 0) {
+      const datas = await datasDaObra(obraId)
+      if (!datas?.execucaoPrazo) {
+        return res.status(409).json({
+          erro: 'Defina o prazo da execução antes de registrar: é ele que fecha o período.',
+        })
+      }
+      const comeco = datas.execucaoInicio ?? datas.inicio
+      const hoje = hojeNoBrasil()
+      for (const l of comData) {
+        if (comeco && l.data < comeco) {
+          return res.status(400).json({ erro: `O período de execução começa em ${dataLida(comeco)}.` })
+        }
+        if (l.data > hoje) {
+          return res.status(400).json({ erro: 'Não dá para registrar um ensaio numa data que ainda não chegou.' })
+        }
+      }
+    }
+
+    const { rows: daObra } = await query(
+      `SELECT l.id, i.nome AS item, e.nome AS ensaio, l.condicao
+         FROM obra_item_ensaio l
+         JOIN obra_item i ON i.id = l.item_id
+         JOIN ensaio e    ON e.id = l.ensaio_id
+        WHERE i.obra_id = $1 AND l.id = ANY($2::bigint[])`,
+      [obraId, linhas.map((l) => l.id)],
+    )
+    if (daObra.length !== linhas.length) {
+      return res.status(404).json({ erro: 'Uma das linhas não está mais no planejamento. Feche e abra a execução de novo.' })
+    }
+
+    await emTransacao(async (db) => {
+      for (const l of linhas) {
+        if (l.apagar) {
+          await db.query(
+            `UPDATE obra_item_ensaio
+                SET data = NULL, resultado = NULL, conforme = NULL, observacao = NULL,
+                    registrado_por = NULL, registrado_em = NULL
+              WHERE id = $1`,
+            [l.id],
+          )
+        } else {
+          await db.query(
+            `UPDATE obra_item_ensaio
+                SET data = $2, resultado = $3, conforme = $4, observacao = $5,
+                    registrado_por = $6, registrado_em = now()
+              WHERE id = $1`,
+            [l.id, l.data, l.resultado, l.conforme, l.observacao, req.dono.sub],
+          )
+        }
+      }
+      await sincronizarItens(db, obraId, req.dono.sub)
+    })
+
+    const sobre = Object.fromEntries(daObra.map((l) => [String(l.id), l]))
+    await registrarAtividade(req, {
+      acao: 'ensaios.execucao',
+      categoria: 'check',
+      entidade: ['obra', obraId],
+      descricao: 'Execução dos ensaios registrada',
+      detalhes: {
+        ...(await descreverObra(obraId)),
+        linhas: linhas
+          .map((l) => {
+            const s = sobre[l.id]
+            const nome = `${s.item} · ${s.ensaio} · ${rotuloDaCondicao(s.condicao)}`
+            return l.apagar
+              ? `${nome}: resultado apagado`
+              : `${nome}: ${l.resultado} (${l.conforme ? 'conforme' : 'não conforme'}, ${dataLida(l.data)})`
+          })
+          .join('; '),
+      },
+    })
+
+    await conferirEnsaios(req, obraId)
+    return res.json({ ok: true })
+  } catch (e) {
+    if (e.code === '42P01' || e.code === '42703') {
+      return res.status(501).json({ erro: 'Os ensaios por item ainda não existem no banco (atualização 25).' })
+    }
+    return tratar(e, res, 'dados/execucao-itens')
   }
 })
 

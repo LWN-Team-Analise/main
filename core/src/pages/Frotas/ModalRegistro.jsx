@@ -15,7 +15,8 @@ import {
 } from '@/domain/frotas'
 import * as frotasApi from '@/services/frotasService'
 import { dataBR, hojeISO } from '@/utils/formato'
-import { DIAS, diaDaSemana, finaisDoDia, finalDaPlaca, horariosLegiveis } from '@/domain/rodizio'
+import { DIAS, diaDaSemana, finaisDoDia, finalDaPlaca, horaCurta, horarioDe } from '@/domain/rodizio'
+import useHoraAgora from '@/hooks/useHoraAgora'
 import CampoFotos, { fotosCompletas } from './CampoFotos'
 /* aberto tambem de dentro da obra (Retirada do carro): os estilos vem junto */
 import './Frotas.css'
@@ -114,6 +115,7 @@ export default function ModalRegistro({ modo, veiculos, aoFechar, aoRegistrado, 
   const devolucao = modo === 'devolucao'
 
   const [form, setForm] = useState(VAZIO)
+  const agora = useHoraAgora()
   const [fotos, setFotos] = useState({})
   const [erros, setErros] = useState({})
   const [salvando, setSalvando] = useState(false)
@@ -143,14 +145,18 @@ export default function ModalRegistro({ modo, veiculos, aoFechar, aoRegistrado, 
     [veiculos, devolucao],
   )
 
-  const opcoesVeiculo = useMemo(
-    () =>
-      veiculosDaLista.map((v) => ({
-        valor: v.id,
-        rotulo: v.emUso && !devolucao ? `${nomeDoVeiculo(v)} — em uso` : nomeDoVeiculo(v),
-      })),
-    [veiculosDaLista, devolucao],
-  )
+  /* na saida, o carro no rodizio AGORA (dia e horario) ja aparece
+     marcado na lista; fora do horario ele circula e nao leva marca */
+  const opcoesVeiculo = useMemo(() => {
+    const hoje = rodizio?.hoje
+    const finaisAgora = hoje && !hoje.livre && horarioDe(agora) ? hoje.finais : []
+    return veiculosDaLista.map((v) => {
+      const marcas = devolucao
+        ? []
+        : [v.emUso ? 'em uso' : null, finaisAgora.includes(finalDaPlaca(v.placa)) ? 'rodízio agora' : null].filter(Boolean)
+      return { valor: v.id, rotulo: marcas.length ? `${nomeDoVeiculo(v)} — ${marcas.join(', ')}` : nomeDoVeiculo(v) }
+    })
+  }, [veiculosDaLista, devolucao, rodizio, agora])
 
   /* so as obras que estao no quadro (as concluidas ja sairam de la),
      agrupadas pelo nome do cliente */
@@ -323,7 +329,9 @@ export default function ModalRegistro({ modo, veiculos, aoFechar, aoRegistrado, 
       }
     : null
   const finalPlaca = veiculo ? finalDaPlaca(veiculo.placa) : null
-  const noRodizio = diaRodizio && finalPlaca !== null && diaRodizio.finais.includes(finalPlaca)
+  /* so no horario do rodizio: a saida as 11h ja nao leva aviso */
+  const horarioRodizio = horarioDe(lerHora(form.hora) ?? '')
+  const noRodizio = diaRodizio && finalPlaca !== null && diaRodizio.finais.includes(finalPlaca) && horarioRodizio
   /* reservado para OUTRA obra: avisa (quem decide e quem esta saindo) */
   const reservadoParaOutra =
     !devolucao && veiculo?.reservadoPara && veiculo.reservadoPara.obraId !== form.obraId ? veiculo.reservadoPara : null
@@ -380,7 +388,8 @@ export default function ModalRegistro({ modo, veiculos, aoFechar, aoRegistrado, 
         {noRodizio && (
           <p className="frota-form__aviso is-rodizio" role="note">
             <strong>Rodízio:</strong> placa final {finalPlaca} não circula no Centro Expandido de São Paulo{' '}
-            {diaRodizio.data === hojeISO() ? 'hoje' : `nesta ${DIAS[diaRodizio.diaSemana]}`}, das {horariosLegiveis()}.
+            {diaRodizio.data === hojeISO() ? 'hoje' : `nesta ${DIAS[diaRodizio.diaSemana]}`} das{' '}
+            {horaCurta(horarioRodizio.de)} às {horaCurta(horarioRodizio.ate)}.
           </p>
         )}
 

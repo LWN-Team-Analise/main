@@ -43,12 +43,18 @@ export function finalDaPlaca(placa) {
 /** Os finais que nao circulam naquele dia da semana ([] no fim de semana). */
 export const finaisDoDia = (dia) => FINAIS[dia] ?? []
 
-/** 'HH:MM' esta dentro de um dos horarios do rodizio? */
-export const noHorario = (hhmm) => HORARIOS.some((h) => hhmm >= h.de && hhmm < h.ate)
+/** O horario do rodizio em que 'HH:MM' cai ({ de, ate }), ou null fora deles. */
+export const horarioDe = (hhmm) => HORARIOS.find((h) => hhmm >= h.de && hhmm < h.ate) ?? null
 
-/** '7h às 10h e 17h às 20h' */
+/** 'HH:MM' esta dentro de um dos horarios do rodizio? */
+export const noHorario = (hhmm) => horarioDe(hhmm) !== null
+
+/** '10:00' -> '10h' */
+export const horaCurta = (hhmm) => `${Number(String(hhmm).slice(0, 2))}h`
+
+/** 'das 7h às 10h e das 17h às 20h' */
 export const horariosLegiveis = () =>
-  HORARIOS.map((h) => `${Number(h.de.slice(0, 2))}h às ${Number(h.ate.slice(0, 2))}h`).join(' e ')
+  HORARIOS.map((h) => `das ${Number(h.de.slice(0, 2))}h às ${Number(h.ate.slice(0, 2))}h`).join(' e ')
 
 /** '5 e 6' */
 export const finaisLegiveis = (finais) => (finais.length ? finais.join(' e ') : '—')

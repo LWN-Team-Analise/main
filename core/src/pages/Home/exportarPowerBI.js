@@ -324,7 +324,7 @@ export async function exportarParaPowerBI({ escopo, dados, revisor, quem }) {
 
   abas.push({
     nome: 'Sobre',
-    titulo: 'Dashboard — dados para o Power BI',
+    titulo: 'Painel — dados para o Power BI',
     info: [
       ['Conteúdo', ESCOPOS[escopo].rotulo],
       ['Gerado em', dataHora(new Date().toISOString())],

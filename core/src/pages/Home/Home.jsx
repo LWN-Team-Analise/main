@@ -366,7 +366,7 @@ export default function Home() {
             {[
               { id: 'grade', rotulo: 'Grade', Glifo: Icone.grade },
               { id: 'quadro', rotulo: 'Quadro', Glifo: Icone.quadro },
-              ...(veDashboard ? [{ id: 'painel', rotulo: 'Dashboard', Glifo: Icone.painel }] : []),
+              ...(veDashboard ? [{ id: 'painel', rotulo: 'Painel', Glifo: Icone.painel }] : []),
             ].map(({ id, rotulo, Glifo }) => (
               <button
                 key={id}
@@ -418,7 +418,7 @@ export default function Home() {
               type="button"
               className="acao acao--fraca inicio__exportar"
               onClick={() => setPowerBI(true)}
-              title="Baixar os dados do Dashboard numa planilha que o Power BI abre"
+              title="Baixar os dados do Painel numa planilha que o Power BI abre"
             >
               <Icone.exportar />
               Exportar para o Power BI

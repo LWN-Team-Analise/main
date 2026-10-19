@@ -1,14 +1,9 @@
-import { useEffect, useState } from 'react'
 import { AREA, DIAS, finaisLegiveis, finalDaPlaca, horariosLegiveis, noHorario } from '@/domain/rodizio'
+import useHoraAgora from '@/hooks/useHoraAgora'
 import { dataBR } from '@/utils/formato'
 
 /* 'seg', 'ter'... para a faixa da semana */
 const CURTO = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
-
-function agoraHHMM() {
-  const d = new Date()
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
 
 /**
  * O rodizio de Sao Paulo hoje e nos proximos dias (GET /frotas/rodizio),
@@ -19,12 +14,7 @@ function agoraHHMM() {
  * a manha inteira.
  */
 export default function PainelRodizio({ rodizio, veiculos }) {
-  const [agora, setAgora] = useState(agoraHHMM)
-
-  useEffect(() => {
-    const relogio = setInterval(() => setAgora(agoraHHMM()), 60_000)
-    return () => clearInterval(relogio)
-  }, [])
+  const agora = useHoraAgora()
 
   if (!rodizio?.hoje) return null
 
@@ -44,7 +34,7 @@ export default function PainelRodizio({ rodizio, veiculos }) {
             Rodízio em São Paulo
           </h2>
           <p className="rodizio__onde">
-            {AREA} · das {horariosLegiveis()}
+            {AREA} · {horariosLegiveis()}
           </p>
         </div>
         <span className="rodizio__selo">

@@ -1,0 +1,76 @@
+-- ============================================================
+--  O CATALOGO DE ENSAIOS DA LWN
+--
+--  A relacao revisada de ensaios, medicoes e avaliacoes, com as
+--  nomenclaturas usadas internamente, para o Planejamento de ensaios
+--  (1a etapa). Cada um nasce HVAC ou GASES — e a classificacao que
+--  decide se a obra precisa do check "Material de gases".
+--
+--  As analises de GASES sao escolhidas conforme o gas e a utilizacao
+--  (ar comprimido, ar respiravel, nitrogenio, oxigenio, hidrogenio,
+--  dioxido de carbono, argonio, helio, acetileno e outros).
+--
+--  Ficam SEPARADOS de proposito:
+--    - a visualizacao estatica de fumaca em cabines e capelas e o
+--      Smoke Test / Smoke Study de ambientes;
+--    - Status de maquina, Pressao estatica e Diferencial/cascata de
+--      pressao.
+--
+--  "Temperatura da agua gelada" entra com a observacao de que a
+--  inclusao ainda esta a confirmar.
+--
+--  Rodar de novo nao duplica: ensaio ATIVO com o mesmo nome e pulado.
+--  Editar e desativar continua sendo pela tela (Adicionar / editar
+--  ensaios).
+-- ============================================================
+
+BEGIN;
+
+INSERT INTO public.ensaio (nome, descricao, classificacao, ordem)
+SELECT v.nome, v.descricao, v.classificacao, v.ordem
+  FROM (VALUES
+    -- HVAC, salas limpas e equipamentos de ar limpo
+    ('Status de máquina', 'Os parâmetros seguem o procedimento e a documentação aplicável.', 'hvac', 101),
+    ('Integridade e estanqueidade do sistema de filtragem', NULL, 'hvac', 102),
+    ('Diferencial de pressão entre ambientes e avaliação da cascata de pressão', NULL, 'hvac', 103),
+    ('Velocidade e uniformidade do ar', NULL, 'hvac', 104),
+    ('Vazão de ar e determinação do número de trocas por hora', NULL, 'hvac', 105),
+    ('Visualização do fluxo de ar com fumaça em condição estática — cabines e capelas', NULL, 'hvac', 106),
+    ('Smoke Test / Smoke Study — estudo do fluxo de ar em ambientes e forros filtrantes',
+     'Pode envolver condições estáticas e dinâmicas, intervenções e análise do comportamento do fluxo.', 'hvac', 107),
+    ('Temperatura e umidade relativa do ar', NULL, 'hvac', 108),
+    ('Recuperação da classe de limpeza', NULL, 'hvac', 109),
+    ('Contagem de partículas não viáveis no ar, em repouso ou operação', NULL, 'hvac', 110),
+    ('Velocidade de face — Inflow', NULL, 'hvac', 111),
+    ('Velocidade descendente — Downflow', NULL, 'hvac', 112),
+    ('Ensaio de ruído', NULL, 'hvac', 113),
+    ('Pressão estática', NULL, 'hvac', 114),
+    ('Diferencial de pressão/perda de carga de filtros', NULL, 'hvac', 115),
+    ('Vazamento e estanqueidade de dutos', NULL, 'hvac', 116),
+    ('Ensaios de pressurização de escadas', NULL, 'hvac', 117),
+    ('Mapeamento térmico de ambientes, câmaras e armazéns', NULL, 'hvac', 118),
+    ('Ensaio de luminosidade', NULL, 'hvac', 119),
+    ('Temperatura da água gelada', 'Inclusão no catálogo a confirmar.', 'hvac', 120),
+    -- Gases
+    ('Pureza do gás', NULL, 'gases', 201),
+    ('Teor de oxigênio — O₂', NULL, 'gases', 202),
+    ('Teor de monóxido de carbono — CO', NULL, 'gases', 203),
+    ('Teor de dióxido de carbono — CO₂', NULL, 'gases', 204),
+    ('Teor de monóxido de nitrogênio/óxido nítrico — NO', NULL, 'gases', 205),
+    ('Teor de dióxido de nitrogênio — NO₂', NULL, 'gases', 206),
+    ('Teor de dióxido de enxofre — SO₂', NULL, 'gases', 207),
+    ('Umidade, teor de água e temperatura do ponto de orvalho, conforme o método', NULL, 'gases', 208),
+    ('Contagem de partículas não viáveis', NULL, 'gases', 209),
+    ('Análise microbiológica/partículas viáveis', NULL, 'gases', 210),
+    ('Teor de óleo', NULL, 'gases', 211)
+  ) AS v(nome, descricao, classificacao, ordem)
+ WHERE NOT EXISTS (
+   SELECT 1 FROM public.ensaio e
+    WHERE e.ativo AND lower(btrim(e.nome)) = lower(btrim(v.nome))
+ );
+
+COMMIT;
+
+-- CONFERENCIA: quantos ensaios ativos em cada classificacao
+SELECT coalesce(classificacao, 'sem classificação') AS classificacao, count(*) AS ativos
+  FROM public.ensaio WHERE ativo GROUP BY 1 ORDER BY 1;

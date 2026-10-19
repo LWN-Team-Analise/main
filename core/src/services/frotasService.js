@@ -66,3 +66,8 @@ export const cancelarReserva = (obraId) => del(`/frotas/reservas/${encodeURIComp
 
 /** { hoje, dias, horarios, area, agora, fonte } — ver GET /frotas/rodizio. */
 export const carregarRodizio = () => get('/frotas/rodizio')
+
+/* ---- o transito e os alertas de Sao Paulo ---- */
+
+/** { transito, alertas, cge } — ver GET /frotas/condicoes. Cada parte pode vir com `erro`. */
+export const carregarCondicoes = () => get('/frotas/condicoes')

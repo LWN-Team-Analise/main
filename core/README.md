@@ -96,6 +96,21 @@ site — e dele que sai o link do "esqueci minha senha"), `GRAPH_TENANT_ID`,
 Outlook estiver ligado, `OUTLOOK_CLIENT_ID`, `OUTLOOK_CLIENT_SECRET` e
 `OUTLOOK_TENANT`.
 
+`TOMTOM_KEY` liga o transito da Grande Sao Paulo na aba Frotas (conta gratis
+em developer.tomtom.com; o plano gratis da 2.500 consultas por dia). Sem
+ela, o painel mostra so a lentidao da capital, pela CET.
+
+**O painel de transito.** Cada corredor da regiao metropolitana (Marginais,
+Dutra, Castello, Anchieta, Rodoanel... a lista e os pontos estao em
+`src/domain/transito.js`) tem um ponto em cada pista, um por sentido, tirado
+do OpenStreetMap. O TomTom devolve a velocidade de agora e a sem transito
+daquele trecho, e o nivel sai da razao entre as duas: Livre (75% ou mais),
+Moderado (50 a 75%), Intenso (30 a 50%), Muito intenso (abaixo de 30%). A
+regiao (Capital, Norte, Leste, ABC, Oeste, Sudoeste) leva o nivel da media
+dos trechos dela. A consulta gasta uma chamada por ponto e fica 20 minutos
+na memoria. Os "km" da CET sao **km de lentidao** (vias paradas ou lentas),
+e nao distancia. Os avisos do INMET valem para os 39 municipios da regiao.
+
 `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` e `DB_NAME` **nao** vao para a
 Vercel: elas apontam para o Postgres da sua maquina, que a nuvem nao alcanca.
 
@@ -235,6 +250,10 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-20.sql.txt` | dias da execucao escolhidos um a um (`obra.execucao_dias`)        |
 | `db/atualizacao-21.sql.txt` | limite de tentativas: login, codigo de senha e sugestao          |
 | `db/atualizacao-22.sql.txt` | Frotas: veiculos, saidas e devolucoes, fotos e as 3 permissoes   |
+| `db/atualizacao-23.sql.txt` | clientes prioritarios; reserva e retirada do carro da obra         |
+| `db/atualizacao-24.sql.txt` | historico de despesas do SharePoint (cliente_texto, planilha_chave) |
+| `db/atualizacao-25.sql.txt` | ensaios por item: servico da obra, itens (ambiente/TAG/ponto de uso) e linhas com o resultado |
+| `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
 Rode o primeiro na ordem indicada dentro dele; depois rode os outros
 inteiros, conectado ao banco `TrajetoClientes`. Todos, do segundo em diante,
@@ -311,6 +330,17 @@ npm run db:frota -- "C:\caminho\Controle Saída e Devolução de Veículos.xlsx"
 
 Com `--simular` no fim ele so mostra o que faria. Rodar de novo nao duplica
 nada: cada linha guarda o Id do Forms.
+
+O historico de despesas, refeicoes e bonus das listas do SharePoint
+("Despesas.xlsx"), depois da atualizacao 24:
+
+```bash
+npm run db:despesas -- "C:\caminho\Despesas.xlsx"
+```
+
+Quem criou cada linha e procurado entre os usuarios pelo nome; quem nao e
+achado vira um usuario DESATIVADO com o nome da planilha. `--simular` mostra
+esse casamento antes de gravar.
 
 ### O que `db/atualizacao-2.sql.txt` acrescenta
 
@@ -909,7 +939,8 @@ proprio a faixa.
 ## Chat da equipe
 
 O botao redondo do canto inferior direito abre a conversa geral da equipe
-(`chat_site`). Ela e separada do chat da obra de proposito: aquele morre com a
+(`chat_site`) numa tela propria, `/app/chat` — nao mais num pop-up. O
+"Voltar" do canto superior esquerdo leva para a pagina inicial. Ela e separada do chat da obra de proposito: aquele morre com a
 obra e vira historico dela; este e do dia a dia e nao pertence a obra nenhuma.
 
 ### Uma conversa so, usada por duas telas
@@ -927,7 +958,7 @@ dele:
 | Tela | O que ela faz |
 |---|---|
 | `pages/Obras/ModalChat.jsx` | carrega o chat DA OBRA e poe os participantes dela na frente da lista de @ |
-| `components/ChatSite/ChatSite.jsx` | carrega o chat DA EQUIPE; ali a equipe inteira pode ser citada, em ordem alfabetica |
+| `pages/Chat/ChatEquipe.jsx` | a tela do chat DA EQUIPE (`/app/chat`); ali a equipe inteira pode ser citada, em ordem alfabetica |
 
 O componente **nao carrega nem guarda** as mensagens: quem faz isso e quem
 chama, porque as duas origens sao rotas diferentes. Dali saem so dois pedidos
@@ -944,6 +975,7 @@ O botao muda conforme a tela:
 | Obras | **+**, com *Adicionar observação* e *Chat da equipe* |
 | Demais | icone de chat, atalho direto |
 | Dentro de uma obra | **nao aparece** — la o chat que vale e o da obra |
+| Chat da equipe | **nao aparece** — a pessoa ja esta nele |
 
 Conversar e de todo mundo que entra; nao ha permissao para isso. O que se
 controla e quem apaga: cada um tira so a propria mensagem, e a API confere de
@@ -1747,6 +1779,49 @@ percentual — um dia nao apaga o outro). O andamento de um ensaio e o do dia
 mais recente; o da execucao e a media (Vazao 100% + Smoke Test 50% = 75%). O
 check **so fecha com todos em 100%**, e reabre sozinho se um ensaio voltar a
 ficar abaixo disso (um dia corrigido, um ensaio novo no planejamento).
+
+**Ensaios por item (atualizacao 25).** A obra nova planeja **por item**: em
+vez de uma lista solta, cadastra o que vai ser ensaiado e, em cada item, os
+ensaios com a condicao.
+
+| Item | Identifica | Ensaios que aparecem |
+| --- | --- | --- |
+| Ambiente | nome + classe (ISO 7 / Grau C) | HVAC |
+| Equipamento | nome + TAG | HVAC |
+| Sistema | nome (AHU, rede de gases) | HVAC e Gases |
+| Ponto de uso | nome + **gas** (obrigatorio) | Gases |
+
+Cada ensaio marcado no item escolhe **Como encontrado** (o ensaio antes de
+qualquer ajuste, que registra como o sistema estava — o "As-Found" do
+mercado), **Como certificado** (depois dos ajustes, o resultado que vai para o
+certificado) ou as duas, para comparar o antes e o depois. Na tela tudo e em
+portugues; no banco os ids continuam `as_found` e `como_certificado`. Cada
+item + ensaio + condicao e uma **linha** (`obra_item_ensaio`). O
+**servico** e um por obra (`obra.servico`: Qualificacao/Certificacao, QI, QO,
+QP, TAB, Comissionamento ou Requalificacao). Cada item salvo ja vai para o
+banco; "Concluir planejamento" pede o servico, ao menos um item e todo item
+com ensaio. "Duplicar" abre a copia de um item no editor, para trocar so o
+nome (Sala 101 -> Sala 102).
+
+Na **Execucao**, cada linha recebe o resultado: data, valor medido, conforme
+ou nao conforme e observacao. "Nao conforme" e resultado, nao pendencia: a
+linha conta como feita. O % da execucao e a parte das linhas feitas, e o
+check so fecha com todas. "Salvar e proxima" pula para a proxima pendente
+com a mesma data.
+
+As tabelas da lista solta continuam sendo a fonte do resto do sistema: a
+cada mudanca o servidor (`sincronizarItens`) refaz `obra_ensaio` (os ensaios
+distintos das linhas) e `obra_ensaio_progresso` (por ensaio e dia: linhas
+feitas ate aquele dia / linhas do ensaio). O quadro, o "Material de gases" e
+as regras dos dois checks nao mudaram. As rotas sao `PUT
+/api/dados/obras/:id/planejamento-itens` e `PUT
+/api/dados/obras/:id/execucao-itens`; as da lista solta recusam (409) a obra
+que planeja por item.
+
+A obra que ja tinha escolhido ensaios pela lista **continua nela**. Enquanto
+nao tiver execucao registrada, o botao "Planejar por item" passa para itens
+(ao salvar o primeiro item, a lista passa a sair dos itens). Os itens se
+cadastram pela tela; importar de planilha fica para depois.
 
 **Catalogo de ensaios.** Comeca com Teste 1, 2 e 3. Quem tem "Adicionar /
 editar ensaios" (`gerenciar_ensaios`) cria, renomeia e exclui pelo botao
