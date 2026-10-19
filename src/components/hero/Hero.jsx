@@ -8,7 +8,8 @@ import './Hero.css';
 // streaming right away) and its first frame, shown until the video plays.
 const VIDEO = { src: '/assets/hero/lwn-hero.mp4', poster: '/assets/hero/hero-video-poster.webp' };
 
-// Below this width there is no video at all (it is not even downloaded).
+// From this width the video is a band across the top of the screen; below
+// it, it is shown whole at its own proportions (16:9), under the header.
 const WIDE = '(min-width: 900px)';
 
 /**
@@ -58,8 +59,9 @@ function HeroVideo({ play }) {
  * half the screen) and fades into the brand navy, where the whole copy sits —
  * in place from the start; only the sections below are revealed by the scroll.
  *
- * Phones and small tablets: no video — a compact opening on the brand navy with
- * the whole copy visible from the first paint, without entrance animations.
+ * Phones and small tablets: the same video, whole (not cropped or stretched),
+ * full width just below the header, then the copy on the brand navy — visible
+ * from the first paint, without entrance animations.
  */
 export default function Hero() {
   const wide = useMediaQuery(WIDE);
@@ -69,12 +71,10 @@ export default function Hero() {
   return (
     <section id="inicio" className={`hero${wide ? '' : ' hero--compact'}`} data-theme="dark" aria-label={t.hero.label}>
       <div className="hero__stage">
-        {wide && (
-          <div className="hero__media">
-            <HeroVideo play={!reducedMotion} />
-            <div className="hero__grade" aria-hidden="true" />
-          </div>
-        )}
+        <div className="hero__media">
+          <HeroVideo play={!reducedMotion} />
+          <div className="hero__grade" aria-hidden="true" />
+        </div>
 
         <div className="hero__content">
           <HeroText />
