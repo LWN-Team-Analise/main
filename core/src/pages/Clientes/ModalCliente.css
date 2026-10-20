@@ -39,3 +39,167 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------------- Proximo contato, pessoas e o resumo (atualizacao 27) ---------------- */
+
+.formcli__data {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.formcli__limpar {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.formcli__limpar:hover {
+  color: var(--danger);
+}
+
+.formcli__pessoas {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+}
+
+.formcli__pessoas legend {
+  padding: 0 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.formcli__nada {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.formcli__pessoa {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 1.4fr) minmax(0, 1fr) 30px;
+  gap: 6px;
+  align-items: center;
+}
+
+.formcli__pessoa input {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.formcli__pessoa input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.formcli__tirar {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.formcli__tirar:hover {
+  background: var(--control-bg-hover);
+  color: var(--danger);
+}
+
+.formcli__pessoa-erro {
+  grid-column: 1 / -1;
+}
+
+.formcli__mais {
+  align-self: flex-start;
+  padding: 6px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.formcli__resumo {
+  grid-column: 1 / -1;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+}
+
+.formcli__resumo-titulo {
+  margin: 0 0 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.formcli__resumo dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.formcli__resumo dt {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.formcli__resumo dd {
+  margin: 2px 0 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+@media (max-width: 620px) {
+  .formcli__pessoa {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 30px;
+  }
+
+  .formcli__pessoa input:nth-of-type(3),
+  .formcli__pessoa input:nth-of-type(4) {
+    grid-row: 2;
+  }
+
+  .formcli__pessoa input:nth-of-type(3) {
+    grid-column: 1;
+  }
+
+  .formcli__pessoa input:nth-of-type(4) {
+    grid-column: 2;
+  }
+
+  .formcli__resumo dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

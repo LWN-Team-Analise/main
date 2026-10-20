@@ -18,9 +18,11 @@ import {
 import { useDados } from '@/context/DadosContext'
 import { ordemDosClientes } from '@/domain/obras'
 import Estrelas from '@/components/Estrelas/Estrelas'
-import { dataBR, dataHora, formatarCEP } from '@/utils/formato'
+import { dataBR, dataHora, formatarCEP, hojeISO } from '@/utils/formato'
 import useCorDaLogo from '@/hooks/useCorDaLogo'
 import Confirma from '@/components/Confirma/Confirma'
+import { carregarResumoClientes } from '@/services/comercialService'
+import { baixarPlanilha } from '@/utils/planilha'
 import ModalCliente from './ModalCliente'
 import ModalSetores from './ModalSetores'
 import './Clientes.css'
@@ -47,6 +49,11 @@ const Icone = {
       <path d="M3 7.5 11 11l8-3.5M11 11v9" />
     </svg>
   ),
+  exportar: () => (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14" />
+    </svg>
+  ),
   pino: () => (
     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z" />
@@ -67,12 +74,27 @@ export default function Clientes() {
     removerCliente,
     concluida,
     pode,
+    equipe,
   } = useDados()
   const navigate = useNavigate()
 
   /* sem a permissao a lista continua a mesma; o que some sao os
      botoes de cadastrar, editar e apagar */
   const podeMexer = pode('editar_clientes')
+  const podeExportar = pode('exportar_clientes')
+
+  /* os negocios de cada cliente (aba Comercial): ganhos, abertos e o
+     ticket medio. Sem a tabela, ou sem resposta, fica tudo em zero. */
+  const [resumo, setResumo] = useState({})
+  useEffect(() => {
+    let valido = true
+    carregarResumoClientes()
+      .then((r) => valido && setResumo(r))
+      .catch(() => {})
+    return () => {
+      valido = false
+    }
+  }, [clientes])
 
   const [modal, setModal] = useState(false)
   const [editando, setEditando] = useState(null)
@@ -175,6 +197,72 @@ export default function Clientes() {
     if (apagando) removerCliente(apagando.id)
   }
 
+  /**
+   * A planilha do cadastro inteiro: uma linha por empresa, com o que a
+   * tela tem e o que o sistema calcula (negocios do Comercial e a nota
+   * das obras avaliadas). A segunda aba traz as pessoas de contato, uma
+   * por linha.
+   */
+  const exportarClientes = () => {
+    const nomeDe = (id) => equipe.find((p) => String(p.id) === String(id))?.nome ?? ''
+    const enderecoDe = (c) =>
+      [c.endereco, c.bairro, c.cidade && c.estado ? `${c.cidade}/${c.estado}` : c.cidade, c.cep ? formatarCEP(c.cep) : '']
+        .filter(Boolean)
+        .join(' — ')
+    const ordenados = [...clientes].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+    baixarPlanilha(
+      [
+        {
+          nome: 'Clientes',
+          tabela: 'Clientes',
+          colunas: [
+            { titulo: 'Empresa', tipo: 'texto', largura: 34 },
+            { titulo: 'Endereço', tipo: 'texto', largura: 48 },
+            { titulo: 'Cidade', tipo: 'texto', largura: 18 },
+            { titulo: 'UF', tipo: 'texto', largura: 5 },
+            { titulo: 'Setor', tipo: 'texto', largura: 18 },
+            { titulo: 'Pessoas', tipo: 'texto', largura: 46 },
+            { titulo: 'Negócios fechados', tipo: 'inteiro', largura: 12 },
+            { titulo: 'Negócios em aberto', tipo: 'inteiro', largura: 12 },
+            { titulo: 'Ticket médio', tipo: 'reais', largura: 14 },
+            { titulo: 'Próximo contato', tipo: 'data', largura: 14 },
+            { titulo: 'Proprietário', tipo: 'texto', largura: 22 },
+            { titulo: 'Nota de satisfação média', tipo: 'decimal', largura: 12 },
+          ],
+          linhas: ordenados.map((c) => [
+            c.nome,
+            enderecoDe(c),
+            c.cidade,
+            c.estado,
+            setorPorId(c.setorId)?.nome ?? '',
+            (c.pessoas ?? []).map((p) => (p.email ? `${p.nome} <${p.email}>` : p.nome)).join('; '),
+            resumo[c.id]?.ganhos ?? 0,
+            resumo[c.id]?.abertos ?? 0,
+            resumo[c.id]?.ticketMedio ?? null,
+            c.proximoContato || null,
+            nomeDe(c.proprietarioId),
+            avaliacoes[c.id]?.media ?? null,
+          ]),
+        },
+        {
+          nome: 'Pessoas',
+          tabela: 'Pessoas',
+          colunas: [
+            { titulo: 'Empresa', tipo: 'texto', largura: 34 },
+            { titulo: 'Nome', tipo: 'texto', largura: 28 },
+            { titulo: 'Cargo', tipo: 'texto', largura: 22 },
+            { titulo: 'E-mail', tipo: 'texto', largura: 32 },
+            { titulo: 'Telefone', tipo: 'texto', largura: 18 },
+          ],
+          linhas: ordenados.flatMap((c) =>
+            (c.pessoas ?? []).map((p) => [c.nome, p.nome, p.cargo, p.email, p.telefone]),
+          ),
+        },
+      ],
+      `clientes-${hojeISO()}.xlsx`,
+    )
+  }
+
   const salvar = (campos) => {
     if (editando) atualizarCliente(editando.id, campos)
     else adicionarCliente(campos)
@@ -214,6 +302,19 @@ export default function Clientes() {
             >
               <Icone.setor />
               Setores
+            </button>
+          )}
+
+          {podeExportar && (
+            <button
+              type="button"
+              className="acao acao--fraca"
+              onClick={exportarClientes}
+              disabled={clientes.length === 0}
+              title="Baixar todos os clientes numa planilha do Excel"
+            >
+              <Icone.exportar />
+              Exportar clientes
             </button>
           )}
 
@@ -298,6 +399,8 @@ export default function Clientes() {
       <ModalCliente
         aberto={modal}
         cliente={editando}
+        resumo={editando ? resumo[editando.id] ?? null : null}
+        nota={editando ? avaliacoes[editando.id] ?? null : null}
         aoFechar={() => setModal(false)}
         aoSalvar={salvar}
       />

@@ -10,6 +10,7 @@ import {
   prioridadeTravada,
   rotuloDaPrioridade,
 } from '@/domain/obras'
+import { proximaProposta } from '@/services/dadosService'
 import { dataBR, hojeISO } from '@/utils/formato'
 import './ModalObra.css'
 
@@ -71,6 +72,8 @@ export default function ModalObra({
   const [form, setForm] = useState(VAZIO)
   const [erros, setErros] = useState({})
   const [salvando, setSalvando] = useState(false)
+  /* o n° que veio sugerido (o da ultima obra + 1), para a dica do campo */
+  const [sugerida, setSugerida] = useState('')
 
   const editando = Boolean(obra)
   const tipoAtual = editando ? obra.tipo : tipo
@@ -95,6 +98,23 @@ export default function ModalObra({
         : { ...VAZIO, dataInicio: hojeISO() },
     )
     setErros({})
+    setSugerida('')
+    if (obra) return undefined
+
+    /* Obra NOVA ja vem com o n° da proposta: o da ultima cadastrada,
+       mais um (8234 -> 8235). E so sugestao — o campo continua livre,
+       e se a pessoa ja comecou a digitar, o que ela digitou fica. */
+    let valido = true
+    proximaProposta()
+      .then((numero) => {
+        if (!valido || !numero) return
+        setSugerida(numero)
+        setForm((atual) => (atual.proposta ? atual : { ...atual, proposta: numero }))
+      })
+      .catch(() => {})
+    return () => {
+      valido = false
+    }
   }, [aberto, obra])
 
   const mudar = (campo) => (evento) => {
@@ -212,6 +232,11 @@ export default function ModalObra({
           value={form.proposta}
           onChange={mudar('proposta')}
           erro={erros.proposta}
+          dica={
+            !editando && sugerida && form.proposta === sugerida
+              ? 'Número seguinte ao da última obra cadastrada. Dá para mudar.'
+              : undefined
+          }
         />
 
         <CampoArea

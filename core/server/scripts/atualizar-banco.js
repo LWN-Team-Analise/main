@@ -53,6 +53,8 @@ const ARQUIVOS = [
   'db/atualizacao-24.sql.txt',
   'db/atualizacao-25.sql.txt',
   'db/atualizacao-26.sql.txt',
+  'db/atualizacao-27.sql.txt',
+  'db/atualizacao-28.sql.txt',
 ]
 
 /**
@@ -151,6 +153,14 @@ const CONFERENCIA = [
   ['obra_item_ensaio', "SELECT to_regclass('public.obra_item_ensaio') IS NOT NULL AS ok"],
   ['push_inscricao', "SELECT to_regclass('public.push_inscricao') IS NOT NULL AS ok"],
   ['chat_site_leitura', "SELECT to_regclass('public.chat_site_leitura') IS NOT NULL AS ok"],
+  ['cliente_pessoa', "SELECT to_regclass('public.cliente_pessoa') IS NOT NULL AS ok"],
+  ['negocio', "SELECT to_regclass('public.negocio') IS NOT NULL AS ok"],
+  ['negocio_email', "SELECT to_regclass('public.negocio_email') IS NOT NULL AS ok"],
+  ['cliente.proprietario_id', col('cliente', 'proprietario_id')],
+  ['cargo.painel_tv', col('cargo', 'painel_tv')],
+  ['setor Painel TV', "SELECT EXISTS (SELECT 1 FROM cargo WHERE chave = 'painel_tv' AND painel_tv) AS ok"],
+  ['ver_comercial no acesso total', permissaoNoAcessoTotal('ver_comercial')],
+  ['presenca', "SELECT to_regclass('public.presenca') IS NOT NULL AS ok"],
 ]
 
 function col(tabela, coluna) {

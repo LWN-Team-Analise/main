@@ -1,11 +1,11 @@
 /**
  * Cargos e usuarios (server/routes/equipe.js).
  *
- * Colaborador novo entra com uma senha temporária gerada automaticamente
- * e com senha_temporaria ligado: o sistema cobra a troca no primeiro acesso.
+ * Colaborador novo entra com a senha padrão (123456) e com
+ * senha_temporaria ligado: o sistema cobra a troca no primeiro acesso.
  *
- * A senha temporária é gerada pelo servidor e devolvida na resposta do
- * cadastro para ser mostrada ao administrador.
+ * A senha volta na resposta do cadastro para ser mostrada ao
+ * administrador.
  */
 
 import { del, get, patch, post } from './api'

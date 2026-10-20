@@ -49,7 +49,9 @@ export default function ProtectedRoute({ children, permissao, permissoes }) {
     return <Navigate to="/login" replace state={{ from: location }} />
   }
 
-  if (outlook.disponivel && !outlook.conferindo && !user?.outlook) {
+  /* a TV da empresa (setor "Painel TV") e a unica conta sem Outlook: ela
+     entra com e-mail e senha e so ve a pagina inicial */
+  if (outlook.disponivel && !outlook.conferindo && !user?.outlook && !user?.painelTv) {
     return <PortaoOutlook />
   }
 

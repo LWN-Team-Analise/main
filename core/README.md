@@ -272,6 +272,8 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-24.sql.txt` | historico de despesas do SharePoint (cliente_texto, planilha_chave) |
 | `db/atualizacao-25.sql.txt` | ensaios por item: servico da obra, itens (ambiente/TAG/ponto de uso) e linhas com o resultado |
 | `db/atualizacao-26.sql.txt` | notificacoes no celular (push_inscricao) e mensagens nao lidas do chat (chat_site_leitura) |
+| `db/atualizacao-27.sql.txt` | Comercial (negocio, negocio_email), pessoas/dono/proximo contato do cliente, setor "Painel TV" e as permissoes novas |
+| `db/atualizacao-28.sql.txt` | presenca (a bolinha verde/vermelha/cinza da tela de Usuarios) |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
 Rode o primeiro na ordem indicada dentro dele; depois rode os outros
@@ -579,8 +581,8 @@ esconde o botao e a API recusa a chamada usando exatamente as mesmas chaves.
 
 | Grupo        | Chaves                                                              |
 | ------------ | ------------------------------------------------------------------- |
-| Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_avaliacoes`, `ver_avisos` |
-| Alteracao    | `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_avaliacoes`, `editar_clientes`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral` |
+| Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_avaliacoes`, `ver_avisos` |
+| Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
 
 Alteracao **sempre** depende da visualizacao correspondente: desmarcar "Obras"
 apaga junto tudo o que so faz sentido dentro de Obras, e essas linhas ficam
@@ -588,10 +590,22 @@ travadas ate a visualizacao voltar. Quem tem `acesso_total` (diretoria) passa
 por qualquer uma, marcada ou nao. A lista e normalizada ao gravar **e ao ler**
 (`normalizar()`): alteracao gravada sem a visualizacao dela nao vale.
 
-Na tela do setor, cada alteracao aparece **embaixo** da visualizacao de que
-depende, na coluna da direita (`GRUPOS` em `permissoes.js`); as tres de
-Usuarios, que nao dependem de visualizacao nenhuma, fecham a lista. No celular
-as duas colunas viram arvore.
+Na tela do setor, cada aba ocupa uma linha: a visualizacao a esquerda e as
+alteracoes dela ao lado, uma na frente da outra, quebrando a linha no fim
+(`GRUPOS` em `permissoes.js`); as tres de Usuarios, que nao dependem de
+visualizacao nenhuma, fecham a lista. No celular a aba fica em cima e as
+alteracoes embaixo.
+
+As da atualizacao 27 entraram assim (uma vez so — rodar de novo nao devolve
+uma permissao que alguem tirou depois):
+
+- **`ver_historico`** — o Historico embaixo da Grade. Todo setor que ja via a
+  pagina inicial ganhou; a TV nao tem. A API (`GET /api/atividades`) confere;
+- **`exportar_clientes`** — o botao "Exportar clientes". Quem edita cliente
+  ganhou;
+- **`ver_comercial`**, **`editar_negocios`**, **`excluir_negocios`**,
+  **`responder_emails`** — a aba Comercial. O setor Comercial e o acesso
+  total ganharam; os outros, quem administra marca.
 
 Tres chaves valem uma nota:
 
@@ -930,6 +944,135 @@ leitura comeca "em dia". A tela do chat busca mensagens novas sozinha a cada
 12s.
 
 
+## Comercial (os funis de venda)
+
+A aba **Comercial** (`/app/comercial`, icone `fi-rr-calendar-clock` do
+Flaticon) e o quadro de negocios no desenho do Pipedrive. Quatro funis, no
+seletor do canto direito, cada um com as colunas dele
+(`src/domain/comercial.js`, usado pela tela e pela API):
+
+| Funil | Colunas |
+|---|---|
+| Novos negócios | Demanda Recebida, Aguardando Documentação, Proposta em Elaboração, Proposta Enviada, Construtora Aguardando Concorrência, Negociação/Aprovação Interna, Aguardando Agendamento/Execução |
+| Funil de renovação | Demanda Futura, Contato com o Cliente, Autorizado Renovação de Proposta, Proposta Enviada, Negociação/Aprovação interna, Aguardando Pedido de Compras, Aguardando Execução |
+| Funil de Resgate | Retomar Contato, Contato Agendado, Proposta, Negociação, Fechamento |
+| Funil Prospecção | Empresa-Alvo Identificada, Enriquecer dados, Contato Iniciado, Interesse em Conversa Técnica, Demanda Identificada, Elaboração Proposta |
+
+A barra e a do Pipedrive: as visoes **Funil**, **Lista**, **Previsão** (pelo
+mes da data de fechamento esperada) e **Arquivados** (ganhos e perdidos), o
+**+ Negócio** (com importar), a contagem, o funil, o **Filtro** (de quem e o
+negocio) e o **⋯** (exportar para Excel e importar). Embaixo: **Fixar
+filtros** (guarda neste navegador), **Adicionar condição** (texto, etiqueta,
+situacao da atividade, valor minimo), **Ordenar por** e **Mostrar negócios
+fechados**.
+
+O cartao traz a etiqueta, o titulo, a empresa, a pessoa, o valor, o
+responsavel e a situacao da proxima atividade (triangulo amarelo = nenhuma;
+vermelho = atrasada; verde = hoje; cinza = marcada). Arrastar muda a etapa;
+enquanto arrasta, sobe a faixa **Excluir / Perdido / Ganho / Mover para
+outro funil**. No celular a etapa muda dentro do negocio (as setas do topo).
+
+**Importar:** a planilha que o Pipedrive exporta (`.xlsx` ou `.csv`) e lida
+na tela (`src/utils/lerPlanilha.js`, sem biblioteca); cada coluna e casada
+pelo nome, e a coluna "Funil" manda cada linha para o funil dela (VENDAS
+NOVAS -> Novos negócios, RENOVAÇÃO, RESGATE, PROSPECÇÃO). A empresa casa com o
+cliente pelo nome; o responsavel, pelo nome ou e-mail.
+
+### "Responder?": e-mail saindo da caixa da propria pessoa
+
+O botao do cartao abre a janela de e-mail; a mensagem sai **da caixa do
+Outlook de quem esta logado** (`usuario.outlook_email`, ou o e-mail do
+cadastro), pela mesma permissao de aplicativo **Mail.Send** que ja manda os
+avisos: `POST /users/{caixa}/sendMail` (`server/graph.js`, `enviarComo`).
+Fica nos Itens Enviados da pessoa e a resposta do cliente volta para ela. Os
+enviados ficam registrados no negocio (`negocio_email`). Limite: 30 por
+pessoa por hora.
+
+**Responder dentro da conversa** e saber **quem espera resposta** exigem ler a
+caixa de entrada: a permissao de aplicativo **Mail.Read** (ou
+Mail.ReadBasic.All) no mesmo registro do Entra ID, com consentimento do
+administrador. Com ela:
+
+- a janela mostra o ultimo e-mail do contato e a resposta entra no fio dele
+  (`/messages/{id}/reply`);
+- o quadro confere, 20 por vez, a caixa do responsavel de cada negocio aberto
+  (`POST /api/comercial/emails/conferir`), e o "Responder?" aparece so onde o
+  ultimo e-mail do contato ainda nao foi respondido.
+
+Sem ela (o que ha hoje: so Mail.Send), o envio funciona como e-mail novo, e o
+"Responder?" aparece em todo negocio aberto que tem e-mail de contato. Nada
+precisa mudar no codigo para ligar: o sistema le as permissoes do proprio
+token.
+
+## Clientes: pessoas, proprietario e exportacao
+
+O cadastro do cliente ganhou (atualizacao 27):
+
+- **Proprietário** — quem cadastrou (ou responde pela) empresa. Vem
+  preenchido com quem esta cadastrando; os clientes antigos ganharam o que o
+  historico registrou;
+- **Próximo contato** — uma data;
+- **Pessoas de contato** — nome, cargo, e-mail e telefone (`cliente_pessoa`).
+  Sao as pessoas que o negocio escolhe no Comercial; o e-mail delas e o destino
+  do "Responder?";
+- **Calculado pelo sistema** (so leitura): negocios fechados (ganhos) e em
+  aberto e o ticket medio (media dos ganhos), do Comercial
+  (`GET /api/comercial/resumo-clientes`); e a nota de satisfacao media, das
+  obras avaliadas.
+
+**Exportar clientes** (`exportar_clientes`) baixa um `.xlsx` com duas abas:
+**Clientes** (Empresa, Endereço, Cidade, UF, Setor, Pessoas, Negócios
+fechados, Negócios em aberto, Ticket médio, Próximo contato, Proprietário,
+Nota de satisfação média) e **Pessoas** (uma por linha).
+
+## Obra nova: o n° da proposta ja vem preenchido
+
+Abrir o cadastro de uma obra nova busca `GET /api/dados/obras/proxima-proposta`:
+o n° da ULTIMA obra cadastrada, mais um (`8234` -> `8235`; `1042/2026` ->
+`1043/2026`, o primeiro grupo de digitos e o contador). Numero que ja existe e
+pulado. O campo continua editavel (`src/domain/proposta.js`).
+
+## A tela da TV (Painel TV)
+
+O setor marcado como **Tela da TV** (`cargo.painel_tv`, so o acesso total
+liga) e a televisao da empresa. Quem esta nele:
+
+- so ve a **pagina inicial**, sem Dashboard, sem Historico e sem chat;
+- e o **unico login sem Outlook** (o portao do Outlook nao barra), e a sessao
+  dura 30 dias;
+- ve "Ótima tarde, **Time**!", "**Para equipe**" e "Possuímos N tarefas para
+  fazer agora.", com as tarefas de TODOS os setores (o filtro **Todas**);
+- a pagina se troca sozinha (`src/pages/Home/useModoTv.js`): Grade e Quadro
+  se revezando, cada uma descendo devagar ate a ultima tarefa. Se mostrou
+  tudo antes de 1 minuto, volta ao topo e repete ate o minuto exato; se a
+  lista e comprida, termina de descer, espera 10 s (subindo de volta) e troca.
+  A cada troca os dados sao lidos de novo.
+
+A conta da TV e criada pelo script (com a senha que voce escolher):
+
+```
+npm run db:painel -- lwnteamanalise@lwnengenharia.com.br "SenhaDaTV"
+```
+
+Para criar no Neon, rode com o `DATABASE_URL` dele no ambiente. Rodar de
+novo com o mesmo e-mail troca a senha. Na TV: `/core/login`, com o e-mail e a
+senha.
+
+## Usuarios: quem esta online (a bolinha)
+
+No card de cada pessoa, a foto tem uma bolinha no canto de baixo, a direita
+(atualizacao 28, `src/hooks/usePresenca.js`, `server/routes/presenca.js`):
+
+- **verde** — o sistema esta aberto e na frente;
+- **vermelho** — aberto, mas em segundo plano (outra aba, janela minimizada,
+  celular com outro app na frente);
+- **cinza** — offline: fechou a aba, ou nenhuma aba avisou em 3 minutos.
+
+Cada aba aberta avisa o servidor a cada minuto e na hora em que muda de
+visibilidade; fechar a aba (ou sair da conta) avisa na hora. Uma linha por aba
+em `presenca`: com duas abas abertas, vale a melhor das duas. O prazo e contado
+pelo relogio do banco. A tela de Usuarios rele as bolinhas a cada 30 s.
+
 ## Setores do cliente
 
 > Nao confundir com o **setor da equipe** (Comercial, GQ, Excelencia), que e a
@@ -1263,6 +1406,7 @@ db/
 | `/app/obras/:id`            | Tela da obra (5 etapas)  | protegido |
 | `/app/clientes`             | Clientes                 | protegido |
 | `/app/concluidas`           | Obras concluidas         | protegido |
+| `/app/comercial`            | Comercial (funis de venda) | protegido |
 | `/app/avaliacoes`           | Avaliacoes da equipe     | protegido |
 | `/app/usuarios`             | Usuarios                 | protegido |
 | `/app/despesas`             | Despesas (enviar)        | protegido |

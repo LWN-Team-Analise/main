@@ -247,9 +247,8 @@
 /* ============================================================
    Permissoes do cargo
 
-   Duas colunas: o que ele VE e o que ele ALTERA. Cada alteracao
-   fica embaixo da visualizacao de que depende — e, sem ela, fica
-   apagada e travada.
+   O que ele VE (a aba) e o que ele ALTERA dentro dela. Sem a
+   visualizacao, as alteracoes da aba ficam apagadas e travadas.
    ============================================================ */
 
 .perm {
@@ -328,28 +327,24 @@
   color: var(--text-strong);
 }
 
-/* As duas colunas continuam — Visualizacao a esquerda, Alteracao a
-   direita —, mas cada alteracao desce para a linha de baixo da
-   visualizacao de que depende. O ramo inteiro e uma grade de duas
-   colunas: a visualizacao na primeira linha, as alteracoes na segunda,
-   ja na coluna da direita. */
-.perm__arvore {
-  --perm-col: minmax(0, 0.8fr) minmax(0, 1.2fr);
+/* Uma linha por aba: a VISUALIZACAO a esquerda e, ao lado, as
+   ALTERACOES dela uma na frente da outra, quebrando a linha quando
+   chegam ao fim. Cada caixa e um chip; marcado, ele acende. */
+.perm__grupos {
+  --perm-aba: 200px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
 .perm__cabeca,
-.perm__ramo {
+.perm__grupo {
   display: grid;
-  grid-template-columns: var(--perm-col);
-  column-gap: 14px;
+  grid-template-columns: var(--perm-aba) minmax(0, 1fr);
+  column-gap: 16px;
 }
 
 .perm__cabeca h4 {
-  margin: 0 0 4px;
-  padding: 0 9px;
+  margin: 0 0 6px;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -357,109 +352,115 @@
   color: var(--text-muted);
 }
 
-.perm__ramo + .perm__ramo {
-  padding-top: 4px;
+.perm__grupo {
+  align-items: start;
+  padding: 10px 0;
   border-top: 1px solid var(--line);
 }
 
-.perm__vis {
-  grid-column: 1;
+.perm__aba {
+  display: flex;
 }
 
 .perm__alts {
   display: flex;
-  grid-column: 2;
-  grid-row: 2;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
+  min-width: 0;
+}
+
+.perm__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* Usuarios nao tem caixa de visualizacao: o nome da aba fica no lugar,
-   alinhado com o texto das outras linhas */
-.perm__item--fixo {
+.perm__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 6px 12px 6px 9px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  font-size: 0.8rem;
+  line-height: 1.3;
+  color: var(--text-base);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.perm__chip:hover:not(.is-travada) {
+  background: var(--control-bg-hover);
+}
+
+.perm__chip:has(input:checked) {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--text-strong);
+}
+
+.perm__chip input {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* a visualizacao e o nome da aba: em negrito, ocupando a coluna */
+.perm__chip--aba {
+  font-weight: 600;
+}
+
+/* Usuarios nao tem caixa de visualizacao: o nome da aba fica no lugar */
+.perm__chip--fixo {
+  border-style: dashed;
+  background: transparent;
   font-weight: 600;
   color: var(--text-muted);
   cursor: default;
 }
 
-.perm__item--fixo i {
-  width: 16px;
-  flex-shrink: 0;
-}
-
-/* No celular as duas colunas nao cabem lado a lado: vira arvore, com a
-   alteracao recuada embaixo da visualizacao e um fio ligando as duas */
-@media (max-width: 560px) {
-  .perm__cabeca,
-  .perm__ramo {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .perm__cabeca h4 + h4,
-  .perm__alts {
-    grid-column: 1;
-    grid-row: auto;
-    margin-left: 17px;
-    padding-left: 10px;
-    border-left: 1.5px solid var(--control-border);
-  }
-}
-
-.perm__item {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  padding: 7px 9px;
-  border-radius: var(--radius-sm);
-  font-size: 0.81rem;
-  line-height: 1.4;
-  color: var(--text-base);
-  cursor: pointer;
-  transition: background var(--dur-fast) var(--ease-out);
-}
-
-.perm__item:hover:not(.is-travada) {
-  background: var(--control-bg-hover);
-}
-
-.perm__item input {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  margin-top: 1px;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-.perm__item span {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-/* alteracao sem a visualizacao dela: nao clica, e diz por que */
-.perm__item.is-travada {
+/* alteracao sem a visualizacao dela: nao clica, e a linha diz por que */
+.perm__chip.is-travada {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.perm__item.is-travada input {
+.perm__chip.is-travada input {
   cursor: not-allowed;
 }
 
 .perm__trava {
-  font-style: normal;
-  font-size: 0.68rem;
+  margin: 0;
+  font-size: 0.7rem;
   line-height: 1.4;
-  color: var(--text-faint);
+  color: var(--pri-media);
 }
 
-.perm__trava {
-  color: var(--pri-media);
+/* No celular a aba fica em cima e as alteracoes logo abaixo, recuadas */
+@media (max-width: 560px) {
+  .perm__cabeca {
+    display: none;
+  }
+
+  .perm__grupo {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 8px;
+  }
+
+  .perm__alts {
+    padding-left: 14px;
+    border-left: 1.5px solid var(--control-border);
+    margin-left: 10px;
+  }
 }
 
 /* ---------------- Copiar permissões de outro cargo ----------------

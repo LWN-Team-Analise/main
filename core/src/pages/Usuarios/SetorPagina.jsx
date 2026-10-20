@@ -18,7 +18,8 @@ import './SetorPagina.css'
  *
  * Antes era um pop-up por cima da lista de setores, e a arvore de
  * permissoes (visualizacao x alteracao) nao cabia: rolava dentro do
- * pop-up, que rolava dentro da tela. Aqui ela tem a largura toda. Criar,
+ * pop-up, que rolava dentro da tela. Aqui ela tem a largura toda, com as
+ * caixas lado a lado, quebrando a linha no fim. Criar,
  * renomear e excluir continuam rapidos na lista (botao Setor, em
  * Usuarios); o clique num setor da lista abre esta tela.
  *
@@ -62,6 +63,7 @@ export default function SetorPagina() {
       cor: cargo.cor,
       curto: cargo.curto,
       acessoTotal: Boolean(cargo.acessoTotal),
+      painelTv: Boolean(cargo.painelTv),
       permissoes: normalizar(cargo.permissoes ?? []),
     })
   }, [cargo, form])
@@ -196,35 +198,41 @@ export default function SetorPagina() {
           </div>
         </header>
 
-        <div className="setorpag__grade">
+        {/* Um cartao so: a identificacao numa faixa em cima e as permissoes
+            embaixo, na largura toda — sem coluna estreita sobrando vazia. */}
+        <div className="setorpag__cartao vidro">
           {/* ---------------- quem e o setor ---------------- */}
-          <section className="setorpag__bloco vidro" aria-labelledby="setor-dados">
+          <section className="setorpag__ident" aria-labelledby="setor-dados">
             <h2 id="setor-dados" className="setorpag__subtitulo">
               Identificação
             </h2>
-            <div className="cargos__linhacampos">
-              <label className="cargos__campo cargos__campo--nome">
-                <span>Nome</span>
-                <input value={form.nome} onChange={(e) => mudar('nome')(e.target.value)} placeholder="Ex.: Jurídico" />
-              </label>
-              <label className="cargos__campo cargos__campo--sigla">
-                <span>Sigla</span>
-                <input value={form.curto} onChange={(e) => mudar('curto')(e.target.value)} placeholder="jur" maxLength={6} />
-              </label>
-            </div>
+            <div className="setorpag__identlinha">
+              <div className="cargos__linhacampos setorpag__nomes">
+                <label className="cargos__campo cargos__campo--nome">
+                  <span>Nome</span>
+                  <input value={form.nome} onChange={(e) => mudar('nome')(e.target.value)} placeholder="Ex.: Jurídico" />
+                </label>
+                <label className="cargos__campo cargos__campo--sigla">
+                  <span>Sigla</span>
+                  <input value={form.curto} onChange={(e) => mudar('curto')(e.target.value)} placeholder="jur" maxLength={6} />
+                </label>
+              </div>
 
-            <EscolhaCor valor={form.cor} aoMudar={mudar('cor')} rotulo="Cor e opacidade" />
-            <div className="cargos__paleta">
-              {CORES_SETOR.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  className={`cargos__cor ${form.cor.toLowerCase() === c ? 'is-atual' : ''}`.trim()}
-                  style={{ background: c }}
-                  onClick={() => mudar('cor')(c)}
-                  aria-label={`Usar a cor ${c}`}
-                />
-              ))}
+              <div className="setorpag__cor">
+                <EscolhaCor valor={form.cor} aoMudar={mudar('cor')} rotulo="Cor e opacidade" />
+                <div className="cargos__paleta">
+                  {CORES_SETOR.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      className={`cargos__cor ${form.cor.toLowerCase() === c ? 'is-atual' : ''}`.trim()}
+                      style={{ background: c }}
+                      onClick={() => mudar('cor')(c)}
+                      aria-label={`Usar a cor ${c}`}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
 
             <label
@@ -241,11 +249,32 @@ export default function SetorPagina() {
                 Edita as tarefas de <strong>todos</strong> os setores
               </span>
             </label>
+
+            {/* a televisao da empresa: so a pagina inicial, trocando de Grade
+                para Quadro sozinha, e sem o login do Outlook — por isso so
+                quem tem acesso total liga ou desliga */}
+            <label
+              className={`cargos__total ${souTotal ? '' : 'is-travada'}`.trim()}
+              title={souTotal ? undefined : 'Só quem tem acesso total pode mudar esta opção.'}
+            >
+              <input
+                type="checkbox"
+                checked={form.painelTv}
+                onChange={(e) => mudar('painelTv')(e.target.checked)}
+                disabled={!souTotal}
+              />
+              <span>
+                <strong>Tela da TV</strong>: só a página inicial, trocando entre Grade e Quadro sozinha, e entra
+                sem o Outlook
+              </span>
+            </label>
           </section>
 
           {/* ---------------- o que o setor pode ---------------- */}
-          <section className="setorpag__bloco setorpag__bloco--perm vidro" aria-labelledby="setor-perm">
-            <div className={`perm perm--solta ${listaTravada ? 'is-travada' : ''}`.trim()}>
+          <section
+            className={`perm perm--solta ${listaTravada ? 'is-travada' : ''}`.trim()}
+            aria-labelledby="setor-perm"
+          >
             <header className="perm__topo">
               <h3 id="setor-perm">Permissões</h3>
               <span className="perm__contagem">
@@ -293,63 +322,65 @@ export default function SetorPagina() {
                 </p>
               )}
 
-              <div className="perm__arvore">
+              {/* Uma linha por aba: a visualizacao a esquerda e, ao lado, as
+                  alteracoes dela uma na frente da outra, quebrando a linha
+                  quando chegam ao fim. */}
+              <div className="perm__grupos">
                 <div className="perm__cabeca" aria-hidden="true">
                   <h4>Visualização</h4>
                   <h4>Alteração</h4>
                 </div>
 
-                {GRUPOS.map((grupo) => (
-                  <div key={grupo.visualizacao?.chave ?? grupo.rotulo} className="perm__ramo">
-                    <div className="perm__vis">
-                      {grupo.visualizacao ? (
-                        <label className="perm__item">
-                          <input
-                            type="checkbox"
-                            checked={form.permissoes.includes(grupo.visualizacao.chave)}
-                            onChange={() => alternar(grupo.visualizacao.chave)}
-                          />
-                          <span>{grupo.visualizacao.rotulo}</span>
-                        </label>
-                      ) : (
-                        <span className="perm__item perm__item--fixo">
-                          <i aria-hidden="true" />
-                          <span>{grupo.rotulo}</span>
-                        </span>
+                {GRUPOS.map((grupo) => {
+                  const aba = grupo.visualizacao
+                  const travadas = grupo.alteracoes.some((p) => travada(p.chave, form.permissoes))
+                  return (
+                    <div key={aba?.chave ?? grupo.rotulo} className="perm__grupo">
+                      <div className="perm__aba">
+                        {aba ? (
+                          <label className="perm__chip perm__chip--aba">
+                            <input
+                              type="checkbox"
+                              checked={form.permissoes.includes(aba.chave)}
+                              onChange={() => alternar(aba.chave)}
+                            />
+                            <span>{aba.rotulo}</span>
+                          </label>
+                        ) : (
+                          <span className="perm__chip perm__chip--fixo">{grupo.rotulo}</span>
+                        )}
+                      </div>
+
+                      {grupo.alteracoes.length > 0 && (
+                        <div className="perm__alts">
+                          <ul className="perm__chips">
+                            {grupo.alteracoes.map((p) => {
+                              const bloqueada = travada(p.chave, form.permissoes)
+                              return (
+                                <li key={p.chave}>
+                                  <label
+                                    className={`perm__chip ${bloqueada ? 'is-travada' : ''}`.trim()}
+                                    title={bloqueada ? `Marque "${aba?.rotulo}" em Visualização primeiro.` : undefined}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={form.permissoes.includes(p.chave)}
+                                      onChange={() => alternar(p.chave)}
+                                      disabled={bloqueada}
+                                    />
+                                    <span>{p.rotulo}</span>
+                                  </label>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                          {travadas && <p className="perm__trava">Marque “{aba?.rotulo}” para liberar estas.</p>}
+                        </div>
                       )}
                     </div>
-
-                    {grupo.alteracoes.length > 0 && (
-                      <ul className="perm__alts">
-                        {grupo.alteracoes.map((p) => {
-                          const bloqueada = travada(p.chave, form.permissoes)
-                          const exigida = grupo.visualizacao
-                          return (
-                            <li key={p.chave}>
-                              <label
-                                className={`perm__item ${bloqueada ? 'is-travada' : ''}`.trim()}
-                                title={bloqueada ? `Marque "${exigida?.rotulo}" em Visualização primeiro.` : undefined}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={form.permissoes.includes(p.chave)}
-                                  onChange={() => alternar(p.chave)}
-                                  disabled={bloqueada}
-                                />
-                                <span>
-                                  {p.rotulo}
-                                  {bloqueada && <em className="perm__trava">precisa de “{exigida?.rotulo}”</em>}
-                                </span>
-                              </label>
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
-            </div>
             </div>
           </section>
         </div>
@@ -409,6 +440,13 @@ export default function SetorPagina() {
 
             <dt>Acesso total</dt>
             <dd>{form.acessoTotal ? 'Sim — passa por qualquer permissão' : 'Não'}</dd>
+
+            {form.painelTv && (
+              <>
+                <dt>Tela da TV</dt>
+                <dd>Sim — página inicial automática, sem Outlook</dd>
+              </>
+            )}
 
             <dt>Permissões</dt>
             <dd>

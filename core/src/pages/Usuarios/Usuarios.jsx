@@ -8,6 +8,7 @@ import Confirma from '@/components/Confirma/Confirma'
 import { useDados } from '@/context/DadosContext'
 import { useAuth } from '@/context/AuthContext'
 import Estrelas from '@/components/Estrelas/Estrelas'
+import { usePresencaDaEquipe } from '@/hooks/usePresenca'
 
 import { formatarTelefone } from '@/utils/formato'
 import ModalCargos from './ModalCargos'
@@ -65,6 +66,13 @@ const Icone = {
   ),
 }
 
+/* a bolinha no canto da foto (hooks/usePresenca.js) */
+const PRESENCA = {
+  ativo: 'Online agora',
+  segundo_plano: 'Em segundo plano',
+  offline: 'Offline',
+}
+
 /** Tira acento e caixa: "Écio" acha por "ecio". */
 const semAcento = (texto) =>
   String(texto ?? '')
@@ -99,6 +107,7 @@ export default function Usuarios() {
     pode,
   } = useDados()
   const { user } = useAuth()
+  const presenca = usePresencaDaEquipe()
 
   /* quem nao pode mexer em usuario ainda entra aqui pela permissao de
      cargo — so nao ve os botoes de cadastrar e editar os outros */
@@ -315,6 +324,9 @@ export default function Usuarios() {
               const emAndamento = obrasDaPessoa(pessoa.id).length
               const aberto = abertos.has(pessoa.id)
               const detalhe = `pessoa-${pessoa.id}-detalhe`
+              /* quem esta olhando esta tela esta, por definicao, com o
+                 site aberto e na frente — sem esperar o proprio aviso */
+              const estado = pessoa.souEu ? 'ativo' : presenca[pessoa.id] ?? 'offline'
 
               return (
                 <li
@@ -331,7 +343,15 @@ export default function Usuarios() {
                       aria-controls={detalhe}
                       onClick={() => alternarAberto(pessoa.id)}
                     >
-                      <Avatar nome={pessoa.nome} foto={pessoa.foto} tamanho={46} titulo={pessoa.nome} />
+                      <span className="pessoa__foto">
+                        <Avatar nome={pessoa.nome} foto={pessoa.foto} tamanho={46} titulo={pessoa.nome} />
+                        <span
+                          className={`pessoa__presenca pessoa__presenca--${estado}`}
+                          title={PRESENCA[estado]}
+                        >
+                          <span className="sr-only">{PRESENCA[estado]}</span>
+                        </span>
+                      </span>
                       <span className="pessoa__quem">
                         <span className="pessoa__nome">
                           {pessoa.nome}
