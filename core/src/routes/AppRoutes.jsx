@@ -14,6 +14,7 @@ import Despesas from '@/pages/Despesas/Despesas'
 import MeusEnvios from '@/pages/Despesas/MeusEnvios'
 import EnviosGerais, { EnviosDaPessoa } from '@/pages/Despesas/EnviosGerais'
 import Frotas from '@/pages/Frotas/Frotas'
+import Comercial from '@/pages/Comercial/Comercial'
 import Registros from '@/pages/Frotas/Registros'
 import RetornoOutlook from '@/pages/Login/RetornoOutlook'
 import ChatEquipe from '@/pages/Chat/ChatEquipe'
@@ -84,6 +85,16 @@ export default function AppRoutes() {
         element={
           <Interna permissao="ver_concluidas">
             <ObraDetalhe somenteLeitura voltarPara="/app/concluidas" />
+          </Interna>
+        }
+      />
+      {/* os funis de venda (os negocios do Pipedrive); a API confere a
+          mesma chave em cada chamada de /api/comercial */}
+      <Route
+        path="/app/comercial"
+        element={
+          <Interna permissao="ver_comercial">
+            <Comercial />
           </Interna>
         }
       />

@@ -218,3 +218,143 @@ function traduzir(status, recado) {
   }
   return recado
 }
+
+/* ============================================================
+   E-MAIL COMO A PROPRIA PESSOA — o "Responder?" da aba Comercial
+
+   A mesma permissao de APLICATIVO (Mail.Send) que manda os avisos da
+   caixa do sistema manda de QUALQUER caixa do tenant: basta trocar o
+   endereco em /users/{caixa}/sendMail. E assim que o site manda o
+   e-mail "como se fosse a pessoa": sai da caixa dela, fica nos Itens
+   Enviados dela, e o cliente responde para ela.
+
+   Ler a caixa de entrada (achar o ultimo e-mail do contato, saber se
+   ele ja foi respondido e responder DENTRO da conversa) e outra
+   permissao: Mail.Read (ou Mail.ReadBasic.All). Sem ela, o envio
+   continua funcionando — so que como e-mail novo, e nao como resposta.
+   ============================================================ */
+
+/** As permissoes de aplicativo concedidas, lidas do proprio token. */
+export async function papeis() {
+  if (!configurado()) return []
+  try {
+    const token = await pegarToken()
+    const corpo = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString())
+    return corpo.roles ?? []
+  } catch {
+    return []
+  }
+}
+
+/** O aplicativo pode ler as caixas de entrada? */
+export async function podeLerCaixas() {
+  const lista = await papeis()
+  return ['Mail.Read', 'Mail.ReadWrite', 'Mail.ReadBasic.All'].some((p) => lista.includes(p))
+}
+
+/** O aplicativo pode mandar e-mail (de qualquer caixa do tenant)? */
+export async function podeEnviar() {
+  return (await papeis()).includes('Mail.Send')
+}
+
+async function chamar(caminho, { metodo = 'GET', corpo } = {}) {
+  const token = await pegarToken()
+  const resposta = await fetch(`https://graph.microsoft.com/v1.0${caminho}`, {
+    method: metodo,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(corpo ? { 'Content-Type': 'application/json' } : {}),
+    },
+    body: corpo ? JSON.stringify(corpo) : undefined,
+  })
+  const dados = resposta.status === 202 || resposta.status === 204 ? null : await resposta.json().catch(() => null)
+  return { status: resposta.status, ok: resposta.ok, dados }
+}
+
+const aspas = (texto) => String(texto ?? '').replace(/'/g, "''")
+
+/**
+ * O ultimo e-mail que o contato mandou para a caixa, e se ele ainda
+ * espera resposta (nada saiu da caixa naquela conversa depois dele).
+ *
+ * Devolve null quando nao ha e-mail dele, ou { id, assunto, recebidoEm,
+ * previa, aguardando }. Exige permissao de leitura (podeLerCaixas).
+ */
+export async function ultimoDoContato(caixa, contato) {
+  /* com $filter e $orderby juntos, o Graph exige a propriedade da ordem
+     tambem no filtro, e na frente — senao responde "too complex" */
+  const filtro = `receivedDateTime ge 2000-01-01T00:00:00Z and from/emailAddress/address eq '${aspas(contato)}'`
+  const r = await chamar(
+    `/users/${encodeURIComponent(caixa)}/messages?$filter=${encodeURIComponent(filtro)}` +
+      '&$orderby=receivedDateTime desc&$top=1&$select=id,subject,receivedDateTime,bodyPreview,conversationId',
+  )
+  if (!r.ok) throw new Error(r.dados?.error?.message ?? `HTTP ${r.status}`)
+  const ultima = r.dados?.value?.[0]
+  if (!ultima) return null
+
+  const respostas = await chamar(
+    `/users/${encodeURIComponent(caixa)}/mailFolders/sentitems/messages?$filter=${encodeURIComponent(
+      `conversationId eq '${aspas(ultima.conversationId)}' and sentDateTime gt ${ultima.receivedDateTime}`,
+    )}&$top=1&$select=id`,
+  )
+  const respondida = respostas.ok && (respostas.dados?.value?.length ?? 0) > 0
+
+  return {
+    id: ultima.id,
+    assunto: ultima.subject ?? '',
+    recebidoEm: ultima.receivedDateTime,
+    previa: ultima.bodyPreview ?? '',
+    aguardando: !respondida,
+  }
+}
+
+/**
+ * Manda o e-mail saindo da caixa da pessoa.
+ *
+ * Com `emRespostaA` (o id de uma mensagem da caixa dela), vira RESPOSTA
+ * naquela conversa — o cliente ve o fio inteiro, como se ela tivesse
+ * clicado em Responder no Outlook. Sem ele, e um e-mail novo.
+ *
+ * Devolve { ok: true } ou { ok: false, motivo } — nunca estoura.
+ */
+export async function enviarComo({ caixa, para, assunto, html, emRespostaA }) {
+  if (!configurado()) {
+    return { ok: false, motivo: 'O envio pela API da Microsoft não está configurado no servidor.' }
+  }
+  const alvos = destinatarios(para)
+  if (alvos.length === 0) return { ok: false, motivo: 'Nenhum destinatário informado.' }
+
+  try {
+    const r = emRespostaA
+      ? await chamar(`/users/${encodeURIComponent(caixa)}/messages/${encodeURIComponent(emRespostaA)}/reply`, {
+          metodo: 'POST',
+          corpo: { message: { toRecipients: alvos }, comment: html },
+        })
+      : await chamar(`/users/${encodeURIComponent(caixa)}/sendMail`, {
+          metodo: 'POST',
+          corpo: {
+            message: { subject: assunto, body: { contentType: 'HTML', content: html }, toRecipients: alvos },
+            saveToSentItems: true,
+          },
+        })
+
+    if (r.status === 202) return { ok: true }
+
+    const recado = r.dados?.error?.message ?? `A Microsoft recusou o envio (HTTP ${r.status}).`
+    logger.error('graph/enviarComo', recado, { status: r.status })
+    if (r.status === 404) {
+      return { ok: false, motivo: `A caixa ${caixa} não foi encontrada no Outlook da empresa.` }
+    }
+    if (r.status === 403) {
+      return {
+        ok: false,
+        motivo:
+          'A Microsoft não deixou o site enviar por esta caixa. Confira a permissão Mail.Send do aplicativo (e se há uma política de acesso restringindo as caixas).',
+      }
+    }
+    return { ok: false, motivo: traduzir(r.status, recado) }
+  } catch (erro) {
+    logger.error('graph/enviarComo', erro.message)
+    return { ok: false, motivo: 'Não foi possível falar com a API da Microsoft agora.' }
+  }
+}

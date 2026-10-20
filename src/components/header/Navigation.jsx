@@ -1,4 +1,6 @@
 import { motion } from 'framer-motion';
+import { Users } from 'lucide-react';
+import { corePath } from '../../data/site';
 import { useSite } from '../../i18n/content';
 import { useStrings } from '../../i18n/strings';
 import NavItem from './NavItem';
@@ -26,6 +28,13 @@ export default function Navigation({ activeId, className = '' }) {
             </li>
           );
         })}
+        {/* The employees' area: another app on this domain, so a full page load. */}
+        <li className="nav__team-item">
+          <a href={corePath} className="nav__team">
+            <Users size={16} aria-hidden="true" />
+            {t.header.team}
+          </a>
+        </li>
       </ul>
     </nav>
   );

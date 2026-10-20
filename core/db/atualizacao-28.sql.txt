@@ -1,0 +1,49 @@
+-- ============================================================
+--  ATUALIZACAO 28 — QUEM ESTA NO SITE AGORA (a bolinha de presenca)
+--
+--  presenca — uma linha por ABA aberta do sistema. Enquanto a aba esta
+--  aberta, ela avisa o servidor a cada minuto (e na hora em que fica
+--  visivel ou vai para segundo plano); fechar a aba apaga a linha.
+--
+--  A tela de Usuarios le daqui a bolinha de cada pessoa:
+--
+--    verde    alguma aba dela esta VISIVEL e avisou ha pouco;
+--    vermelho tem aba aberta, mas todas em segundo plano;
+--    cinza    nenhuma aba avisou nos ultimos minutos (offline).
+--
+--  Por aba, e nao por pessoa: quem tem o sistema aberto em duas abas
+--  (uma na frente, outra escondida) nao fica piscando entre verde e
+--  vermelho — vale a melhor das duas.
+--
+--  Fora da tabela usuario de proposito: ela tem o gatilho que carimba
+--  atualizado_em e a trava do usuario protegido, e um aviso por minuto
+--  de cada pessoa nao tem nada que passar por eles.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao duplica nada.
+-- ============================================================
+
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS public.presenca (
+    usuario_id  bigint      NOT NULL REFERENCES public.usuario (id) ON DELETE CASCADE,
+    aba         text        NOT NULL,
+    visivel     boolean     NOT NULL DEFAULT true,
+    visto_em    timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (usuario_id, aba)
+);
+
+CREATE INDEX IF NOT EXISTS presenca_visto_em ON public.presenca (visto_em);
+
+COMMENT ON TABLE public.presenca IS
+    'Abas abertas do sistema: o ultimo aviso de cada uma e se ela estava visivel. A bolinha verde/vermelha/cinza da tela de Usuarios.';
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'presenca' AS item, to_regclass('public.presenca') IS NOT NULL AS ok;

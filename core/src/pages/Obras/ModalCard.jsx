@@ -110,7 +110,8 @@ export default function ModalCard({ aberto, etapa, card = null, obraId = null, a
           vazio="Escolha o setor..."
           aria-label="Setor responsável pelo card"
           desabilitado={setoresTravados}
-          opcoes={cargos.map((c) => ({ valor: c.chave, rotulo: c.nome, cor: c.cor }))}
+          /* o setor da TV nao recebe tarefa */
+            opcoes={cargos.filter((c) => !c.painelTv).map((c) => ({ valor: c.chave, rotulo: c.nome, cor: c.cor }))}
         />
         {setoresTravados && (
           <p className="formrot__dica">

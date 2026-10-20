@@ -117,6 +117,12 @@ export async function criarObra(campos) {
 }
 
 export const editarObra = (id, campos) => patch(`/dados/obras/${id}`, campos)
+
+/** O n° da proposta da obra nova: o da ultima cadastrada, mais um. */
+export async function proximaProposta() {
+  const { proposta } = await get('/dados/obras/proxima-proposta')
+  return proposta ?? ''
+}
 export const apagarObra = (id) => del(`/dados/obras/${id}`)
 
 /**

@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs'
 import { query } from '../db.js'
 import { cargoPode, exige, exigeSessao, meuCargo, tratar } from '../sessao.js'
 import { normalizar } from '../../src/domain/permissoes.js'
-import { gerarSenhaForte } from '../utils/senha.js'
 import { IMAGEM_INVALIDA, imagemValida } from '../utils/imagem.js'
 import { registrarAtividade } from '../atividade.js'
 
@@ -53,8 +52,9 @@ const ROTULO_CAMPO_USUARIO = {
   cpf: 'CPF',
 }
 
-/** Senha temporária forte para novos usuários - gerada pelo servidor */
-export const SENHA_PADRAO = gerarSenhaForte()
+/** A senha com que todo colaborador novo entra. O sistema pede a troca
+    no primeiro acesso (senha_temporaria = true). */
+export const SENHA_PADRAO = '123456'
 
 const soDigitos = (valor) => String(valor ?? '').replace(/\D/g, '')
 const texto = (valor) => String(valor ?? '').trim()
@@ -84,6 +84,8 @@ const paraCargo = (linha) => ({
   curto: linha.curto,
   cor: linha.cor,
   acessoTotal: linha.acesso_total,
+  // a tela da TV (atualizacao 27): pagina inicial que se troca sozinha, sem Outlook
+  painelTv: linha.painel_tv === true,
   fixo: linha.fixo,
   ordem: linha.ordem,
   // cargo novo nasce sem nenhuma; quem administra marca uma a uma
@@ -173,12 +175,17 @@ router.patch('/cargos/:id', exigeSessao, exige('editar_cargo'), async (req, res)
     valores.push(texto(req.body.curto).slice(0, 6))
     campos.push(`curto = $${valores.length}`)
   }
-  if (campos.length === 0 && req.body?.acessoTotal === undefined && req.body?.permissoes === undefined) {
+  if (
+    campos.length === 0 &&
+    req.body?.acessoTotal === undefined &&
+    req.body?.painelTv === undefined &&
+    req.body?.permissoes === undefined
+  ) {
     return res.status(400).json({ erro: 'Nada para alterar.' })
   }
 
   try {
-    const alvo = await query('SELECT acesso_total, permissoes FROM cargo WHERE id = $1', [req.params.id])
+    const alvo = await query('SELECT * FROM cargo WHERE id = $1', [req.params.id])
     if (!alvo.rows[0]) return res.status(404).json({ erro: 'Cargo não encontrado.' })
 
     /* ligar OU desligar o acesso total so por quem o tem — desligar o
@@ -189,6 +196,17 @@ router.patch('/cargos/:id', exigeSessao, exige('editar_cargo'), async (req, res)
         if (!req.cargo?.acessoTotal) return res.status(403).json({ erro: SO_ACESSO_TOTAL })
         valores.push(novo)
         campos.push(`acesso_total = $${valores.length}`)
+      }
+    }
+
+    /* a tela da TV tambem e so de quem tem acesso total: quem esta num
+       setor marcado assim entra SEM o Outlook */
+    if (req.body?.painelTv !== undefined) {
+      const novo = Boolean(req.body.painelTv)
+      if (novo !== (alvo.rows[0].painel_tv === true)) {
+        if (!req.cargo?.acessoTotal) return res.status(403).json({ erro: SO_ACESSO_TOTAL })
+        valores.push(novo)
+        campos.push(`painel_tv = ${valores.length}`)
       }
     }
 
@@ -228,7 +246,7 @@ router.patch('/cargos/:id', exigeSessao, exige('editar_cargo'), async (req, res)
       acao: 'setor.editado',
       categoria: 'equipe',
       entidade: ['cargo', rows[0].id],
-      descricao: campos.some((c) => c.startsWith('permissoes') || c.startsWith('acesso_total'))
+      descricao: campos.some((c) => /^(permissoes|acesso_total|painel_tv)/.test(c))
         ? 'Permissões do setor alteradas'
         : 'Setor editado',
       detalhes: { setor: rows[0].nome },
@@ -579,7 +597,7 @@ router.get('/usuarios/:id/foto', exigeSessao, async (req, res) => {
 /**
  * POST /api/equipe/usuarios — cadastra o colaborador.
  *
- * Entra com uma senha temporaria gerada aqui e senha_temporaria = true:
+ * Entra com a SENHA_PADRAO (123456) e senha_temporaria = true:
  * no primeiro acesso a tela cobra a troca. Quem cadastra precisa da
  * permissao `editar_usuario`.
  *
@@ -640,8 +658,7 @@ router.post('/usuarios', exigeSessao, async (req, res) => {
       ? await acharTitulo(req.body?.cargoTituloId, req.body?.cargoTitulo)
       : null
 
-    const senhaTemporaria = gerarSenhaForte()
-    const hash = await bcrypt.hash(senhaTemporaria, 12)
+    const hash = await bcrypt.hash(SENHA_PADRAO, 12)
 
     const { rows } = await query(
       `INSERT INTO usuario (name, email, cpf, data_nascimento, telefone,
@@ -678,7 +695,7 @@ router.post('/usuarios', exigeSessao, async (req, res) => {
     })
     return res
       .status(201)
-      .json({ usuario: paraUsuario(criado.rows[0]), senhaPadrao: senhaTemporaria })
+      .json({ usuario: paraUsuario(criado.rows[0]), senhaPadrao: SENHA_PADRAO })
   } catch (erro) {
     if (erro.code === '23505') {
       const qual = String(erro.detail ?? '').includes('cpf') ? 'CPF' : 'e-mail'

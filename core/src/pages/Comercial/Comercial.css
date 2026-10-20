@@ -1,0 +1,1437 @@
+/* ============================================================
+   COMERCIAL — o quadro de negocios no desenho do Pipedrive.
+
+   A barra de cima (visoes, + Negocio, contagem, funil, Filtro, ⋯),
+   a linha dos filtros e da ordem, e o funil: uma coluna por etapa,
+   o cabecalho em forma de seta, os cartoes embaixo.
+
+   As cores do quadro sao proprias daqui (--com-*), com a versao
+   escura logo abaixo: no tema escuro ele fica com a cara do
+   Pipedrive escuro que a equipe usava.
+   ============================================================ */
+
+/* nas variaveis de :root (e nao de .comercial) porque os pop-ups abrem
+   fora da pagina e usam as mesmas cores */
+:root {
+  --com-coluna: rgba(13, 13, 13, 0.035);
+  --com-cabeca: rgba(13, 13, 13, 0.07);
+  --com-cartao: #ffffff;
+  --com-cartao-borda: rgba(13, 13, 13, 0.1);
+  --com-cartao-sombra: 0 1px 2px rgba(13, 13, 13, 0.08);
+  --com-verde: #2c8f4f;
+  --com-verde-forte: #24783f;
+  --com-azul: #3b6fe0;
+  --com-azul-suave: rgba(59, 111, 224, 0.12);
+  --com-atividade-futura: #9aa1ad;
+}
+
+.comercial {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+:root[data-theme='dark'] {
+  --com-coluna: #0f1115;
+  --com-cabeca: #1a1d23;
+  --com-cartao: #1f232a;
+  --com-cartao-borda: rgba(255, 255, 255, 0.06);
+  --com-cartao-sombra: none;
+  --com-azul: #5b8cff;
+  --com-azul-suave: rgba(91, 140, 255, 0.16);
+  --com-atividade-futura: #5f646d;
+}
+
+/* ---------------- titulo ---------------- */
+
+.comercial__titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.comercial__info {
+  display: inline-grid;
+  color: var(--text-muted);
+  cursor: help;
+}
+
+/* ---------------- botoes comuns ---------------- */
+
+.comercial__verde,
+.comercial__botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.comercial__verde {
+  border: 0;
+  background: var(--com-verde);
+  color: #fff;
+}
+
+.comercial__verde:hover:not(:disabled) {
+  background: var(--com-verde-forte);
+}
+
+.comercial__verde:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.comercial__botao {
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+  color: var(--text-strong);
+}
+
+.comercial__botao:hover {
+  background: var(--control-bg-hover);
+}
+
+/* ---------------- a barra de cima ---------------- */
+
+.comercial__barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.comercial__visoes {
+  display: inline-flex;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.comercial__visoes button {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 38px;
+  border: 0;
+  border-left: 1px solid var(--control-border);
+  background: var(--control-bg);
+  color: var(--text-base);
+  cursor: pointer;
+}
+
+.comercial__visoes button:first-child {
+  border-left: 0;
+}
+
+.comercial__visoes button:hover {
+  background: var(--control-bg-hover);
+}
+
+/* a visao escolhida: o contorno azul do Pipedrive */
+.comercial__visoes button.is-atual {
+  background: var(--com-azul-suave);
+  color: var(--com-azul);
+  box-shadow: inset 0 0 0 1.5px var(--com-azul);
+}
+
+/* "+ Negocio" e a setinha grudados, como um botao so */
+.comercial__novo {
+  display: inline-flex;
+}
+
+.comercial__novo > .comercial__verde {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.comercial__novo-mais .commenu__botao {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--com-verde);
+  color: #fff;
+}
+
+.comercial__novo-mais .commenu__botao:hover {
+  background: var(--com-verde-forte);
+}
+
+.comercial__espaco {
+  flex: 1;
+}
+
+.comercial__conta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-strong);
+  white-space: nowrap;
+}
+
+.comercial__conta span {
+  display: inline-grid;
+  color: var(--text-muted);
+  cursor: help;
+}
+
+/* o seletor do funil: a caixa com o icone, em maiusculas como no Pipedrive */
+.comercial__funil {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text-strong);
+}
+
+.comercial__funil-icone {
+  display: inline-grid;
+}
+
+.comercial__funil .sel__botao {
+  min-height: 36px;
+  padding: 6px 10px 6px 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  font-weight: 700;
+  font-size: 0.86rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.comercial__funil .sel__botao:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+/* ---------------- menus suspensos ---------------- */
+
+.commenu {
+  position: relative;
+  display: inline-flex;
+}
+
+.commenu__botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.commenu__botao:hover {
+  background: var(--control-bg-hover);
+}
+
+.commenu__lista {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--modal-borda, var(--control-border));
+  border-radius: var(--radius-md);
+  background: var(--modal-bg, var(--surface));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+
+.commenu__lista[data-alinhar='direita'] {
+  right: 0;
+  left: auto;
+}
+
+.commenu__lista > button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.84rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.commenu__lista > button:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+.commenu__lista > button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.commenu__lista > button[aria-checked='true'] {
+  color: var(--com-azul);
+  font-weight: 700;
+}
+
+.commenu__titulo {
+  margin: 4px 10px 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ---------------- a segunda linha ---------------- */
+
+.comercial__filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.comercial__filtros-esq,
+.comercial__filtros-dir {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+}
+
+.comercial__filtros-dir {
+  justify-content: flex-end;
+}
+
+.comercial__link,
+.comercial__condicao .commenu__botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text-base);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.comercial__link:hover,
+.comercial__condicao .commenu__botao:hover {
+  color: var(--text-strong);
+  background: transparent;
+}
+
+.comercial__link.is-ligado {
+  color: var(--com-azul);
+}
+
+.comercial__condicao-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--com-azul-suave);
+  color: var(--com-azul);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.comercial__condicao-chip button {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.comercial__condicao-chip button:hover {
+  background: var(--com-azul-suave);
+}
+
+.condicao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(300px, 80vw);
+  padding: 4px;
+}
+
+.condicao__entrada {
+  padding: 9px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.84rem;
+}
+
+.condicao .comercial__verde {
+  justify-content: center;
+}
+
+/* "Ordenar por": a seta e a pastilha azul do Pipedrive */
+.comercial__ordem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.comercial__sentido {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--com-azul-suave);
+  color: var(--com-azul);
+  cursor: pointer;
+}
+
+.comercial__sentido[data-sentido='desc'] svg {
+  transform: rotate(180deg);
+}
+
+.comercial__ordenar .commenu__botao {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 0;
+  background: var(--com-azul-suave);
+  color: var(--com-azul);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.comercial__ordenar .commenu__botao:hover {
+  background: var(--com-azul-suave);
+  filter: brightness(1.1);
+}
+
+.comercial__erro,
+.comercial__nada {
+  margin: 0;
+  padding: 18px;
+  border: 1px dashed var(--control-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+}
+
+.comercial__erro {
+  color: var(--danger);
+}
+
+.comercial__erro button {
+  border: 0;
+  background: transparent;
+  color: var(--com-azul);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ============================================================
+   O FUNIL
+   ============================================================ */
+
+.funil {
+  position: relative;
+  min-width: 0;
+}
+
+.funil__colunas {
+  display: grid;
+  grid-template-columns: repeat(var(--etapas), minmax(172px, 1fr));
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  /* a rolagem de lado fica no quadro, nao na pagina */
+  overscroll-behavior-x: contain;
+}
+
+.funil__coluna {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: calc(100dvh - 330px);
+  border-radius: 6px 6px 0 0;
+  background: var(--com-coluna);
+  transition: background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.funil__coluna[data-sobre='sim'] {
+  background: var(--com-azul-suave);
+  box-shadow: inset 0 0 0 1.5px var(--com-azul);
+}
+
+/* o cabecalho e a seta do funil: o bico do lado direito, e o encaixe
+   do lado esquerdo em toda coluna menos a primeira */
+.funil__cabeca {
+  padding: 10px 22px 10px 20px;
+  background: var(--com-cabeca);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%);
+}
+
+.funil__cabeca[data-primeira='sim'] {
+  padding-left: 14px;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
+}
+
+.funil__cabeca h3 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.funil__cabeca p {
+  margin: 3px 0 0;
+  overflow: hidden;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.funil__corpo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 6px 12px;
+}
+
+/* o "+" de cada coluna: aparece ao passar o mouse; na coluna vazia, sempre */
+.funil__mais {
+  display: grid;
+  place-items: center;
+  height: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  opacity: 0;
+  cursor: pointer;
+  transition: height var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+
+.funil__coluna:hover .funil__mais,
+.funil__mais[data-sempre='sim'],
+.funil__mais:focus-visible {
+  height: 34px;
+  opacity: 1;
+}
+
+.funil__mais:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+/* ---------------- o cartao ---------------- */
+
+.cartaoneg {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 11px 9px;
+  border: 1px solid var(--com-cartao-borda);
+  border-radius: 6px;
+  background: var(--com-cartao);
+  box-shadow: var(--com-cartao-sombra);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.cartaoneg:hover {
+  border-color: var(--control-border);
+}
+
+.cartaoneg:focus-visible {
+  outline: 2px solid var(--com-azul);
+  outline-offset: 1px;
+}
+
+.cartaoneg[draggable='true'] {
+  cursor: grab;
+}
+
+.cartaoneg[draggable='true']:active {
+  cursor: grabbing;
+}
+
+.cartaoneg[data-status='ganho'],
+.cartaoneg[data-status='perdido'] {
+  opacity: 0.72;
+}
+
+.cartaoneg__etiqueta {
+  width: 34px;
+  height: 4px;
+  margin-bottom: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--etiqueta);
+}
+
+.cartaoneg__titulo {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.32;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.cartaoneg__linha {
+  margin: 1px 0 0;
+  overflow: hidden;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cartaoneg__valor {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-base);
+}
+
+.cartaoneg__rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.cartaoneg__dono {
+  display: inline-grid;
+}
+
+.cartaoneg__boneco {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--control-bg-hover);
+  color: var(--text-muted);
+}
+
+.cartaoneg__atividade {
+  display: inline-grid;
+}
+
+.cartaoneg__fechado {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.cartaoneg__fechado[data-status='ganho'] {
+  background: rgba(44, 143, 79, 0.16);
+  color: var(--com-verde);
+}
+
+.cartaoneg__fechado[data-status='perdido'] {
+  background: rgba(229, 72, 77, 0.14);
+  color: #e5484d;
+}
+
+.cartaoneg__responder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px -4px -2px;
+  padding: 5px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--com-azul);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cartaoneg__responder:hover {
+  background: var(--com-azul-suave);
+}
+
+/* ---------------- o funil vazio ---------------- */
+
+.funil__vazio {
+  position: absolute;
+  top: 120px;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: min(440px, calc(100% - 32px));
+  padding: 18px;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.funil__vazio p {
+  margin: 0;
+  font-size: 1.35rem;
+  color: var(--text-strong);
+}
+
+.funil__vazio-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+/* a ilustracao: tres cartoes empilhados e o "+" azul */
+.funil__arte {
+  position: relative;
+  width: 250px;
+  height: 150px;
+}
+
+.funil__arte > span {
+  position: absolute;
+  width: 190px;
+  height: 108px;
+  border-radius: 12px;
+  background: var(--control-bg-hover);
+}
+
+.funil__arte > span:nth-child(1) {
+  top: 0;
+  left: 0;
+  opacity: 0.6;
+}
+
+.funil__arte > span:nth-child(2) {
+  top: 12px;
+  left: 22px;
+  opacity: 0.8;
+}
+
+.funil__arte > span:nth-child(3) {
+  top: 26px;
+  left: 44px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 22px;
+  border: 2px solid var(--text-muted);
+  background: var(--com-cartao);
+}
+
+.funil__arte i {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--control-bg-hover);
+}
+
+.funil__arte b {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--control-bg-hover);
+}
+
+.funil__arte > span:nth-child(3)::after {
+  content: '';
+}
+
+.funil__arte b:first-of-type {
+  width: 90px;
+  margin-bottom: 10px;
+}
+
+.funil__arte b:last-of-type {
+  position: absolute;
+  top: 62px;
+  left: 76px;
+  width: 70px;
+}
+
+.funil__arte em {
+  position: absolute;
+  right: 6px;
+  bottom: 4px;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 3px solid var(--com-cartao);
+  border-radius: 50%;
+  background: #5aa0d8;
+  color: #fff;
+}
+
+/* ---------------- soltar: a faixa de baixo ---------------- */
+
+.funil__zonas {
+  position: fixed;
+  right: 24px;
+  bottom: 18px;
+  left: calc(var(--rail-largura, 110px) + 24px);
+  z-index: 60;
+  display: flex;
+  gap: 6px;
+  animation: zonas-sobe var(--dur-base) var(--ease-out);
+}
+
+.funil__zona {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  height: 64px;
+  border: 2px dashed currentColor;
+  border-radius: var(--radius-md);
+  background: var(--com-cartao);
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+  transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+
+.funil__zona[data-tipo='excluir'] {
+  color: var(--text-muted);
+}
+
+.funil__zona[data-tipo='perdido'] {
+  color: #e5484d;
+}
+
+.funil__zona[data-tipo='ganho'] {
+  color: var(--com-verde);
+}
+
+.funil__zona[data-tipo='mover'] {
+  color: var(--com-azul);
+}
+
+.funil__zona[data-sobre='sim'] {
+  background: color-mix(in srgb, currentColor 14%, var(--com-cartao));
+  transform: translateY(-3px);
+}
+
+@keyframes zonas-sobe {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+/* ============================================================
+   LISTA e ARQUIVADOS
+   ============================================================ */
+
+.comlista {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+}
+
+.comlista table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  font-size: 0.83rem;
+}
+
+.comlista th {
+  position: sticky;
+  top: 0;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.comlista td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-base);
+  vertical-align: top;
+}
+
+.comlista tbody tr {
+  cursor: pointer;
+}
+
+.comlista tbody tr:hover td {
+  background: var(--control-bg);
+}
+
+.comlista__num {
+  text-align: right !important;
+  white-space: nowrap;
+}
+
+.comlista__titulo {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-strong);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.comlista__etapa {
+  color: var(--text-muted);
+}
+
+.comlista__atividade[data-situacao='atrasada'] {
+  color: #e5484d;
+  font-weight: 600;
+}
+
+.comlista__atividade[data-situacao='hoje'] {
+  color: var(--com-verde);
+  font-weight: 600;
+}
+
+.comlista__atividade[data-situacao='sem'] {
+  color: var(--text-faint);
+}
+
+.comlista__status {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.comlista__status[data-status='ganho'] {
+  background: rgba(44, 143, 79, 0.16);
+  color: var(--com-verde);
+}
+
+.comlista__status[data-status='perdido'] {
+  background: rgba(229, 72, 77, 0.14);
+  color: #e5484d;
+}
+
+.comlista__motivo {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.74rem;
+  font-style: normal;
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   O NEGOCIO (modal)
+   ============================================================ */
+
+.negform {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.negform__grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.negform__grade > .campo--largo,
+.negform__grade > .negform__atividade {
+  grid-column: 1 / -1;
+}
+
+/* as setas das etapas, como no topo do negocio no Pipedrive */
+.negform__etapas {
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+}
+
+.negform__etapa {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  background: var(--control-bg-hover);
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%, 8px 50%);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.negform__etapa:first-child {
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%);
+  border-radius: 4px 0 0 4px;
+}
+
+.negform__etapa span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.negform__etapa[data-feita='sim'] {
+  background: var(--com-verde, #2c8f4f);
+}
+
+.negform__etapa:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.negform__etapa:disabled {
+  cursor: default;
+}
+
+.negform__etapa-nome {
+  margin: -6px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.negform__etapa-nome strong {
+  color: var(--text-strong);
+}
+
+.negform__etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.negform__etiqueta {
+  width: 30px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--etiqueta);
+  cursor: pointer;
+}
+
+.negform__etiqueta[aria-checked='true'] {
+  border-color: var(--text-strong);
+  box-shadow: 0 0 0 2px var(--modal-bg, var(--surface)) inset;
+}
+
+.negform__etiqueta--nenhuma {
+  width: auto;
+  padding: 0 9px;
+  border: 1px dashed var(--control-border);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.negform__etiqueta--nenhuma[aria-checked='true'] {
+  border-style: solid;
+  color: var(--text-strong);
+}
+
+.negform__atividade {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 12px 14px;
+}
+
+.negform__data {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.negform__limpar {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.negform__limpar:hover {
+  color: var(--danger);
+}
+
+.negform__erro {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--danger);
+}
+
+.negform__rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.negform__rodape .btn {
+  width: auto;
+}
+
+.negform__fecho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
+}
+
+.negform__ganho,
+.negform__perdido,
+.negform__reabrir,
+.negform__email,
+.negform__excluir {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.negform__ganho {
+  border-color: transparent;
+  background: var(--com-verde, #2c8f4f);
+  color: #fff;
+}
+
+.negform__perdido {
+  border-color: transparent;
+  background: #e5484d;
+  color: #fff;
+}
+
+.negform__excluir {
+  padding: 0 10px;
+  color: var(--danger);
+}
+
+.negform__ganho:hover,
+.negform__perdido:hover {
+  filter: brightness(1.08);
+}
+
+.negform__reabrir:hover,
+.negform__email:hover,
+.negform__excluir:hover {
+  background: var(--control-bg-hover);
+}
+
+/* ============================================================
+   E-MAIL e IMPORTAR (modais)
+   ============================================================ */
+
+.emailneg {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.emailneg__nota {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.emailneg__ultimo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--control-border);
+  border-left: 3px solid var(--com-azul, #3b6fe0);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+}
+
+.emailneg__ultimo p {
+  margin: 0;
+}
+
+.emailneg__ultimo-topo {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.emailneg__ultimo-topo strong {
+  color: var(--text-strong);
+}
+
+.emailneg__espera {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(229, 72, 77, 0.14);
+  color: #e5484d;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.emailneg__ultimo-assunto {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.emailneg__ultimo-previa {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-base);
+}
+
+.emailneg__responder {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.emailneg__responder input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.emailneg__de {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.emailneg__de strong {
+  color: var(--text-strong);
+}
+
+.emailneg__historico summary {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.emailneg__historico ul {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.emailneg__historico li {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+}
+
+.emailneg__historico li p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.emailneg__historico li strong {
+  color: var(--text-strong);
+}
+
+.emailneg__corpo {
+  margin-top: 6px !important;
+  color: var(--text-base) !important;
+  white-space: pre-wrap;
+}
+
+.emailneg__selo {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg-hover);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.importar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.importar__titulo {
+  margin: 4px 0 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.importar__mapa {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+
+.importar__campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.importar__campo > span {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.importar__resumo {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-base);
+}
+
+/* ============================================================
+   Celular e tela estreita
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .comercial__espaco {
+    display: none;
+  }
+
+  .comercial__conta {
+    order: 10;
+    width: 100%;
+  }
+
+  .funil__colunas {
+    grid-template-columns: repeat(var(--etapas), minmax(250px, 82vw));
+    scroll-snap-type: x mandatory;
+  }
+
+  .funil__coluna {
+    scroll-snap-align: start;
+    min-height: 50dvh;
+  }
+
+  .funil__zonas {
+    left: 12px;
+    right: 12px;
+    bottom: 96px;
+    flex-wrap: wrap;
+  }
+
+  .funil__zona {
+    flex-basis: calc(50% - 3px);
+    height: 48px;
+  }
+}
+
+@media (max-width: 600px) {
+  .negform__grade,
+  .negform__atividade,
+  .importar__mapa {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .comercial__filtros-dir {
+    justify-content: flex-start;
+  }
+}

@@ -76,7 +76,7 @@
   background: radial-gradient(70% 120% at 0% 100%, rgba(42, 82, 190, 0.14), rgba(42, 82, 190, 0) 70%);
 }
 
-/* ---------- Phones and small tablets: no video, a compact opening ---------- */
+/* ---------- Phones and small tablets: the whole video, then the copy ---------- */
 
 /* The copy on the brand navy, with a soft glow and a faint grid (like a
    cleanroom ceiling). Content-sized, visible from the first paint. */
@@ -106,8 +106,19 @@
   pointer-events: none;
 }
 
+/* The video whole, at its own 16:9 (854×480) — never cropped or stretched —
+   full width just below the header, so the bar hides none of it. */
+.hero--compact .hero__media {
+  height: auto;
+  aspect-ratio: 854 / 480;
+  margin-top: calc(var(--header-top) + var(--header-h) + 10px);
+}
+
+/* Only a soft edge into the navy, top and bottom; the picture stays clear. */
 .hero--compact .hero__grade {
-  display: none;
+  background:
+    linear-gradient(180deg, var(--c-navy-950) 0%, rgba(4, 11, 28, 0) 12%),
+    linear-gradient(0deg, var(--c-navy-950) 0%, rgba(4, 11, 28, 0.5) 12%, rgba(4, 11, 28, 0) 30%);
 }
 
 .hero--compact .hero__content {
@@ -115,8 +126,7 @@
   inset: auto;
   margin-top: 0;
   background: none;
-  padding: calc(var(--header-top) + var(--header-h) + clamp(2.25rem, 9vw, 3.5rem)) var(--gutter)
-    clamp(3rem, 12vw, 4.5rem);
+  padding: clamp(1.25rem, 5vw, 2rem) var(--gutter) clamp(3rem, 12vw, 4.5rem);
 }
 
 /* Already there when the page opens: no entrance animation on the copy. */

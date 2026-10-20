@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '@/components/AppShell/AppShell'
 import Avatar from '@/components/Avatar/Avatar'
 import IconeClima from '@/components/Clima/IconeClima'
 import Globo from '@/components/Globo/Globo'
+import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
 import { useTheme } from '@/context/ThemeContext'
 import { rotuloPrioridadeObra, tomPrioridadeObra } from '@/domain/obras'
@@ -11,6 +12,7 @@ import { coordenadaDaUF } from '@/domain/geo'
 import useClima, { familiaDoTempo, nomeDoTempo } from '@/hooks/useClima'
 import { dataBR, dataHora, hojeISO } from '@/utils/formato'
 import useTarefas from './useTarefas'
+import useModoTv from './useModoTv'
 import Painel from './Painel'
 import Historico from './Historico'
 import ModalPowerBI from './ModalPowerBI'
@@ -221,15 +223,18 @@ const COLUNAS = [
  * tarefa e quem monta o roteiro da obra.
  */
 export default function Home() {
-  const { nomeDoCargo, corDoCargo, pessoaPorId, etapaDaObra, pendentesDaObra, pode } = useDados()
+  const { nomeDoCargo, corDoCargo, pessoaPorId, etapaDaObra, pendentesDaObra, pode, recarregar } = useDados()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const tarefas = useTarefas()
   const veDashboard = pode('ver_dashboard')
+  /* a televisao da empresa (setor "Painel TV"): troca de Grade para Quadro
+     sozinha e descendo a lista (useModoTv), fala com a EQUIPE e mostra as
+     tarefas de todos os setores */
+  const tv = Boolean(user?.painelTv)
+  const veHistorico = pode('ver_historico') && !tv
 
   const [abaEscolhida, setAba] = useState('grade')
-  /* quem perde a permissao com a aba aberta volta para a Grade, em vez
-     de ficar olhando um painel que nao e mais dele */
-  const aba = abaEscolhida === 'painel' && !veDashboard ? 'grade' : abaEscolhida
   const [powerBI, setPowerBI] = useState(false)
   const [recado, setRecado] = useState('')
   /* o passo do Dashboard mora aqui porque o seletor dele vive na barra
@@ -245,7 +250,19 @@ export default function Home() {
   const [escopo, setEscopo] = useState('minhas')
 
   const temMinhas = useMemo(() => tarefas.some((t) => t.minha), [tarefas])
-  const soMinhas = escopo === 'minhas' && temMinhas
+  const soMinhas = escopo === 'minhas' && temMinhas && !tv
+
+  /* na TV: Grade e Quadro se revezando, e os dados lidos de novo a cada
+     troca — a tela fica ligada o dia inteiro */
+  const proximaTela = useCallback(() => {
+    setAba((atual) => (atual === 'quadro' ? 'grade' : 'quadro'))
+    recarregar()
+  }, [recarregar])
+
+  /* quem perde a permissao com a aba aberta volta para a Grade, em vez
+     de ficar olhando um painel que nao e mais dele (a TV nem tem o painel) */
+  const aba = abaEscolhida === 'painel' && (!veDashboard || tv) ? 'grade' : abaEscolhida
+  useModoTv({ ligado: tv, aba, aoTrocar: proximaTela })
 
   const visiveis = useMemo(
     () => (soMinhas ? tarefas.filter((t) => t.minha) : tarefas),
@@ -316,8 +333,8 @@ export default function Home() {
   const agora = new Date()
 
   return (
-    <AppShell>
-      <section className="inicio">
+    <AppShell semChat={tv}>
+      <section className={`inicio ${tv ? 'inicio--tv' : ''}`.trim()}>
         {/* ---------------- a faixa do dia ---------------- */}
         <header className="dia vidro">
           <p className="dia__data">
@@ -333,11 +350,15 @@ export default function Home() {
               falta fazer — para a segunda linha. */}
           <div className="dia__texto">
             {/* deixa claro que a lista e a do usuario: as tarefas do setor dele */}
-            {soMinhas && faltando.length > 0 && <span className="paravoce paravoce--topo">Para você</span>}
+            {(soMinhas || tv) && faltando.length > 0 && (
+              <span className="paravoce paravoce--topo">{tv ? 'Para equipe' : 'Para você'}</span>
+            )}
             <h1 className="dia__frase">
               {faltando.length === 0
                 ? 'Nenhuma tarefa pendente hoje'
-                : soMinhas
+                : tv
+                  ? `Possuímos ${faltando.length} tarefa${faltando.length > 1 ? 's' : ''} para fazer agora.`
+                  : soMinhas
                   ? `Você tem ${faltando.length} tarefa${faltando.length > 1 ? 's' : ''} para fazer agora.`
                   : /* em "Todas" a lista e da empresa: "voce tem" diria que e tudo seu */
                     `${faltando.length} tarefa${faltando.length > 1 ? 's' : ''} pendente${
@@ -427,7 +448,18 @@ export default function Home() {
 
           {/* o Dashboard olha a empresa inteira: filtrar por setor ali
               daria uma média de uma pessoa só, que não é média nenhuma */}
-          {aba !== 'painel' && temMinhas && (
+          {tv && (
+            <div className="escopo" role="group" aria-label="De quem são as tarefas">
+              <button type="button" disabled>
+                Para equipe
+              </button>
+              <button type="button" className="is-atual" aria-pressed="true">
+                Todas
+              </button>
+            </div>
+          )}
+
+          {aba !== 'painel' && temMinhas && !tv && (
             <div className="escopo" role="group" aria-label="De quem são as tarefas">
               <button
                 type="button"
@@ -460,30 +492,30 @@ export default function Home() {
 
         {aba === 'grade' && (
           <Grade
-            tarefas={faltando}
+            tarefas={tv ? faltando.map((t) => ({ ...t, posso: true })) : faltando}
             paraVoce={!soMinhas && temMinhas}
             hoje={hoje}
             nomeDoCargo={nomeDoCargo}
             corDoCargo={corDoCargo}
-            aoAbrir={(alvo) => navigate(`/app/obras/${alvo.obra.id}`)}
+            aoAbrir={tv ? () => {} : (alvo) => navigate(`/app/obras/${alvo.obra.id}`)}
           />
         )}
 
         {/* O Historico mora embaixo da Grade — do globo, quando nao ha
             nada pendente; da tabela de tarefas, quando ha. A Grade e o
             "meu dia" daqui para a frente; o Historico, o que ja foi. */}
-        {aba === 'grade' && <Historico />}
+        {aba === 'grade' && veHistorico && <Historico />}
 
         {aba === 'quadro' && (
           <Quadro
-            tarefas={doMes}
+            tarefas={tv ? doMes.map((t) => ({ ...t, posso: true })) : doMes}
             paraVoce={!soMinhas && temMinhas}
             hoje={hoje}
             mes={mes}
             nomeDoCargo={nomeDoCargo}
             corDoCargo={corDoCargo}
             pessoaPorId={pessoaPorId}
-            aoAbrir={(t) => navigate(`/app/obras/${t.obra.id}`)}
+            aoAbrir={tv ? () => {} : (t) => navigate(`/app/obras/${t.obra.id}`)}
           />
         )}
 

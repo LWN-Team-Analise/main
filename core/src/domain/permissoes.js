@@ -39,6 +39,7 @@ export const VISUALIZACAO = [
   { chave: 'ver_concluidas', rotulo: 'Concluídas', rota: '/app/concluidas' },
   { chave: 'ver_despesas', rotulo: 'Visualizar despesas', rota: '/app/despesas' },
   { chave: 'ver_frotas', rotulo: 'Frotas', rota: '/app/frotas' },
+  { chave: 'ver_comercial', rotulo: 'Comercial', rota: '/app/comercial' },
   { chave: 'ver_avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes' },
   { chave: 'ver_avisos', rotulo: 'Enviar avisos', rota: null },
 ]
@@ -57,11 +58,17 @@ export const ALTERACAO = [
      todo mundo — por isso tem chave propria, embaixo de "Pagina inicial":
      sem ela, a pessoa ve a Grade e o Quadro, e a aba Dashboard some. */
   { chave: 'ver_dashboard', rotulo: 'Ver painel (gráficos)', dependeDe: 'ver_inicio' },
+  /* o Historico embaixo da Grade (o que ja foi feito). Todo setor que ja
+     via a pagina inicial ganhou esta junto (atualizacao 27); a tela da TV
+     nao tem. */
+  { chave: 'ver_historico', rotulo: 'Ver histórico', dependeDe: 'ver_inicio' },
   { chave: 'editar_usuario', rotulo: 'Adicionar / editar usuário', dependeDe: null },
   { chave: 'editar_cargo', rotulo: 'Adicionar / editar setor', dependeDe: null },
   { chave: 'editar_cargo_titulo', rotulo: 'Adicionar / editar cargo', dependeDe: null },
   { chave: 'editar_avaliacoes', rotulo: 'Adicionar / editar avaliações', dependeDe: 'ver_avaliacoes' },
   { chave: 'editar_clientes', rotulo: 'Adicionar / editar clientes', dependeDe: 'ver_clientes' },
+  /* a planilha do Excel com o cadastro inteiro (Clientes > Exportar) */
+  { chave: 'exportar_clientes', rotulo: 'Exportar clientes (Excel)', dependeDe: 'ver_clientes' },
   { chave: 'editar_obras', rotulo: 'Adicionar / editar obras', dependeDe: 'ver_obras' },
   { chave: 'excluir_concluidas', rotulo: 'Excluir obra concluída', dependeDe: 'ver_concluidas' },
   { chave: 'check_todas_etapas', rotulo: 'Check em todas as etapas', dependeDe: 'ver_obras' },
@@ -90,6 +97,13 @@ export const ALTERACAO = [
      deles) e `editar_veiculos`. */
   { chave: 'registrar_frota', rotulo: 'Registrar saída e devolução de veículo', dependeDe: 'ver_frotas' },
   { chave: 'editar_veiculos', rotulo: 'Adicionar / editar veículos', dependeDe: 'ver_frotas' },
+  /* Comercial: ver a aba e os funis e `ver_comercial`; criar, editar e
+     mover negocio (e marcar ganho ou perdido) e `editar_negocios`;
+     apagar de vez e `excluir_negocios`; mandar e-mail ao contato pela
+     propria caixa do Outlook, sem sair do site, e `responder_emails`. */
+  { chave: 'editar_negocios', rotulo: 'Adicionar / editar negócios', dependeDe: 'ver_comercial' },
+  { chave: 'excluir_negocios', rotulo: 'Excluir negócio', dependeDe: 'ver_comercial' },
+  { chave: 'responder_emails', rotulo: 'Responder e-mails pelo site', dependeDe: 'ver_comercial' },
 ]
 
 /**

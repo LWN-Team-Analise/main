@@ -187,7 +187,8 @@ export default function ModalCheck({
             aoMudar={setDonos}
             vazio={doCard ? `Segue o card (${doCard})` : 'Segue o card'}
             aria-label="Setores que podem marcar este check"
-            opcoes={cargos.map((c) => ({ valor: c.chave, rotulo: c.nome, cor: c.cor }))}
+            /* o setor da TV nao recebe tarefa */
+            opcoes={cargos.filter((c) => !c.painelTv).map((c) => ({ valor: c.chave, rotulo: c.nome, cor: c.cor }))}
           />
         </div>
 

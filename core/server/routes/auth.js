@@ -15,6 +15,7 @@ import { registrarAtividade } from '../atividade.js'
 const router = Router()
 
 const EXPIRA = process.env.JWT_EXPIRES || '8h'
+const EXPIRA_TV = '30d'
 
 /** O codigo do "esqueci minha senha" vale 3 minutos, como pedido. */
 const MINUTOS_DO_CODIGO = 3
@@ -71,6 +72,9 @@ function paraUsuario(linha) {
     cargoPermissoes: normalizar(linha.cargo_permissoes ?? []),
     // true = ainda esta com a senha padrao; a tela obriga a trocar no primeiro acesso
     senhaTemporaria: linha.senha_temporaria ?? false,
+    // setor da TV da empresa (atualizacao 27): tela inicial que se troca
+    // sozinha, e o unico login que nao passa pelo Outlook
+    painelTv: linha.painel_tv === true,
     // cadastrado so pelo e-mail: falta a pessoa completar nome, nascimento e CPF
     cadastroPendente: !linha.cpf,
   }
@@ -83,7 +87,8 @@ const CAMPOS_BASE = `u.id, u.name, u.email, u.cpf, u.data_nascimento, u.telefone
 const CAMPOS_CARGO = `, u.foto, u.cargo_id, u.cargo_titulo, u.outlook_email,
                       c.chave AS cargo_chave, c.nome AS cargo_nome,
                       c.cor AS cargo_cor, c.acesso_total,
-                      c.permissoes AS cargo_permissoes`
+                      c.permissoes AS cargo_permissoes,
+                      (to_jsonb(c) ->> 'painel_tv')::boolean AS painel_tv`
 
 /**
  * Busca o usuario ja com o cargo. Se db/sistema.sql.txt ainda nao foi
@@ -109,9 +114,9 @@ async function buscarUsuario(condicao, valores) {
  * O token de sessao. O `sh` e a marca da senha (server/sessao.js):
  * trocar a senha derruba todo token emitido com a antiga.
  */
-function tokenDeSessao(id, senhaHash) {
+function tokenDeSessao(id, senhaHash, expira = EXPIRA) {
   return jwt.sign({ sub: id, sh: marcaDaSenha(senhaHash) }, SEGREDO, {
-    expiresIn: EXPIRA,
+    expiresIn: expira,
     algorithm: 'HS256',
   })
 }
@@ -119,7 +124,9 @@ function tokenDeSessao(id, senhaHash) {
 /** Monta o token e carimba o ultimo acesso. */
 async function abrirSessao(linha) {
   const usuario = paraUsuario(linha)
-  const token = tokenDeSessao(usuario.id, linha.senha_hash)
+  /* a TV fica ligada dias seguidos, sem ninguem para entrar de novo a
+     cada 8 horas; a conta dela so ve a pagina inicial */
+  const token = tokenDeSessao(usuario.id, linha.senha_hash, usuario.painelTv ? EXPIRA_TV : EXPIRA)
   await query('UPDATE usuario SET ultimo_acesso = now() WHERE id = $1', [usuario.id])
   return { token, user: usuario }
 }

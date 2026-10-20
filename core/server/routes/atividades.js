@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { query } from '../db.js'
-import { exigeSessao, tratar } from '../sessao.js'
+import { exige, exigeSessao, tratar } from '../sessao.js'
 
 /* ============================================================
    HISTORICO — /api/atividades
@@ -42,7 +42,9 @@ const paraAtividade = (l) => ({
   criadoEm: l.criado_em,
 })
 
-router.get('/', exigeSessao, async (req, res) => {
+/* o Historico e da pagina inicial, mas nem toda tela inicial o mostra:
+   a da TV nao tem (ver_historico, atualizacao 27) */
+router.get('/', exigeSessao, exige('ver_historico'), async (req, res) => {
   const limite = Math.min(Math.max(Number.parseInt(req.query.limite, 10) || 30, 1), 100)
   const antes = String(req.query.antes ?? '').trim()
   if (antes && !/^\d{1,15}$/.test(antes)) {

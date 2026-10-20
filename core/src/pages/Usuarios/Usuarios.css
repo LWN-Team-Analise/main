@@ -184,6 +184,38 @@
   border-radius: var(--radius-sm);
 }
 
+/* a foto com a bolinha de presenca no canto de baixo, a direita */
+.pessoa__foto {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.pessoa__presenca {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--presenca-cor);
+  /* o anel da cor do fundo separa a bolinha da foto */
+  box-shadow: 0 0 0 2.5px var(--surface);
+  transition: background var(--dur-base) var(--ease-out);
+}
+
+.pessoa__presenca--ativo {
+  --presenca-cor: #22c55e;
+}
+
+.pessoa__presenca--segundo_plano {
+  --presenca-cor: #ef4444;
+}
+
+.pessoa__presenca--offline {
+  --presenca-cor: #9ca3af;
+}
+
 .pessoa__quem {
   display: block;
   flex: 1;

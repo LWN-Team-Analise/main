@@ -6,6 +6,7 @@ import { logger } from '../logger.js'
 import { descreverObra, registrarAtividade } from '../atividade.js'
 import { notificar, pessoasDosSetores, todosAtivos } from '../push.js'
 import { IMAGEM_INVALIDA, imagemValida } from '../utils/imagem.js'
+import { proximaProposta } from '../../src/domain/proposta.js'
 import {
   CONDICOES,
   LIMITES_ITEM,
@@ -163,6 +164,17 @@ const paraCliente = (l) => ({
   cidade: l.cidade ?? '',
   estado: l.estado ?? '',
   cep: l.cep ?? '',
+  /* quem cadastrou (ou responde pela) empresa e o proximo contato
+     (atualizacao 27). Sem as colunas, os dois vem vazios. */
+  proprietarioId: l.proprietario_id === null || l.proprietario_id === undefined ? null : String(l.proprietario_id),
+  proximoContato: l.proximo_contato ?? null,
+  pessoas: (l.pessoas ?? []).map((p) => ({
+    id: String(p.id),
+    nome: p.nome,
+    cargo: p.cargo ?? '',
+    email: p.email ?? '',
+    telefone: p.telefone ?? '',
+  })),
   criadoEm: l.criado_em,
 })
 
@@ -198,18 +210,37 @@ async function lerTermos() {
 /* As colunas do cliente que a tela usa. A logo_original fica de fora
    sempre (ver paraCliente); a logo e a capa, so na carga leve. */
 const COLUNAS_CLIENTE = `id, nome, recorte_logo, recorte_capa, setor_id, endereco, bairro,
-  cidade, estado, cep, criado_em, ordem_prioridade,
+  cidade, estado, cep, criado_em, ordem_prioridade, proprietario_id, proximo_contato,
   md5(coalesce(logo, '') || '|' || coalesce(capa, '')) AS imagem_versao`
 
-function lerClientes(imagens) {
-  return query(
-    /* os prioritarios (as unidades da LWN, atualizacao 23) primeiro, na ordem deles */
-    `SELECT ${COLUNAS_CLIENTE}${imagens ? ', logo, capa' : ''} FROM cliente ORDER BY ordem_prioridade NULLS LAST, lower(nome)`,
-  ).catch((erro) => {
-    /* banco antigo, sem alguma das colunas: tudo, com as imagens */
-    if (erro.code !== '42703') throw erro
-    return query('SELECT * FROM cliente ORDER BY lower(nome)')
+async function lerClientes(imagens) {
+  const [clientes, pessoas] = await Promise.all([
+    query(
+      /* os prioritarios (as unidades da LWN, atualizacao 23) primeiro, na ordem deles */
+      `SELECT ${COLUNAS_CLIENTE}${imagens ? ', logo, capa' : ''} FROM cliente ORDER BY ordem_prioridade NULLS LAST, lower(nome)`,
+    ).catch((erro) => {
+      /* banco antigo, sem alguma das colunas: tudo, com as imagens */
+      if (erro.code !== '42703') throw erro
+      return query('SELECT * FROM cliente ORDER BY lower(nome)')
+    }),
+    /* as pessoas de contato (atualizacao 27); sem a tabela, ninguem */
+    query('SELECT id, cliente_id, nome, cargo, email, telefone FROM cliente_pessoa ORDER BY cliente_id, ordem, id').catch(
+      (erro) => {
+        if (erro.code !== '42P01') throw erro
+        return { rows: [] }
+      },
+    ),
+  ])
+  const porCliente = new Map()
+  pessoas.rows.forEach((p) => {
+    const chave = String(p.cliente_id)
+    if (!porCliente.has(chave)) porCliente.set(chave, [])
+    porCliente.get(chave).push(p)
   })
+  clientes.rows.forEach((c) => {
+    c.pessoas = porCliente.get(String(c.id)) ?? []
+  })
+  return clientes
 }
 
 /**
@@ -667,6 +698,91 @@ function camposCliente(corpo) {
   }
 }
 
+const PESSOAS_MAXIMO = 50
+
+/**
+ * As pessoas de contato, o proprietario e o proximo contato do cliente
+ * (atualizacao 27). Vem depois do INSERT/UPDATE do cadastro, numa
+ * transacao propria: banco sem as colunas novas continua gravando o
+ * resto do cliente.
+ *
+ * As pessoas sao a lista INTEIRA que a tela tem: a que veio com id e
+ * atualizada (o id se mantem, e os negocios ligados a ela tambem), a
+ * sem id e nova, e a que sumiu da lista sai.
+ *
+ * Devolve um recado de erro, ou null.
+ */
+function lerExtrasDoCliente(corpo) {
+  const pessoas = Array.isArray(corpo?.pessoas) ? corpo.pessoas : null
+  if (pessoas && pessoas.length > PESSOAS_MAXIMO) return { erro: `No máximo ${PESSOAS_MAXIMO} pessoas por cliente.` }
+  const limpas = []
+  for (const p of pessoas ?? []) {
+    const nome = texto(p?.nome).slice(0, 200)
+    const email = texto(p?.email).toLowerCase().slice(0, 200)
+    if (!nome && !email) continue
+    if (!nome) return { erro: 'Toda pessoa de contato precisa de nome.' }
+    if (email && !/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)) return { erro: `O e-mail de ${nome} não parece certo.` }
+    limpas.push({
+      id: /^\d{1,15}$/.test(texto(p?.id)) ? texto(p.id) : null,
+      nome,
+      cargo: texto(p?.cargo).slice(0, 120) || null,
+      email: email || null,
+      telefone: texto(p?.telefone).slice(0, 40) || null,
+    })
+  }
+  const proximo = texto(corpo?.proximoContato).slice(0, 10)
+  if (proximo && !/^\d{4}-\d{2}-\d{2}$/.test(proximo)) return { erro: 'Confira a data do próximo contato.' }
+  const dono = texto(corpo?.proprietarioId)
+  return {
+    pessoas: pessoas ? limpas : null,
+    proximoContato: proximo || null,
+    proprietarioId: /^\d{1,15}$/.test(dono) ? dono : null,
+  }
+}
+
+async function gravarExtrasDoCliente(clienteId, extras, { novo, usuarioId }) {
+  try {
+    await emTransacao(async (db) => {
+      await db.query('UPDATE cliente SET proprietario_id = $1, proximo_contato = $2 WHERE id = $3', [
+        /* cliente novo sem dono escolhido: e de quem cadastrou */
+        extras.proprietarioId ?? (novo ? usuarioId : null),
+        extras.proximoContato,
+        clienteId,
+      ])
+      if (!extras.pessoas) return
+      const ficam = extras.pessoas.filter((p) => p.id).map((p) => p.id)
+      await db.query('DELETE FROM cliente_pessoa WHERE cliente_id = $1 AND NOT (id = ANY($2::bigint[]))', [clienteId, ficam])
+      for (const [ordem, p] of extras.pessoas.entries()) {
+        if (p.id) {
+          await db.query(
+            `UPDATE cliente_pessoa SET nome = $1, cargo = $2, email = $3, telefone = $4, ordem = $5
+              WHERE id = $6 AND cliente_id = $7`,
+            [p.nome, p.cargo, p.email, p.telefone, ordem, p.id, clienteId],
+          )
+        } else {
+          await db.query(
+            `INSERT INTO cliente_pessoa (cliente_id, nome, cargo, email, telefone, ordem)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [clienteId, p.nome, p.cargo, p.email, p.telefone, ordem],
+          )
+        }
+      }
+    })
+  } catch (erro) {
+    /* banco ainda sem a atualizacao 27: o cadastro em si ja foi gravado */
+    if (erro.code === '42P01' || erro.code === '42703') return
+    if (erro.code === '23503') throw Object.assign(new Error('O proprietário escolhido não existe mais.'), { status: 400 })
+    throw erro
+  }
+}
+
+/** O cliente como a tela le, ja com as pessoas. */
+async function lerClienteCompleto(id) {
+  const todos = await lerClientes(false)
+  const achado = todos.rows.find((c) => String(c.id) === String(id))
+  return achado ? paraCliente(achado) : null
+}
+
 /**
  * As cinco colunas da imagem, ou null quando a tela NAO mexeu nela.
  *
@@ -787,6 +903,8 @@ router.delete('/setores/:id', exigeSessao, exige('editar_clientes'), async (req,
 router.post('/clientes', exigeSessao, exige('editar_clientes'), async (req, res) => {
   const { erro, valores } = camposCliente(req.body)
   if (erro) return res.status(400).json({ erro })
+  const extras = lerExtrasDoCliente(req.body)
+  if (extras.erro) return res.status(400).json({ erro: extras.erro })
 
   const imagem = camposImagem(req.body) ?? {}
   if (!imagemDoClienteValida(imagem)) return res.status(400).json({ erro: IMAGEM_INVALIDA })
@@ -807,8 +925,10 @@ router.post('/clientes', exigeSessao, exige('editar_clientes'), async (req, res)
       descricao: 'Novo cliente cadastrado',
       detalhes: { cliente: rows[0].nome, cidade: `${rows[0].cidade}/${rows[0].estado}` },
     })
-    return res.status(201).json({ cliente: paraCliente(rows[0]) })
+    await gravarExtrasDoCliente(rows[0].id, extras, { novo: true, usuarioId: req.dono.sub })
+    return res.status(201).json({ cliente: (await lerClienteCompleto(rows[0].id)) ?? paraCliente(rows[0]) })
   } catch (e) {
+    if (e.status === 400) return res.status(400).json({ erro: e.message })
     return tratar(e, res, 'dados/cliente-criar')
   }
 })
@@ -816,20 +936,22 @@ router.post('/clientes', exigeSessao, exige('editar_clientes'), async (req, res)
 router.patch('/clientes/:id', exigeSessao, exige('editar_clientes'), async (req, res) => {
   const { erro, valores } = camposCliente(req.body)
   if (erro) return res.status(400).json({ erro })
+  const extras = lerExtrasDoCliente(req.body)
+  if (extras.erro) return res.status(400).json({ erro: extras.erro })
 
   /* a imagem so entra no UPDATE quando a tela mexeu nela; sem isso,
      salvar um endereco novo apagaria a logo do cliente */
   const imagem = camposImagem(req.body) ?? {}
   if (!imagemDoClienteValida(imagem)) return res.status(400).json({ erro: IMAGEM_INVALIDA })
   const todos = [...valores, ...Object.values(imagem)]
-  const extras = Object.keys(imagem)
-    .map((coluna, i) => `, ${coluna} = $${valores.length + i + 1}`)
+  const colunasDaImagem = Object.keys(imagem)
+    .map((coluna, i) => `, ${coluna} = ${valores.length + i + 1}`)
     .join('')
 
   try {
     const { rows } = await query(
       `UPDATE cliente SET nome = $1, endereco = $2, bairro = $3,
-                          cidade = $4, estado = $5, cep = $6, setor_id = $7${extras}
+                          cidade = $4, estado = $5, cep = $6, setor_id = $7${colunasDaImagem}
         WHERE id = $${todos.length + 1} RETURNING *`,
       [...todos, req.params.id],
     )
@@ -839,10 +961,12 @@ router.patch('/clientes/:id', exigeSessao, exige('editar_clientes'), async (req,
       categoria: 'cliente',
       entidade: ['cliente', rows[0].id],
       descricao: 'Cliente editado',
-      detalhes: { cliente: rows[0].nome, imagem: extras ? 'imagem alterada' : null },
+      detalhes: { cliente: rows[0].nome, imagem: colunasDaImagem ? 'imagem alterada' : null },
     })
-    return res.json({ cliente: paraCliente(rows[0]) })
+    await gravarExtrasDoCliente(rows[0].id, extras, { novo: false, usuarioId: req.dono.sub })
+    return res.json({ cliente: (await lerClienteCompleto(rows[0].id)) ?? paraCliente(rows[0]) })
   } catch (e) {
+    if (e.status === 400) return res.status(400).json({ erro: e.message })
     return tratar(e, res, 'dados/cliente-editar')
   }
 })
@@ -1233,6 +1357,24 @@ const ROTULO_CAMPO_OBRA = {
   tipo: 'tipo',
   prioridade: 'prioridade',
 }
+
+/**
+ * O n° da proposta que a obra NOVA ja traz preenchido: o da ultima obra
+ * cadastrada (concluida ou nao), mais um — 8234 vira 8235. Ele continua
+ * editavel na tela; aqui so se pula o numero que ja existir.
+ */
+router.get('/obras/proxima-proposta', exigeSessao, exige('editar_obras'), async (_req, res) => {
+  try {
+    const [ultima, todas] = await Promise.all([
+      query("SELECT proposta FROM obra WHERE proposta ~ '[0-9]' ORDER BY criado_em DESC, id DESC LIMIT 1"),
+      query('SELECT lower(proposta) AS p FROM obra'),
+    ])
+    const ocupadas = new Set(todas.rows.map((l) => l.p))
+    return res.json({ proposta: proximaProposta(ultima.rows[0]?.proposta, ocupadas) })
+  } catch (e) {
+    return tratar(e, res, 'dados/proxima-proposta')
+  }
+})
 
 router.post('/obras', exigeSessao, exige('editar_obras'), async (req, res) => {
   const clienteId = texto(req.body?.clienteId)

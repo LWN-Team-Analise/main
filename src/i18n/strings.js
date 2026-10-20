@@ -13,6 +13,8 @@ const pt = {
     home: 'LWN Engenharia — página inicial',
     mainNav: 'Navegação principal',
     mobileNav: 'Navegação móvel',
+    // Atmosfera LWN, the employees' platform (corePath), at the end of the menu.
+    team: 'Área do colaborador',
     openMenu: 'Abrir menu',
     closeMenu: 'Fechar menu',
     lightMode: 'Ativar modo claro',
@@ -178,6 +180,7 @@ const en = {
     home: 'LWN Engenharia — home page',
     mainNav: 'Main navigation',
     mobileNav: 'Mobile navigation',
+    team: 'Employee area',
     openMenu: 'Open menu',
     closeMenu: 'Close menu',
     lightMode: 'Switch to light mode',

@@ -4,7 +4,10 @@ import Button from '@/components/Button/Button'
 import Avatar from '@/components/Avatar/Avatar'
 import EditorImagem, { PreviaHeader } from '@/components/EditorImagem/EditorImagem'
 import { CampoSelecao, CampoTexto } from '@/components/Campo/Campo'
+import { CampoData } from '@/components/CampoData/CampoData'
+import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
+import { valorCurto } from '@/domain/comercial'
 import { carregarImagemDoCliente } from '@/services/dadosService'
 import { buscarCEP, listarCidades, listarEstados } from '@/services/enderecoService'
 import { formatarCEP } from '@/utils/formato'
@@ -30,15 +33,24 @@ const VAZIO = {
   bairro: '',
   estado: '',
   cidade: '',
+  /* quem cadastrou (ou responde pela) empresa, o proximo contato e as
+     pessoas de contato (atualizacao 27) */
+  proprietarioId: '',
+  proximoContato: '',
+  pessoas: [],
 }
+
+const PESSOA_VAZIA = { id: null, nome: '', cargo: '', email: '', telefone: '' }
+const emailCerto = (email) => /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)
 
 /**
  * Cadastro de cliente. O CEP puxa o resto do endereco no ViaCEP; a lista de
  * estados e de cidades vem do IBGE. Se alguma API falhar, os campos seguem
  * editaveis na mao — o cadastro nunca fica preso.
  */
-export default function ModalCliente({ aberto, cliente = null, aoFechar, aoSalvar }) {
-  const { setores } = useDados()
+export default function ModalCliente({ aberto, cliente = null, resumo = null, nota = null, aoFechar, aoSalvar }) {
+  const { setores, equipe } = useDados()
+  const { user } = useAuth()
   const [form, setForm] = useState(VAZIO)
   const [erros, setErros] = useState({})
   const [estados, setEstados] = useState([])
@@ -57,13 +69,25 @@ export default function ModalCliente({ aberto, cliente = null, aoFechar, aoSalva
   /* abre limpo (ou com o cliente que veio para edicao) */
   useEffect(() => {
     if (aberto) {
-      setForm(cliente ? { ...VAZIO, ...cliente, setorId: cliente.setorId ?? '' } : VAZIO)
+      setForm(
+        cliente
+          ? {
+              ...VAZIO,
+              ...cliente,
+              setorId: cliente.setorId ?? '',
+              proprietarioId: cliente.proprietarioId ?? '',
+              proximoContato: cliente.proximoContato ?? '',
+              pessoas: (cliente.pessoas ?? []).map((p) => ({ ...PESSOA_VAZIA, ...p })),
+            }
+          : /* cliente novo e de quem esta cadastrando, ate alguem trocar */
+            { ...VAZIO, proprietarioId: user?.id ? String(user.id) : '' },
+      )
       setErros({})
       setAvisoCEP('')
       setErroImagem('')
       setImagemMexida(false)
     }
-  }, [aberto, cliente])
+  }, [aberto, cliente, user?.id])
 
   /* estados: uma vez so, na primeira abertura */
   useEffect(() => {
@@ -153,6 +177,27 @@ export default function ModalCliente({ aberto, cliente = null, aoFechar, aoSalva
     setImagemMexida(true)
   }
 
+  /* ---------------- Pessoas de contato ---------------- */
+
+  const mudarPessoa = (i, campo) => (evento) => {
+    const valor = evento.target.value
+    setForm((atual) => ({
+      ...atual,
+      pessoas: atual.pessoas.map((p, j) => (j === i ? { ...p, [campo]: valor } : p)),
+    }))
+    setErros((atual) => ({ ...atual, [`pessoa${i}`]: undefined }))
+  }
+
+  const tirarPessoa = (i) =>
+    setForm((atual) => ({ ...atual, pessoas: atual.pessoas.filter((_, j) => j !== i) }))
+
+  const novaPessoa = () => setForm((atual) => ({ ...atual, pessoas: [...atual.pessoas, { ...PESSOA_VAZIA }] }))
+
+  const pessoasDaEquipe = equipe
+    .filter((p) => p.ativo !== false || String(p.id) === String(form.proprietarioId))
+    .map((p) => ({ valor: String(p.id), rotulo: p.nome }))
+    .sort((a, b) => a.rotulo.localeCompare(b.rotulo, 'pt-BR'))
+
   /* trocar o estado na mao invalida a cidade que estava escolhida */
   const mudarEstado = (evento) => {
     const sigla = evento.target.value
@@ -194,6 +239,12 @@ export default function ModalCliente({ aberto, cliente = null, aoFechar, aoSalva
     if (!form.nome.trim()) novosErros.nome = 'Informe o nome da empresa.'
     if (!form.cidade.trim()) novosErros.cidade = 'Informe a cidade.'
     if (!form.estado) novosErros.estado = 'Escolha o estado.'
+    form.pessoas.forEach((p, i) => {
+      const algum = p.nome.trim() || p.email.trim() || p.telefone.trim() || p.cargo.trim()
+      if (!algum) return
+      if (!p.nome.trim()) novosErros[`pessoa${i}`] = 'Escreva o nome da pessoa.'
+      else if (p.email.trim() && !emailCerto(p.email.trim())) novosErros[`pessoa${i}`] = 'O e-mail não parece certo.'
+    })
 
     if (Object.keys(novosErros).length > 0) {
       setErros(novosErros)
@@ -201,6 +252,18 @@ export default function ModalCliente({ aberto, cliente = null, aoFechar, aoSalva
     }
 
     const { logo, logoOriginal, recorteLogo, capa, recorteCapa, ...campos } = form
+    /* linha de pessoa toda em branco nao vai */
+    campos.pessoas = form.pessoas
+      .map((p) => ({
+        id: p.id,
+        nome: p.nome.trim(),
+        cargo: p.cargo.trim(),
+        email: p.email.trim(),
+        telefone: p.telefone.trim(),
+      }))
+      .filter((p) => p.nome || p.email || p.telefone || p.cargo)
+    campos.proprietarioId = form.proprietarioId || null
+    campos.proximoContato = form.proximoContato || null
     /* a imagem viaja em bloco, e SO quando alguem mexeu nela: os dois
        recortes e as duas imagens saem do mesmo gesto no editor, e
        gravar um sem os outros deixaria o cliente com um recorte que
@@ -216,7 +279,7 @@ export default function ModalCliente({ aberto, cliente = null, aoFechar, aoSalva
       aberto={aberto}
       aoFechar={aoFechar}
       titulo={cliente ? 'Editar cliente' : 'Novo cliente'}
-      largura={600}
+      largura={720}
     >
       <form className="formcli" onSubmit={enviar} noValidate>
         {/* ---------------- Logo + prévia do header ----------------
@@ -371,6 +434,119 @@ export default function ModalCliente({ aberto, cliente = null, aoFechar, aoSalva
             erro={erros.cidade}
           />
         )}
+
+        {/* quem responde pela empresa — vem com quem esta cadastrando */}
+        <CampoSelecao
+          rotulo="Proprietário"
+          value={form.proprietarioId}
+          onChange={mudar('proprietarioId')}
+          vazio="Sem proprietário"
+          opcoes={pessoasDaEquipe}
+          dica="Quem cadastrou a empresa no sistema."
+        />
+
+        <div className="formcli__data">
+          <CampoData
+            rotulo="Próximo contato"
+            valor={form.proximoContato}
+            aoMudar={(v) => setForm((atual) => ({ ...atual, proximoContato: v ?? '' }))}
+            vazio="Sem data"
+          />
+          {form.proximoContato && (
+            <button
+              type="button"
+              className="formcli__limpar"
+              onClick={() => setForm((atual) => ({ ...atual, proximoContato: '' }))}
+            >
+              Tirar data
+            </button>
+          )}
+        </div>
+
+        {/* ---------------- Pessoas de contato ---------------- */}
+        <fieldset className="formcli__pessoas">
+          <legend>Pessoas de contato</legend>
+          {form.pessoas.length === 0 && (
+            <p className="formcli__nada">
+              Nenhuma pessoa ainda. O e-mail delas é para onde vai o “Responder?” dos negócios no Comercial.
+            </p>
+          )}
+          {form.pessoas.map((p, i) => (
+            <div key={p.id ?? `nova-${i}`} className="formcli__pessoa">
+              <input
+                aria-label={`Nome da pessoa ${i + 1}`}
+                placeholder="Nome"
+                value={p.nome}
+                onChange={mudarPessoa(i, 'nome')}
+                maxLength={200}
+              />
+              <input
+                aria-label={`Cargo da pessoa ${i + 1}`}
+                placeholder="Cargo"
+                value={p.cargo}
+                onChange={mudarPessoa(i, 'cargo')}
+                maxLength={120}
+              />
+              <input
+                aria-label={`E-mail da pessoa ${i + 1}`}
+                type="email"
+                placeholder="E-mail"
+                value={p.email}
+                onChange={mudarPessoa(i, 'email')}
+              />
+              <input
+                aria-label={`Telefone da pessoa ${i + 1}`}
+                inputMode="tel"
+                placeholder="Telefone"
+                value={p.telefone}
+                onChange={mudarPessoa(i, 'telefone')}
+                maxLength={40}
+              />
+              <button
+                type="button"
+                className="formcli__tirar"
+                onClick={() => tirarPessoa(i)}
+                aria-label={`Tirar ${p.nome || 'esta pessoa'}`}
+                title="Tirar"
+              >
+                ×
+              </button>
+              {erros[`pessoa${i}`] && (
+                <span className="campo__nota campo__nota--erro formcli__pessoa-erro" role="alert">
+                  {erros[`pessoa${i}`]}
+                </span>
+              )}
+            </div>
+          ))}
+          <button type="button" className="formcli__mais" onClick={novaPessoa}>
+            + Adicionar pessoa
+          </button>
+        </fieldset>
+
+        {/* Os numeros que saem sozinhos: os negocios do Comercial e as notas
+            das obras avaliadas. Nao se digita — mudam quando um negocio e
+            ganho ou uma obra e avaliada. */}
+        <div className="formcli__resumo">
+          <p className="formcli__resumo-titulo">Calculado pelo sistema</p>
+          <dl>
+            <div>
+              <dt>Negócios fechados</dt>
+              <dd>{resumo?.ganhos ?? 0}</dd>
+            </div>
+            <div>
+              <dt>Negócios em aberto</dt>
+              <dd>{resumo?.abertos ?? 0}</dd>
+            </div>
+            <div>
+              <dt>Ticket médio</dt>
+              <dd>{resumo?.ticketMedio ? valorCurto(resumo.ticketMedio) : '—'}</dd>
+            </div>
+            <div>
+              <dt>Nota de satisfação média</dt>
+              <dd>{nota?.media !== undefined && nota?.media !== null ? String(nota.media).replace('.', ',') : '—'}</dd>
+            </div>
+          </dl>
+        </div>
 
         <footer className="formobra__acoes">
           <button type="button" className="formobra__cancelar" onClick={aoFechar}>

@@ -1,7 +1,7 @@
 /* ============================================================
    A tela de um setor (/app/usuarios/setores/:id): o "Voltar" e o nome
-   em cima, a identificacao de um lado e as permissoes do outro, e a
-   barra de salvar presa embaixo da tela.
+   em cima, um cartao so com a identificacao numa faixa e as permissoes
+   embaixo, e a barra de salvar presa embaixo da tela.
    ============================================================ */
 
 .setorpag {
@@ -66,20 +66,52 @@
   color: var(--text-muted);
 }
 
-/* identificacao estreita a esquerda, permissoes largas a direita */
-.setorpag__grade {
-  display: grid;
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
-  align-items: start;
-  gap: 16px;
-}
-
-.setorpag__bloco {
+/* Um cartao so, na largura toda: a identificacao em cima, numa faixa
+   (nome, sigla e cor lado a lado), e as permissoes logo abaixo. */
+.setorpag__cartao {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
   padding: 18px;
   border-radius: var(--radius-lg);
+}
+
+.setorpag__ident {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.setorpag__identlinha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px 28px;
+}
+
+.setorpag__nomes {
+  flex: 1 1 320px;
+  max-width: 520px;
+}
+
+/* a cor com a opacidade e, ao lado, a paleta pronta */
+.setorpag__cor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 18px;
+  flex: 2 1 480px;
+}
+
+.setorpag__cor .cor {
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+
+.setorpag__cor .cargos__paleta {
+  padding-bottom: 7px;
 }
 
 .setorpag__subtitulo {
@@ -87,12 +119,6 @@
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--text-strong);
-}
-
-/* a identificacao acompanha a rolagem: as permissoes sao compridas */
-.setorpag__grade > .setorpag__bloco:first-child {
-  position: sticky;
-  top: 96px;
 }
 
 /* as permissoes ja estao no cartao da tela: sem a moldura do pop-up */
@@ -134,14 +160,6 @@
 }
 
 @media (max-width: 900px) {
-  .setorpag__grade {
-    grid-template-columns: 1fr;
-  }
-
-  .setorpag__grade > .setorpag__bloco:first-child {
-    position: static;
-  }
-
   /* no celular a barra de baixo do sistema tambem e presa: a do setor
      fica logo acima dela */
   .setorpag__rodape {

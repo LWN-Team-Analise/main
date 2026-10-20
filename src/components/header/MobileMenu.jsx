@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUpRight, Phone } from 'lucide-react';
+import { ArrowUpRight, Phone, Users } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import { company } from '../../data/site';
+import { company, corePath } from '../../data/site';
 import { useSite } from '../../i18n/content';
 import { useStrings } from '../../i18n/strings';
 import NavItem from './NavItem';
@@ -62,6 +62,20 @@ export default function MobileMenu({ open, activeId, onClose }) {
                     </NavItem>
                   </motion.li>
                 ))}
+                <motion.li
+                  className="mobile-menu__team"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 + navLinks.length * 0.035, duration: 0.3, ease: EASE }}
+                >
+                  <a href={corePath} className="mobile-menu__link" onClick={onClose}>
+                    <span className="mobile-menu__index" aria-hidden="true">
+                      <Users size={16} />
+                    </span>
+                    <span className="mobile-menu__label">{t.header.team}</span>
+                    <ArrowUpRight className="mobile-menu__arrow" size={18} aria-hidden="true" />
+                  </a>
+                </motion.li>
               </ul>
             </nav>
             <div className="mobile-menu__footer">
