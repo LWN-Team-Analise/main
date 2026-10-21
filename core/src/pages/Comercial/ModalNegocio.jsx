@@ -5,10 +5,18 @@ import { CampoArea, CampoDinheiro, CampoSelecao, CampoTexto } from '@/components
 import { CampoData } from '@/components/CampoData/CampoData'
 import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
-import { ETIQUETAS, FUNIS, ROTULO_STATUS, emailValido, funilPorId } from '@/domain/comercial'
+import {
+  ETIQUETAS,
+  FUNIS,
+  MOEDAS,
+  ROTULO_STATUS,
+  TIPOS_CONTATO,
+  emailValido,
+  funilPorId,
+} from '@/domain/comercial'
 import { dataHora } from '@/utils/formato'
 import * as comercial from '@/services/comercialService'
-import { IconeEmail, IconeLixo, IconeTrofeu } from './icones'
+import { IconeEmail, IconeImportar, IconeLixo, IconeMais, IconeTrofeu } from './icones'
 
 /** A data que pode ficar em branco: o calendario e, embaixo, o "Tirar data". */
 function DataOpcional({ rotulo, valor, aoMudar, vazio }) {
@@ -26,6 +34,9 @@ function DataOpcional({ rotulo, valor, aoMudar, vazio }) {
 
 /* a empresa que ainda nao e cliente cadastrado (a prospeccao) */
 const OUTRA = '__outra'
+/* o contato escrito so neste negocio (os negocios antigos, de antes do
+   "Adicionar contato"): nome e telefone guardados no proprio negocio */
+const DO_NEGOCIO = '__negocio'
 
 const VAZIO = {
   funil: 'novos',
@@ -34,30 +45,46 @@ const VAZIO = {
   clienteId: '',
   organizacao: '',
   pessoaId: '',
+  contatoTipo: 'comercial',
   contatoNome: '',
   contatoEmail: '',
   contatoTelefone: '',
   centavos: null,
+  moeda: 'BRL',
   responsavelId: '',
   etiqueta: '',
+  probabilidade: '',
+  /* sem campo na tela; seguem como estavam ao salvar */
   proximaAtividade: '',
   atividadeDescricao: '',
   previsaoFechamento: '',
   observacao: '',
 }
 
+const NOVO_CONTATO = { nome: '', email: '', telefone: '' }
+
 /**
  * Criar e editar negocio — o "Adicionar negócio" do Pipedrive.
  *
  * A empresa sai da lista de clientes; a que ainda nao e cliente (a
  * prospeccao inteira) entra como "Empresa não cadastrada", com o nome
- * escrito na mao. A pessoa de contato sai das pessoas daquele cliente
- * (Clientes > editar), ou e escrita aqui.
+ * escrito na mao.
+ *
+ * O CONTATO nao depende da empresa: a lista traz todas as pessoas
+ * cadastradas (as da empresa escolhida primeiro), e o "Adicionar
+ * contato" cria uma ali mesmo — na empresa escolhida, ou sem empresa.
+ * Ao lado, se o contato e comercial ou pessoal; embaixo, o e-mail do
+ * negocio, que vem do contato e pode ser trocado (e para ele que vai o
+ * "Responder?").
+ *
+ * O valor tem moeda (Real, Dolar ou Euro) e o negocio tem a
+ * probabilidade de fechar, em %.
  *
  * A etapa e a barra de setas do topo, como no Pipedrive: clicar numa
  * seta poe o negocio naquela etapa.
  *
- * Editando, o rodape ganha Ganho, Perdido (ou Reabrir) e Excluir.
+ * Novo, o rodape tem o Importar no canto esquerdo; editando, ganha
+ * Ganho, Perdido (ou Reabrir) e Excluir.
  */
 export default function ModalNegocio({
   aberto,
@@ -73,6 +100,7 @@ export default function ModalNegocio({
   aoReabrir,
   aoExcluir,
   aoEmail,
+  aoImportar,
 }) {
   const { clientes, equipe } = useDados()
   const { user } = useAuth()
@@ -80,11 +108,18 @@ export default function ModalNegocio({
   const [erros, setErros] = useState({})
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
+  const [contatos, setContatos] = useState([])
+  /* o "Adicionar contato" aberto: os campos da pessoa nova */
+  const [novo, setNovo] = useState(null)
+  const [errosNovo, setErrosNovo] = useState({})
+  const [criandoContato, setCriandoContato] = useState(false)
 
   useEffect(() => {
-    if (!aberto) return
+    if (!aberto) return undefined
     setErros({})
     setErro('')
+    setNovo(null)
+    setErrosNovo({})
     if (negocio) {
       setForm({
         ...VAZIO,
@@ -93,13 +128,16 @@ export default function ModalNegocio({
         titulo: negocio.titulo,
         clienteId: negocio.clienteId ?? (negocio.organizacao ? OUTRA : ''),
         organizacao: negocio.clienteId ? '' : negocio.organizacao,
-        pessoaId: negocio.pessoaId ?? (negocio.contatoNome || negocio.contatoEmail ? OUTRA : ''),
+        pessoaId: negocio.pessoaId ?? (negocio.contatoNome ? DO_NEGOCIO : ''),
+        contatoTipo: negocio.contatoTipo ?? 'comercial',
         contatoNome: negocio.pessoaId ? '' : negocio.contatoNome,
-        contatoEmail: negocio.pessoaId ? '' : negocio.contatoEmail,
+        contatoEmail: negocio.contatoEmail ?? '',
         contatoTelefone: negocio.pessoaId ? '' : negocio.contatoTelefone,
         centavos: Math.round(Number(negocio.valor || 0) * 100) || null,
+        moeda: negocio.moeda ?? 'BRL',
         responsavelId: negocio.responsavelId ?? '',
         etiqueta: negocio.etiqueta ?? '',
+        probabilidade: negocio.probabilidade ?? '',
         proximaAtividade: negocio.proximaAtividade ?? '',
         atividadeDescricao: negocio.atividadeDescricao ?? '',
         previsaoFechamento: negocio.previsaoFechamento ?? '',
@@ -114,11 +152,21 @@ export default function ModalNegocio({
         responsavelId: user?.id ? String(user.id) : '',
       })
     }
+
+    /* a lista de contatos e lida a cada abertura: alguem pode ter
+       cadastrado uma pessoa em Clientes nesse meio tempo */
+    let vivo = true
+    comercial
+      .carregarContatos()
+      .then((lista) => vivo && setContatos(lista))
+      .catch(() => vivo && setContatos([]))
+    return () => {
+      vivo = false
+    }
   }, [aberto, negocio, inicial, user?.id])
 
   const funil = funilPorId(form.funil) ?? FUNIS[0]
-  const cliente = clientes.find((c) => String(c.id) === String(form.clienteId)) ?? null
-  const pessoas = cliente?.pessoas ?? []
+  const comCliente = Boolean(form.clienteId) && form.clienteId !== OUTRA
   const somenteLeitura = !podeEditar
 
   const pessoasDaEquipe = useMemo(
@@ -130,6 +178,21 @@ export default function ModalNegocio({
     [equipe, form.responsavelId],
   )
 
+  /* as pessoas da empresa escolhida primeiro; depois todo o resto */
+  const opcoesContato = useMemo(() => {
+    const daEmpresa = (c) => comCliente && String(c.clienteId) === String(form.clienteId)
+    const rotulo = (c) => [c.nome, c.clienteNome].filter(Boolean).join(' — ')
+    const ordenados = [...contatos].sort(
+      (a, b) => Number(daEmpresa(b)) - Number(daEmpresa(a)) || a.nome.localeCompare(b.nome, 'pt-BR'),
+    )
+    return [
+      ...(form.pessoaId === DO_NEGOCIO && form.contatoNome
+        ? [{ valor: DO_NEGOCIO, rotulo: `${form.contatoNome} (só neste negócio)` }]
+        : []),
+      ...ordenados.map((c) => ({ valor: c.id, rotulo: rotulo(c) })),
+    ]
+  }, [contatos, comCliente, form.clienteId, form.pessoaId, form.contatoNome])
+
   const mudar = (campo) => (evento) => {
     const valor = evento?.target ? evento.target.value : evento
     setForm((atual) => ({ ...atual, [campo]: valor }))
@@ -138,21 +201,63 @@ export default function ModalNegocio({
   }
 
   const mudarFunil = (evento) => {
-    const novo = funilPorId(evento.target.value)
-    if (!novo) return
+    const novoFunil = funilPorId(evento.target.value)
+    if (!novoFunil) return
     setForm((atual) => ({
       ...atual,
-      funil: novo.id,
+      funil: novoFunil.id,
       /* a etapa so continua se ela existe no funil novo */
-      etapa: novo.etapas.some((e) => e.id === atual.etapa) ? atual.etapa : novo.etapas[0].id,
+      etapa: novoFunil.etapas.some((e) => e.id === atual.etapa) ? atual.etapa : novoFunil.etapas[0].id,
     }))
   }
 
-  /* trocar a empresa desfaz a pessoa escolhida (ela era da outra) */
   const mudarCliente = (evento) => {
     const valor = evento.target.value
-    setForm((atual) => ({ ...atual, clienteId: valor, pessoaId: '' }))
+    setForm((atual) => ({ ...atual, clienteId: valor }))
     setErros((atual) => ({ ...atual, clienteId: undefined, organizacao: undefined }))
+  }
+
+  /* escolher o contato traz o e-mail dele — a nao ser que alguem ja
+     tenha escrito outro no campo */
+  const mudarContato = (evento) => {
+    const id = evento.target.value
+    const antes = contatos.find((c) => c.id === form.pessoaId)
+    const escolhido = contatos.find((c) => c.id === id)
+    setForm((atual) => {
+      const emailSeguiaOContato = !atual.contatoEmail || atual.contatoEmail === (antes?.email ?? '')
+      return {
+        ...atual,
+        pessoaId: id,
+        contatoEmail: emailSeguiaOContato ? escolhido?.email ?? '' : atual.contatoEmail,
+      }
+    })
+    setErros((atual) => ({ ...atual, contatoEmail: undefined }))
+  }
+
+  const salvarContato = async () => {
+    const nome = novo.nome.trim()
+    const email = novo.email.trim()
+    const faltas = {}
+    if (!nome) faltas.nome = 'Escreva o nome.'
+    if (email && !emailValido(email)) faltas.email = 'O e-mail não parece certo.'
+    setErrosNovo(faltas)
+    if (Object.keys(faltas).length) return
+    setCriandoContato(true)
+    try {
+      const contato = await comercial.criarContato({
+        nome,
+        email,
+        telefone: novo.telefone.trim(),
+        clienteId: comCliente ? form.clienteId : null,
+      })
+      setContatos((lista) => [...lista, contato])
+      setForm((atual) => ({ ...atual, pessoaId: contato.id, contatoEmail: contato.email || atual.contatoEmail }))
+      setNovo(null)
+    } catch (e) {
+      setErrosNovo({ [e.campo ?? 'nome']: e.message })
+    } finally {
+      setCriandoContato(false)
+    }
   }
 
   const conferir = () => {
@@ -160,8 +265,10 @@ export default function ModalNegocio({
     if (!form.titulo.trim()) novos.titulo = 'Dê um título ao negócio.'
     if (!form.clienteId) novos.clienteId = 'Escolha o cliente (ou "Empresa não cadastrada").'
     if (form.clienteId === OUTRA && !form.organizacao.trim()) novos.organizacao = 'Escreva o nome da empresa.'
-    const email = form.pessoaId === OUTRA || !cliente ? form.contatoEmail.trim() : ''
+    const email = form.contatoEmail.trim()
     if (email && !emailValido(email)) novos.contatoEmail = 'O e-mail não parece certo.'
+    const prob = String(form.probabilidade).trim()
+    if (prob && !(/^\d{1,3}$/.test(prob) && Number(prob) <= 100)) novos.probabilidade = 'De 0 a 100.'
     setErros(novos)
     return Object.keys(novos).length === 0
   }
@@ -169,8 +276,9 @@ export default function ModalNegocio({
   const enviar = async (evento) => {
     evento.preventDefault()
     if (somenteLeitura || !conferir()) return
-    const comCliente = form.clienteId && form.clienteId !== OUTRA
-    const pessoaEscolhida = comCliente && form.pessoaId && form.pessoaId !== OUTRA
+    const pessoaEscolhida = form.pessoaId && form.pessoaId !== DO_NEGOCIO
+    const doNegocio = form.pessoaId === DO_NEGOCIO
+    const prob = String(form.probabilidade).trim()
     const campos = {
       funil: form.funil,
       etapa: form.etapa,
@@ -178,12 +286,15 @@ export default function ModalNegocio({
       clienteId: comCliente ? form.clienteId : null,
       organizacao: comCliente ? '' : form.organizacao.trim(),
       pessoaId: pessoaEscolhida ? form.pessoaId : null,
-      contatoNome: pessoaEscolhida ? '' : form.contatoNome.trim(),
-      contatoEmail: pessoaEscolhida ? '' : form.contatoEmail.trim(),
-      contatoTelefone: pessoaEscolhida ? '' : form.contatoTelefone.trim(),
+      contatoTipo: form.contatoTipo || null,
+      contatoNome: doNegocio ? form.contatoNome.trim() : '',
+      contatoEmail: form.contatoEmail.trim(),
+      contatoTelefone: doNegocio ? form.contatoTelefone.trim() : '',
       valor: (form.centavos ?? 0) / 100,
+      moeda: form.moeda,
       responsavelId: form.responsavelId || null,
       etiqueta: form.etiqueta || null,
+      probabilidade: prob ? Number(prob) : null,
       proximaAtividade: form.proximaAtividade || null,
       atividadeDescricao: form.atividadeDescricao.trim(),
       previsaoFechamento: form.previsaoFechamento || null,
@@ -205,10 +316,6 @@ export default function ModalNegocio({
   }
 
   const indiceEtapa = funil.etapas.findIndex((e) => e.id === form.etapa)
-  /* nome, e-mail e telefone escritos a mao: empresa nao cadastrada, ou
-     cliente sem pessoas (ou "Outra pessoa") */
-  const mostraCamposDoContato =
-    form.clienteId === OUTRA || (Boolean(cliente) && (form.pessoaId === OUTRA || pessoas.length === 0))
 
   return (
     <Modal
@@ -260,6 +367,7 @@ export default function ModalNegocio({
 
           <CampoSelecao
             rotulo="Organização (cliente)"
+            largo={form.clienteId !== OUTRA}
             value={form.clienteId}
             onChange={mudarCliente}
             erro={erros.clienteId}
@@ -270,7 +378,7 @@ export default function ModalNegocio({
             ]}
           />
 
-          {form.clienteId === OUTRA ? (
+          {form.clienteId === OUTRA && (
             <CampoTexto
               rotulo="Nome da empresa"
               placeholder="Ex.: Laboratório Exemplo"
@@ -279,54 +387,110 @@ export default function ModalNegocio({
               erro={erros.organizacao}
               maxLength={200}
             />
-          ) : (
-            <CampoSelecao
-              rotulo="Pessoa de contato"
-              value={form.pessoaId}
-              onChange={mudar('pessoaId')}
-              vazio={cliente ? (pessoas.length ? 'Escolha a pessoa...' : 'Nenhuma pessoa cadastrada') : 'Escolha o cliente antes'}
-              disabled={!cliente}
-              opcoes={[
-                ...pessoas.map((p) => ({ valor: p.id, rotulo: p.email ? `${p.nome} — ${p.email}` : p.nome })),
-                { valor: OUTRA, rotulo: 'Outra pessoa…' },
-              ]}
-            />
           )}
 
-          {mostraCamposDoContato && (
-            <>
-              <CampoTexto
-                rotulo="Nome do contato"
-                placeholder="Nome e sobrenome"
-                value={form.contatoNome}
-                onChange={mudar('contatoNome')}
-                maxLength={200}
+          {/* o contato e, ao lado, se ele e comercial ou pessoal */}
+          <div className="negform__contato campo--largo">
+            <div className="negform__contato-linha">
+              <CampoSelecao
+                rotulo="Contato"
+                value={form.pessoaId}
+                onChange={mudarContato}
+                erro={erros.pessoaId}
+                vazio={contatos.length ? 'Escolha o contato...' : 'Nenhum contato cadastrado'}
+                opcoes={opcoesContato}
               />
-              <CampoTexto
-                rotulo="E-mail do contato"
-                type="email"
-                placeholder="nome@empresa.com.br"
-                value={form.contatoEmail}
-                onChange={mudar('contatoEmail')}
-                erro={erros.contatoEmail}
-                dica="É para ele que vai o “Responder?” do cartão."
+              <CampoSelecao
+                rotulo="Tipo"
+                value={form.contatoTipo}
+                onChange={mudar('contatoTipo')}
+                erro={erros.contatoTipo}
+                opcoes={TIPOS_CONTATO.map((t) => ({ valor: t.id, rotulo: t.rotulo }))}
               />
-              <CampoTexto
-                rotulo="Telefone do contato"
-                inputMode="tel"
-                placeholder="(11) 90000-0000"
-                value={form.contatoTelefone}
-                onChange={mudar('contatoTelefone')}
-                maxLength={40}
-              />
-            </>
-          )}
+            </div>
+
+            {!somenteLeitura && !novo && (
+              <button
+                type="button"
+                className="negform__addcontato"
+                onClick={() => {
+                  setNovo(NOVO_CONTATO)
+                  setErrosNovo({})
+                }}
+              >
+                <IconeMais tamanho={14} />
+                Adicionar contato
+              </button>
+            )}
+
+            {novo && (
+              <div className="negform__novocontato" role="group" aria-label="Novo contato">
+                <CampoTexto
+                  rotulo="Nome"
+                  placeholder="Nome e sobrenome"
+                  value={novo.nome}
+                  onChange={(e) => setNovo((a) => ({ ...a, nome: e.target.value }))}
+                  erro={errosNovo.nome}
+                  maxLength={200}
+                  autoFocus
+                />
+                <CampoTexto
+                  rotulo="E-mail"
+                  type="email"
+                  placeholder="nome@empresa.com.br"
+                  value={novo.email}
+                  onChange={(e) => setNovo((a) => ({ ...a, email: e.target.value }))}
+                  erro={errosNovo.email}
+                />
+                <CampoTexto
+                  rotulo="Telefone"
+                  inputMode="tel"
+                  placeholder="(11) 90000-0000"
+                  value={novo.telefone}
+                  onChange={(e) => setNovo((a) => ({ ...a, telefone: e.target.value }))}
+                  maxLength={40}
+                />
+                <div className="negform__novocontato-acoes">
+                  <p>
+                    {comCliente
+                      ? `Entra nos contatos de ${clientes.find((c) => String(c.id) === String(form.clienteId))?.nome ?? 'do cliente'}.`
+                      : 'Entra como contato sem empresa.'}
+                  </p>
+                  <button type="button" className="formobra__cancelar" onClick={() => setNovo(null)}>
+                    Cancelar
+                  </button>
+                  <Button type="button" onClick={salvarContato} loading={criandoContato}>
+                    Salvar contato
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <CampoTexto
+            rotulo="E-mail"
+            largo
+            type="email"
+            placeholder="nome@empresa.com.br"
+            value={form.contatoEmail}
+            onChange={mudar('contatoEmail')}
+            erro={erros.contatoEmail}
+          />
 
           <CampoDinheiro
             rotulo="Valor"
             centavos={form.centavos}
+            moeda={form.moeda}
             aoMudar={(c) => setForm((atual) => ({ ...atual, centavos: c }))}
             erro={erros.valor}
+          />
+
+          <CampoSelecao
+            rotulo="Moeda"
+            value={form.moeda}
+            onChange={mudar('moeda')}
+            erro={erros.moeda}
+            opcoes={MOEDAS.map((m) => ({ valor: m.id, rotulo: `${m.rotulo} (${m.simbolo})` }))}
           />
 
           <CampoSelecao
@@ -350,6 +514,22 @@ export default function ModalNegocio({
             aoMudar={(v) => setForm((atual) => ({ ...atual, previsaoFechamento: v ?? '' }))}
             vazio="Sem data"
           />
+
+          {/* a probabilidade ao lado da data de fechamento */}
+          <div className="negform__prob">
+            <CampoTexto
+              rotulo="Probabilidade"
+              inputMode="numeric"
+              placeholder="0"
+              value={form.probabilidade}
+              onChange={(e) => mudar('probabilidade')(e.target.value.replace(/\D/g, '').slice(0, 3))}
+              erro={erros.probabilidade}
+              aria-describedby="negform-prob-sufixo"
+            />
+            <span className="negform__prob-sufixo" id="negform-prob-sufixo" aria-label="por cento">
+              %
+            </span>
+          </div>
 
           <div className="campo campo--largo">
             <span className="campo__rotulo">Etiqueta</span>
@@ -379,22 +559,6 @@ export default function ModalNegocio({
             </div>
           </div>
 
-          <div className="negform__atividade campo--largo">
-            <DataOpcional
-              rotulo="Próxima atividade"
-              valor={form.proximaAtividade}
-              aoMudar={(v) => setForm((atual) => ({ ...atual, proximaAtividade: v ?? '' }))}
-              vazio="Nenhuma agendada"
-            />
-            <CampoTexto
-              rotulo="O que fazer"
-              placeholder="Ex.: Ligar para confirmar o pedido de compra"
-              value={form.atividadeDescricao}
-              onChange={mudar('atividadeDescricao')}
-              maxLength={200}
-            />
-          </div>
-
           <CampoArea
             rotulo="Observação"
             largo
@@ -412,6 +576,15 @@ export default function ModalNegocio({
         )}
 
         <footer className="negform__rodape">
+          {/* negocio novo: o Importar no canto esquerdo */}
+          {!negocio && podeEditar && aoImportar && (
+            <div className="negform__fecho">
+              <button type="button" className="negform__importar" onClick={aoImportar}>
+                <IconeImportar />
+                Importar
+              </button>
+            </div>
+          )}
           {negocio && (
             <div className="negform__fecho">
               {podeEditar && negocio.status === 'aberto' && (

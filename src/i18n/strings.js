@@ -26,6 +26,7 @@ const pt = {
     label: 'Apresentação',
     quote: 'Solicite um orçamento',
     services: 'Nossos serviços',
+    seal: 'Selo NPS 10/10 — nota máxima de acordo com nossos clientes',
   },
   about: {
     figureAlt: 'Técnicos da LWN com equipamentos de proteção analisando uma amostra em laboratório.',
@@ -192,6 +193,7 @@ const en = {
     label: 'Introduction',
     quote: 'Request a quote',
     services: 'Our services',
+    seal: 'NPS 10/10 seal — top score according to our clients',
   },
   about: {
     figureAlt: 'LWN technicians in protective equipment analysing a sample in a laboratory.',

@@ -14,6 +14,7 @@ import {
   ORDENS,
   ROTULO_SITUACAO,
   ROTULO_STATUS,
+  TIPOS_CONTATO,
   comparar,
   funilPorId,
   rotuloDaEtapa,
@@ -355,9 +356,14 @@ export default function Comercial() {
           tabela: 'Negocios',
           colunas: [
             { titulo: 'Título', tipo: 'texto', largura: 42 },
-            { titulo: 'Valor', tipo: 'reais', largura: 14 },
+            /* o valor vai como numero e a moeda ao lado: formatar tudo em
+               reais escreveria "R$" num negocio em dolar */
+            { titulo: 'Valor', tipo: 'decimal', largura: 14 },
+            { titulo: 'Moeda', tipo: 'texto', largura: 8 },
+            { titulo: 'Probabilidade (%)', tipo: 'inteiro', largura: 12 },
             { titulo: 'Organização', tipo: 'texto', largura: 30 },
-            { titulo: 'Pessoa de contato', tipo: 'texto', largura: 24 },
+            { titulo: 'Contato', tipo: 'texto', largura: 24 },
+            { titulo: 'Tipo do contato', tipo: 'texto', largura: 12 },
             { titulo: 'E-mail do contato', tipo: 'texto', largura: 28 },
             { titulo: 'Funil', tipo: 'texto', largura: 20 },
             { titulo: 'Etapa', tipo: 'texto', largura: 30 },
@@ -370,8 +376,11 @@ export default function Comercial() {
           linhas: visiveis.map((n) => [
             n.titulo,
             Number(n.valor),
+            n.moeda ?? 'BRL',
+            n.probabilidade ?? null,
             n.organizacao,
             n.contatoNome,
+            TIPOS_CONTATO.find((t) => t.id === n.contatoTipo)?.rotulo ?? '',
             n.contatoEmail,
             nomeFunil(n.funil),
             rotuloDaEtapa(n.funil, n.etapa),
@@ -811,6 +820,10 @@ export default function Comercial() {
         aoEmail={(n) => {
           setEditando(null)
           setEscrevendo(n)
+        }}
+        aoImportar={() => {
+          setEditando(null)
+          setImportando(true)
         }}
       />
 

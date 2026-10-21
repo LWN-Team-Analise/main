@@ -55,6 +55,7 @@ const ARQUIVOS = [
   'db/atualizacao-26.sql.txt',
   'db/atualizacao-27.sql.txt',
   'db/atualizacao-28.sql.txt',
+  'db/atualizacao-29.sql.txt',
 ]
 
 /**
@@ -161,6 +162,10 @@ const CONFERENCIA = [
   ['setor Painel TV', "SELECT EXISTS (SELECT 1 FROM cargo WHERE chave = 'painel_tv' AND painel_tv) AS ok"],
   ['ver_comercial no acesso total', permissaoNoAcessoTotal('ver_comercial')],
   ['presenca', "SELECT to_regclass('public.presenca') IS NOT NULL AS ok"],
+  ['negocio.moeda', col('negocio', 'moeda')],
+  ['negocio.probabilidade', col('negocio', 'probabilidade')],
+  ['negocio.contato_tipo', col('negocio', 'contato_tipo')],
+  ['cliente_pessoa.cliente_id aceita NULL', nulavel('cliente_pessoa', 'cliente_id')],
 ]
 
 function col(tabela, coluna) {

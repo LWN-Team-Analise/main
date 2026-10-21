@@ -1,0 +1,65 @@
+-- ============================================================
+--  ATUALIZACAO 29 — O NEGOCIO GANHA MOEDA, PROBABILIDADE E CONTATO SOLTO
+--
+--  1. negocio.moeda — o valor do negocio em Reais (BRL), Dolar
+--     americano (USD) ou Euro (EUR). Os que ja existem ficam em BRL.
+--
+--  2. negocio.probabilidade — a chance de fechar, de 0 a 100 (%). Em
+--     branco quando ninguem informou.
+--
+--  3. negocio.contato_tipo — o contato do negocio e COMERCIAL ou
+--     PESSOAL. Em branco nos que ja existem.
+--
+--  4. cliente_pessoa.cliente_id passa a aceitar NULL: o contato nao
+--     depende mais da organizacao. O "Adicionar contato" do negocio
+--     cria a pessoa com a empresa escolhida — ou sem empresa nenhuma.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao duplica nada.
+-- ============================================================
+
+BEGIN;
+
+-- ---- 1. a moeda ----
+ALTER TABLE public.negocio ADD COLUMN IF NOT EXISTS moeda text NOT NULL DEFAULT 'BRL';
+ALTER TABLE public.negocio DROP CONSTRAINT IF EXISTS negocio_moeda_valida;
+ALTER TABLE public.negocio ADD CONSTRAINT negocio_moeda_valida CHECK (moeda IN ('BRL', 'USD', 'EUR'));
+
+-- ---- 2. a probabilidade ----
+ALTER TABLE public.negocio ADD COLUMN IF NOT EXISTS probabilidade smallint;
+ALTER TABLE public.negocio DROP CONSTRAINT IF EXISTS negocio_probabilidade_faixa;
+ALTER TABLE public.negocio ADD CONSTRAINT negocio_probabilidade_faixa
+    CHECK (probabilidade IS NULL OR probabilidade BETWEEN 0 AND 100);
+
+-- ---- 3. comercial ou pessoal ----
+ALTER TABLE public.negocio ADD COLUMN IF NOT EXISTS contato_tipo text;
+ALTER TABLE public.negocio DROP CONSTRAINT IF EXISTS negocio_contato_tipo_valido;
+ALTER TABLE public.negocio ADD CONSTRAINT negocio_contato_tipo_valido
+    CHECK (contato_tipo IS NULL OR contato_tipo IN ('comercial', 'pessoal'));
+
+COMMENT ON COLUMN public.negocio.moeda IS 'Moeda do valor: BRL, USD ou EUR.';
+COMMENT ON COLUMN public.negocio.probabilidade IS 'Chance de fechar, de 0 a 100 (%).';
+COMMENT ON COLUMN public.negocio.contato_tipo IS 'O contato do negocio e comercial ou pessoal.';
+
+-- ---- 4. contato sem empresa ----
+ALTER TABLE public.cliente_pessoa ALTER COLUMN cliente_id DROP NOT NULL;
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'negocio.moeda' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'negocio' AND column_name = 'moeda') AS ok
+UNION ALL
+SELECT 'negocio.probabilidade',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'negocio' AND column_name = 'probabilidade')
+UNION ALL
+SELECT 'cliente_pessoa.cliente_id aceita NULL',
+       (SELECT is_nullable = 'YES' FROM information_schema.columns
+         WHERE table_name = 'cliente_pessoa' AND column_name = 'cliente_id');

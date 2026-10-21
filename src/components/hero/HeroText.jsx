@@ -17,7 +17,8 @@ function useHeadline(hero) {
 
 /**
  * Headline, description and calls to action — all on screen from the start
- * (the scroll reveals only the sections that follow the hero).
+ * (the scroll reveals only the sections that follow the hero). Above the
+ * description, on the right, the golden NPS 10/10 seal (assets/selo_dourado).
  */
 export default function HeroText() {
   const { hero } = useSite();
@@ -35,6 +36,17 @@ export default function HeroText() {
       </div>
 
       <div className="hero-text__secondary">
+        <img
+          className="hero-text__seal"
+          src="/assets/seals/selo-nps-320.webp"
+          srcSet="/assets/seals/selo-nps-320.webp 320w, /assets/seals/selo-nps-640.webp 640w"
+          sizes="(max-width: 899px) 104px, 158px"
+          width="320"
+          height="308"
+          alt={t.hero.seal}
+          decoding="async"
+        />
+
         <p className="hero-text__description">
           {hero.description.map(({ text, strong }, i) => (
             <Fragment key={i}>

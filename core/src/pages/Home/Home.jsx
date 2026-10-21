@@ -262,7 +262,7 @@ export default function Home() {
   /* quem perde a permissao com a aba aberta volta para a Grade, em vez
      de ficar olhando um painel que nao e mais dele (a TV nem tem o painel) */
   const aba = abaEscolhida === 'painel' && (!veDashboard || tv) ? 'grade' : abaEscolhida
-  useModoTv({ ligado: tv, aba, aoTrocar: proximaTela })
+  const { saindo: tvSaindo } = useModoTv({ ligado: tv, aba, aoTrocar: proximaTela })
 
   const visiveis = useMemo(
     () => (soMinhas ? tarefas.filter((t) => t.minha) : tarefas),
@@ -331,6 +331,30 @@ export default function Home() {
   )
 
   const agora = new Date()
+
+  const telaGrade = aba === 'grade' && (
+    <Grade
+      tarefas={tv ? faltando.map((t) => ({ ...t, posso: true })) : faltando}
+      paraVoce={!soMinhas && temMinhas}
+      hoje={hoje}
+      nomeDoCargo={nomeDoCargo}
+      corDoCargo={corDoCargo}
+      aoAbrir={tv ? () => {} : (alvo) => navigate(`/app/obras/${alvo.obra.id}`)}
+    />
+  )
+
+  const telaQuadro = aba === 'quadro' && (
+    <Quadro
+      tarefas={tv ? doMes.map((t) => ({ ...t, posso: true })) : doMes}
+      paraVoce={!soMinhas && temMinhas}
+      hoje={hoje}
+      mes={mes}
+      nomeDoCargo={nomeDoCargo}
+      corDoCargo={corDoCargo}
+      pessoaPorId={pessoaPorId}
+      aoAbrir={tv ? () => {} : (t) => navigate(`/app/obras/${t.obra.id}`)}
+    />
+  )
 
   return (
     <AppShell semChat={tv}>
@@ -490,33 +514,26 @@ export default function Home() {
           </p>
         )}
 
-        {aba === 'grade' && (
-          <Grade
-            tarefas={tv ? faltando.map((t) => ({ ...t, posso: true })) : faltando}
-            paraVoce={!soMinhas && temMinhas}
-            hoje={hoje}
-            nomeDoCargo={nomeDoCargo}
-            corDoCargo={corDoCargo}
-            aoAbrir={tv ? () => {} : (alvo) => navigate(`/app/obras/${alvo.obra.id}`)}
-          />
-        )}
+        {tv ? (
+          /* na TV a Grade e o Quadro moram num palco com a altura que
+             sobra da tela: so ele rola (useModoTv), a faixa do dia e as
+             abas ficam paradas. A `key` refaz o palco a cada troca, e e
+             isso que dispara o esmaecer de entrada. */
+          <div key={aba} className={`tv-palco ${tvSaindo ? 'is-saindo' : ''}`.trim()}>
+            {telaGrade}
+            {telaQuadro}
+          </div>
+        ) : (
+          <>
+            {telaGrade}
 
-        {/* O Historico mora embaixo da Grade — do globo, quando nao ha
-            nada pendente; da tabela de tarefas, quando ha. A Grade e o
-            "meu dia" daqui para a frente; o Historico, o que ja foi. */}
-        {aba === 'grade' && veHistorico && <Historico />}
+            {/* O Historico mora embaixo da Grade — do globo, quando nao ha
+                nada pendente; da tabela de tarefas, quando ha. A Grade e o
+                "meu dia" daqui para a frente; o Historico, o que ja foi. */}
+            {aba === 'grade' && veHistorico && <Historico />}
 
-        {aba === 'quadro' && (
-          <Quadro
-            tarefas={tv ? doMes.map((t) => ({ ...t, posso: true })) : doMes}
-            paraVoce={!soMinhas && temMinhas}
-            hoje={hoje}
-            mes={mes}
-            nomeDoCargo={nomeDoCargo}
-            corDoCargo={corDoCargo}
-            pessoaPorId={pessoaPorId}
-            aoAbrir={tv ? () => {} : (t) => navigate(`/app/obras/${t.obra.id}`)}
-          />
+            {telaQuadro}
+          </>
         )}
 
         {aba === 'painel' && recado && (

@@ -4,6 +4,16 @@ import { dataBR } from '@/utils/formato'
 import { IconeAtividade, IconeEmail, IconePessoa, IconeSemAtividade } from './icones'
 
 /**
+ * "Negociação/Aprovação Interna" com um ponto de quebra depois de cada
+ * barra: sem ele, a linha que nao cabe quebra no meio da palavra
+ * ("Aprovaç-ão"). O <wbr> nao entra no texto copiado.
+ */
+export function quebraNaBarra(texto) {
+  const partes = String(texto ?? '').split('/')
+  return partes.flatMap((parte, i) => (i === 0 ? [parte] : ['/', <wbr key={i} />, parte]))
+}
+
+/**
  * Um negocio no quadro — o cartao do Pipedrive:
  *
  *   a faixa da etiqueta em cima, o titulo, a empresa, a pessoa de
@@ -59,10 +69,10 @@ export default function CartaoNegocio({
     >
       {etiqueta && <span className="cartaoneg__etiqueta" style={{ '--etiqueta': etiqueta }} aria-hidden="true" />}
 
-      <h4 className="cartaoneg__titulo">{negocio.titulo}</h4>
+      <h4 className="cartaoneg__titulo">{quebraNaBarra(negocio.titulo)}</h4>
       {negocio.organizacao && <p className="cartaoneg__linha">{negocio.organizacao}</p>}
       {negocio.contatoNome && <p className="cartaoneg__linha">{negocio.contatoNome}</p>}
-      <p className="cartaoneg__valor">{valorCurto(negocio.valor)}</p>
+      <p className="cartaoneg__valor">{valorCurto(negocio.valor, negocio.moeda)}</p>
 
       <div className="cartaoneg__rodape">
         <span className="cartaoneg__dono" title={negocio.responsavelNome || 'Sem responsável'}>

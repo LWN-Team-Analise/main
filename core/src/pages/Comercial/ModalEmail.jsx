@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import Modal from '@/components/Modal/Modal'
+import Avatar from '@/components/Avatar/Avatar'
 import Button from '@/components/Button/Button'
 import { CampoArea, CampoTexto } from '@/components/Campo/Campo'
 import { emailValido } from '@/domain/comercial'
 import { dataHora } from '@/utils/formato'
 import * as comercial from '@/services/comercialService'
+import { useAuth } from '@/context/AuthContext'
+import { useDados } from '@/context/DadosContext'
 
 /**
  * O "Responder?" do cartao: escrever ao contato do negocio sem sair do
@@ -16,6 +19,9 @@ import * as comercial from '@/services/comercialService'
  * mostra o ultimo e-mail do contato e a mensagem vai como RESPOSTA
  * dentro daquela conversa. Sem a leitura, vai como e-mail novo — e a
  * janela diz o que falta liberar.
+ *
+ * Quem envia aparece no topo com a foto do perfil do site — que e a
+ * do Outlook: entrar ou vincular a conta Microsoft traz a foto de la.
  */
 export default function ModalEmail({ aberto, negocio, aoFechar, aoEnviado }) {
   const [info, setInfo] = useState(null)
@@ -24,6 +30,13 @@ export default function ModalEmail({ aberto, negocio, aoFechar, aoEnviado }) {
   const [erros, setErros] = useState({})
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const { user } = useAuth()
+  const { equipe } = useDados()
+  /* a foto da lista da equipe e a mais nova (a da sessao e a do login) */
+  const pessoa = (id) => equipe.find((p) => String(p.id) === String(id)) ?? null
+  const eu = pessoa(user?.id)
+  const meuNome = eu?.nome ?? user?.name ?? ''
+  const minhaFoto = eu?.foto ?? user?.foto ?? null
 
   useEffect(() => {
     if (!aberto || !negocio) return undefined
@@ -125,9 +138,14 @@ export default function ModalEmail({ aberto, negocio, aoFechar, aoEnviado }) {
         )}
         {info?.erroLeitura && <p className="emailneg__nota">{info.erroLeitura}</p>}
 
-        <p className="emailneg__de">
-          De: <strong>{caixa || 'sua caixa do Outlook'}</strong>
-        </p>
+        <div className="emailneg__de">
+          <Avatar nome={meuNome} foto={minhaFoto} tamanho={42} titulo={meuNome} />
+          <p>
+            <span>De</span>
+            <strong>{meuNome}</strong>
+            <em>{caixa || 'sua caixa do Outlook'}</em>
+          </p>
+        </div>
 
         <CampoTexto
           rotulo="Para"
@@ -173,11 +191,19 @@ export default function ModalEmail({ aberto, negocio, aoFechar, aoEnviado }) {
             <ul>
               {info.enviados.map((e) => (
                 <li key={e.id}>
-                  <p>
-                    <strong>{e.assunto}</strong> — {e.usuarioNome || e.de}, {dataHora(e.enviadoEm)}
-                    {e.resposta && <span className="emailneg__selo">resposta</span>}
-                  </p>
-                  <p className="emailneg__corpo">{e.corpo}</p>
+                  <Avatar
+                    nome={e.usuarioNome || e.de}
+                    foto={pessoa(e.usuarioId)?.foto ?? null}
+                    tamanho={30}
+                    titulo={e.usuarioNome || e.de}
+                  />
+                  <div>
+                    <p>
+                      <strong>{e.assunto}</strong> — {e.usuarioNome || e.de}, {dataHora(e.enviadoEm)}
+                      {e.resposta && <span className="emailneg__selo">resposta</span>}
+                    </p>
+                    <p className="emailneg__corpo">{e.corpo}</p>
+                  </div>
                 </li>
               ))}
             </ul>

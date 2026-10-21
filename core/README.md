@@ -274,6 +274,7 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-26.sql.txt` | notificacoes no celular (push_inscricao) e mensagens nao lidas do chat (chat_site_leitura) |
 | `db/atualizacao-27.sql.txt` | Comercial (negocio, negocio_email), pessoas/dono/proximo contato do cliente, setor "Painel TV" e as permissoes novas |
 | `db/atualizacao-28.sql.txt` | presenca (a bolinha verde/vermelha/cinza da tela de Usuarios) |
+| `db/atualizacao-29.sql.txt` | negocio.moeda, negocio.probabilidade, negocio.contato_tipo; contato (cliente_pessoa) sem empresa |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
 Rode o primeiro na ordem indicada dentro dele; depois rode os outros
@@ -968,7 +969,10 @@ fechados**.
 
 O cartao traz a etiqueta, o titulo, a empresa, a pessoa, o valor, o
 responsavel e a situacao da proxima atividade (triangulo amarelo = nenhuma;
-vermelho = atrasada; verde = hoje; cinza = marcada). Arrastar muda a etapa;
+vermelho = atrasada; verde = hoje; cinza = marcada). O "+" de cada coluna
+fica no topo dela, logo abaixo do cabecalho, e so aparece com o mouse em cima do
+cabecalho (no celular, sempre). Os nomes das etapas e os textos dos cartoes
+quebram linha em vez de virar "...". Arrastar muda a etapa;
 enquanto arrasta, sobe a faixa **Excluir / Perdido / Ganho / Mover para
 outro funil**. No celular a etapa muda dentro do negocio (as setas do topo).
 
@@ -977,6 +981,21 @@ na tela (`src/utils/lerPlanilha.js`, sem biblioteca); cada coluna e casada
 pelo nome, e a coluna "Funil" manda cada linha para o funil dela (VENDAS
 NOVAS -> Novos negócios, RENOVAÇÃO, RESGATE, PROSPECÇÃO). A empresa casa com o
 cliente pelo nome; o responsavel, pelo nome ou e-mail.
+
+### O formulario do negocio (atualizacao 29)
+
+- **Contato** nao depende da organizacao: a lista traz todas as pessoas
+  cadastradas (as da empresa escolhida primeiro). Ao lado, o **Tipo**
+  (Comercial ou Pessoal); embaixo, o **Adicionar contato**, que cria a pessoa
+  na hora — na empresa escolhida, ou sem empresa (`POST /api/comercial/contatos`);
+- **E-mail**: vem do contato escolhido e pode ser trocado so neste negocio. E
+  para ele que vai o "Responder?";
+- **Valor** com **Moeda** ao lado: Real (R$), Dolar americano (US$) ou Euro (€).
+  Os totais das colunas nao misturam moedas ("R$ 62.010 + US$ 5.000"), e o
+  ticket medio da aba Clientes conta so os negocios em reais;
+- **Probabilidade** (%), ao lado da data de fechamento esperada. A "Proxima atividade"
+  saiu do formulario (o que ja estava gravado continua);
+- no negocio novo, o **Importar** fica no canto esquerdo do rodape.
 
 ### "Responder?": e-mail saindo da caixa da propria pessoa
 
@@ -987,6 +1006,9 @@ avisos: `POST /users/{caixa}/sendMail` (`server/graph.js`, `enviarComo`).
 Fica nos Itens Enviados da pessoa e a resposta do cliente volta para ela. Os
 enviados ficam registrados no negocio (`negocio_email`). Limite: 30 por
 pessoa por hora.
+
+A janela mostra quem envia com a foto do perfil do site (a do Outlook), e
+o historico de enviados traz a foto de cada remetente.
 
 **Responder dentro da conversa** e saber **quem espera resposta** exigem ler a
 caixa de entrada: a permissao de aplicativo **Mail.Read** (ou
@@ -1043,10 +1065,18 @@ liga) e a televisao da empresa. Quem esta nele:
 - ve "Ótima tarde, **Time**!", "**Para equipe**" e "Possuímos N tarefas para
   fazer agora.", com as tarefas de TODOS os setores (o filtro **Todas**);
 - a pagina se troca sozinha (`src/pages/Home/useModoTv.js`): Grade e Quadro
-  se revezando, cada uma descendo devagar ate a ultima tarefa. Se mostrou
-  tudo antes de 1 minuto, volta ao topo e repete ate o minuto exato; se a
-  lista e comprida, termina de descer, espera 10 s (subindo de volta) e troca.
-  A cada troca os dados sao lidos de novo.
+  se revezando, com um esmaecer suave na troca. A pagina tem a altura da
+  tela: a faixa do dia e as abas ficam paradas, e so a lista de tarefas
+  desce — na Grade, a tabela (com o cabecalho preso); no Quadro, as tres
+  colunas juntas, cada uma na mesma fracao do caminho;
+- a descida e devagar e sempre na mesma velocidade — 25 px/s na caixa mais
+  comprida, mais ou menos uma linha da Grade a cada 2 s —, para dar para
+  ler de longe;
+- cada tela fica 1 minuto exato. Se mostrou tudo antes, volta ao topo e
+  repete ate o minuto; se o minuto acabou no meio da descida, ela segue ate
+  10 s a mais e troca. Lista que nao coube nesse tempo continua de onde
+  parou na proxima vez que a tela volta. A cada troca os dados sao lidos de
+  novo.
 
 A conta da TV e criada pelo script (com a senha que voce escolher):
 

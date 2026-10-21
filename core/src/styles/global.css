@@ -13,6 +13,28 @@ body,
   height: 100%;
 }
 
+/* O iPhone aumenta sozinho a fonte de alguns blocos de texto ("text
+   autosizing") e refaz o layout depois. Era uma das diferencas entre o
+   Safari do celular e o resto: o tamanho que o CSS pede e o que vale. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* No iPhone, tocar num campo com fonte menor que 16px faz o Safari dar
+   zoom na pagina — e ela continua ampliada depois, torta e cortada. A
+   busca do topo (14px), o filtro de data das Obras, os campos de
+   Configuracoes e a caixa do chat caiam nisso. So no iOS
+   (`-webkit-touch-callout` so existe la): no computador e no Android
+   os campos seguem com o tamanho do desenho. */
+@supports (-webkit-touch-callout: none) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
+  select,
+  textarea {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
 body {
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
