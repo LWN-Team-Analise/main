@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { valorCurto } from '@/domain/comercial'
-import CartaoNegocio from './CartaoNegocio'
+import { somaPorMoeda } from '@/domain/comercial'
+import CartaoNegocio, { quebraNaBarra } from './CartaoNegocio'
 import { IconeImportar, IconeMais } from './icones'
 
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`
@@ -9,7 +9,10 @@ const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`
  * O FUNIL — uma coluna por etapa, como no Pipedrive.
  *
  * O cabecalho de cada coluna e a "seta" do funil: o nome da etapa e,
- * embaixo, a soma dos valores e quantos negocios ha nela.
+ * embaixo, a soma dos valores e quantos negocios ha nela. O "+" que
+ * cria um negocio naquela etapa fica logo abaixo do cabecalho, no topo
+ * da coluna, e so aparece com o mouse em cima do CABECALHO — passar
+ * pelos cartoes nao mostra nada.
  *
  * Arrastar um cartao para outra coluna muda a etapa. Enquanto ele
  * esta sendo arrastado, sobe do rodape a faixa do Pipedrive: soltar em
@@ -78,7 +81,8 @@ export default function QuadroFunil({
       <div className="funil__colunas" style={{ '--etapas': funil.etapas.length }}>
         {funil.etapas.map((etapa, i) => {
           const lista = porEtapa[etapa.id]
-          const total = lista.reduce((soma, n) => soma + Number(n.valor || 0), 0)
+          /* a soma separada por moeda: real com dolar nao se soma */
+          const total = somaPorMoeda(lista)
           return (
             <section
               key={etapa.id}
@@ -88,9 +92,9 @@ export default function QuadroFunil({
               {...alvo(`etapa:${etapa.id}`, (n) => n.etapa !== etapa.id && aoMover(n, etapa.id))}
             >
               <header className="funil__cabeca" data-primeira={i === 0 ? 'sim' : undefined}>
-                <h3 title={etapa.rotulo}>{etapa.rotulo}</h3>
-                <p title={`${valorCurto(total)} · ${plural(lista.length, 'negócio', 'negócios')}`}>
-                  {valorCurto(total)}
+                <h3 title={etapa.rotulo}>{quebraNaBarra(etapa.rotulo)}</h3>
+                <p title={`${total} · ${plural(lista.length, 'negócio', 'negócios')}`}>
+                  {total}
                   {lista.length > 0 && ` · ${plural(lista.length, 'negócio', 'negócios')}`}
                 </p>
               </header>
@@ -100,7 +104,6 @@ export default function QuadroFunil({
                   <button
                     type="button"
                     className="funil__mais"
-                    data-sempre={lista.length === 0 ? 'sim' : undefined}
                     onClick={() => aoNovo(etapa.id)}
                     aria-label={`Novo negócio em ${etapa.rotulo}`}
                     title={`Novo negócio em ${etapa.rotulo}`}

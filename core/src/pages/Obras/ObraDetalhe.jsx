@@ -431,24 +431,22 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
     <AppShell semChat>
       <section className="detalhe">
         {/* ---------------- faixa da obra ----------------
-            A foto do cliente estica para ocupar a faixa inteira e vai
-            de 0% de opacidade na esquerda a 15% na ponta direita. */}
+            A foto do cliente fica ao fundo, de 0% de opacidade na
+            esquerda a 15% na ponta direita — nunca esticada. */}
         <header className="capa" data-tom={obra.tipo}>
           {/* O recorte de HEADER da logo, quando o cliente tem um: ele
               já vem na proporção desta faixa, então entra em `cover` e
               aparece exatamente como foi enquadrado.
 
               Sem ele (cliente cadastrado antes do editor) cai na
-              própria logo — e ali continua esticada, como sempre foi:
-              `cover` numa logo quadrada daria um zoom que ninguém
-              escolheu. */}
+              própria logo, INTEIRA e na proporção dela, encostada à
+              direita — onde o fundo é mais visível. Ela ficava esticada
+              na faixa toda (100% 100%), e `cover` numa logo quadrada
+              daria um zoom que ninguém escolheu. */}
           {(cliente?.capa || cliente?.logo) && (
             <span
-              className="capa__marca"
-              style={{
-                backgroundImage: `url(${cliente.capa ?? cliente.logo})`,
-                backgroundSize: cliente.capa ? 'cover' : '100% 100%',
-              }}
+              className={`capa__marca ${cliente.capa ? '' : 'capa__marca--logo'}`.trim()}
+              style={{ backgroundImage: `url(${cliente.capa ?? cliente.logo})` }}
               aria-hidden="true"
             />
           )}

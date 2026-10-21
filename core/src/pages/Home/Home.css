@@ -87,16 +87,38 @@
   color: var(--pri-alta);
 }
 
+/* No celular a faixa vira GRADE: data e tempo a esquerda, a frase
+   ocupando o resto da linha e o resumo na linha de baixo.
+
+   Era flex com quebra de linha, e o resumo descia por ter
+   `width: 100%`. No Safari do iPhone esse 100% era resolvido DEPOIS de
+   montar as linhas: o resumo cabia na primeira, depois virava 100% e
+   esmagava a frase ate largura zero — ela aparecia uma letra por
+   linha, de cima a baixo da tela. Na grade a coluna da frase e
+   `minmax(0, 1fr)`: ela fica com o que sobra, sem depender de
+   adivinhar a quebra. */
 @media (max-width: 780px) {
   .dia {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
     gap: 12px 16px;
+    padding: 14px 18px;
   }
 
   .dia__resumo {
+    grid-column: 1 / -1;
     align-items: flex-start;
-    width: 100%;
+    max-width: none;
     text-align: left;
+  }
+}
+
+/* tela bem estreita: a frase desce para baixo da data e do tempo */
+/* (a terceira coluna continua existindo, vazia: e ela que fica com a
+   sobra, e nao a data e o tempo — sem ela os dois se espalhavam) */
+@media (max-width: 360px) {
+  .dia__texto {
+    grid-column: 1 / -1;
   }
 }
 
@@ -1525,4 +1547,94 @@
 
 .paravoce--topo {
   margin: 0 0 4px;
+}
+
+/* ---------------- A TV (setor "Painel TV") ----------------
+   A pagina inteira tem a altura da tela e nao rola: a faixa do dia e
+   as abas ficam paradas em cima, e o PALCO (Grade ou Quadro) fica com
+   o resto. Quem desce e so a lista de tarefas, por dentro do palco
+   (useModoTv). O `modo-tv` vai no <html> enquanto a conta e a da TV. */
+
+html.modo-tv .shell {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+html.modo-tv .shell__coluna,
+html.modo-tv .shell__conteudo {
+  min-height: 0;
+}
+
+.inicio--tv {
+  flex: 1;
+  min-height: 0;
+}
+
+/* entra subindo de leve e acendendo; sai apagando (o .is-saindo vem
+   do useModoTv, 450 ms antes da troca) */
+.tv-palco {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  animation: tv-entra 650ms var(--ease-out) both;
+  transition: opacity 450ms ease, transform 450ms ease;
+}
+
+.tv-palco.is-saindo {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.995);
+}
+
+@keyframes tv-entra {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+/* Grade: a tabela rola dentro do cartao, com o cabecalho preso no alto */
+.tv-palco .grade {
+  flex: 0 1 auto;
+  min-height: 0;
+  /* sem o respiro de cima: com ele, a linha que passa por baixo do
+     cabecalho preso aparecia numa fresta acima dele */
+  padding-top: 0;
+  overflow: hidden;
+}
+
+.tv-palco .grade__tabela thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+/* Quadro: as tres colunas com a altura toda; cada pilha rola por dentro */
+.tv-palco .quadrot {
+  flex: 1 1 auto;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.tv-palco .colunat {
+  min-height: 0;
+}
+
+.tv-palco .colunat__pilha {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tv-palco {
+    animation: none;
+    transition: none;
+  }
 }

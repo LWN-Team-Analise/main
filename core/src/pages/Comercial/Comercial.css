@@ -7,40 +7,75 @@
 
    As cores do quadro sao proprias daqui (--com-*), com a versao
    escura logo abaixo: no tema escuro ele fica com a cara do
-   Pipedrive escuro que a equipe usava.
+   Pipedrive escuro que a equipe usava — os tons foram medidos no
+   print dele (fundo #1e2029, colunas #0e1017, texto #e2e2e4).
+
+   A tela inteira e um painel com o fundo do Pipedrive; as colunas
+   sao "pocos" mais escuros, e os cartoes voltam ao tom do fundo. Entre
+   uma coluna e outra aparece o fundo, e e isso que desenha as setas.
    ============================================================ */
 
 /* nas variaveis de :root (e nao de .comercial) porque os pop-ups abrem
    fora da pagina e usam as mesmas cores */
 :root {
-  --com-coluna: rgba(13, 13, 13, 0.035);
-  --com-cabeca: rgba(13, 13, 13, 0.07);
+  --com-fundo: #ffffff;
+  --com-fundo-borda: rgba(13, 13, 13, 0.08);
+  --com-coluna: #f1f2f5;
+  --com-cabeca: #e7e9ee;
   --com-cartao: #ffffff;
-  --com-cartao-borda: rgba(13, 13, 13, 0.1);
-  --com-cartao-sombra: 0 1px 2px rgba(13, 13, 13, 0.08);
+  --com-cartao-borda: rgba(13, 13, 13, 0.08);
+  --com-cartao-hover: rgba(13, 13, 13, 0.2);
+  --com-cartao-sombra: 0 1px 2px rgba(13, 13, 13, 0.06);
+  --com-texto: #1d1f26;
+  --com-texto-2: #6a6d75;
+  --com-texto-3: #4a4d55;
+  --com-controle-borda: rgba(13, 13, 13, 0.16);
+  --com-controle-hover: rgba(13, 13, 13, 0.05);
+  --com-mais: rgba(13, 13, 13, 0.08);
   --com-verde: #2c8f4f;
   --com-verde-forte: #24783f;
   --com-azul: #3b6fe0;
+  --com-azul-forte: #2f5fcc;
   --com-azul-suave: rgba(59, 111, 224, 0.12);
+  --com-azul-fundo: #e5edff;
   --com-atividade-futura: #9aa1ad;
 }
 
+:root[data-theme='dark'] {
+  --com-fundo: #1e2029;
+  --com-fundo-borda: #2b2e38;
+  --com-coluna: #0e1017;
+  --com-cabeca: #0e1017;
+  --com-cartao: #1e2029;
+  --com-cartao-borda: transparent;
+  --com-cartao-hover: #3c3d45;
+  --com-cartao-sombra: none;
+  --com-texto: #e2e2e4;
+  --com-texto-2: #898b90;
+  --com-texto-3: #abacaf;
+  --com-controle-borda: #3c3d45;
+  --com-controle-hover: rgba(255, 255, 255, 0.05);
+  --com-mais: #2a2d37;
+  --com-verde: #3c824e;
+  --com-verde-forte: #346f43;
+  --com-azul: #588adf;
+  --com-azul-forte: #6e9dec;
+  --com-azul-suave: rgba(88, 138, 223, 0.16);
+  --com-azul-fundo: #001f4b;
+  --com-atividade-futura: #5f646d;
+}
+
+/* o painel: a tela do Pipedrive dentro do sistema */
 .comercial {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
-}
-
-:root[data-theme='dark'] {
-  --com-coluna: #0f1115;
-  --com-cabeca: #1a1d23;
-  --com-cartao: #1f232a;
-  --com-cartao-borda: rgba(255, 255, 255, 0.06);
-  --com-cartao-sombra: none;
-  --com-azul: #5b8cff;
-  --com-azul-suave: rgba(91, 140, 255, 0.16);
-  --com-atividade-futura: #5f646d;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--com-fundo-borda);
+  border-radius: var(--radius-lg);
+  background: var(--com-fundo);
+  color: var(--com-texto);
 }
 
 /* ---------------- titulo ---------------- */
@@ -50,14 +85,14 @@
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.12rem;
   font-weight: 700;
-  color: var(--text-strong);
+  color: var(--com-texto);
 }
 
 .comercial__info {
   display: inline-grid;
-  color: var(--text-muted);
+  color: var(--com-texto-2);
   cursor: help;
 }
 
@@ -68,11 +103,11 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  min-height: 38px;
-  padding: 0 14px;
-  border-radius: var(--radius-sm);
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
   font: inherit;
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -95,13 +130,13 @@
 }
 
 .comercial__botao {
-  border: 1px solid var(--control-border);
-  background: var(--control-bg);
-  color: var(--text-strong);
+  border: 1px solid var(--com-controle-borda);
+  background: transparent;
+  color: var(--com-texto);
 }
 
 .comercial__botao:hover {
-  background: var(--control-bg-hover);
+  background: var(--com-controle-hover);
 }
 
 /* ---------------- a barra de cima ---------------- */
@@ -115,8 +150,8 @@
 
 .comercial__visoes {
   display: inline-flex;
-  border: 1px solid var(--control-border);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--com-controle-borda);
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -124,12 +159,13 @@
   display: grid;
   place-items: center;
   width: 46px;
-  height: 38px;
+  height: 34px;
   border: 0;
-  border-left: 1px solid var(--control-border);
-  background: var(--control-bg);
-  color: var(--text-base);
+  border-left: 1px solid var(--com-controle-borda);
+  background: transparent;
+  color: var(--com-texto);
   cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
 }
 
 .comercial__visoes button:first-child {
@@ -137,13 +173,13 @@
 }
 
 .comercial__visoes button:hover {
-  background: var(--control-bg-hover);
+  background: var(--com-controle-hover);
 }
 
-/* a visao escolhida: o contorno azul do Pipedrive */
+/* a visao escolhida: o fundo azul-marinho e o contorno do Pipedrive */
 .comercial__visoes button.is-atual {
-  background: var(--com-azul-suave);
-  color: var(--com-azul);
+  background: var(--com-azul-fundo);
+  color: var(--com-azul-forte);
   box-shadow: inset 0 0 0 1.5px var(--com-azul);
 }
 
@@ -158,11 +194,11 @@
 }
 
 .comercial__novo-mais .commenu__botao {
-  min-height: 38px;
+  min-height: 34px;
   padding: 0 10px;
   border: 0;
   border-left: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  border-radius: 0 8px 8px 0;
   background: var(--com-verde);
   color: #fff;
 }
@@ -180,14 +216,14 @@
   align-items: center;
   gap: 7px;
   margin: 0;
-  font-size: 0.95rem;
-  color: var(--text-strong);
+  font-size: 0.86rem;
+  color: var(--com-texto);
   white-space: nowrap;
 }
 
 .comercial__conta span {
   display: inline-grid;
-  color: var(--text-muted);
+  color: var(--com-texto-2);
   cursor: help;
 }
 
@@ -196,11 +232,11 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding-left: 10px;
-  border: 1px solid var(--control-border);
-  border-radius: var(--radius-sm);
-  background: var(--control-bg);
-  color: var(--text-strong);
+  padding-left: 12px;
+  border: 1px solid var(--com-controle-borda);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--com-texto);
 }
 
 .comercial__funil-icone {
@@ -208,22 +244,23 @@
 }
 
 .comercial__funil .sel__botao {
-  min-height: 36px;
-  padding: 6px 10px 6px 6px;
+  min-height: 32px;
+  padding: 4px 10px 4px 6px;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   background: transparent;
+  color: var(--com-texto);
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   font-weight: 700;
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
 .comercial__funil .sel__botao:hover:not(:disabled) {
-  background: var(--control-bg-hover);
+  background: var(--com-controle-hover);
 }
 
 /* ---------------- menus suspensos ---------------- */
@@ -237,21 +274,22 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  min-height: 38px;
+  min-height: 34px;
   padding: 0 12px;
-  border: 1px solid var(--control-border);
-  border-radius: var(--radius-sm);
-  background: var(--control-bg);
-  color: var(--text-strong);
+  border: 1px solid var(--com-controle-borda);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--com-texto);
   font: inherit;
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
 }
 
 .commenu__botao:hover {
-  background: var(--control-bg-hover);
+  background: var(--com-controle-hover);
 }
 
 .commenu__lista {
@@ -342,20 +380,20 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 30px;
+  min-height: 28px;
   padding: 0 4px;
   border: 0;
   background: transparent;
-  color: var(--text-base);
+  color: var(--com-texto-3);
   font: inherit;
-  font-size: 0.82rem;
+  font-size: 0.77rem;
   font-weight: 700;
   cursor: pointer;
 }
 
 .comercial__link:hover,
 .comercial__condicao .commenu__botao:hover {
-  color: var(--text-strong);
+  color: var(--com-texto);
   background: transparent;
 }
 
@@ -425,12 +463,12 @@
 .comercial__sentido {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border: 0;
-  border-radius: var(--radius-sm);
-  background: var(--com-azul-suave);
-  color: var(--com-azul);
+  border-radius: 6px;
+  background: var(--com-azul-fundo);
+  color: var(--com-azul-forte);
   cursor: pointer;
 }
 
@@ -439,18 +477,19 @@
 }
 
 .comercial__ordenar .commenu__botao {
-  min-height: 30px;
+  min-height: 28px;
   padding: 0 10px;
   border: 0;
-  background: var(--com-azul-suave);
-  color: var(--com-azul);
-  font-size: 0.82rem;
+  border-radius: 6px;
+  background: var(--com-azul-fundo);
+  color: var(--com-azul-forte);
+  font-size: 0.77rem;
   font-weight: 700;
 }
 
 .comercial__ordenar .commenu__botao:hover {
-  background: var(--com-azul-suave);
-  filter: brightness(1.1);
+  background: var(--com-azul-fundo);
+  filter: brightness(1.15);
 }
 
 .comercial__erro,
@@ -486,97 +525,124 @@
   min-width: 0;
 }
 
+/* duas linhas na grade: a dos cabecalhos e a dos corpos. Cada coluna
+   ocupa as duas (subgrid), entao o cabecalho que quebra em duas linhas
+   puxa os vizinhos junto e os corpos comecam todos na mesma altura */
 .funil__colunas {
   display: grid;
-  grid-template-columns: repeat(var(--etapas), minmax(172px, 1fr));
-  gap: 4px;
+  grid-template-columns: repeat(var(--etapas), minmax(150px, 1fr));
+  grid-template-rows: auto 1fr;
+  gap: 0 5px;
   overflow-x: auto;
   padding-bottom: 6px;
   /* a rolagem de lado fica no quadro, nao na pagina */
   overscroll-behavior-x: contain;
 }
 
+/* a coluna em si nao tem fundo: o cabecalho e o corpo pintam cada um o
+   seu, e os cantos cortados da seta deixam o fundo do painel aparecer */
 .funil__coluna {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
   min-width: 0;
-  min-height: calc(100dvh - 330px);
-  border-radius: 6px 6px 0 0;
-  background: var(--com-coluna);
-  transition: background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  min-height: calc(100dvh - 320px);
 }
 
-.funil__coluna[data-sobre='sim'] {
-  background: var(--com-azul-suave);
-  box-shadow: inset 0 0 0 1.5px var(--com-azul);
+.funil__coluna[data-sobre='sim'] .funil__cabeca,
+.funil__coluna[data-sobre='sim'] .funil__corpo {
+  background: color-mix(in srgb, var(--com-azul) 14%, var(--com-coluna));
 }
 
 /* o cabecalho e a seta do funil: o bico do lado direito, e o encaixe
    do lado esquerdo em toda coluna menos a primeira */
 .funil__cabeca {
-  padding: 10px 22px 10px 20px;
+  position: relative;
+  padding: 9px 20px 9px 19px;
   background: var(--com-cabeca);
   clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%);
+  transition: background var(--dur-fast) var(--ease-out);
 }
 
 .funil__cabeca[data-primeira='sim'] {
-  padding-left: 14px;
+  padding-left: 12px;
+  border-radius: 8px 0 0 0;
   clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
 }
 
+/* o nome inteiro da etapa, quebrando linha se precisar — nada de "..." */
 .funil__cabeca h3 {
   margin: 0;
-  overflow: hidden;
-  font-size: 1.02rem;
+  font-size: 0.84rem;
   font-weight: 700;
-  color: var(--text-strong);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.25;
+  color: var(--com-texto);
+  overflow-wrap: anywhere;
 }
 
 .funil__cabeca p {
   margin: 3px 0 0;
-  overflow: hidden;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: var(--com-texto-2);
 }
 
 .funil__corpo {
   display: flex;
-  flex: 1;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 6px 12px;
+  padding: 7px 6px 12px;
+  border-radius: 0 0 8px 8px;
+  background: var(--com-coluna);
+  transition: background var(--dur-fast) var(--ease-out);
 }
 
-/* o "+" de cada coluna: aparece ao passar o mouse; na coluna vazia, sempre */
+/* o "+" do topo da coluna: so aparece com o mouse em cima do
+   CABECALHO (passar pelos cartoes nao mostra nada). Ele continua a
+   vista enquanto o mouse esta nele, e some com um atraso curto — o
+   bastante para descer do cabecalho ate ele sem ele fugir. */
 .funil__mais {
   display: grid;
+  flex-shrink: 0;
   place-items: center;
   height: 0;
   margin: 0;
+  padding: 0;
   overflow: hidden;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--com-texto-2);
   opacity: 0;
   cursor: pointer;
-  transition: height var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+  transition: height var(--dur-fast) var(--ease-out) 0.35s, opacity var(--dur-fast) var(--ease-out) 0.35s,
+    background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
-.funil__coluna:hover .funil__mais,
-.funil__mais[data-sempre='sim'],
+.funil__cabeca:hover + .funil__corpo .funil__mais,
+.funil__mais:hover,
 .funil__mais:focus-visible {
-  height: 34px;
+  height: 32px;
   opacity: 1;
+  transition-delay: 0s;
 }
 
 .funil__mais:hover {
-  background: var(--control-bg-hover);
-  color: var(--text-strong);
+  background: var(--com-controle-hover);
+  color: var(--com-texto);
+}
+
+.funil__mais:focus-visible {
+  outline: 2px solid var(--com-azul);
+  outline-offset: -2px;
+}
+
+/* sem mouse (celular, tablet) nao ha "passar por cima": fica a vista */
+@media (hover: none) {
+  .funil__mais {
+    height: 32px;
+    opacity: 1;
+  }
 }
 
 /* ---------------- o cartao ---------------- */
@@ -585,10 +651,10 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 10px 11px 9px;
+  gap: 1px;
+  padding: 9px 10px 8px;
   border: 1px solid var(--com-cartao-borda);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--com-cartao);
   box-shadow: var(--com-cartao-sombra);
   cursor: pointer;
@@ -596,7 +662,7 @@
 }
 
 .cartaoneg:hover {
-  border-color: var(--control-border);
+  border-color: var(--com-cartao-hover);
 }
 
 .cartaoneg:focus-visible {
@@ -618,7 +684,7 @@
 }
 
 .cartaoneg__etiqueta {
-  width: 34px;
+  width: 32px;
   height: 4px;
   margin-bottom: 6px;
   border-radius: var(--radius-pill);
@@ -626,28 +692,28 @@
 }
 
 .cartaoneg__titulo {
-  margin: 0;
-  font-size: 0.98rem;
+  margin: 0 0 2px;
+  font-size: 0.84rem;
   font-weight: 700;
-  line-height: 1.32;
-  color: var(--text-strong);
+  line-height: 1.3;
+  color: var(--com-texto);
   overflow-wrap: anywhere;
 }
 
+/* empresa e pessoa inteiras: quebram linha em vez de virar "..." */
 .cartaoneg__linha {
   margin: 1px 0 0;
-  overflow: hidden;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: var(--com-texto-2);
+  overflow-wrap: anywhere;
 }
 
 .cartaoneg__valor {
   margin: 4px 0 0;
-  font-size: 0.82rem;
+  font-size: 0.74rem;
   font-weight: 600;
-  color: var(--text-base);
+  color: var(--com-texto-2);
 }
 
 .cartaoneg__rodape {
@@ -665,11 +731,11 @@
 .cartaoneg__boneco {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: var(--control-bg-hover);
-  color: var(--text-muted);
+  background: var(--com-mais);
+  color: var(--com-texto-2);
 }
 
 .cartaoneg__atividade {
@@ -698,14 +764,14 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin: 8px -4px -2px;
+  margin: 7px -4px -2px;
   padding: 5px;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
   background: transparent;
   color: var(--com-azul);
   font: inherit;
-  font-size: 0.86rem;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
 }
@@ -734,7 +800,7 @@
 .funil__vazio p {
   margin: 0;
   font-size: 1.35rem;
-  color: var(--text-strong);
+  color: var(--com-texto);
 }
 
 .funil__vazio-acoes {
@@ -905,20 +971,21 @@
   position: sticky;
   top: 0;
   padding: 11px 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--com-fundo-borda);
+  background: var(--com-fundo);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-align: left;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--com-texto-2);
   white-space: nowrap;
 }
 
 .comlista td {
   padding: 10px 12px;
-  border-bottom: 1px solid var(--line);
-  color: var(--text-base);
+  border-bottom: 1px solid var(--com-fundo-borda);
+  color: var(--com-texto);
   vertical-align: top;
 }
 
@@ -927,7 +994,7 @@
 }
 
 .comlista tbody tr:hover td {
-  background: var(--control-bg);
+  background: var(--com-controle-hover);
 }
 
 .comlista__num {
@@ -939,7 +1006,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--text-strong);
+  color: var(--com-texto);
   font: inherit;
   font-weight: 700;
   text-align: left;
@@ -947,7 +1014,7 @@
 }
 
 .comlista__etapa {
-  color: var(--text-muted);
+  color: var(--com-texto-2);
 }
 
 .comlista__atividade[data-situacao='atrasada'] {
@@ -1009,9 +1076,113 @@
   min-width: 0;
 }
 
-.negform__grade > .campo--largo,
-.negform__grade > .negform__atividade {
+.negform__grade > .campo--largo {
   grid-column: 1 / -1;
+}
+
+/* o contato e o tipo (comercial/pessoal) lado a lado; embaixo, o
+   "Adicionar contato" pequeno */
+.negform__contato {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.negform__contato-linha {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px;
+  gap: 12px 14px;
+}
+
+.negform__addcontato {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--com-azul, var(--accent));
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.negform__addcontato:hover {
+  background: var(--com-azul-suave, var(--control-bg-hover));
+}
+
+.negform__novocontato {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 12px;
+  padding: 12px;
+  border: 1px dashed var(--control-border);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+}
+
+.negform__novocontato-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 10px;
+}
+
+.negform__novocontato-acoes p {
+  margin: 0 auto 0 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.negform__novocontato-acoes .btn {
+  width: auto;
+}
+
+/* a probabilidade, ao lado da data de fechamento, com o "%" dentro do
+   campo, no canto direito */
+.negform__prob {
+  position: relative;
+  min-width: 0;
+}
+
+.negform__prob .campo__controle {
+  padding-right: 34px;
+}
+
+.negform__prob-sufixo {
+  position: absolute;
+  right: 14px;
+  bottom: 11px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.negform__importar {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.negform__importar:hover {
+  background: var(--control-bg-hover);
 }
 
 /* as setas das etapas, como no topo do negocio no Pipedrive */
@@ -1104,12 +1275,6 @@
 .negform__etiqueta--nenhuma[aria-checked='true'] {
   border-style: solid;
   color: var(--text-strong);
-}
-
-.negform__atividade {
-  display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-  gap: 12px 14px;
 }
 
 .negform__data {
@@ -1292,14 +1457,45 @@
   accent-color: var(--accent);
 }
 
+/* quem envia: a foto do perfil (a do Outlook), o nome e a caixa */
 .emailneg__de {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+}
+
+.emailneg__de p {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   margin: 0;
-  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.emailneg__de span {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: var(--text-muted);
 }
 
 .emailneg__de strong {
+  font-size: 0.92rem;
   color: var(--text-strong);
+}
+
+.emailneg__de em {
+  overflow: hidden;
+  font-size: 0.8rem;
+  font-style: normal;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .emailneg__historico summary {
@@ -1319,10 +1515,17 @@
 }
 
 .emailneg__historico li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   font-size: 0.8rem;
+}
+
+.emailneg__historico li > div {
+  min-width: 0;
 }
 
 .emailneg__historico li p {
@@ -1392,6 +1595,10 @@
    ============================================================ */
 
 @media (max-width: 900px) {
+  .comercial {
+    padding: 12px 10px 14px;
+  }
+
   .comercial__espaco {
     display: none;
   }
@@ -1426,9 +1633,13 @@
 
 @media (max-width: 600px) {
   .negform__grade,
-  .negform__atividade,
+  .negform__novocontato,
   .importar__mapa {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .negform__contato-linha {
+    grid-template-columns: minmax(0, 1fr) 130px;
   }
 
   .comercial__filtros-dir {

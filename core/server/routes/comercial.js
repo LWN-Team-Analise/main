@@ -10,7 +10,9 @@ import { enviarComo, podeEnviar, podeLerCaixas, ultimoDoContato } from '../graph
 import {
   EMAIL_CORPO_MAXIMO,
   ETIQUETAS,
+  MOEDAS,
   TEXTO_MAXIMO,
+  TIPOS_CONTATO,
   TITULO_MAXIMO,
   VALOR_MAXIMO,
   emailValido,
@@ -40,6 +42,10 @@ import {
                                     (quais contatos esperam resposta)
      GET    /resumo-clientes        negocios ganhos, abertos e ticket
                                     medio de cada cliente (aba Clientes)
+     GET    /contatos               todos os contatos (cliente_pessoa), de
+                                    qualquer empresa ou de nenhuma
+     POST   /contatos               cria um contato (o "Adicionar contato"
+                                    do negocio)
 
    Quem pode o que — conferido AQUI, a cada chamada:
 
@@ -125,9 +131,13 @@ function paraNegocio(l) {
     organizacao: l.cliente_nome ?? l.organizacao ?? '',
     pessoaId: l.pessoa_id === null ? null : String(l.pessoa_id),
     contatoNome: l.pessoa_nome ?? l.contato_nome ?? '',
-    contatoEmail: l.pessoa_email ?? l.contato_email ?? '',
+    /* o e-mail escrito NO negocio vale primeiro; sem ele, o do contato */
+    contatoEmail: l.contato_email ?? l.pessoa_email ?? '',
+    contatoTipo: l.contato_tipo ?? null,
     contatoTelefone: l.pessoa_telefone ?? l.contato_telefone ?? '',
     valor: Number(l.valor ?? 0),
+    moeda: l.moeda ?? 'BRL',
+    probabilidade: l.probabilidade === null || l.probabilidade === undefined ? null : Number(l.probabilidade),
     responsavelId: l.responsavel_id === null ? null : String(l.responsavel_id),
     responsavelNome: l.responsavel_nome ?? '',
     etiqueta: l.etiqueta ?? null,
@@ -193,12 +203,12 @@ async function lerNegocio(corpo, usuarioId) {
     return { erro: 'Escolha o cliente ou escreva o nome da empresa.', campo: 'organizacao' }
   }
 
-  const pessoaId = clienteId ? idOuNulo(corpo?.pessoaId) : null
+  /* o contato nao depende da organizacao (atualizacao 29): qualquer
+     pessoa cadastrada serve, de qualquer empresa ou de nenhuma */
+  const pessoaId = idOuNulo(corpo?.pessoaId)
   if (pessoaId) {
-    const { rows } = await query('SELECT cliente_id FROM cliente_pessoa WHERE id = $1', [pessoaId])
-    if (!rows[0] || String(rows[0].cliente_id) !== String(clienteId)) {
-      return { erro: 'Essa pessoa não é deste cliente.', campo: 'pessoaId' }
-    }
+    const { rows } = await query('SELECT id FROM cliente_pessoa WHERE id = $1', [pessoaId])
+    if (!rows[0]) return { erro: 'Esse contato não existe mais.', campo: 'pessoaId' }
   }
 
   const contatoEmail = texto(corpo?.contatoEmail).toLowerCase()
@@ -208,6 +218,20 @@ async function lerNegocio(corpo, usuarioId) {
 
   const valor = lerValor(corpo?.valor)
   if (valor === null || valor > VALOR_MAXIMO) return { erro: 'Confira o valor do negócio.', campo: 'valor' }
+
+  const moeda = texto(corpo?.moeda) || 'BRL'
+  if (!MOEDAS.some((m) => m.id === moeda)) return { erro: 'Moeda desconhecida.', campo: 'moeda' }
+
+  const prob = corpo?.probabilidade
+  const probabilidade = prob === null || prob === undefined || prob === '' ? null : Number(prob)
+  if (probabilidade !== null && !(Number.isInteger(probabilidade) && probabilidade >= 0 && probabilidade <= 100)) {
+    return { erro: 'A probabilidade vai de 0 a 100%.', campo: 'probabilidade' }
+  }
+
+  const contatoTipo = texto(corpo?.contatoTipo) || null
+  if (contatoTipo && !TIPOS_CONTATO.some((t) => t.id === contatoTipo)) {
+    return { erro: 'O contato é comercial ou pessoal.', campo: 'contatoTipo' }
+  }
 
   const etiqueta = texto(corpo?.etiqueta) || null
   if (etiqueta && !ETIQUETAS.some((e) => e.id === etiqueta)) return { erro: 'Etiqueta desconhecida.', campo: 'etiqueta' }
@@ -225,9 +249,14 @@ async function lerNegocio(corpo, usuarioId) {
       organizacao,
       pessoa_id: pessoaId,
       contato_nome: pessoaId ? null : texto(corpo?.contatoNome).slice(0, TEXTO_MAXIMO) || null,
-      contato_email: pessoaId ? null : contatoEmail || null,
+      /* o e-mail fica no negocio mesmo com contato escolhido: e o campo
+         "E-mail" do formulario, e e para ele que vai o "Responder?" */
+      contato_email: contatoEmail || null,
       contato_telefone: pessoaId ? null : texto(corpo?.contatoTelefone).slice(0, 40) || null,
+      contato_tipo: contatoTipo,
       valor,
+      moeda,
+      probabilidade,
       responsavel_id: idOuNulo(corpo?.responsavelId) ?? String(usuarioId),
       etiqueta,
       proxima_atividade: dataOuNula(corpo?.proximaAtividade),
@@ -557,6 +586,7 @@ router.get('/negocios/:id/emails', exigeSessao, exige(VER), async (req, res) => 
         assunto: e.assunto,
         corpo: e.corpo,
         resposta: Boolean(e.em_resposta_a),
+        usuarioId: e.usuario_id ? String(e.usuario_id) : null,
         usuarioNome: e.usuario_nome ?? '',
         enviadoEm: e.enviado_em,
       })),
@@ -649,14 +679,14 @@ router.post('/emails/conferir', exigeSessao, exige(VER), async (req, res) => {
     if (!(await podeLerCaixas())) return res.json({ leitura: false, negocios: [], restantes: 0 })
 
     const { rows } = await query(
-      `SELECT n.id, coalesce(p.email, n.contato_email) AS contato,
+      `SELECT n.id, coalesce(n.contato_email, p.email) AS contato,
               coalesce(nullif(u.outlook_email, ''), u.email) AS caixa
          FROM negocio n
          LEFT JOIN cliente_pessoa p ON p.id = n.pessoa_id
          JOIN usuario u             ON u.id = n.responsavel_id
         WHERE n.status = 'aberto'
           AND ($1::text IS NULL OR n.funil = $1)
-          AND coalesce(p.email, n.contato_email) IS NOT NULL
+          AND coalesce(n.contato_email, p.email) IS NOT NULL
           AND (n.email_conferido_em IS NULL OR n.email_conferido_em < now() - interval '10 minutes')
         ORDER BY n.email_conferido_em NULLS FIRST
         LIMIT 21`,
@@ -693,6 +723,67 @@ router.post('/emails/conferir', exigeSessao, exige(VER), async (req, res) => {
   }
 })
 
+/* ---------------- contatos ---------------- */
+
+const paraContato = (l) => ({
+  id: String(l.id),
+  nome: l.nome,
+  cargo: l.cargo ?? '',
+  email: l.email ?? '',
+  telefone: l.telefone ?? '',
+  clienteId: l.cliente_id === null ? null : String(l.cliente_id),
+  clienteNome: l.cliente_nome ?? '',
+})
+
+router.get('/contatos', exigeSessao, exige(VER), async (_req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT p.*, c.nome AS cliente_nome
+         FROM cliente_pessoa p
+         LEFT JOIN cliente c ON c.id = p.cliente_id
+        ORDER BY p.nome`,
+    )
+    return res.json({ contatos: rows.map(paraContato) })
+  } catch (erro) {
+    return falhou(erro, res, 'comercial/contatos')
+  }
+})
+
+/* o "Adicionar contato" do negocio: com a empresa escolhida, ou sem
+   empresa nenhuma (cliente_pessoa.cliente_id aceita NULL desde a 29) */
+router.post('/contatos', exigeSessao, exige(EDITAR), async (req, res) => {
+  const nome = texto(req.body?.nome).slice(0, 200)
+  const email = texto(req.body?.email).toLowerCase()
+  const telefone = texto(req.body?.telefone).slice(0, 40)
+  const clienteId = idOuNulo(req.body?.clienteId)
+  if (!nome) return res.status(400).json({ erro: 'Escreva o nome do contato.', campo: 'nome' })
+  if (email && !emailValido(email)) return res.status(400).json({ erro: 'O e-mail não parece certo.', campo: 'email' })
+  try {
+    const { rows } = await query(
+      `INSERT INTO cliente_pessoa (cliente_id, nome, email, telefone, ordem)
+       VALUES ($1, $2, $3, $4,
+               coalesce((SELECT max(ordem) + 1 FROM cliente_pessoa WHERE cliente_id IS NOT DISTINCT FROM $1), 0))
+       RETURNING id`,
+      [clienteId, nome, email || null, telefone || null],
+    )
+    const { rows: lido } = await query(
+      `SELECT p.*, c.nome AS cliente_nome FROM cliente_pessoa p
+         LEFT JOIN cliente c ON c.id = p.cliente_id WHERE p.id = $1`,
+      [rows[0].id],
+    )
+    await registrarAtividade(req, {
+      acao: 'contato.criado',
+      categoria: 'comercial',
+      entidade: ['cliente_pessoa', rows[0].id],
+      descricao: 'Novo contato no Comercial',
+      detalhes: { contato: nome, cliente: lido[0].cliente_nome || null },
+    })
+    return res.status(201).json({ contato: paraContato(lido[0]) })
+  } catch (erro) {
+    return falhou(erro, res, 'comercial/contato-criar')
+  }
+})
+
 /* ---------------- resumo por cliente (aba Clientes) ---------------- */
 
 router.get('/resumo-clientes', exigeSessao, exige('ver_clientes'), async (_req, res) => {
@@ -702,8 +793,10 @@ router.get('/resumo-clientes', exigeSessao, exige('ver_clientes'), async (_req, 
               count(*) FILTER (WHERE status = 'ganho')                 AS ganhos,
               count(*) FILTER (WHERE status = 'aberto')                AS abertos,
               count(*) FILTER (WHERE status = 'perdido')               AS perdidos,
-              coalesce(sum(valor) FILTER (WHERE status = 'ganho'), 0) AS valor_ganho,
-              avg(valor) FILTER (WHERE status = 'ganho')              AS ticket
+              /* valores so em reais: o ticket medio e a soma nao misturam
+                 dolar e euro com real */
+              coalesce(sum(valor) FILTER (WHERE status = 'ganho' AND moeda = 'BRL'), 0) AS valor_ganho,
+              avg(valor) FILTER (WHERE status = 'ganho' AND moeda = 'BRL')              AS ticket
          FROM negocio
         WHERE cliente_id IS NOT NULL
         GROUP BY cliente_id`,

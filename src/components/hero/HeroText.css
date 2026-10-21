@@ -47,10 +47,39 @@
   font-style: normal;
 }
 
+/* ---------- Seal ---------- */
+
+/* The golden NPS 10/10 seal: top right of the description column, over the
+   bottom of the video. Out of the flow on purpose — in it, the column grew
+   by the seal's height and pushed the buttons below the fold on shorter
+   screens. */
+.hero-text__seal {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 1.25rem);
+  display: block;
+  width: clamp(124px, 9.5vw, 158px);
+  height: auto;
+  filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.45));
+  animation: hero-seal 1.2s var(--ease-out) 0.55s both;
+}
+
+@keyframes hero-seal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* ---------- Description ---------- */
 
 /* In place from the start: it only rises in with the headline as the page opens. */
 .hero-text__secondary {
+  position: relative;
   padding-bottom: 0.35rem;
   animation: hero-rise 1.1s var(--ease-out) 0.4s both;
 }
@@ -153,6 +182,14 @@
 
   .hero-text__actions {
     margin-top: 1.25rem;
+  }
+
+  /* one column: the seal sits on the right of the description's top line */
+  .hero-text__seal {
+    position: static;
+    float: right;
+    width: 104px;
+    margin: -0.25rem 0 0.5rem 1rem;
   }
 }
 

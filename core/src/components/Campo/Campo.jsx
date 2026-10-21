@@ -120,9 +120,20 @@ const Cadeado = () => (
  * fixo). E readOnly, e nao disabled: o numero continua legivel e
  * selecionavel, so nao muda.
  */
-export function CampoDinheiro({ rotulo, dica, erro, largo, centavos, aoMudar, travado = false, ...rest }) {
+/* reais pelo formatador de sempre; dolar e euro (o negocio do Comercial
+   pode ser em outra moeda) com o simbolo deles */
+const OUTRAS_MOEDAS = new Map()
+function emDinheiro(valor, moeda) {
+  if (moeda === 'BRL') return reais(valor)
+  if (!OUTRAS_MOEDAS.has(moeda)) {
+    OUTRAS_MOEDAS.set(moeda, new Intl.NumberFormat('pt-BR', { style: 'currency', currency: moeda }))
+  }
+  return OUTRAS_MOEDAS.get(moeda).format(valor)
+}
+
+export function CampoDinheiro({ rotulo, dica, erro, largo, centavos, aoMudar, travado = false, moeda = 'BRL', ...rest }) {
   const id = useId()
-  const mostrado = centavos === null || centavos === undefined ? '' : reais(centavos / 100)
+  const mostrado = centavos === null || centavos === undefined ? '' : emDinheiro(centavos / 100, moeda)
 
   const mudar = (evento) => {
     /* 11 digitos = R$ 999.999.999,99: o teto de verdade quem da e a API */
@@ -139,7 +150,7 @@ export function CampoDinheiro({ rotulo, dica, erro, largo, centavos, aoMudar, tr
           type="text"
           inputMode="numeric"
           autoComplete="off"
-          placeholder="R$ 0,00"
+          placeholder={emDinheiro(0, moeda)}
           value={mostrado}
           onChange={travado ? undefined : mudar}
           readOnly={travado}

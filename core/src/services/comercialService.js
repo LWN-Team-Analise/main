@@ -48,3 +48,15 @@ export async function carregarResumoClientes() {
   const { resumo } = await get('/comercial/resumo-clientes')
   return resumo ?? {}
 }
+
+/** Todos os contatos (cliente_pessoa), de qualquer empresa ou de nenhuma. */
+export async function carregarContatos() {
+  const { contatos } = await get('/comercial/contatos')
+  return contatos ?? []
+}
+
+/** { nome, email, telefone, clienteId } — o "Adicionar contato" do negocio. */
+export async function criarContato(campos) {
+  const { contato } = await post('/comercial/contatos', campos)
+  return contato
+}

@@ -122,24 +122,64 @@ export const ROTULO_SITUACAO = {
   futura: 'Próxima atividade agendada',
 }
 
-const REAIS_INTEIRO = new Intl.NumberFormat('pt-BR', {
-  style: 'currency',
-  currency: 'BRL',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-})
-const REAIS_CENTAVOS = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+/* As moedas do valor do negocio (negocio.moeda, atualizacao 29). */
+export const MOEDAS = [
+  { id: 'BRL', rotulo: 'Real brasileiro', simbolo: 'R$' },
+  { id: 'USD', rotulo: 'Dólar americano', simbolo: 'US$' },
+  { id: 'EUR', rotulo: 'Euro', simbolo: '€' },
+]
+export const moedaPorId = (id) => MOEDAS.find((m) => m.id === id) ?? MOEDAS[0]
+
+/* O contato do negocio e comercial ou pessoal (negocio.contato_tipo). */
+export const TIPOS_CONTATO = [
+  { id: 'comercial', rotulo: 'Comercial' },
+  { id: 'pessoal', rotulo: 'Pessoal' },
+]
+
+const formatos = new Map()
+function formato(moeda, centavos) {
+  const chave = `${moeda}:${centavos}`
+  if (!formatos.has(chave)) {
+    formatos.set(
+      chave,
+      new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: moeda,
+        ...(centavos ? {} : { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+      }),
+    )
+  }
+  return formatos.get(chave)
+}
 
 /**
  * O valor como o Pipedrive escreve: "R$ 62.010" quando e redondo,
  * "R$ 84.632,50" quando tem centavos. O espaco fino que o Intl poe
  * depois do "R$" vira espaco comum, para nao quebrar a linha estranho.
  */
-export function valorCurto(valor) {
+export function valorCurto(valor, moeda = 'BRL') {
   const n = Number(valor)
   const v = Number.isFinite(n) ? n : 0
-  const texto = Number.isInteger(Math.round(v * 100) / 100) ? REAIS_INTEIRO.format(v) : REAIS_CENTAVOS.format(v)
+  const m = moedaPorId(moeda).id
+  const texto = formato(m, !Number.isInteger(Math.round(v * 100) / 100)).format(v)
   return texto.replace(/\s/g, ' ')
+}
+
+/**
+ * A soma de uma coluna (ou de um mes) sem misturar moedas: "R$ 62.010",
+ * ou "R$ 62.010 + US$ 5.000" quando ha negocio em outra moeda. Somar
+ * dolar com real como se fosse a mesma coisa daria um numero falso.
+ */
+export function somaPorMoeda(negocios) {
+  const somas = new Map()
+  negocios.forEach((n) => {
+    const m = moedaPorId(n.moeda).id
+    somas.set(m, (somas.get(m) ?? 0) + Number(n.valor || 0))
+  })
+  if (!somas.size) return valorCurto(0)
+  return MOEDAS.filter((m) => somas.has(m.id))
+    .map((m) => valorCurto(somas.get(m.id), m.id))
+    .join(' + ')
 }
 
 /**

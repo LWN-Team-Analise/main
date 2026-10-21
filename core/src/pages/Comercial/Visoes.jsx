@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { ROTULO_STATUS, rotuloDaEtapa, situacaoDaAtividade, valorCurto } from '@/domain/comercial'
+import { ROTULO_STATUS, rotuloDaEtapa, situacaoDaAtividade, somaPorMoeda, valorCurto } from '@/domain/comercial'
 import { dataBR } from '@/utils/formato'
 import CartaoNegocio from './CartaoNegocio'
 
@@ -52,7 +52,7 @@ export function ListaNegocios({ negocios, funilDe, hoje, aoAbrir, fechados = fal
                     {n.titulo}
                   </button>
                 </td>
-                <td className="comlista__num">{valorCurto(n.valor)}</td>
+                <td className="comlista__num">{valorCurto(n.valor, n.moeda)}</td>
                 <td>{n.organizacao || '—'}</td>
                 <td>{n.contatoNome || n.contatoEmail || '—'}</td>
                 <td>
@@ -124,13 +124,13 @@ export function PrevisaoNegocios({ negocios, hoje, donoDe, responderEm, aoAbrir,
     <div className="funil funil--previsao">
       <div className="funil__colunas" style={{ '--etapas': colunas.length }}>
         {colunas.map((c, i) => {
-          const total = c.negocios.reduce((s, n) => s + Number(n.valor || 0), 0)
+          const total = somaPorMoeda(c.negocios)
           return (
             <section key={c.id} className="funil__coluna" aria-label={c.rotulo}>
               <header className="funil__cabeca" data-primeira={i === 0 ? 'sim' : undefined}>
                 <h3>{c.rotulo}</h3>
                 <p>
-                  {valorCurto(total)} · {c.negocios.length} {c.negocios.length === 1 ? 'negócio' : 'negócios'}
+                  {total} · {c.negocios.length} {c.negocios.length === 1 ? 'negócio' : 'negócios'}
                 </p>
               </header>
               <div className="funil__corpo">
