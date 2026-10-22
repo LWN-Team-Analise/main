@@ -34,15 +34,13 @@
 /* ---- foto do cliente ao fundo ----
    Nunca esticada. Depende do que a imagem E:
 
-     recorte de header  `cover` — ele ja chega na proporcao desta
-                        faixa, e o que a pessoa enquadrou e o que
-                        tem de aparecer;
-     so a logo          (.capa__marca--logo) INTEIRA, `contain`, na
-                        proporcao dela, no vao entre o nome e os
-                        botoes da direita. Antes
-                        ela era esticada na faixa toda (100% 100%), e
-                        num cover uma logo quadrada viraria um zoom
-                        que ninguem escolheu.
+     recorte de header  ja chega na proporcao desta faixa: o que a
+                        pessoa enquadrou e o que aparece;
+     so a logo          `cover` tambem — ocupa a faixa inteira com o
+                        zoom no centro dela, como um recorte padrao.
+                        Antes ela era esticada (100% 100%) e deformava.
+                        Para escolher outro ponto: Clientes > editar >
+                        Ajustar enquadramento, que grava o recorte.
 
    A opacidade caminha da esquerda para a direita: 0% na esquerda,
    onde fica o nome, ate 15% na ponta direita. Quem faz isso e a
@@ -61,23 +59,6 @@
   pointer-events: none;
 }
 
-/* a logo cabe inteira dentro da faixa, com um respiro das bordas.
-   `multiply` some com o fundo branco que quase toda logo traz: sem
-   ele, o quadrado claro da imagem aparecia atras dos botoes (esticada,
-   o branco cobria a faixa inteira e nao se notava). */
-.capa__marca--logo {
-  padding: 14px 22px;
-  background-origin: content-box;
-  background-clip: content-box;
-  /* no vao entre o nome (a esquerda, onde a mascara apaga tudo) e os
-     botoes (encostados a direita, que a cobririam) */
-  background-position: 72% center;
-  background-size: contain;
-  mix-blend-mode: multiply;
-  /* multiplicada, a logo so escurece o azul: com os 15% de sempre ela
-     quase sumia; aqui ela fica tao discreta quanto o recorte */
-  opacity: 0.45;
-}
 
 .capa[data-tom='padrao'] {
   --tom-bg: var(--obra-padrao-grad);

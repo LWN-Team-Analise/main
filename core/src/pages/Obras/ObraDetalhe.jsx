@@ -435,17 +435,16 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
             esquerda a 15% na ponta direita — nunca esticada. */}
         <header className="capa" data-tom={obra.tipo}>
           {/* O recorte de HEADER da logo, quando o cliente tem um: ele
-              já vem na proporção desta faixa, então entra em `cover` e
-              aparece exatamente como foi enquadrado.
+              já vem na proporção desta faixa e aparece exatamente como
+              foi enquadrado (Clientes > editar > Ajustar enquadramento).
 
-              Sem ele (cliente cadastrado antes do editor) cai na
-              própria logo, INTEIRA e na proporção dela, encostada à
-              direita — onde o fundo é mais visível. Ela ficava esticada
-              na faixa toda (100% 100%), e `cover` numa logo quadrada
-              daria um zoom que ninguém escolheu. */}
+              Sem ele, a própria logo — do mesmo jeito: ocupando a faixa
+              inteira, com o zoom no centro dela (`cover`), sem esticar.
+              Para escolher outro ponto, é o mesmo "Ajustar
+              enquadramento", que grava o recorte. */}
           {(cliente?.capa || cliente?.logo) && (
             <span
-              className={`capa__marca ${cliente.capa ? '' : 'capa__marca--logo'}`.trim()}
+              className="capa__marca"
               style={{ backgroundImage: `url(${cliente.capa ?? cliente.logo})` }}
               aria-hidden="true"
             />

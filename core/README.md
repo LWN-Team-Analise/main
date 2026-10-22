@@ -1067,16 +1067,29 @@ liga) e a televisao da empresa. Quem esta nele:
 - a pagina se troca sozinha (`src/pages/Home/useModoTv.js`): Grade e Quadro
   se revezando, com um esmaecer suave na troca. A pagina tem a altura da
   tela: a faixa do dia e as abas ficam paradas, e so a lista de tarefas
-  desce — na Grade, a tabela (com o cabecalho preso); no Quadro, as tres
-  colunas juntas, cada uma na mesma fracao do caminho;
-- a descida e devagar e sempre na mesma velocidade — 25 px/s na caixa mais
-  comprida, mais ou menos uma linha da Grade a cada 2 s —, para dar para
-  ler de longe;
-- cada tela fica 1 minuto exato. Se mostrou tudo antes, volta ao topo e
-  repete ate o minuto; se o minuto acabou no meio da descida, ela segue ate
-  10 s a mais e troca. Lista que nao coube nesse tempo continua de onde
-  parou na proxima vez que a tela volta. A cada troca os dados sao lidos de
-  novo.
+  desce, em loop — desce ate o fim, para um instante, volta ao inicio e
+  desce de novo;
+- as caixas andam em grupos, cada grupo no seu laco:
+  - **Grade**: a tabela (com o cabecalho parado), a 25 px/s — mais ou menos
+    uma linha a cada 2 s;
+  - **"Em andamento" e "Não iniciado"**: juntas, cada uma na mesma fracao do
+    caminho (chegam ao fim ao mesmo tempo), a 40 px/s na mais comprida;
+  - **"Concluída"**: sozinha, a 25 px/s, e nao conta para a troca — e
+    historico, e costuma ser bem maior que as outras;
+- cada tela fica 1 minuto exato. Quando a Grade (ou o par do Quadro) ja
+  mostrou o fim, a tela troca no minuto; se nao, ela segue ate 10 s a mais e
+  troca — e, na proxima vez, continua de onde parou. A cada troca os dados
+  sao lidos de novo;
+- a lista desliza com `transform` (Web Animations), e nao mexendo no
+  scrollTop: anda em fracao de pixel e e a placa de video que move, sem
+  redesenhar a lista. No modo TV saem tambem a textura animada do fundo, o
+  desfoque do vidro e as sombras dos cards — era isso que travava a TV;
+- a medida nao e feita uma vez so: a cada 0,7 s cada grupo confere o tamanho
+  da lista (os dados relidos chegam depois que a tela troca) e segue do
+  ponto em que esta. As caixas ganham a altura da tela em pixels, e o quanto
+  falta descer e medido contra a borda da TELA — o ultimo card nunca fica
+  cortado no rodape. A tabela da Grade usa bordas por celula na TV, para as
+  linhas subirem junto com as tarefas.
 
 A conta da TV e criada pelo script (com a senha que voce escolher):
 

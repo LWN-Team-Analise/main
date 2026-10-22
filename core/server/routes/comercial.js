@@ -96,13 +96,13 @@ const soData = (valor) => {
   return String(valor).slice(0, 10)
 }
 
-/** Tabela que ainda nao existe vira recado com o arquivo certo, nao 500. */
+/** Tabela ou coluna que ainda nao existe (falta rodar uma atualizacao) vira recado, nao 500. */
 function falhou(erro, res, onde) {
   if (erro.code === '42P01' || erro.code === '42703') {
     return res.status(503).json({
       erro:
-        'O banco ainda não tem as tabelas do Comercial. Rode db/atualizacao-27.sql.txt ' +
-        '(ou: npm run db:atualizar) e suba a API de novo.',
+        'O banco ainda não está atualizado para o Comercial (atualizações 27 a 29 em core/db). ' +
+        'Rode npm run db:atualizar e suba a API de novo.',
     })
   }
   if (erro.code === '23503') {

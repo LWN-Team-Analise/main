@@ -373,9 +373,11 @@ export function PreviaHeader({
   nome,
   recorte = null,
   aoMudar = null,
-  /* a faixa ja recortada. Quando vem, ela e desenhada esticada na
-     moldura inteira, sem conta de recorte nenhuma: o recorte ja foi
-     aplicado quando a imagem foi gravada. */
+  /* a faixa ja recortada. Quando vem, ela preenche a moldura inteira
+     (`cover`), sem conta de recorte nenhuma: o recorte ja foi aplicado
+     quando a imagem foi gravada. A logo sem recorte proprio tambem
+     chega por aqui — e com `cover` ela aparece como na tela da obra,
+     com o zoom no centro, em vez de esticada. */
   capa = null,
 }) {
   const moldura = useRef(null)
@@ -434,7 +436,11 @@ export function PreviaHeader({
               alt=""
               /* faixa pronta: preenche a moldura. Imagem inteira: o
                  recorte decide o pedaco que aparece. */
-              style={capa ? { inset: 0, width: '100%', height: '100%' } : estiloDaImagem(medidas, PROPORCAO_HEADER, recorte)}
+              style={
+                capa
+                  ? { inset: 0, width: '100%', height: '100%', objectFit: 'cover' }
+                  : estiloDaImagem(medidas, PROPORCAO_HEADER, recorte)
+              }
               draggable={false}
             />
           </span>

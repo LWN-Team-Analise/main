@@ -350,9 +350,9 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
               <PreviaHeader capa={form.capa || form.logo} nome={form.nome} />
               {!form.capa && (
                 <span className="campo__nota">
-                  Logo cadastrada antes do recorte separado: a faixa está usando o mesmo
-                  enquadramento do quadrado. Abra &quot;Ajustar enquadramento&quot; para dar
-                  um recorte próprio a ela.
+                  Sem recorte próprio: a faixa da obra mostra a logo inteira na largura, com o
+                  zoom no centro. Para escolher outro ponto ou outro zoom, abra
+                  &quot;Ajustar enquadramento&quot;.
                 </span>
               )}
             </div>
