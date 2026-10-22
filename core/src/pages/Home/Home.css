@@ -554,13 +554,56 @@
 
 /* cada coluna marca o proprio estado com um risco em cima da pilha */
 .colunat__pilha {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
   max-height: 62vh;
   padding: 10px 4px 4px;
   border-top: 2px solid var(--marca);
   overflow-y: auto;
+}
+
+/* os cards da coluna. Moram num trilho dentro da pilha porque na TV e
+   o TRILHO que desliza (transform), e nao a pilha que rola */
+.colunat__trilho {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+/* ---- o card de uma obra ("Em andamento" e "Não iniciado") ----
+   O nome da obra no alto, e embaixo o que falta nela: cada etapa com
+   os setores que ainda devem check e quantos checks sao. */
+.tobra__nome {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.tobra__nome > span:not(.paravoce) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tobra__etapas {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tobra__etapa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 8px;
+}
+
+.tobra__conta {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .colunat[data-coluna='espera'] { --marca: var(--etapa-travada); }
@@ -1605,31 +1648,82 @@ html.modo-tv .shell__conteudo {
   overflow: hidden;
 }
 
+/* o cabecalho fica parado e por cima: quem desliza por baixo dele e o
+   corpo da tabela (useModoTv) */
 .tv-palco .grade__tabela thead th {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 1;
   background: var(--surface);
   box-shadow: 0 1px 0 var(--line);
 }
 
-/* Quadro: as tres colunas com a altura toda; cada pilha rola por dentro */
+/* bordas de cada CELULA, e nao da tabela: com `collapse`, navegador de
+   TV mais antigo desenha as linhas pela tabela inteira, e elas ficavam
+   paradas enquanto as obras e as tarefas subiam */
+.tv-palco .grade__tabela {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.tv-palco .grade__tabela tbody,
+.tv-palco .colunat__trilho {
+  will-change: transform;
+}
+
+/* Quadro: as tres colunas lado a lado, com a altura toda; o trilho de
+   cada uma desliza por dentro. Flexbox, e nao a grade: navegador de TV
+   nem sempre passa a altura da pagina para a linha da grade, e a coluna
+   crescia com a lista ate passar da tela (sem nada para deslizar). A
+   altura da pilha ainda e conferida pelo useModoTv. */
 .tv-palco .quadrot {
+  display: flex;
   flex: 1 1 auto;
-  min-height: 0;
-  grid-template-rows: minmax(0, 1fr);
   align-items: stretch;
+  min-height: 0;
 }
 
 .tv-palco .colunat {
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 0;
 }
 
 .tv-palco .colunat__pilha {
+  position: relative;
   flex: 1;
   min-height: 0;
   max-height: none;
   overflow: hidden;
+}
+
+/* ---- a TV mais leve ----
+   Televisao tem processador e placa de video fracos, e a descida dos
+   cards travava. O que pesava, em ordem:
+
+     1. a textura do fundo (body::after, o efeito VHS) andando sem
+        parar: a tela inteira redesenhada a cada quadro;
+     2. o desfoque do vidro (backdrop-filter) de cada painel, refeito
+        a cada quadro por causa do fundo que mexia por baixo;
+     3. as sombras dos cards e o efeito de passar o mouse, que na TV
+        nao tem mouse nenhum.
+
+   Na TV tudo isso sai; o vidro fica so com a cor translucida. */
+html.modo-tv *,
+html.modo-tv *::before,
+html.modo-tv *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html.modo-tv *::before,
+html.modo-tv *::after {
+  animation: none !important;
+}
+
+.tv-palco .tcard,
+.tv-palco .cardfeito {
+  box-shadow: none;
+  transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1637,4 +1731,21 @@ html.modo-tv .shell__conteudo {
     animation: none;
     transition: none;
   }
+}
+
+/* ---------------- O filtro "Gráficos" do Painel ---------------- */
+
+.inicio__graficos {
+  min-width: 190px;
+}
+
+/* com um grupo so, o primeiro titulo de secao abre o painel: sem a
+   linha e o respiro que o separavam do grupo de cima */
+.dash > .dash__secao:first-child {
+  margin-top: 0;
+}
+
+.dash > .dash__secao:first-child > .dash__titulo {
+  padding-top: 0;
+  border-top: 0;
 }

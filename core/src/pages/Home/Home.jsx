@@ -4,6 +4,7 @@ import AppShell from '@/components/AppShell/AppShell'
 import Avatar from '@/components/Avatar/Avatar'
 import IconeClima from '@/components/Clima/IconeClima'
 import Globo from '@/components/Globo/Globo'
+import Seletor from '@/components/Seletor/Seletor'
 import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
 import { useTheme } from '@/context/ThemeContext'
@@ -103,6 +104,9 @@ function Clima() {
     </div>
   )
 }
+
+/* onde o filtro "Gráficos" do Painel fica guardado */
+const CHAVE_GRAFICOS = 'atmosfera.painel.graficos'
 
 const DIAS = ['DOM.', 'SEG.', 'TER.', 'QUA.', 'QUI.', 'SEX.', 'SÁB.']
 const MESES = ['JAN.', 'FEV.', 'MAR.', 'ABR.', 'MAI.', 'JUN.', 'JUL.', 'AGO.', 'SET.', 'OUT.', 'NOV.', 'DEZ.']
@@ -240,6 +244,23 @@ export default function Home() {
   /* o passo do Dashboard mora aqui porque o seletor dele vive na barra
      de abas, ao lado de Grade/Quadro/Dashboard */
   const [passo, setPasso] = useState('mes')
+  /* o filtro "Gráficos" do Painel: todos, ou um grupo so. Fica
+     lembrado neste navegador. */
+  const [graficos, setGraficosEstado] = useState(() => {
+    try {
+      return localStorage.getItem(CHAVE_GRAFICOS) || 'todos'
+    } catch {
+      return 'todos'
+    }
+  })
+  const setGraficos = (valor) => {
+    setGraficosEstado(valor)
+    try {
+      localStorage.setItem(CHAVE_GRAFICOS, valor)
+    } catch {
+      /* sem storage, vale so ate recarregar */
+    }
+  }
   const [mes, setMes] = useState(() => {
     const agora = new Date()
     return mesDe(agora.getFullYear(), agora.getMonth())
@@ -456,6 +477,24 @@ export default function Home() {
             </div>
           )}
 
+          {/* quais graficos o Painel mostra: todos, ou so os de um grupo */}
+          {aba === 'painel' && (
+            <div className="inicio__graficos">
+              <Seletor
+                valor={pode('ver_comercial') || graficos !== 'comercial' ? graficos : 'todos'}
+                aoMudar={setGraficos}
+                aria-label="Quais gráficos mostrar"
+                opcoes={[
+                  { valor: 'todos', rotulo: 'Todos os gráficos' },
+                  { valor: 'obras', rotulo: 'Obras' },
+                  { valor: 'despesas', rotulo: 'Despesas' },
+                  { valor: 'frotas', rotulo: 'Frotas' },
+                  ...(pode('ver_comercial') ? [{ valor: 'comercial', rotulo: 'Comercial' }] : []),
+                ]}
+              />
+            </div>
+          )}
+
           {/* os dados do Dashboard, para o Power BI: tudo, só obras ou
               só despesas (ModalPowerBI) */}
           {aba === 'painel' && (
@@ -545,7 +584,13 @@ export default function Home() {
           </p>
         )}
 
-        {aba === 'painel' && <Painel mes={mes} passo={passo} />}
+        {aba === 'painel' && (
+          <Painel
+            mes={mes}
+            passo={passo}
+            secao={pode('ver_comercial') || graficos !== 'comercial' ? graficos : 'todos'}
+          />
+        )}
       </section>
 
       {veDashboard && (
@@ -818,6 +863,67 @@ function Quadro({ tarefas, hoje, mes, nomeDoCargo, corDoCargo, pessoaPorId, aoAb
       .sort((a, b) => String(b.ultimo ?? '').localeCompare(String(a.ultimo ?? '')))
   }, [porColuna.concluida, nomeDoCargo])
 
+  /**
+   * "Em andamento" e "Não iniciado", agrupados por OBRA.
+   *
+   * Um card por check enchia as colunas: uma obra com doze checks
+   * abertos virava doze retangulos contando a mesma historia. Agora
+   * cada obra e UM card, com o que falta nela: as etapas e, em cada
+   * uma, os setores que ainda devem check (e quantos).
+   *
+   * A ordem e a da urgencia: a obra aparece onde aparecia o primeiro
+   * check dela. No "Não iniciado", o card junta tambem quem segura a
+   * fila — as etapas anteriores que ainda nao fecharam.
+   */
+  const obras = useMemo(() => {
+    const agrupar = (lista) => {
+      const mapa = new Map()
+      lista.forEach((t) => {
+        const g = mapa.get(t.obra.id) ?? {
+          obra: t.obra,
+          cliente: t.cliente,
+          primeira: t,
+          minha: false,
+          posso: false,
+          checks: 0,
+          etapas: new Map(),
+          aguardando: new Map(),
+        }
+        g.checks += 1
+        g.minha = g.minha || Boolean(t.minha)
+        if (t.posso && !g.posso) {
+          g.posso = true
+          /* clicar abre a obra pelo check que a pessoa pode marcar */
+          g.primeira = t
+        }
+        const etapa = g.etapas.get(t.etapaNumero) ?? {
+          numero: t.etapaNumero,
+          nome: t.etapaNome,
+          checks: 0,
+          setores: new Set(),
+        }
+        etapa.checks += 1
+        t.cargos.forEach((c) => etapa.setores.add(c))
+        g.etapas.set(t.etapaNumero, etapa)
+        ;(t.aguardando ?? []).forEach((a) => {
+          const espera = g.aguardando.get(a.numero) ?? { numero: a.numero, nome: a.nome, setores: new Set() }
+          a.setores.forEach((c) => espera.setores.add(c))
+          g.aguardando.set(a.numero, espera)
+        })
+        mapa.set(t.obra.id, g)
+      })
+      const emOrdem = (m) => [...m.values()].sort((a, b) => a.numero - b.numero).map((e) => ({ ...e, setores: [...e.setores] }))
+      /* o que segura a obra e o que esta FORA do card: a etapa que espera
+         a anterior, quando as duas estao no card, nao repete ali */
+      return [...mapa.values()].map((g) => ({
+        ...g,
+        etapas: emOrdem(g.etapas),
+        aguardando: emOrdem(g.aguardando).filter((a) => !g.etapas.has(a.numero)),
+      }))
+    }
+    return { andamento: agrupar(porColuna.andamento), espera: agrupar(porColuna.espera) }
+  }, [porColuna.andamento, porColuna.espera])
+
   if (tarefas.length === 0) {
     return (
       <Vazio
@@ -834,183 +940,178 @@ function Quadro({ tarefas, hoje, mes, nomeDoCargo, corDoCargo, pessoaPorId, aoAb
           <header className="colunat__topo">
             <Glifo />
             <h2>{rotulo}</h2>
-            <span className="colunat__conta">{porColuna[id].length}</span>
+            <span
+              className="colunat__conta"
+              title={id === 'concluida' ? undefined : `${porColuna[id].length} checks em ${obras[id].length} obras`}
+            >
+              {id === 'concluida' ? porColuna[id].length : obras[id].length}
+            </span>
           </header>
 
+          {/* o trilho dentro da pilha e o que a TV desliza (useModoTv) */}
           <div className="colunat__pilha">
-            {(id === 'concluida' ? cards.length : porColuna[id].length) === 0 && (
-              <p className="colunat__vazio">
-                {id === 'espera'
-                  ? 'Nada esperando etapa anterior.'
-                  : id === 'andamento'
-                    ? 'Nada em andamento.'
-                    : mes.atual
-                      ? 'Nada concluído ainda.'
-                      : `Nada concluído em ${mes.rotulo}.`}
-              </p>
-            )}
+            <div className="colunat__trilho">
+              {(id === 'concluida' ? cards.length : obras[id].length) === 0 && (
+                <p className="colunat__vazio">
+                  {id === 'espera'
+                    ? 'Nada esperando etapa anterior.'
+                    : id === 'andamento'
+                      ? 'Nada em andamento.'
+                      : mes.atual
+                        ? 'Nada concluído ainda.'
+                        : `Nada concluído em ${mes.rotulo}.`}
+                </p>
+              )}
 
-            {/* ---- concluídas: um card, com os checks dentro ---- */}
-            {id === 'concluida' &&
-              cards.map((c) => (
-                <article
-                  key={c.chave}
-                  className="cardfeito"
-                  data-parcial={c.fechadoEm ? undefined : 'sim'}
-                  onClick={() => aoAbrir(c.checks[0])}
-                  role="link"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      aoAbrir(c.checks[0])
-                    }
-                  }}
-                  title={`Abrir ${daObra(c.checks[0])}`}
-                >
-                  <p className="cardfeito__topo">
-                    <strong>{c.titulo}</strong>
-                    <span className="cardfeito__placar">
-                      {c.checks.length}/{c.total}
-                    </span>
-                  </p>
+              {/* ---- concluídas: um card, com os checks dentro ---- */}
+              {id === 'concluida' &&
+                cards.map((c) => (
+                  <article
+                    key={c.chave}
+                    className="cardfeito"
+                    data-parcial={c.fechadoEm ? undefined : 'sim'}
+                    onClick={() => aoAbrir(c.checks[0])}
+                    role="link"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        aoAbrir(c.checks[0])
+                      }
+                    }}
+                    title={`Abrir ${daObra(c.checks[0])}`}
+                  >
+                    <p className="cardfeito__topo">
+                      <strong>{c.titulo}</strong>
+                      <span className="cardfeito__placar">
+                        {c.checks.length}/{c.total}
+                      </span>
+                    </p>
 
-                  <p className="tcard__obra" data-tipo={c.obra.tipo}>
-                    <Avatar
-                      nome={c.cliente?.nome}
-                      foto={c.cliente?.logo}
-                      tamanho={18}
-                      quadrado
-                    />
-                    {daObra(c.checks[0])}
-                  </p>
+                    <p className="tcard__obra" data-tipo={c.obra.tipo}>
+                      <Avatar
+                        nome={c.cliente?.nome}
+                        foto={c.cliente?.logo}
+                        tamanho={18}
+                        quadrado
+                      />
+                      {daObra(c.checks[0])}
+                    </p>
 
-                  <p className="tcard__meio">
-                    <span className="tcard__etapa">
-                      {c.etapaNome || `${c.etapaNumero}ª etapa`}
-                    </span>
-                    <Setores
-                      cargos={c.cargos}
-                      nomeDoCargo={nomeDoCargo}
-                      corDoCargo={corDoCargo}
-                    />
-                  </p>
+                    <p className="tcard__meio">
+                      <span className="tcard__etapa">
+                        {c.etapaNome || `${c.etapaNumero}ª etapa`}
+                      </span>
+                      <Setores
+                        cargos={c.cargos}
+                        nomeDoCargo={nomeDoCargo}
+                        corDoCargo={corDoCargo}
+                      />
+                    </p>
 
-                  {/* cada check, com a hora em que foi marcado e por quem */}
-                  <ul className="cardfeito__checks">
-                    {c.checks.map((t) => {
-                      const quem = t.feitoPor ? pessoaPorId(t.feitoPor) : null
-                      return (
-                        <li key={t.id}>
-                          <span className="cardfeito__ok" aria-hidden="true">
-                            <Icone.ok />
-                          </span>
-                          <span className="cardfeito__nome">{t.titulo}</span>
-                          <span className="cardfeito__quando">
-                            {dataHora(t.feitoEm)}
-                            {quem && <em>{quem.nome}</em>}
+                    {/* cada check, com a hora em que foi marcado e por quem */}
+                    <ul className="cardfeito__checks">
+                      {c.checks.map((t) => {
+                        const quem = t.feitoPor ? pessoaPorId(t.feitoPor) : null
+                        return (
+                          <li key={t.id}>
+                            <span className="cardfeito__ok" aria-hidden="true">
+                              <Icone.ok />
+                            </span>
+                            <span className="cardfeito__nome">{t.titulo}</span>
+                            <span className="cardfeito__quando">
+                              {dataHora(t.feitoEm)}
+                              {quem && <em>{quem.nome}</em>}
+                            </span>
+                          </li>
+                        )
+                      })}
+                    </ul>
+
+                    {/* o card fechou, ou ainda falta parte dele */}
+                    <p className="cardfeito__pe">
+                      {c.fechadoEm ? (
+                        <>
+                          <Icone.ok />
+                          Card concluído em {dataHora(c.fechadoEm)}
+                        </>
+                      ) : (
+                        <>
+                          Faltam {c.total - c.checks.length} check
+                          {c.total - c.checks.length > 1 ? 's' : ''} neste card
+                        </>
+                      )}
+                    </p>
+                  </article>
+                ))}
+
+              {/* ---- não iniciado e em andamento: um card por obra ---- */}
+              {id !== 'concluida' &&
+                obras[id].map((g) => (
+                  /* travado = nenhum check da obra e do setor de quem ve.
+                     O card continua contando o que falta, so nao abre. */
+                  <article
+                    key={g.obra.id}
+                    className={`tcard tobra ${g.posso ? '' : 'tcard--travado'}`.trim()}
+                    onClick={g.posso ? () => aoAbrir(g.primeira) : undefined}
+                    role={g.posso ? 'link' : undefined}
+                    tabIndex={g.posso ? 0 : undefined}
+                    aria-disabled={g.posso ? undefined : 'true'}
+                    onKeyDown={(e) => {
+                      if (g.posso && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault()
+                        aoAbrir(g.primeira)
+                      }
+                    }}
+                    title={g.posso ? `Abrir ${daObra(g.primeira)}` : 'Nenhuma tarefa desta obra é do seu setor'}
+                  >
+                    <p className="tcard__obra tobra__nome" data-tipo={g.obra.tipo}>
+                      {!g.posso && <Icone.cadeado />}
+                      <Avatar nome={g.cliente?.nome} foto={g.cliente?.logo} tamanho={20} quadrado />
+                      <span>{daObra(g.primeira)}</span>
+                      {paraVoce && g.minha && <span className="paravoce">Para você</span>}
+                    </p>
+
+                    {/* o que falta: cada etapa com os setores que devem check */}
+                    <ul className="tobra__etapas">
+                      {g.etapas.map((e) => (
+                        <li key={e.numero} className="tobra__etapa">
+                          <span className="tcard__etapa">{e.nome || `${e.numero}ª etapa`}</span>
+                          <Setores cargos={e.setores} nomeDoCargo={nomeDoCargo} corDoCargo={corDoCargo} />
+                          <span className="tobra__conta">
+                            {e.checks} check{e.checks > 1 ? 's' : ''}
                           </span>
                         </li>
-                      )
-                    })}
-                  </ul>
-
-                  {/* o card fechou, ou ainda falta parte dele */}
-                  <p className="cardfeito__pe">
-                    {c.fechadoEm ? (
-                      <>
-                        <Icone.ok />
-                        Card concluído em {dataHora(c.fechadoEm)}
-                      </>
-                    ) : (
-                      <>
-                        Faltam {c.total - c.checks.length} check
-                        {c.total - c.checks.length > 1 ? 's' : ''} neste card
-                      </>
-                    )}
-                  </p>
-                </article>
-              ))}
-
-            {/* ---- não iniciado e em andamento: um card por check ---- */}
-            {id !== 'concluida' &&
-              porColuna[id].map((t) => (
-                /* travado = de outro setor. O card continua contando o
-                   que e e de quem, so nao aceita clique — a mesma
-                   leitura das linhas da Grade. */
-                <article
-                  key={t.id}
-                  className={`tcard ${t.posso ? '' : 'tcard--travado'}`.trim()}
-                  onClick={t.posso ? () => aoAbrir(t) : undefined}
-                  role={t.posso ? 'link' : undefined}
-                  tabIndex={t.posso ? 0 : undefined}
-                  aria-disabled={t.posso ? undefined : 'true'}
-                  onKeyDown={(e) => {
-                    if (t.posso && (e.key === 'Enter' || e.key === ' ')) {
-                      e.preventDefault()
-                      aoAbrir(t)
-                    }
-                  }}
-                  title={t.posso ? `Abrir ${daObra(t)}` : 'Esta tarefa é de outro setor'}
-                >
-                  <p className="tcard__titulo">
-                    {!t.posso && <Icone.cadeado />}
-                    {t.titulo}
-                    {paraVoce && t.minha && <span className="paravoce">Para você</span>}
-                  </p>
-
-                  <p className="tcard__obra" data-tipo={t.obra.tipo}>
-                    <Avatar
-                      nome={t.cliente?.nome}
-                      foto={t.cliente?.logo}
-                      tamanho={18}
-                      quadrado
-                    />
-                    {daObra(t)}
-                  </p>
-
-                  <p className="tcard__meio">
-                    <span className="tcard__etapa">{t.etapaNome || `${t.etapaNumero}ª etapa`}</span>
-                    <Setores
-                      cargos={t.cargos}
-                      nomeDoCargo={nomeDoCargo}
-                      corDoCargo={corDoCargo}
-                    />
-                  </p>
-
-                  {/* "Não iniciado": quem segura a fila — as etapas antes
-                      desta que ainda nao fecharam e os setores que ainda
-                      devem check em cada uma (ver useTarefas) */}
-                  {t.status === 'espera' && t.aguardando.length > 0 && (
-                    <div className="tcard__espera">
-                      <span className="tcard__esperatit">
-                        <Icone.relogio />
-                        Aguardando a conclusão de
-                      </span>
-                      {t.aguardando.map((e) => (
-                        <span key={e.numero} className="tcard__esperaetapa">
-                          <strong>{e.nome || `${e.numero}ª Etapa`}</strong>
-                          <Setores
-                            cargos={e.setores}
-                            nomeDoCargo={nomeDoCargo}
-                            corDoCargo={corDoCargo}
-                          />
-                        </span>
                       ))}
-                    </div>
-                  )}
+                    </ul>
 
-                  <p className="tcard__pe">
-                    <span
-                      className="tpri"
-                      data-pri={tomPrioridadeObra(t.obra)}
-                    >
-                      {rotuloPrioridadeObra(t.obra)}
-                    </span>
-                    <Prazo iso={t.obra.dataConclusao} hoje={hoje} />
-                  </p>
-                </article>
-              ))}
+                    {/* "Não iniciado": quem segura a fila — as etapas antes
+                        destas que ainda nao fecharam e os setores que ainda
+                        devem check em cada uma (ver useTarefas) */}
+                    {id === 'espera' && g.aguardando.length > 0 && (
+                      <div className="tcard__espera">
+                        <span className="tcard__esperatit">
+                          <Icone.relogio />
+                          Aguardando a conclusão de
+                        </span>
+                        {g.aguardando.map((e) => (
+                          <span key={e.numero} className="tcard__esperaetapa">
+                            <strong>{e.nome || `${e.numero}ª Etapa`}</strong>
+                            <Setores cargos={e.setores} nomeDoCargo={nomeDoCargo} corDoCargo={corDoCargo} />
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <p className="tcard__pe">
+                      <span className="tpri" data-pri={tomPrioridadeObra(g.obra)}>
+                        {rotuloPrioridadeObra(g.obra)}
+                      </span>
+                      <Prazo iso={g.obra.dataConclusao} hoje={hoje} />
+                    </p>
+                  </article>
+                ))}
+            </div>
           </div>
         </section>
       ))}
