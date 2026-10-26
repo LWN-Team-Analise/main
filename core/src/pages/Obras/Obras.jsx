@@ -23,7 +23,7 @@ import './Obras.css'
 
 const ORDENACOES = [
   { valor: 'prioridade', rotulo: 'Prioridade' },
-  { valor: 'data', rotulo: 'Data de conclusão' },
+  { valor: 'data', rotulo: 'Data de início' },
   { valor: 'empresa', rotulo: 'Empresa' },
   { valor: 'recentes', rotulo: 'Mais recentes' },
 ]
@@ -261,7 +261,8 @@ export default function Obras() {
       if (concluida(obra)) return false
       if (prioridade && obra.prioridade !== prioridade) return false
       if (clienteId && String(obra.clienteId) !== String(clienteId)) return false
-      if (ateData && obra.dataConclusao && obra.dataConclusao > ateData) return false
+      /* o prazo final nao se escolhe mais: o filtro olha o INICIO da obra */
+      if (ateData && obra.dataInicio && obra.dataInicio > ateData) return false
 
       if (setores.length > 0) {
         const pendentes = pendentesDaObra(obra)
@@ -281,7 +282,7 @@ export default function Obras() {
 
     const comparar = {
       prioridade: (a, b) => PRIORIDADE_PESO[b.prioridade] - PRIORIDADE_PESO[a.prioridade],
-      data: (a, b) => String(a.dataConclusao ?? '9999').localeCompare(String(b.dataConclusao ?? '9999')),
+      data: (a, b) => String(a.dataInicio ?? '9999').localeCompare(String(b.dataInicio ?? '9999')),
       empresa: (a, b) =>
         (clientePorId(a.clienteId)?.nome ?? '').localeCompare(
           clientePorId(b.clienteId)?.nome ?? '',
@@ -439,7 +440,7 @@ export default function Obras() {
                     className="filtro__data"
                     value={ateData}
                     onChange={(e) => setAteData(e.target.value)}
-                    aria-label="Mostrar obras com conclusão até esta data"
+                    aria-label="Mostrar obras com início até esta data"
                   />
                   {ateData && <span className="filtro__dataleg">{dataExtensa(ateData)}</span>}
                 </div>

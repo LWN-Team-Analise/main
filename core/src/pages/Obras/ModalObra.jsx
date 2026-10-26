@@ -11,7 +11,7 @@ import {
   rotuloDaPrioridade,
 } from '@/domain/obras'
 import { proximaProposta } from '@/services/dadosService'
-import { dataBR, hojeISO } from '@/utils/formato'
+import { hojeISO } from '@/utils/formato'
 import './ModalObra.css'
 
 const VAZIO = {
@@ -20,7 +20,6 @@ const VAZIO = {
   descricao: '',
   prioridade: 'media',
   dataInicio: '',
-  dataConclusao: '',
 }
 
 /**
@@ -37,23 +36,15 @@ const VAZIO = {
  *                    dezenas de obras descritas como "obra" ou "-":
  *                    campo obrigatorio sem o que dizer vira ruido.
  *
- * As datas:
- *   Data de inicio      — ja vem preenchida com hoje;
- *   Prazo final         — a obra INTEIRA, ate a entrega da
- *                         documentacao. Na obra PADRAO pode ficar em
- *                         branco enquanto ninguem souber; na EMERGENCIA e
- *                         obrigatorio. E dele que sai a cor do card.
+ * A data: so a de INICIO, que ja vem preenchida com hoje.
  *
- * O periodo de execucao (3a etapa) NAO entra aqui: ele e definido dentro
- * da obra, na etapa de execucao. E o TIPO e o do botao que abriu o
- * cadastro — data nenhuma transforma obra padrao em emergencia.
+ * O PRAZO FINAL saiu daqui: ele nao se escolhe mais. Aparece sozinho
+ * quando a obra chega a 5a etapa e o ultimo usuario marca o ultimo check
+ * que faltava — e o dia desse check (prazoFinalDaObra, em domain/obras).
  *
- * Emergencia sem prazo e uma contradicao: se nao ha data ate a qual
- * aquilo precisa estar resolvido, o que existe e uma obra urgente — e
- * urgente ja e a prioridade alta da obra padrao. Fora isso, e o prazo
- * que faz a obra aparecer como atrasada na pagina inicial e entrar na
- * conta de atraso do painel: sem ele a emergencia seria a unica que
- * nunca cobra ninguem.
+ * O periodo de execucao (3a etapa) tambem NAO entra aqui: ele e definido
+ * dentro da obra, na etapa de execucao. E o TIPO e o do botao que abriu
+ * o cadastro — data nenhuma transforma obra padrao em emergencia.
  *
  * Emergencia nao escolhe prioridade: e sempre alta. A tela mostra a
  * pastilha travada, e o banco garante o mesmo por gatilho.
@@ -72,8 +63,6 @@ export default function ModalObra({
   const [form, setForm] = useState(VAZIO)
   const [erros, setErros] = useState({})
   const [salvando, setSalvando] = useState(false)
-  /* o n° que veio sugerido (o da ultima obra + 1), para a dica do campo */
-  const [sugerida, setSugerida] = useState('')
 
   const editando = Boolean(obra)
   const tipoAtual = editando ? obra.tipo : tipo
@@ -93,12 +82,10 @@ export default function ModalObra({
             descricao: obra.descricao ?? '',
             prioridade: obra.prioridade ?? 'media',
             dataInicio: obra.dataInicio ?? '',
-            dataConclusao: obra.dataConclusao ?? '',
           }
         : { ...VAZIO, dataInicio: hojeISO() },
     )
     setErros({})
-    setSugerida('')
     if (obra) return undefined
 
     /* Obra NOVA ja vem com o n° da proposta: o da ultima cadastrada,
@@ -108,7 +95,6 @@ export default function ModalObra({
     proximaProposta()
       .then((numero) => {
         if (!valido || !numero) return
-        setSugerida(numero)
         setForm((atual) => (atual.proposta ? atual : { ...atual, proposta: numero }))
       })
       .catch(() => {})
@@ -135,29 +121,6 @@ export default function ModalObra({
     if (!form.proposta.trim()) novosErros.proposta = 'Informe o n° da proposta.'
     /* a descricao NAO entra aqui: e opcional de propósito */
     if (!form.dataInicio) novosErros.dataInicio = 'Informe a data de início.'
-
-    /* Na EMERGENCIA a data de conclusao e obrigatoria.
-       Emergencia sem prazo e uma contradicao: se nao ha uma data ate a
-       qual aquilo precisa estar resolvido, o que existe e uma obra
-       urgente, e urgente ja e a prioridade alta da obra padrao. E e o
-       prazo que faz a obra aparecer como atrasada na pagina inicial e
-       entrar na conta de atraso do painel — sem ele a emergencia e a
-       unica que nunca cobra ninguem. Na obra padrao ele continua
-       opcional: ali a data as vezes so se sabe depois. */
-    if (emergencia && !form.dataConclusao) {
-      novosErros.dataConclusao = 'Obra de emergência precisa de um prazo final.'
-    }
-
-    /* prazo antes do inicio quase sempre e dedo trocado no teclado */
-    if (form.dataConclusao && form.dataConclusao < form.dataInicio) {
-      novosErros.dataConclusao = 'O prazo final não pode ser antes do início.'
-    }
-    /* a execucao cabe dentro da obra: o prazo final nao pode ficar antes
-       do periodo de execucao ja definido la dentro */
-    const fimDaExecucao = obra?.execucaoPrazo || obra?.execucaoInicio
-    if (form.dataConclusao && fimDaExecucao && form.dataConclusao < fimDaExecucao) {
-      novosErros.dataConclusao = `O prazo final não pode ser antes da execução (${dataBR(fimDaExecucao)}).`
-    }
 
     if (Object.keys(novosErros).length > 0) {
       setErros(novosErros)
@@ -232,11 +195,6 @@ export default function ModalObra({
           value={form.proposta}
           onChange={mudar('proposta')}
           erro={erros.proposta}
-          dica={
-            !editando && sugerida && form.proposta === sugerida
-              ? 'Número seguinte ao da última obra cadastrada. Dá para mudar.'
-              : undefined
-          }
         />
 
         <CampoArea
@@ -272,6 +230,8 @@ export default function ModalObra({
           />
         )}
 
+        {/* so o inicio: o prazo final aparece sozinho quando o ultimo
+            check da obra e marcado */}
         <div className="formobra__datas">
           <CampoTexto
             rotulo="Data de início"
@@ -280,36 +240,6 @@ export default function ModalObra({
             onChange={mudar('dataInicio')}
             erro={erros.dataInicio}
           />
-          {/* O mesmo (!) da tela da obra, aqui dentro do formulário:
-              obra padrão que já existe e continua sem data de
-              conclusão. É o campo ao lado que resolve, então aqui ele
-              é só o sinal — não leva a lugar nenhum.
-
-              Só na EDIÇÃO. Numa obra nascendo o campo está vazio por
-              definição, e piscar em todo cadastro novo ensinaria a
-              ignorar o sinal justamente onde ele importa. */}
-          <div className="pendencia__caixa">
-            <CampoTexto
-              rotulo={emergencia ? 'Prazo final *' : 'Prazo final'}
-              type="date"
-              required={emergencia}
-              min={form.dataInicio || undefined}
-              value={form.dataConclusao}
-              onChange={mudar('dataConclusao')}
-              erro={erros.dataConclusao}
-            />
-
-            {editando && !emergencia && !form.dataConclusao && (
-              <span
-                className="pendencia pendencia--parada"
-                title="Esta obra está sem prazo final. Sem ele o card fica verde e ela nunca aparece como atrasada."
-                role="img"
-                aria-label="Pendente: esta obra está sem prazo final"
-              >
-                !
-              </span>
-            )}
-          </div>
         </div>
 
         {erros.geral && (

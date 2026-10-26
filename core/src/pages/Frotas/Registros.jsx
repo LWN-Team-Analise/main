@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import AppShell from '@/components/AppShell/AppShell'
 import Modal from '@/components/Modal/Modal'
+import Confirma from '@/components/Confirma/Confirma'
 import Seletor from '@/components/Seletor/Seletor'
+import { useDados } from '@/context/DadosContext'
 import { CHECKLIST, POSICOES, TIPOS, kmLegivel } from '@/domain/frotas'
 import * as frotasApi from '@/services/frotasService'
 import { dataBR } from '@/utils/formato'
@@ -20,6 +22,9 @@ import './Frotas.css'
  * Cada registro abre no clique e mostra tudo o que foi respondido. Na
  * devolucao, o NAO de uma pergunta importante fica em vermelho — e o
  * registro inteiro ganha a marca de pendencia ja na lista fechada.
+ *
+ * Quem tem `excluir_registro_frota` ve, no registro aberto, o "Excluir
+ * registro" — para a saida ou a devolucao feita por engano.
  */
 
 const FILTROS_TIPO = [
@@ -102,7 +107,7 @@ function Fotos({ registro }) {
 }
 
 /** Tudo o que foi respondido num registro. */
-function Detalhe({ registro }) {
+function Detalhe({ registro, aoExcluir }) {
   const devolucao = registro.tipo === 'devolucao'
   return (
     <div className="reg__detalhe">
@@ -181,11 +186,22 @@ function Detalhe({ registro }) {
       {registro.fotos === 0 && registro.fotosExternas.length === 0 && (
         <p className="reg__nota">Sem fotos neste registro.</p>
       )}
+
+      {aoExcluir && (
+        <div className="reg__acoes">
+          <button type="button" className="reg__excluir" onClick={() => aoExcluir(registro)}>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4.5 7h15M9.5 7V5.4A1.4 1.4 0 0 1 10.9 4h2.2a1.4 1.4 0 0 1 1.4 1.4V7M6.5 7l.9 12.1A1.5 1.5 0 0 0 8.9 20.5h6.2a1.5 1.5 0 0 0 1.5-1.4L17.5 7" />
+            </svg>
+            Excluir {TIPOS[registro.tipo]?.rotulo.toLowerCase() ?? 'registro'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
 
-function Registro({ registro }) {
+function Registro({ registro, aoExcluir }) {
   const [aberto, setAberto] = useState(false)
   const pendencias = registro.alertas.length
   return (
@@ -211,12 +227,14 @@ function Registro({ registro }) {
         )}
         <IconeSeta aberto={aberto} />
       </button>
-      {aberto && <Detalhe registro={registro} />}
+      {aberto && <Detalhe registro={registro} aoExcluir={aoExcluir} />}
     </li>
   )
 }
 
 export default function Registros() {
+  const { pode } = useDados()
+  const podeExcluir = pode('excluir_registro_frota')
   const [params, setParams] = useSearchParams()
   const veiculo = params.get('veiculo') ?? ''
   const tipo = params.get('tipo') ?? ''
@@ -231,6 +249,20 @@ export default function Registros() {
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [procura, setProcura] = useState(busca)
+  /* o registro que vai ser apagado (a confirmacao aberta) */
+  const [excluindo, setExcluindo] = useState(null)
+
+  const excluir = async () => {
+    const alvo = excluindo
+    setExcluindo(null)
+    try {
+      await frotasApi.excluirRegistro(alvo.id)
+      setRegistros((atuais) => atuais.filter((r) => r.id !== alvo.id))
+      setTotal((n) => Math.max(0, n - 1))
+    } catch (e) {
+      setErro(e.message)
+    }
+  }
 
   /* cada leitura tem um numero: a resposta de um filtro antigo que
      chega atrasada nao pisa na do filtro novo */
@@ -408,7 +440,7 @@ export default function Registros() {
 
         <ul className="registros__lista">
           {registros.map((r) => (
-            <Registro key={r.id} registro={r} />
+            <Registro key={r.id} registro={r} aoExcluir={podeExcluir ? setExcluindo : undefined} />
           ))}
         </ul>
 
@@ -423,6 +455,20 @@ export default function Registros() {
           </button>
         )}
       </section>
+
+      <Confirma
+        aberto={Boolean(excluindo)}
+        titulo={`Excluir esta ${TIPOS[excluindo?.tipo]?.rotulo.toLowerCase() ?? 'registro'}?`}
+        mensagem={
+          excluindo
+            ? `${excluindo.veiculoNome} · ${excluindo.condutorNome} · ${dataBR(excluindo.data)}${excluindo.hora ? ` às ${excluindo.hora}` : ''}. O registro e as fotos dele são apagados.`
+            : ''
+        }
+        aviso="Se era o último registro do veículo, o KM atual volta a ser o do registro anterior. Se era a retirada do carro reservado de uma obra, o check “Retirada do carro” dela é desmarcado."
+        rotuloConfirmar="Excluir"
+        aoConfirmar={excluir}
+        aoFechar={() => setExcluindo(null)}
+      />
     </AppShell>
   )
 }

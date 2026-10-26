@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { emTransacao, query } from '../db.js'
 import { exige, exigeSessao, tratar } from '../sessao.js'
-import { registrarAtividade } from '../atividade.js'
+import { descreverObra, registrarAtividade } from '../atividade.js'
 import { logger } from '../logger.js'
 import { anotar, estourou } from '../limite.js'
 import { enviarComo, podeEnviar, podeLerCaixas, ultimoDoContato } from '../graph.js'
@@ -21,13 +21,17 @@ import {
   lerValor,
   rotuloDaEtapa,
 } from '../../src/domain/comercial.js'
+import { proximaProposta } from '../../src/domain/proposta.js'
 
 /* ============================================================
    COMERCIAL — /api/comercial
 
      GET    /negocios?funil=        os negocios (de um funil, ou de todos),
                                     com o estado do e-mail da Microsoft
-     POST   /negocios               cria
+     POST   /negocios               cria (no funil "Novos negocios",
+                                    cria a obra junto — ver abaixo)
+     GET    /proxima-proposta       o n° de proposta sugerido para a
+                                    obra do negocio novo
      PUT    /negocios/:id           edita (inclusive troca de funil)
      PATCH  /negocios/:id/etapa     muda de etapa (o arrastar do quadro)
      PATCH  /negocios/:id/status    ganho, perdido ou reaberto
@@ -46,6 +50,14 @@ import {
                                     qualquer empresa ou de nenhuma
      POST   /contatos               cria um contato (o "Adicionar contato"
                                     do negocio)
+
+   O NEGOCIO QUE VIRA OBRA (atualizacao 30): negocio criado no funil
+   "Novos negocios" ja nasce com a obra dele em Obras — cliente, n° da
+   proposta, a descricao (o titulo do negocio), data de inicio hoje,
+   obra padrao de prioridade media. As duas gravacoes vao juntas (uma
+   transacao): ou nascem as duas, ou nenhuma. O cadastro manual em
+   Obras continua existindo do mesmo jeito. Basta `editar_negocios`:
+   e o Comercial cadastrando a obra por aqui.
 
    Quem pode o que — conferido AQUI, a cada chamada:
 
@@ -101,7 +113,7 @@ function falhou(erro, res, onde) {
   if (erro.code === '42P01' || erro.code === '42703') {
     return res.status(503).json({
       erro:
-        'O banco ainda não está atualizado para o Comercial (atualizações 27 a 29 em core/db). ' +
+        'O banco ainda não está atualizado para o Comercial (atualizações 27 a 30 em core/db). ' +
         'Rode npm run db:atualizar e suba a API de novo.',
     })
   }
@@ -113,11 +125,13 @@ function falhou(erro, res, onde) {
 
 const SELECT_NEGOCIO = `
   SELECT n.*, c.nome AS cliente_nome, u.name AS responsavel_nome,
-         p.nome AS pessoa_nome, p.email AS pessoa_email, p.telefone AS pessoa_telefone
+         p.nome AS pessoa_nome, p.email AS pessoa_email, p.telefone AS pessoa_telefone,
+         o.proposta AS obra_proposta
     FROM negocio n
     LEFT JOIN cliente c        ON c.id = n.cliente_id
     LEFT JOIN usuario u        ON u.id = n.responsavel_id
-    LEFT JOIN cliente_pessoa p ON p.id = n.pessoa_id`
+    LEFT JOIN cliente_pessoa p ON p.id = n.pessoa_id
+    LEFT JOIN obra o           ON o.id = n.obra_id`
 
 function paraNegocio(l) {
   return {
@@ -148,6 +162,9 @@ function paraNegocio(l) {
     motivoPerda: l.motivo_perda ?? '',
     fechadoEm: l.fechado_em,
     observacao: l.observacao ?? '',
+    /* a obra criada junto (funil Novos negocios); null = sem obra */
+    obraId: l.obra_id === null || l.obra_id === undefined ? null : String(l.obra_id),
+    obraProposta: l.obra_proposta ?? null,
     email: {
       aguardando: Boolean(l.email_aguardando),
       assunto: l.email_assunto ?? '',
@@ -290,18 +307,83 @@ router.get('/negocios', exigeSessao, exige(VER), async (req, res) => {
 
 /* ---------------- gravacao ---------------- */
 
+/** O funil cujo negocio novo ja nasce com a obra em Obras. */
+const FUNIL_DA_OBRA = 'novos'
+
+/** Hoje no calendario do Brasil: o servidor pode estar rodando em UTC. */
+const hojeNoBrasil = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+
+/**
+ * O n° da proposta sugerido para a obra do negocio novo — a mesma conta
+ * do "Nova obra" de Obras (o da ultima obra, mais um), so que liberado
+ * para quem cria negocio: o Comercial nem sempre edita obra.
+ */
+router.get('/proxima-proposta', exigeSessao, exige(EDITAR), async (_req, res) => {
+  try {
+    const [ultima, todas] = await Promise.all([
+      query("SELECT proposta FROM obra WHERE proposta ~ '[0-9]' ORDER BY criado_em DESC, id DESC LIMIT 1"),
+      query('SELECT lower(proposta) AS p FROM obra'),
+    ])
+    const ocupadas = new Set(todas.rows.map((l) => l.p))
+    return res.json({ proposta: proximaProposta(ultima.rows[0]?.proposta, ocupadas) })
+  } catch (erro) {
+    return falhou(erro, res, 'comercial/proxima-proposta')
+  }
+})
+
 router.post('/negocios', exigeSessao, exige(EDITAR), async (req, res) => {
   try {
     const lido = await lerNegocio(req.body, req.dono.sub)
     if (lido.erro) return res.status(400).json(lido)
     const c = { ...lido.campos, criado_por: req.dono.sub }
-    const colunas = Object.keys(c)
-    const { rows } = await query(
-      `INSERT INTO negocio (${colunas.join(', ')})
-       VALUES (${colunas.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING id`,
-      Object.values(c),
-    )
-    const negocio = await lerUm(rows[0].id)
+
+    /* Novos negocios: a obra nasce junto. Ela precisa de um cliente
+       CADASTRADO (a empresa so escrita nao tem cidade nem estado para
+       virar cliente) e do n° da proposta. */
+    const comObra = c.funil === FUNIL_DA_OBRA
+    const proposta = texto(req.body?.proposta).slice(0, 80)
+    if (comObra && !c.cliente_id) {
+      return res.status(400).json({
+        erro: 'O negócio de Novos negócios vira obra: escolha um cliente cadastrado.',
+        campo: 'clienteId',
+      })
+    }
+    if (comObra && !proposta) {
+      return res.status(400).json({ erro: 'Informe o n° da proposta da obra.', campo: 'proposta' })
+    }
+
+    const { negocioId, obraId } = await emTransacao(async (db) => {
+      let obra = null
+      if (comObra) {
+        const { rows } = await db.query(
+          `INSERT INTO obra (cliente_id, proposta, descricao, tipo, prioridade, data_inicio,
+                             criado_por, atualizado_por)
+           VALUES ($1, $2, $3, 'padrao', 'media', $4, $5, $5)
+           RETURNING id`,
+          [c.cliente_id, proposta, c.titulo, hojeNoBrasil(), req.dono.sub],
+        )
+        obra = rows[0].id
+      }
+      const linha = { ...c, obra_id: obra }
+      const colunas = Object.keys(linha)
+      const { rows } = await db.query(
+        `INSERT INTO negocio (${colunas.join(', ')})
+         VALUES (${colunas.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING id`,
+        Object.values(linha),
+      )
+      return { negocioId: rows[0].id, obraId: obra }
+    })
+
+    const negocio = await lerUm(negocioId)
+    if (obraId) {
+      await registrarAtividade(req, {
+        acao: 'obra.criada',
+        categoria: 'obra',
+        entidade: ['obra', obraId],
+        descricao: 'Nova obra criada pelo Comercial',
+        detalhes: { ...(await descreverObra(obraId)), negocio: negocio.titulo },
+      })
+    }
     await registrarAtividade(req, {
       acao: 'negocio.criado',
       categoria: 'comercial',

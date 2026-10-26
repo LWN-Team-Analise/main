@@ -37,9 +37,10 @@ export const VISUALIZACAO = [
   { chave: 'ver_obras', rotulo: 'Obras', rota: '/app/obras' },
   { chave: 'ver_clientes', rotulo: 'Clientes', rota: '/app/clientes' },
   { chave: 'ver_concluidas', rotulo: 'Concluídas', rota: '/app/concluidas' },
-  { chave: 'ver_despesas', rotulo: 'Visualizar despesas', rota: '/app/despesas' },
+  { chave: 'ver_despesas', rotulo: 'Reembolso', rota: '/app/despesas' },
   { chave: 'ver_frotas', rotulo: 'Frotas', rota: '/app/frotas' },
   { chave: 'ver_comercial', rotulo: 'Comercial', rota: '/app/comercial' },
+  { chave: 'ver_turnos', rotulo: 'Turnos', rota: '/app/turnos' },
   { chave: 'ver_avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes' },
   { chave: 'ver_avisos', rotulo: 'Enviar avisos', rota: null },
 ]
@@ -82,6 +83,10 @@ export const ALTERACAO = [
   { chave: 'definir_prazos', rotulo: 'Pode definir prazo para checks', dependeDe: 'ver_obras' },
   /* o catalogo de ensaios de onde o Planejamento de ensaios escolhe */
   { chave: 'gerenciar_ensaios', rotulo: 'Adicionar / editar ensaios', dependeDe: 'ver_obras' },
+  /* membro parcial: quem foi a obra sem marcar check e foi incluido a
+     mao (atualizacao 30). Incluir qualquer um pode — a pessoa aceita
+     ou recusa; TIRAR da obra depois e so com esta */
+  { chave: 'excluir_membro_parcial', rotulo: 'Excluir membro parcial da obra', dependeDe: 'ver_obras' },
   { chave: 'enviar_avisos', rotulo: 'Enviar avisos', dependeDe: 'ver_avisos' },
   /* Despesas: ver a aba (e os proprios envios) e `ver_despesas`;
      ENVIAR despesa, refeicao ou bonus e `alterar_despesas`; abrir os
@@ -91,12 +96,17 @@ export const ALTERACAO = [
   { chave: 'alterar_despesas', rotulo: 'Alterar despesas', dependeDe: 'ver_despesas' },
   { chave: 'revisar_despesa_geral', rotulo: 'Revisar despesa geral', dependeDe: 'ver_despesas' },
   { chave: 'excluir_despesas', rotulo: 'Excluir lançamento de despesa', dependeDe: 'ver_despesas' },
+  /* os valores pre-definidos do reembolso (almoco, janta, bonus
+     apartamento...) e quais tipos sao pre-definidos */
+  { chave: 'definir_valores_reembolso', rotulo: 'Editar valores pré-definidos', dependeDe: 'ver_despesas' },
   /* Frotas: ver a aba e os registros de todos os veiculos e
      `ver_frotas`; dar SAIDA e DEVOLUCAO e `registrar_frota`;
      cadastrar e editar os veiculos (e corrigir o KM atual de um
      deles) e `editar_veiculos`. */
   { chave: 'registrar_frota', rotulo: 'Registrar saída e devolução de veículo', dependeDe: 'ver_frotas' },
   { chave: 'editar_veiculos', rotulo: 'Adicionar / editar veículos', dependeDe: 'ver_frotas' },
+  /* apagar uma saida, troca ou devolucao registrada (Saidas e devolucoes) */
+  { chave: 'excluir_registro_frota', rotulo: 'Excluir saída e devolução', dependeDe: 'ver_frotas' },
   /* Comercial: ver a aba e os funis e `ver_comercial`; criar, editar e
      mover negocio (e marcar ganho ou perdido) e `editar_negocios`;
      apagar de vez e `excluir_negocios`; mandar e-mail ao contato pela
@@ -104,6 +114,9 @@ export const ALTERACAO = [
   { chave: 'editar_negocios', rotulo: 'Adicionar / editar negócios', dependeDe: 'ver_comercial' },
   { chave: 'excluir_negocios', rotulo: 'Excluir negócio', dependeDe: 'ver_comercial' },
   { chave: 'responder_emails', rotulo: 'Responder e-mails pelo site', dependeDe: 'ver_comercial' },
+  /* Turnos (atualizacao 31): ver a aba e `ver_turnos`; criar e mudar
+     turnos, anotacoes do dia e cronogramas e `editar_turnos` */
+  { chave: 'editar_turnos', rotulo: 'Adicionar / editar turnos e cronogramas', dependeDe: 'ver_turnos' },
 ]
 
 /**

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { somaPorMoeda } from '@/domain/comercial'
 import CartaoNegocio, { quebraNaBarra } from './CartaoNegocio'
 import { IconeImportar, IconeMais } from './icones'
@@ -76,9 +76,26 @@ export default function QuadroFunil({
     },
   })
 
+  /* a altura da fila de cabecalhos vira a altura de cada ">" que desce
+     entre os corpos (--seta-altura, no CSS): assim eles tem o mesmo
+     angulo do ">" do cabecalho. Os cabecalhos dividem a mesma linha da
+     grade, entao medir o primeiro basta; ele muda quando o nome de uma
+     etapa quebra linha (tela estreita, outro funil) */
+  const colunas = useRef(null)
+  useLayoutEffect(() => {
+    const quadro = colunas.current
+    const cabeca = quadro?.querySelector('.funil__cabeca')
+    if (!cabeca) return undefined
+    const medir = () => quadro.style.setProperty('--seta-altura', `${cabeca.offsetHeight}px`)
+    medir()
+    const observador = new ResizeObserver(medir)
+    observador.observe(cabeca)
+    return () => observador.disconnect()
+  }, [funil.id])
+
   return (
     <div className="funil" data-arrastando={arrastando ? 'sim' : undefined}>
-      <div className="funil__colunas" style={{ '--etapas': funil.etapas.length }}>
+      <div ref={colunas} className="funil__colunas" style={{ '--etapas': funil.etapas.length }}>
         {funil.etapas.map((etapa, i) => {
           const lista = porEtapa[etapa.id]
           /* a soma separada por moeda: real com dolar nao se soma */

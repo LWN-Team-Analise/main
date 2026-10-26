@@ -16,6 +16,10 @@ import './ModalRoteiro.css'
  *   [ ] Obrigatorio responder Sim ou Nao?
  *       Marcada, marcar o check abre a pergunta: Sim fecha com ✓; Nao
  *       tambem fecha, mas com um X e "Nao" do lado (Hospedagem — Nao).
+ *   [ ] Check com horario (ex.: Ponto de encontro)
+ *       Clicar no check dentro da obra abre as datas dela, cada uma com
+ *       o seu horario (06:30) e quem vai; e la que ele e marcado. Nao
+ *       junta com o Sim ou Nao.
  *   Prazo
  *       A data limite deste check NESTA obra. So aparece para quem tem
  *       "Pode definir prazo para checks" (definir_prazos).
@@ -57,6 +61,7 @@ export default function ModalCheck({
   const [titulo, setTitulo] = useState('')
   const [donos, setDonos] = useState([])
   const [simNao, setSimNao] = useState(false)
+  const [horario, setHorario] = useState(false)
   const [informacoes, setInformacoes] = useState('')
   const [prazo, setPrazo] = useState('')
   const [erro, setErro] = useState('')
@@ -74,6 +79,7 @@ export default function ModalCheck({
     setTitulo(check?.titulo ?? '')
     setDonos(check?.cargos ?? [])
     setSimNao(Boolean(check?.simNao))
+    setHorario(Boolean(check?.horario))
     setInformacoes(check?.informacoes ?? '')
     setPrazo(prazoAtual ?? '')
     setErro('')
@@ -93,6 +99,7 @@ export default function ModalCheck({
         titulo: titulo.trim(),
         cargos: donos,
         simNao: doSistema ? false : simNao,
+        horario: doSistema ? false : horario,
         informacoes: informacoes.trim(),
         obraId,
       }
@@ -162,9 +169,24 @@ export default function ModalCheck({
               <input
                 type="checkbox"
                 checked={simNao}
-                onChange={(e) => setSimNao(e.target.checked)}
+                onChange={(e) => {
+                  setSimNao(e.target.checked)
+                  if (e.target.checked) setHorario(false)
+                }}
               />
               <span>Obrigatório responder Sim ou Não?</span>
+            </label>
+            {/* o horario de cada data da obra (o ponto de encontro) */}
+            <label className="formrot__marca">
+              <input
+                type="checkbox"
+                checked={horario}
+                onChange={(e) => {
+                  setHorario(e.target.checked)
+                  if (e.target.checked) setSimNao(false)
+                }}
+              />
+              <span>Check com horário (ex.: Ponto de encontro às 06:30, um horário para cada data da obra)</span>
             </label>
           </div>
         )}

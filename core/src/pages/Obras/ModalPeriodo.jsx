@@ -47,14 +47,15 @@ export default function ModalPeriodo({ aberto, obra, aoFechar }) {
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
 
+  /* do inicio da obra em diante. Nao ha teto: a obra nao tem mais prazo
+     final escolhido (o dela e o dia do ultimo check) */
   const min = obra?.dataInicio || undefined
-  const max = obra?.dataConclusao || undefined
 
   useEffect(() => {
     if (!aberto) return
     /* so os dias que cabem na obra de hoje: um dia travado no
        calendario nao daria para desmarcar */
-    setDias(diasDaExecucao(obra).filter((d) => (!min || d >= min) && (!max || d <= max)))
+    setDias(diasDaExecucao(obra).filter((d) => !min || d >= min))
     setErro('')
     setAbertura((n) => n + 1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -84,9 +85,7 @@ export default function ModalPeriodo({ aberto, obra, aoFechar }) {
       aberto={aberto}
       aoFechar={aoFechar}
       titulo="Período de execução"
-      subtitulo={
-        max ? `Só a etapa de execução. Prazo final da obra: ${dataBR(max)}.` : 'Só a etapa de execução.'
-      }
+      subtitulo="Só a etapa de execução."
       largura={440}
     >
       <form className="formrot" onSubmit={salvar} noValidate>
@@ -103,7 +102,6 @@ export default function ModalPeriodo({ aberto, obra, aoFechar }) {
             setErro('')
           }}
           min={min}
-          max={max}
           hoje={hojeISO()}
           rotulo="Dias da execução"
         />

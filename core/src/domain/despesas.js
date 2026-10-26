@@ -1,13 +1,14 @@
 /* ============================================================
-   DESPESAS — o que cada envio pode ser
+   REEMBOLSO (a aba que se chamava Despesas) — o que cada envio pode ser
 
    Tres categorias, cada uma com os seus tipos:
 
-     despesa   — gasto que a pessoa pagou e pede de volta. Leva
-                 comprovante (anexo) e o valor e o do recibo.
-     refeicao  — almoco ou janta em obra. O valor e FIXO: a
+     despesa   — gasto que a pessoa pagou e pede de volta. O valor e
+                 o do recibo; combustivel e outros exigem o
+                 comprovante (anexo), os transportes o aceitam.
+     refeicao  — almoco ou janta em obra. O valor e PRE-DEFINIDO: a
                  pessoa ve, mas nao digita.
-     bonus     — bonus de viagem ou de apartamento.
+     bonus     — bonus de viagem ou de apartamento (este, pre-definido).
 
    Este arquivo nao tem React dentro, de proposito: a API importa
    o MESMO arquivo (server/routes/despesas.js), igual faz com as
@@ -53,36 +54,70 @@ export const CATEGORIAS = {
 
 export const CHAVES_CATEGORIA = Object.keys(CATEGORIAS)
 
+/** Teto por envio. Serve para pegar o zero a mais digitado sem querer. */
+export const VALOR_MAXIMO = 100000
+
 /* ------------------------------------------------------------
-   Valores FIXOS
+   Valores PRE-DEFINIDOS
 
-   O unico lugar onde eles moram. A tela mostra este numero num
-   campo travado e o servidor grava ESTE numero — o que vier no
-   pedido e ignorado. Mudar o valor da refeicao e mudar a linha
-   abaixo, e mais nada.
+   Tipo pre-definido tem o valor da casa: a tela mostra o numero num
+   campo travado e o servidor grava ESTE numero — o que vier no pedido
+   e ignorado. Tipo que nao esta na tabela tem o valor digitado pela
+   pessoa.
 
-   Cada envio guarda o valor do dia em que foi feito: trocar o
-   numero aqui nao reescreve o que ja foi enviado.
+   A tabela de verdade mora no banco (configuracao
+   'valores_reembolso'): quem tem `definir_valores_reembolso` muda os
+   valores pelo botao "Valores pré-definidos" da aba Reembolso, e
+   escolhe quais tipos sao pre-definidos. Os de baixo sao o PADRAO,
+   valendo enquanto ninguem salvou a tabela.
 
-   Tipo que NAO esta aqui tem o valor digitado pela pessoa. Os
-   bonus estao nesse caso por enquanto — nao ha valor definido
-   para eles. No dia em que houver, basta acrescentar
-   `bonus_viagem: 350` (por exemplo): o campo trava sozinho na
-   tela e o servidor passa a gravar o numero daqui.
+   Cada envio guarda o valor do dia em que foi feito: mudar a tabela
+   nao reescreve o que ja foi enviado.
    ------------------------------------------------------------ */
 export const VALORES_FIXOS = {
   almoco: 41.5,
   janta: 41.5,
+  /* o mesmo para todo cliente */
+  bonus_apartamento: 35,
 }
 
-/** O valor fixo do tipo, ou null quando e a pessoa quem digita. */
-export function valorFixo(tipo) {
-  const valor = VALORES_FIXOS[tipo]
+/** O valor pre-definido do tipo na tabela, ou null quando e a pessoa quem digita. */
+export function valorFixo(tipo, tabela = VALORES_FIXOS) {
+  const valor = tabela?.[tipo]
   return typeof valor === 'number' ? valor : null
 }
 
-/** Teto por envio. Serve para pegar o zero a mais digitado sem querer. */
-export const VALOR_MAXIMO = 100000
+/**
+ * Le a tabela de valores (a que veio do banco ou da tela) e devolve
+ * so os tipos que existem, com valor valido — ou { erro, tipo }.
+ * `null` ou vazio num tipo = ele nao e pre-definido.
+ */
+export function lerTabelaDeValores(bruto) {
+  const tabela = {}
+  const todos = Object.values(CATEGORIAS).flatMap((c) => c.tipos)
+  for (const { chave, rotulo } of todos) {
+    const valor = bruto?.[chave]
+    if (valor === undefined || valor === null || valor === '') continue
+    const lido = lerValor(valor)
+    if (lido === null || lido <= 0 || lido > VALOR_MAXIMO) {
+      return { erro: `Confira o valor de "${rotulo}".`, tipo: chave }
+    }
+    tabela[chave] = lido
+  }
+  return { tabela }
+}
+
+/* ------------------------------------------------------------
+   Comprovante obrigatorio
+
+   So no combustivel e no "outros": o vale transporte e o transporte
+   intermunicipal aceitam o anexo, mas nao exigem.
+   ------------------------------------------------------------ */
+export const TIPOS_COM_COMPROVANTE = ['combustivel', 'outros']
+
+export function comprovanteObrigatorio(tipo) {
+  return TIPOS_COM_COMPROVANTE.includes(tipo)
+}
 
 /** Tamanho dos textos livres. */
 export const OBSERVACAO_MAXIMA = 1000

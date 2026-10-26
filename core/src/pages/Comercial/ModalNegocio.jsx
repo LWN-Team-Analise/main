@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
 import { CampoArea, CampoDinheiro, CampoSelecao, CampoTexto } from '@/components/Campo/Campo'
@@ -16,7 +17,7 @@ import {
 } from '@/domain/comercial'
 import { dataHora } from '@/utils/formato'
 import * as comercial from '@/services/comercialService'
-import { IconeEmail, IconeImportar, IconeLixo, IconeMais, IconeTrofeu } from './icones'
+import { IconeEmail, IconeImportar, IconeLixo, IconeMais, IconeObra, IconeTrofeu } from './icones'
 
 /** A data que pode ficar em branco: o calendario e, embaixo, o "Tirar data". */
 function DataOpcional({ rotulo, valor, aoMudar, vazio }) {
@@ -34,6 +35,8 @@ function DataOpcional({ rotulo, valor, aoMudar, vazio }) {
 
 /* a empresa que ainda nao e cliente cadastrado (a prospeccao) */
 const OUTRA = '__outra'
+/* o funil cujo negocio NOVO ja cria a obra em Obras (atualizacao 30) */
+const FUNIL_DA_OBRA = 'novos'
 /* o contato escrito so neste negocio (os negocios antigos, de antes do
    "Adicionar contato"): nome e telefone guardados no proprio negocio */
 const DO_NEGOCIO = '__negocio'
@@ -59,6 +62,8 @@ const VAZIO = {
   atividadeDescricao: '',
   previsaoFechamento: '',
   observacao: '',
+  /* o n° da proposta da obra que nasce junto (so Novos negocios) */
+  proposta: '',
 }
 
 const NOVO_CONTATO = { nome: '', email: '', telefone: '' }
@@ -85,6 +90,13 @@ const NOVO_CONTATO = { nome: '', email: '', telefone: '' }
  *
  * Novo, o rodape tem o Importar no canto esquerdo; editando, ganha
  * Ganho, Perdido (ou Reabrir) e Excluir.
+ *
+ * NOVOS NEGOCIOS VIRAM OBRA: o negocio novo nesse funil ja cria a obra
+ * em Obras. Por isso, ali, a empresa tem de ser um cliente cadastrado
+ * (a obra precisa dele) e aparece o "N° da proposta" da obra, que vem
+ * sugerido como no "Nova obra" (o da ultima, mais um). O titulo do
+ * negocio vira a descricao da obra. Depois, o negocio mostra o atalho
+ * para a obra dele.
  */
 export default function ModalNegocio({
   aberto,
@@ -102,7 +114,7 @@ export default function ModalNegocio({
   aoEmail,
   aoImportar,
 }) {
-  const { clientes, equipe } = useDados()
+  const { clientes, equipe, pode, recarregar } = useDados()
   const { user } = useAuth()
   const [form, setForm] = useState(VAZIO)
   const [erros, setErros] = useState({})
@@ -160,6 +172,16 @@ export default function ModalNegocio({
       .carregarContatos()
       .then((lista) => vivo && setContatos(lista))
       .catch(() => vivo && setContatos([]))
+    /* negocio novo: o n° da proposta da obra ja vem sugerido. Se a
+       pessoa ja comecou a digitar, o que ela digitou fica */
+    if (!negocio) {
+      comercial
+        .proximaProposta()
+        .then((numero) => {
+          if (vivo && numero) setForm((atual) => (atual.proposta ? atual : { ...atual, proposta: numero }))
+        })
+        .catch(() => {})
+    }
     return () => {
       vivo = false
     }
@@ -168,6 +190,8 @@ export default function ModalNegocio({
   const funil = funilPorId(form.funil) ?? FUNIS[0]
   const comCliente = Boolean(form.clienteId) && form.clienteId !== OUTRA
   const somenteLeitura = !podeEditar
+  /* este negocio, ao ser salvo, cria a obra em Obras */
+  const criaObra = !negocio && form.funil === FUNIL_DA_OBRA
 
   const pessoasDaEquipe = useMemo(
     () =>
@@ -208,6 +232,8 @@ export default function ModalNegocio({
       funil: novoFunil.id,
       /* a etapa so continua se ela existe no funil novo */
       etapa: novoFunil.etapas.some((e) => e.id === atual.etapa) ? atual.etapa : novoFunil.etapas[0].id,
+      /* o negocio novo de Novos negocios vira obra: so cliente cadastrado */
+      clienteId: !negocio && novoFunil.id === FUNIL_DA_OBRA && atual.clienteId === OUTRA ? '' : atual.clienteId,
     }))
   }
 
@@ -263,8 +289,13 @@ export default function ModalNegocio({
   const conferir = () => {
     const novos = {}
     if (!form.titulo.trim()) novos.titulo = 'Dê um título ao negócio.'
-    if (!form.clienteId) novos.clienteId = 'Escolha o cliente (ou "Empresa não cadastrada").'
+    if (!form.clienteId) {
+      novos.clienteId = criaObra
+        ? 'Escolha o cliente: a obra nasce com ele.'
+        : 'Escolha o cliente (ou "Empresa não cadastrada").'
+    }
     if (form.clienteId === OUTRA && !form.organizacao.trim()) novos.organizacao = 'Escreva o nome da empresa.'
+    if (criaObra && !form.proposta.trim()) novos.proposta = 'Informe o n° da proposta da obra.'
     const email = form.contatoEmail.trim()
     if (email && !emailValido(email)) novos.contatoEmail = 'O e-mail não parece certo.'
     const prob = String(form.probabilidade).trim()
@@ -299,12 +330,15 @@ export default function ModalNegocio({
       atividadeDescricao: form.atividadeDescricao.trim(),
       previsaoFechamento: form.previsaoFechamento || null,
       observacao: form.observacao.trim(),
+      ...(criaObra ? { proposta: form.proposta.trim() } : {}),
     }
     setSalvando(true)
     try {
       const { negocio: salvo } = negocio
         ? await comercial.editarNegocio(negocio.id, campos)
         : await comercial.criarNegocio(campos)
+      /* a obra nova entra em Obras (e na pagina inicial) sem recarregar */
+      if (salvo.obraId && !negocio) recarregar()
       aoSalvo(salvo, !negocio)
       aoFechar()
     } catch (e) {
@@ -351,7 +385,22 @@ export default function ModalNegocio({
           ))}
         </div>
         <p className="negform__etapa-nome">
-          Etapa: <strong>{funil.etapas[indiceEtapa]?.rotulo ?? '—'}</strong>
+          <span>
+            Etapa: <strong>{funil.etapas[indiceEtapa]?.rotulo ?? '—'}</strong>
+          </span>
+          {/* o negocio que virou obra leva a ela */}
+          {negocio?.obraId &&
+            (pode('ver_obras') ? (
+              <Link className="negform__obralink" to={`/app/obras/${negocio.obraId}`} onClick={aoFechar}>
+                <IconeObra tamanho={14} />
+                Obra {negocio.obraProposta || ''}
+              </Link>
+            ) : (
+              <span className="negform__obralink">
+                <IconeObra tamanho={14} />
+                Obra {negocio.obraProposta || ''}
+              </span>
+            ))}
         </p>
 
         <fieldset className="negform__grade" disabled={somenteLeitura}>
@@ -373,7 +422,9 @@ export default function ModalNegocio({
             erro={erros.clienteId}
             vazio="Escolha o cliente..."
             opcoes={[
-              { valor: OUTRA, rotulo: 'Empresa não cadastrada…' },
+              /* a obra precisa de cliente cadastrado: em Novos negocios
+                 a empresa so escrita nao existe */
+              ...(criaObra ? [] : [{ valor: OUTRA, rotulo: 'Empresa não cadastrada…' }]),
               ...clientes.map((c) => ({ valor: String(c.id), rotulo: c.nome })),
             ]}
           />
@@ -387,6 +438,27 @@ export default function ModalNegocio({
               erro={erros.organizacao}
               maxLength={200}
             />
+          )}
+
+          {/* Novos negocios: a obra que nasce junto com o negocio */}
+          {criaObra && (
+            <div className="negform__obra campo--largo">
+              <p className="negform__obra-nota">
+                <IconeObra />
+                <span>
+                  A criação desse trabalho está integrada com Obras e o restante do site. O título desse Novo Negócio
+                  servirá como descrição da obra.
+                </span>
+              </p>
+              <CampoTexto
+                rotulo="N° da proposta (obra)"
+                placeholder="Ex.: 8235"
+                value={form.proposta}
+                onChange={mudar('proposta')}
+                erro={erros.proposta}
+                maxLength={80}
+              />
+            </div>
           )}
 
           {/* o contato e, ao lado, se ele e comercial ou pessoal */}

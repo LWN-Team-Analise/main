@@ -10,8 +10,11 @@ import {
   CHAVES_CATEGORIA,
   JUSTIFICATIVA_MAXIMA,
   OBSERVACAO_MAXIMA,
+  VALORES_FIXOS,
   VALOR_MAXIMO,
   anexoAceito,
+  comprovanteObrigatorio,
+  lerTabelaDeValores,
   lerValor,
   rotuloDoTipo,
   tipoValido,
@@ -22,7 +25,7 @@ const REAIS = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL
 const reais = (valor) => REAIS.format(Number(valor) || 0)
 
 /* ============================================================
-   DESPESAS — /api/despesas
+   REEMBOLSO (a aba que se chamava Despesas) — /api/despesas
 
      POST   /envios               envia uma despesa, refeicao ou bonus
      DELETE /envios/:id           exclui um lancamento (so quem pode excluir)
@@ -34,6 +37,8 @@ const reais = (valor) => REAIS.format(Number(valor) || 0)
      GET    /painel               os totais por dia, categoria e tipo, sem
                                   ninguem — os graficos do Dashboard
      GET    /anexos/:id           o comprovante (o arquivo em si)
+     GET    /valores              a tabela dos valores pre-definidos
+     PUT    /valores              grava a tabela (definir_valores_reembolso)
 
    /envios, /resumo e /exportar aceitam os mesmos filtros, e eles se somam:
      ?usuarios=   de quem (ver escopoDaConsulta)
@@ -54,6 +59,9 @@ const reais = (valor) => REAIS.format(Number(valor) || 0)
      excluir_despesas      excluir um lancamento. Os PROPRIOS, ou os de
                            qualquer um quando tambem revisa — o mesmo
                            alcance do que a pessoa enxerga.
+     definir_valores_reembolso
+                           mudar os valores pre-definidos (e escolher
+                           quais tipos sao pre-definidos).
 
    As tres de baixo dependem de ver_despesas (src/domain/permissoes.js):
    a lista do setor e normalizada ao ser lida, entao sem a visualizacao
@@ -77,6 +85,72 @@ const PERMISSAO_ENVIAR = 'alterar_despesas'
 const PERMISSAO_REVISAR = 'revisar_despesa_geral'
 const PERMISSAO_EXCLUIR = 'excluir_despesas'
 const PERMISSAO_DASHBOARD = 'ver_dashboard'
+const PERMISSAO_VALORES = 'definir_valores_reembolso'
+
+/* ============================================================
+   VALORES PRE-DEFINIDOS
+
+   A tabela mora em configuracao ('valores_reembolso'), como JSON
+   { tipo: valor }. Sem a linha (ninguem salvou ainda), vale o padrao
+   de src/domain/despesas.js (VALORES_FIXOS).
+   ============================================================ */
+
+const CHAVE_VALORES = 'valores_reembolso'
+
+async function tabelaDeValores() {
+  try {
+    const { rows } = await query('SELECT valor FROM configuracao WHERE chave = $1', [CHAVE_VALORES])
+    if (!rows[0]) return VALORES_FIXOS
+    const lido = lerTabelaDeValores(JSON.parse(rows[0].valor))
+    return lido.tabela ?? VALORES_FIXOS
+  } catch (erro) {
+    /* banco sem a tabela configuracao, ou JSON estragado: o padrao */
+    if (erro.code === '42P01' || erro instanceof SyntaxError) return VALORES_FIXOS
+    throw erro
+  }
+}
+
+router.get('/valores', exigeSessao, exige(PERMISSAO_VER), async (_req, res) => {
+  try {
+    return res.json({ valores: await tabelaDeValores() })
+  } catch (erro) {
+    return falhou(erro, res, 'despesas/valores')
+  }
+})
+
+router.put('/valores', exigeSessao, exige(PERMISSAO_VALORES), async (req, res) => {
+  const lido = lerTabelaDeValores(req.body?.valores)
+  if (lido.erro) return res.status(400).json({ erro: lido.erro, campo: lido.tipo })
+  try {
+    const antes = await tabelaDeValores()
+    await query(
+      `INSERT INTO configuracao (chave, valor, atualizado_por) VALUES ($1, $2, $3)
+       ON CONFLICT (chave) DO UPDATE
+          SET valor = EXCLUDED.valor, atualizado_em = now(), atualizado_por = EXCLUDED.atualizado_por`,
+      [CHAVE_VALORES, JSON.stringify(lido.tabela), req.dono.sub],
+    )
+    /* o historico diz o que mudou: "Almoço: R$ 41,50 -> R$ 45,00" */
+    const mudancas = [...new Set([...Object.keys(antes), ...Object.keys(lido.tabela)])]
+      .filter((tipo) => antes[tipo] !== lido.tabela[tipo])
+      .map((tipo) => {
+        const de = antes[tipo] === undefined ? 'digitado' : reais(antes[tipo])
+        const para = lido.tabela[tipo] === undefined ? 'digitado' : reais(lido.tabela[tipo])
+        return `${rotuloDoTipo(tipo)}: ${de} -> ${para}`
+      })
+    if (mudancas.length) {
+      await registrarAtividade(req, {
+        acao: 'despesa.valores',
+        categoria: 'despesa',
+        entidade: ['configuracao', CHAVE_VALORES],
+        descricao: 'Valores pré-definidos do reembolso alterados',
+        detalhes: { mudancas: mudancas.join('; ') },
+      })
+    }
+    return res.json({ valores: lido.tabela })
+  } catch (erro) {
+    return falhou(erro, res, 'despesas/valores-salvar')
+  }
+})
 
 /** Tabela que ainda nao existe vira recado com o arquivo certo, nao 500. */
 function falhou(erro, res, onde) {
@@ -350,10 +424,15 @@ router.post('/envios', exigeSessao, exige(PERMISSAO_ENVIAR), async (req, res) =>
   if (obraId && !/^\d{1,15}$/.test(obraId)) return recusa(res, 'obraId', 'Obra inválida.')
 
   /* ---- valor ----
-     Tipo com valor fixo (a refeicao) grava o numero da casa, e o que
-     vier no pedido nao conta: e isso que torna o campo travado da tela
-     uma regra, e nao so uma sugestao. */
-  const fixo = valorFixo(tipo)
+     Tipo com valor pre-definido grava o numero da casa (a tabela do
+     banco), e o que vier no pedido nao conta: e isso que torna o campo
+     travado da tela uma regra, e nao so uma sugestao. */
+  let fixo
+  try {
+    fixo = valorFixo(tipo, await tabelaDeValores())
+  } catch (erro) {
+    return falhou(erro, res, 'despesas/valores-envio')
+  }
   let valor = fixo
   if (fixo === null) {
     if (corpo.valor === undefined || corpo.valor === null || texto(corpo.valor) === '') {
@@ -377,9 +456,10 @@ router.post('/envios', exigeSessao, exige(PERMISSAO_ENVIAR), async (req, res) =>
     return recusa(res, 'observacao', `A observação passa de ${OBSERVACAO_MAXIMA} caracteres.`)
   }
 
-  /* ---- comprovante: obrigatorio na despesa, e so nela ---- */
+  /* ---- comprovante: so na despesa. Obrigatorio no combustivel e no
+     "outros"; nos transportes, vai se a pessoa anexar ---- */
   let anexo = null
-  if (categoria === 'despesa') {
+  if (categoria === 'despesa' && (comprovanteObrigatorio(tipo) || corpo.anexo)) {
     const lido = lerAnexo(corpo.anexo)
     if (lido.erro) return recusa(res, 'anexo', lido.erro)
     anexo = lido.anexo

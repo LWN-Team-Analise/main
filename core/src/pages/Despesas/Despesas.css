@@ -42,6 +42,31 @@
   text-align: center;
 }
 
+/* a tela inteira: e nela que o "Valores pré-definidos" se prende, no
+   canto de cima a direita */
+.despesas__pagina {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.despesas__valores {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+}
+
+/* na tela estreita ele cairia por cima do titulo centralizado: vira
+   uma linha propria, ainda colado a direita, logo acima dele */
+@media (max-width: 860px) {
+  .despesas__valores {
+    position: static;
+    align-self: flex-end;
+    margin-bottom: 14px;
+  }
+}
+
 /* No celular o respiro extra sai: a barra de cima ja e a ultima coisa
    antes do titulo, e os 50px a mais deixavam "Despesas" solto no meio
    da tela, longe da busca. Fica o mesmo comeco das outras telas. */
@@ -1001,4 +1026,83 @@
   font-size: 1.25rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------------- Valores pre-definidos (ModalValores) ---------------- */
+
+.valores {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.valores__grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.valores__grupo legend {
+  margin-bottom: 6px;
+  padding: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* uma linha por tipo: a caixa com o nome a esquerda, o valor a direita */
+.valores__linha {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 170px);
+  align-items: center;
+  gap: 6px 12px;
+  min-height: 56px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.valores__linha.is-ligado {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+}
+
+.valores__marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.valores__marca input {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.valores__marca strong {
+  min-width: 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.valores__nota {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--text-faint);
+}
+
+@media (max-width: 480px) {
+  .valores__linha {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

@@ -20,7 +20,7 @@ export default function MeusEnvios() {
         <header className="envios__topo">
           <Link to="/app/despesas" className="envios__voltar">
             <IconeVoltar />
-            Despesas
+            Reembolso
           </Link>
           <h1 className="tela__titulo">Meus envios</h1>
           <p className="tela__lead">

@@ -1271,6 +1271,59 @@
   vertical-align: middle;
 }
 
+/* as solicitacoes (inclusao como membro parcial): no alto do painel,
+   cada uma com Aceitar e Recusar. A lista delas rola sozinha quando
+   sao muitas, para nao empurrar os avisos para fora */
+.sininho__pedidos {
+  flex: none;
+  max-height: 60%;
+  border-bottom: 1px solid var(--line);
+}
+
+.sininho__pedido {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 10px 10px 10px 8px;
+  border-radius: var(--radius-sm);
+  /* solido: o painel e de vidro, e o texto de baixo aparecia atras do pedido */
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+
+.sininho__pedido + .sininho__pedido {
+  margin-top: 6px;
+}
+
+.sininho__obra {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-faint);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sininho__obra:hover {
+  color: var(--text-strong);
+}
+
+/* o texto do pedido quebra linha (o strong do sino e de uma linha so) */
+.sininho__pedido .pedido__texto strong {
+  font-size: inherit;
+  white-space: normal;
+  overflow: visible;
+}
+
 /* ============================================================
    Botão flutuante do chat
 

@@ -28,6 +28,7 @@ import {
   nomeDoCard,
   podeEditarCheck,
   podeReservarCarro,
+  prazoFinalDaObra,
   PREFIXO_PROPOSTA,
   resumoDosDias,
   rotuloPrioridadeObra,
@@ -51,6 +52,9 @@ import ModalPeriodo from './ModalPeriodo'
 import ModalEtapa from './ModalEtapa'
 import ModalFechaEtapa from './ModalFechaEtapa'
 import ModalChat from './ModalChat'
+import ModalMembrosObra from './ModalMembrosObra'
+import ModalHorario from './ModalHorario'
+import PedidoInclusao from '@/components/PedidoInclusao/PedidoInclusao'
 import Rastreabilidade from './Rastreabilidade'
 import ModalEtiquetas from './ModalEtiquetas'
 import ModalAnexos from './ModalAnexos'
@@ -164,6 +168,9 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
 
   /* pop-ups da obra */
   const [chat, setChat] = useState(false)
+  const [verMembros, setVerMembros] = useState(false)
+  /* o check com horario aberto: { card, check } */
+  const [horario, setHorario] = useState(null)
   const [etiquetas, setEtiquetas] = useState(false)
   const [anexos, setAnexos] = useState(false)
   const [editandoObra, setEditandoObra] = useState(false)
@@ -287,6 +294,12 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
       setPropondo({ card, check })
       return
     }
+    /* o check com horario: as datas, os horarios e quem vai — e e la que
+       ele se marca */
+    if (check.horario) {
+      setHorario({ card, check })
+      return
+    }
     if (etapa.papel === 'execucao' && !obra.execucaoPrazo && !obra.checks?.[check.id]) {
       setFaltaPrazoExecucao(true)
       return
@@ -336,6 +349,14 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   const etapaCorrente = roteiro.find((e) => e.numero === numeroAtual)
   const pct = progresso(obra)
   const membros = obra.membros.map(pessoaPorId).filter(Boolean)
+  /* o dia em que o ultimo check foi marcado; null enquanto faltar check */
+  const prazoFinal = prazoFinalDaObra(roteiro, obra)
+  /* membro parcial (atualizacao 30): os que ainda nao responderam, e a
+     solicitacao de quem esta olhando, se for o caso */
+  const aguardando = (obra.parciais ?? []).filter((p) => p.status === 'pendente').length
+  const meuPedido = (obra.parciais ?? []).find(
+    (p) => p.usuarioId === String(user?.id) && p.status === 'pendente',
+  )
   const marcas = etiquetasDaObra(obra)
 
 
@@ -561,6 +582,13 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
           </div>
         </header>
 
+        {/* a solicitacao para ser membro desta obra, para quem foi incluido */}
+        {meuPedido && (
+          <div className="pedido-obra vidro">
+            <PedidoInclusao pedido={{ ...meuPedido, obraId: obra.id }} />
+          </div>
+        )}
+
         {/* ---------------- faixa de informacoes ---------------- */}
         <div className="infos vidro">
           <div className="info">
@@ -580,39 +608,26 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
             <span className="info__valor">{dataExtensa(obra.dataInicio) || '—'}</span>
           </div>
 
-          {/* ---------------- Data de conclusão ----------------
+          {/* ---------------- Prazo final ----------------
 
-              Obra PADRÃO sem data fica com um (!) piscando no canto.
-              Não é enfeite: sem prazo a obra nunca aparece como
-              atrasada na página inicial e fica de fora da conta de
-              atraso do painel — ela some dos dois lugares que existem
-              para cobrá-la, sem ninguém perceber.
-
-              O sinal é um botão: clicar abre o cadastro, que é onde a
-              data se preenche. Aviso que aponta um buraco sem levar
-              até ele obriga a pessoa a procurar sozinha onde conserta.
-
-              Na EMERGÊNCIA ele não aparece porque não pode acontecer:
-              ali a data é obrigatória no cadastro. E na obra já
-              concluída também não — o prazo daquela já passou, e
-              piscar sobre registro fechado é ruído. */}
+              Não se escolhe mais no cadastro: aparece sozinho quando a
+              obra chega à última etapa e o último usuário marca o último
+              check que faltava — é o dia desse check. Até lá a faixa só
+              diz quando ele vai aparecer. */}
           <div className="info info--conclusao">
             <span className="info__nome">Prazo final</span>
             <span className="info__valor">
-              {dataExtensa(obra.dataConclusao) || <em className="info__vazio">sem data</em>}
+              {prazoFinal ? (
+                dataExtensa(prazoFinal)
+              ) : (
+                <em
+                  className="info__vazio"
+                  title="Aparece quando o último check da obra for marcado"
+                >
+                  ao concluir os checks
+                </em>
+              )}
             </span>
-
-            {!obra.dataConclusao && !soLeitura && obra.tipo !== 'emergencia' && (
-              <button
-                type="button"
-                className="pendencia"
-                onClick={() => setEditandoObra(true)}
-                title="Esta obra está sem data de conclusão. Clique para preencher."
-                aria-label="Pendente: informe a data de conclusão desta obra"
-              >
-                !
-              </button>
-            )}
           </div>
 
           <div className="info">
@@ -670,24 +685,33 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
           {/* Membros a esquerda, "Abrir chat" logo a direita deles — os
               dois no mesmo bloco para nunca se separarem na quebra */}
           <div className="infos__fim">
-            {/* Membro da obra é quem MARCOU algum check nela — mais
-                ninguém. Antes, obra sem nenhum check marcado mostrava aqui
-                os quatro primeiros da equipe como se fossem os
-                participantes: gente que nunca tinha encostado naquela obra
-                aparecia como responsável por ela. Sem membro, agora, a
-                tela diz que não há. */}
-            <div className="info info--membros">
+            {/* Membro da obra é quem MARCOU algum check nela, ou quem
+                foi incluído à mão e ACEITOU (o membro parcial). Antes,
+                obra sem nenhum check marcado mostrava aqui os quatro
+                primeiros da equipe como se fossem os participantes:
+                gente que nunca tinha encostado naquela obra aparecia
+                como responsável por ela. Sem membro, a tela diz que não
+                há. O clique abre a lista, com o "Incluir membro". */}
+            <button
+              type="button"
+              className="info info--membros info--botao"
+              onClick={() => setVerMembros(true)}
+              title="Ver os membros e incluir quem foi à obra sem marcar check"
+            >
               <span className="info__nome">Membros</span>
-              {membros.length === 0 ? (
-                <span className="info__vazio">ninguém marcou check ainda</span>
-              ) : (
-                <span className="info__avatares">
-                  {membros.map((p) => (
-                    <Avatar key={p.id} nome={p.nome} foto={p.foto} tamanho={30} titulo={p.nome} />
-                  ))}
-                </span>
-              )}
-            </div>
+              <span className="info__linha">
+                {membros.length === 0 ? (
+                  <span className="info__vazio">ninguém ainda</span>
+                ) : (
+                  <span className="info__avatares">
+                    {membros.map((p) => (
+                      <Avatar key={p.id} nome={p.nome} foto={p.foto} tamanho={30} titulo={p.nome} />
+                    ))}
+                  </span>
+                )}
+                {aguardando > 0 && <span className="info__aguardando">{aguardando} aguardando</span>}
+              </span>
+            </button>
 
             <button type="button" className="abrirchat" onClick={() => setChat(true)}>
               <Icone.chat tamanho={17} />
@@ -1338,6 +1362,21 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
 
       {/* os três em modo consulta quando a obra está fechada: a conversa
           inteira continua à vista, sem a caixa de escrever */}
+      <ModalHorario
+        aberto={Boolean(horario)}
+        obra={obra}
+        check={horario?.check}
+        somenteLeitura={soLeitura || (horario ? !podeEditarCheck(user, horario.check, horario.card, obra) : true)}
+        aoFechar={() => setHorario(null)}
+      />
+
+      <ModalMembrosObra
+        aberto={verMembros}
+        obra={obra}
+        titulo={nomeDaObra}
+        aoFechar={() => setVerMembros(false)}
+      />
+
       <ModalChat
         aberto={chat}
         obra={obra}

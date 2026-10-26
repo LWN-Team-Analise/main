@@ -37,6 +37,7 @@ import { CORREDORES, MUNICIPIOS_RMSP, REGIOES, nivelPelaVelocidade } from '../..
      GET   /registros              as saidas e devolucoes, da mais nova
                                    para a mais antiga, em paginas
      GET   /registros/:id/fotos    as cinco fotos de um registro
+     DELETE /registros/:id         apaga uma saida, troca ou devolucao
 
    Quem pode o que — conferido AQUI, a cada chamada:
 
@@ -45,6 +46,8 @@ import { CORREDORES, MUNICIPIOS_RMSP, REGIOES, nivelPelaVelocidade } from '../..
                       dar rastreabilidade, e rastro escondido nao serve.
      registrar_frota  dar saida e devolucao.
      editar_veiculos  cadastrar, editar e desativar veiculo.
+     excluir_registro_frota
+                      apagar um registro (Saidas e devolucoes).
 
    As duas de baixo dependem de ver_frotas (src/domain/permissoes.js).
 
@@ -64,6 +67,7 @@ const router = Router()
 const VER = 'ver_frotas'
 const REGISTRAR = 'registrar_frota'
 const EDITAR = 'editar_veiculos'
+const EXCLUIR = 'excluir_registro_frota'
 
 const texto = (valor) => String(valor ?? '').trim()
 
@@ -632,6 +636,87 @@ router.post('/devolucoes', exigeSessao, exige(REGISTRAR), async (req, res) => {
   } catch (erro) {
     if (erro instanceof Recusa) return res.status(erro.status).json({ erro: erro.message, campo: erro.campo })
     return falhou(erro, res, 'frotas/devolucoes')
+  }
+})
+
+/* ------------------------------------------------------------
+   Excluir um registro (excluir_registro_frota)
+
+   Para o registro feito por engano. Sai o registro e as fotos dele
+   (ON DELETE CASCADE). E o que dependia dele volta junto:
+
+     - se era o ULTIMO do veiculo, o KM atual volta a ser o do
+       registro que agora e o ultimo (o carro "em uso" ou "na
+       garagem" segue o ultimo registro sozinho);
+     - se era a saida que RETIROU o carro reservado de uma obra, a
+       reserva volta a esperar a retirada e o check "Retirada do
+       carro" da obra e desmarcado.
+   ------------------------------------------------------------ */
+
+router.delete('/registros/:id', exigeSessao, exige(EXCLUIR), async (req, res) => {
+  if (!idValido(req.params.id)) return res.status(400).json({ erro: 'Registro inválido.' })
+  try {
+    const reg = await emTransacao(async (cliente) => {
+      const { rows: r } = await cliente.query(
+        `SELECT r.id, r.veiculo_id, r.tipo, r.condutor_nome, r.km, to_char(r.data, 'DD/MM/YYYY') AS data_br, v.nome AS veiculo
+           FROM veiculo_registro r JOIN veiculo v ON v.id = r.veiculo_id
+          WHERE r.id = $1`,
+        [req.params.id],
+      )
+      if (!r[0]) throw new Recusa(null, 'Este registro não existe mais.', 404)
+      const registro = r[0]
+      /* o veiculo travado: ninguem registra nele enquanto o KM e refeito */
+      await cliente.query('SELECT id FROM veiculo WHERE id = $1 FOR UPDATE', [registro.veiculo_id])
+
+      const { rows: u } = await cliente.query(
+        `SELECT r.id FROM veiculo_registro r WHERE r.veiculo_id = $1 ORDER BY ${ORDEM_DESC} LIMIT 1`,
+        [registro.veiculo_id],
+      )
+      const eraOUltimo = String(u[0]?.id) === String(registro.id)
+
+      /* a retirada do carro reservado (atualizacao 23) */
+      const { rows: tabela } = await cliente.query("SELECT to_regclass('public.obra_reserva_veiculo') IS NOT NULL AS ok")
+      if (tabela[0]?.ok) {
+        const { rows: reservas } = await cliente.query(
+          'UPDATE obra_reserva_veiculo SET registro_id = NULL WHERE registro_id = $1 RETURNING obra_id',
+          [registro.id],
+        )
+        for (const { obra_id: obraId } of reservas) {
+          const checkId = await checkDaObra(cliente, obraId, 'retirada_carro')
+          if (checkId) await cliente.query('DELETE FROM obra_check WHERE obra_id = $1 AND check_id = $2', [obraId, checkId])
+        }
+      }
+
+      await cliente.query('DELETE FROM veiculo_registro WHERE id = $1', [registro.id])
+
+      if (eraOUltimo) {
+        const { rows: novo } = await cliente.query(
+          `SELECT r.km FROM veiculo_registro r
+            WHERE r.veiculo_id = $1 AND r.km IS NOT NULL
+            ORDER BY ${ORDEM_DESC} LIMIT 1`,
+          [registro.veiculo_id],
+        )
+        if (novo[0]) await cliente.query('UPDATE veiculo SET km_atual = $2 WHERE id = $1', [registro.veiculo_id, novo[0].km])
+      }
+      return registro
+    })
+
+    await registrarAtividade(req, {
+      acao: 'frota.registro_excluido',
+      categoria: 'frota',
+      entidade: ['veiculo', reg.veiculo_id],
+      descricao: `${TIPOS[reg.tipo]?.rotulo ?? 'Registro'} de veículo excluída`,
+      detalhes: {
+        veiculo: reg.veiculo,
+        condutor: reg.condutor_nome,
+        km: reg.km === null ? undefined : kmLegivel(reg.km),
+        data: reg.data_br,
+      },
+    })
+    return res.status(204).end()
+  } catch (erro) {
+    if (erro instanceof Recusa) return res.status(erro.status).json({ erro: erro.message })
+    return falhou(erro, res, 'frotas/excluir-registro')
   }
 })
 

@@ -125,6 +125,24 @@ export async function proximaProposta() {
 }
 export const apagarObra = (id) => del(`/dados/obras/${id}`)
 
+/* ---------------- Membro parcial (atualizacao 30) ----------------
+   Quem foi a obra sem marcar check, incluido a mao. A pessoa aceita ou
+   recusa (com motivo); tirar da obra e com `excluir_membro_parcial`. */
+
+export const incluirParcial = (obraId, usuarioId) => post(`/dados/obras/${obraId}/parciais`, { usuarioId })
+
+/** resposta: { aceitar: true } ou { aceitar: false, motivo } */
+export const responderParcial = (obraId, usuarioId, resposta) =>
+  post(`/dados/obras/${obraId}/parciais/${usuarioId}/resposta`, resposta)
+
+export const tirarParcial = (obraId, usuarioId) => del(`/dados/obras/${obraId}/parciais/${usuarioId}`)
+
+/* ---------------- Check com horario (atualizacao 31) ---------------- */
+
+/** { dias: [{ dia, hora, membros }], marcar?: boolean } — a lista inteira das datas do check. */
+export const salvarHorarios = (obraId, checkId, campos) =>
+  put(`/dados/obras/${obraId}/horarios/${checkId}`, campos)
+
 /**
  * Encerra a obra.
  *

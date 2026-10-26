@@ -1,0 +1,127 @@
+/* A solicitacao de inclusao como membro parcial (PedidoInclusao.jsx) */
+
+.pedido {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pedido__texto {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-base);
+  overflow-wrap: anywhere;
+}
+
+.pedido__texto strong {
+  color: var(--text-strong);
+}
+
+.pedido__quando {
+  margin: -5px 0 0;
+  font-size: 0.7rem;
+  color: var(--text-faint);
+}
+
+.pedido__motivo {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.pedido__motivo span {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.pedido__motivo textarea {
+  width: 100%;
+  min-height: 58px;
+  padding: 8px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.82rem;
+  resize: vertical;
+}
+
+.pedido__motivo textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.pedido__motivo textarea[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.pedido__erro {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--danger);
+}
+
+.pedido__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.pedido__botao {
+  padding: 6px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.pedido__botao:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.pedido__botao:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pedido__botao--aceitar {
+  border-color: transparent;
+  background: var(--accent);
+  color: #fff;
+}
+
+.pedido__botao--aceitar:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+  filter: brightness(1.08);
+}
+
+.pedido__botao--recusar {
+  border-color: var(--danger-border, transparent);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.pedido__botao--recusar:hover:not(:disabled) {
+  background: var(--danger-bg);
+  color: var(--danger);
+  filter: brightness(0.96);
+}
+
+.pedido__botao:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

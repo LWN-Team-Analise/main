@@ -111,13 +111,21 @@ export async function lerRoteiro() {
     query(`SELECT cc.card_id, c.chave, cc.ordem
              FROM etapa_card_cargo cc JOIN cargo c ON c.id = cc.cargo_id
             ORDER BY cc.ordem`),
-    /* tres degraus: com os checks proprios das obras (18), so com o
-       tipo do check (13/14), ou como sempre foi */
+    /* quatro degraus: com o horario do check (31), com os checks
+       proprios das obras (18), so com o tipo do check (13/14), ou como
+       sempre foi */
     query(
-      `SELECT id, card_id, ordem, titulo, sim_nao, informacoes, tipo, obra_id, origem_id,
+      `SELECT id, card_id, ordem, titulo, sim_nao, horario, informacoes, tipo, obra_id, origem_id,
               vigente_de, vigente_ate
          FROM etapa_check ORDER BY ordem, id`,
     ).catch((erro) => {
+      if (erro.code !== '42703') throw erro
+      return query(
+        `SELECT id, card_id, ordem, titulo, sim_nao, informacoes, tipo, obra_id, origem_id,
+                vigente_de, vigente_ate
+           FROM etapa_check ORDER BY ordem, id`,
+      )
+    }).catch((erro) => {
       if (erro.code !== '42703') throw erro
       return comReserva(
         `SELECT id, card_id, ordem, titulo, sim_nao, informacoes, tipo, vigente_de, vigente_ate
@@ -173,6 +181,9 @@ export async function lerRoteiro() {
       /* check de pergunta: marcar pede Sim ou Nao. E do CHECK, nao do
          card — no mesmo card um pede resposta e o do lado nao */
       simNao: l.sim_nao ?? false,
+      /* check com HORARIO (atualizacao 31): clicar abre as datas da obra,
+         cada uma com o seu horario (o ponto de encontro) e quem vai */
+      horario: l.horario ?? false,
       /* o que o check pede — a dica que aparece ao passar o mouse */
       informacoes: l.informacoes ?? '',
       /* 'comum', ou um do sistema: 'planejamento_ensaios' e
@@ -506,6 +517,8 @@ router.delete('/cards/:id', exigeSessao, exige('editar_cards'), async (req, res)
 
    Tudo o que diz como o check se COMPORTA mora nele:
      sim_nao      "Obrigatorio responder Sim ou Nao?";
+     horario      check com horario (ponto de encontro), um por data da
+                  obra (atualizacao 31). Nao junta com o sim_nao;
      informacoes  a dica ao passar o mouse;
      cargos       quem marca (vazio = o setor do card).
 
@@ -566,8 +579,11 @@ async function gravarCargosDoCheck(checkId, chaves) {
  * Obra que ja tem os checks proprios passa direto.
  */
 async function garantirChecksProprios(obraId) {
-  await query(
-    `WITH o AS (
+  /* com a atualizacao 31 a copia leva o horario do check; sem ela, a
+     mesma copia de antes */
+  const copia = (comHorario) =>
+    query(
+      `WITH o AS (
        SELECT id, criado_em FROM obra WHERE id = $1 AND NOT checks_proprios FOR UPDATE
      ),
      base AS (
@@ -585,9 +601,9 @@ async function garantirChecksProprios(obraId) {
      ),
      novos AS (
        INSERT INTO etapa_check (card_id, ordem, titulo, sim_nao, informacoes, tipo,
-                                vigente_de, obra_id, origem_id)
+                                vigente_de, obra_id, origem_id${comHorario ? ', horario' : ''})
        SELECT b.card_id, b.ordem, b.titulo, b.sim_nao, b.informacoes, b.tipo,
-              o.criado_em, o.id, b.id
+              o.criado_em, o.id, b.id${comHorario ? ', b.horario' : ''}
          FROM base b CROSS JOIN o
        RETURNING id, origem_id
      ),
@@ -607,9 +623,51 @@ async function garantirChecksProprios(obraId) {
         WHERE p.obra_id = $1 AND p.check_id = n.origem_id
      )
      UPDATE obra SET checks_proprios = true WHERE id = (SELECT id FROM o)`,
+      [obraId],
+    )
+  await copia(true).catch((erro) => {
+    if (erro.code !== '42703') throw erro
+    return copia(false)
+  })
+  /* os horarios das datas (atualizacao 31) passam para as copias, como
+     as marcas e os prazos; quem vai em cada data segue junto (ON UPDATE
+     CASCADE) */
+  await query(
+    `UPDATE obra_horario h SET check_id = c.id
+       FROM etapa_check c
+      WHERE h.obra_id = $1 AND c.obra_id = $1 AND c.origem_id = h.check_id`,
     [obraId],
-  )
+  ).catch((erro) => {
+    if (erro.code !== '42P01') throw erro
+  })
 }
+
+/** O horario do check (atualizacao 31). Banco sem a coluna: false. */
+async function horarioDoCheck(checkId) {
+  try {
+    const { rows } = await query('SELECT horario FROM etapa_check WHERE id = $1', [checkId])
+    return rows[0]?.horario === true
+  } catch (erro) {
+    if (erro.code !== '42703') throw erro
+    return false
+  }
+}
+
+/** Liga ou desliga o horario do check. Sem a atualizacao 31, so recusa ligar. */
+async function gravarHorarioDoCheck(checkId, horario) {
+  try {
+    await query('UPDATE etapa_check SET horario = $1 WHERE id = $2', [horario, checkId])
+  } catch (erro) {
+    if (erro.code !== '42703') throw erro
+    if (horario) {
+      const falta = new Error('O banco ainda não tem o check com horário. Rode a atualização 31 (npm run db:atualizar).')
+      falta.status = 503
+      throw falta
+    }
+  }
+}
+
+const SIM_NAO_E_HORARIO = 'Um check não pode pedir Sim ou Não e ter horário ao mesmo tempo. Escolha um dos dois.'
 
 /** A copia, nesta obra, do check que a tela mandou (o id do roteiro ou o da propria copia). */
 async function checkDaObra(obraId, checkId) {
@@ -700,6 +758,10 @@ async function versionarCheck(checkId, mudancas = {}) {
         agora,
       ],
     )
+    /* o horario (atualizacao 31) so existe se a coluna existe */
+    if ('horario' in atual) {
+      await gravarHorarioDoCheck(rows[0].id, mudancas.horario ?? atual.horario === true)
+    }
     await gravarCargosDoCheck(rows[0].id, cargos)
     return String(rows[0].id)
   } catch (erro) {
@@ -719,6 +781,8 @@ router.post('/cards/:id/checks', exigeSessao, exige('editar_checks'), async (req
     const obraId = obraDaChamada(req)
     const desde = await momento(obraId)
     const simNao = req.body?.simNao === true
+    const horario = req.body?.horario === true
+    if (simNao && horario) return res.status(400).json({ erro: SIM_NAO_E_HORARIO })
     const informacoes = informacoesDoCorpo(req.body?.informacoes)
 
     let rows
@@ -760,6 +824,15 @@ router.post('/cards/:id/checks', exigeSessao, exige('editar_checks'), async (req
         return res.status(400).json({ erro: posto.erro })
       }
     }
+    if (horario) {
+      try {
+        await gravarHorarioDoCheck(rows[0].id, true)
+      } catch (erro) {
+        await query('DELETE FROM etapa_check WHERE id = $1', [rows[0].id])
+        if (erro.status) return res.status(erro.status).json({ erro: erro.message })
+        throw erro
+      }
+    }
 
     await registrarRoteiro(req, 'check.criado', obraId ? 'Check criado nesta obra' : 'Check criado no roteiro', {
       ...(await nomesDoCard(req.params.id)),
@@ -772,6 +845,7 @@ router.post('/cards/:id/checks', exigeSessao, exige('editar_checks'), async (req
         titulo: rows[0].titulo,
         cargos: req.body?.cargos ?? [],
         simNao,
+        horario,
         informacoes: informacoes ?? '',
         tipo: 'comum',
         obraId: obraId ? String(obraId) : null,
@@ -802,9 +876,11 @@ router.patch('/checks/:id', exigeSessao, exige('editar_checks'), async (req, res
     const cargosAtuais = await cargosDoCheck(atual.id)
 
     /* o check como ele fica: o que veio na chamada por cima do que ele tem */
+    const horarioAtual = await horarioDoCheck(atual.id)
     const novo = {
       titulo: atual.titulo,
       simNao: atual.sim_nao === true,
+      horario: horarioAtual,
       informacoes: atual.informacoes ?? null,
       cargos: cargosAtuais,
     }
@@ -821,6 +897,13 @@ router.patch('/checks/:id', exigeSessao, exige('editar_checks'), async (req, res
       }
       novo.simNao = req.body.simNao === true
     }
+    if (req.body?.horario !== undefined) {
+      if (tipo !== 'comum' && req.body.horario === true) {
+        return res.status(409).json({ erro: CHECK_DO_SISTEMA })
+      }
+      novo.horario = req.body.horario === true
+    }
+    if (novo.simNao && novo.horario) return res.status(400).json({ erro: SIM_NAO_E_HORARIO })
     if (req.body?.informacoes !== undefined) novo.informacoes = informacoesDoCorpo(req.body.informacoes)
     if (req.body?.cargos !== undefined) {
       novo.cargos = limparCargos(req.body.cargos)
@@ -830,6 +913,7 @@ router.patch('/checks/:id', exigeSessao, exige('editar_checks'), async (req, res
     const mudou =
       novo.titulo !== atual.titulo ||
       novo.simNao !== (atual.sim_nao === true) ||
+      novo.horario !== horarioAtual ||
       novo.informacoes !== (atual.informacoes ?? null) ||
       novo.cargos.join('|') !== cargosAtuais.join('|')
     if (!mudou) return res.json({ ok: true, id: String(atual.id), versionado: false })
@@ -846,6 +930,7 @@ router.patch('/checks/:id', exigeSessao, exige('editar_checks'), async (req, res
         novo.informacoes,
         atual.id,
       ])
+      if (novo.horario !== horarioAtual) await gravarHorarioDoCheck(atual.id, novo.horario)
       await gravarCargosDoCheck(atual.id, novo.cargos)
     }
 
@@ -857,6 +942,7 @@ router.patch('/checks/:id', exigeSessao, exige('editar_checks'), async (req, res
     )
     return res.json({ ok: true, id, versionado: versionar })
   } catch (erro) {
+    if (erro.status) return res.status(erro.status).json({ erro: erro.message })
     return tratar(erro, res, 'roteiro/check-editar')
   }
 })

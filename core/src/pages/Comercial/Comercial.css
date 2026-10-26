@@ -12,7 +12,8 @@
 
    A tela inteira e um painel com o fundo do Pipedrive; as colunas
    sao "pocos" mais escuros, e os cartoes voltam ao tom do fundo. Entre
-   uma coluna e outra aparece o fundo, e e isso que desenha as setas.
+   uma coluna e outra aparece o fundo, e e isso que desenha o ">" de
+   cada seta — no cabecalho e, repetido, de cima a baixo nos corpos.
    ============================================================ */
 
 /* nas variaveis de :root (e nao de .comercial) porque os pop-ups abrem
@@ -45,7 +46,8 @@
   --com-fundo: #1e2029;
   --com-fundo-borda: #2b2e38;
   --com-coluna: #0e1017;
-  --com-cabeca: #0e1017;
+  /* um tom acima das colunas: a fila das setas se le como cabecalho */
+  --com-cabeca: #171922;
   --com-cartao: #1e2029;
   --com-cartao-borda: transparent;
   --com-cartao-hover: #3c3d45;
@@ -588,13 +590,60 @@
 }
 
 .funil__corpo {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 7px 6px 12px;
-  border-radius: 0 0 8px 8px;
+  /* 17px dos lados: o ">" entre as colunas entra ate 14,5px no corpo,
+     e os cartoes ficam fora dele */
+  padding: 7px 17px 12px;
   background: var(--com-coluna);
   transition: background var(--dur-fast) var(--ease-out);
+}
+
+/* O ">" ENTRE AS COLUNAS, de cima a baixo.
+
+   No cabecalho o ">" e o vao de 5px entre o bico de uma seta e o
+   encaixe da seguinte. Nos corpos ele continua IGUAL: os corpos se
+   encostam (cada um avanca metade do vao sobre o vizinho) e uma faixa
+   da cor do fundo, recortada em ">" repetidos, desce pela emenda. Cada
+   ">" tem a altura do cabecalho (--seta-altura, medida pelo
+   QuadroFunil), entao o primeiro continua o do cabecalho sem degrau e
+   todos tem o mesmo angulo.
+
+   Antes o vao descia reto, e no tema escuro (fundo mais claro que as
+   colunas) cada seta virava um ">" com uma haste ate o pe do quadro.
+   Os cantos redondos ficam so nas pontas da fila. */
+.funil__colunas {
+  --seta-altura: 54px;
+}
+
+.funil__colunas > .funil__coluna > .funil__corpo {
+  margin-inline: -2.5px;
+}
+
+.funil__colunas > .funil__coluna:not(:first-child) > .funil__corpo::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -14.5px;
+  z-index: 1;
+  width: 29px;
+  background: var(--com-fundo);
+  pointer-events: none;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='54' viewBox='0 0 29 54' preserveAspectRatio='none'%3E%3Cpath d='M0 0H17L29 27L17 54H0L12 27Z'/%3E%3C/svg%3E") 0 0 / 29px var(--seta-altura) repeat-y;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='54' viewBox='0 0 29 54' preserveAspectRatio='none'%3E%3Cpath d='M0 0H17L29 27L17 54H0L12 27Z'/%3E%3C/svg%3E") 0 0 / 29px var(--seta-altura) repeat-y;
+}
+
+.funil__colunas > .funil__coluna:first-child > .funil__corpo {
+  margin-left: 0;
+  border-bottom-left-radius: 8px;
+}
+
+.funil__colunas > .funil__coluna:last-child > .funil__corpo {
+  margin-right: 0;
+  border-bottom-right-radius: 8px;
 }
 
 /* o "+" do topo da coluna: so aparece com o mouse em cima do
@@ -1230,9 +1279,72 @@
 }
 
 .negform__etapa-nome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
   margin: -6px 0 0;
   font-size: 0.8rem;
   color: var(--text-muted);
+}
+
+/* o atalho do negocio que virou obra, na linha da etapa */
+.negform__obralink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--com-azul-suave, var(--control-bg));
+  color: var(--com-azul, var(--accent));
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+a.negform__obralink:hover {
+  background: color-mix(in srgb, var(--com-azul, var(--accent)) 20%, transparent);
+}
+
+/* Novos negocios: a obra que nasce junto com o negocio — o recado e,
+   ao lado, o n° da proposta */
+.negform__obra {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 220px);
+  align-items: end;
+  gap: 10px 14px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--com-azul, var(--accent)) 28%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--com-azul-suave, var(--control-bg));
+}
+
+.negform__obra-nota {
+  display: flex;
+  align-items: flex-start;
+  align-self: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.negform__obra-nota svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--com-azul, var(--accent));
+}
+
+.negform__obra-nota strong {
+  color: var(--text-strong);
+}
+
+@media (max-width: 560px) {
+  .negform__obra {
+    grid-template-columns: 1fr;
+  }
 }
 
 .negform__etapa-nome strong {
