@@ -271,9 +271,14 @@ export default function Turnos() {
       }
     })
 
+    /* a secao Obras: a execucao (em trechos) e os prazos das tarefas */
+    const execucao = (dados.obras ?? []).filter((t) => t.linha === 'execucao')
     return {
       porDia,
       grupos,
+      execucao,
+      emExecucao: new Set(execucao.map((t) => t.obraId)).size,
+      prazos: (dados.obras ?? []).filter((t) => t.linha === 'prazo'),
       total: Object.values(porDia).reduce((s, d) => s + d.minutos, 0),
     }
   }, [dados, dias])
@@ -401,6 +406,77 @@ export default function Turnos() {
                     )
                   })}
                 </div>
+              </div>
+
+              {/* as tarefas das obras, direto das obras: os dias da execucao
+                  (com o carro reservado) e os checks com prazo ainda abertos */}
+              <div className={`turnos__grupo ${fechados.has('obras') ? '' : 'is-aberto'}`.trim()}>
+                <div className="turnos__grupotopo">
+                  <button
+                    type="button"
+                    className="turnos__abrir"
+                    onClick={() => alternar('obras')}
+                    aria-expanded={!fechados.has('obras')}
+                  >
+                    <span className="turnos__caret" aria-hidden="true">
+                      ▸
+                    </span>
+                    <strong>Obras</strong>
+                    <span className="turnos__info">{contas.emExecucao} em execução</span>
+                    <span className="turnos__info">
+                      {contas.prazos.length} prazo{contas.prazos.length === 1 ? '' : 's'}
+                    </span>
+                  </button>
+                </div>
+                {!fechados.has('obras') && (
+                  <>
+                    <Linha
+                      quem={
+                        <span className="turnos__quem">
+                          <span className="turnos__aberto" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M4 20V9l8-5 8 5v11M4 20h16M10 20v-5h4v5" />
+                            </svg>
+                          </span>
+                          <span className="turnos__nome">
+                            <strong>Execução</strong>
+                            <em>
+                              {contas.emExecucao} obra{contas.emExecucao === 1 ? '' : 's'}
+                            </em>
+                          </span>
+                        </span>
+                      }
+                      turnos={contas.execucao}
+                      dias={dias}
+                      hoje={hoje}
+                      edita={false}
+                      aoAbrir={(turno) => setEditando({ turno })}
+                    />
+                    <Linha
+                      quem={
+                        <span className="turnos__quem">
+                          <span className="turnos__aberto" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="13" r="7.5" />
+                              <path d="M12 9.5V13l2.5 1.5M9.5 3h5" />
+                            </svg>
+                          </span>
+                          <span className="turnos__nome">
+                            <strong>Prazos de tarefas</strong>
+                            <em>
+                              {contas.prazos.length} aberto{contas.prazos.length === 1 ? '' : 's'}
+                            </em>
+                          </span>
+                        </span>
+                      }
+                      turnos={contas.prazos}
+                      dias={dias}
+                      hoje={hoje}
+                      edita={false}
+                      aoAbrir={(turno) => setEditando({ turno })}
+                    />
+                  </>
+                )}
               </div>
 
               {contas.grupos.length === 0 && (

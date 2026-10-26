@@ -47,7 +47,8 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
   const [salvando, setSalvando] = useState(false)
   const [apagando, setApagando] = useState(false)
 
-  const daObra = turno?.origem === 'obra'
+  /* ponto de encontro, execucao ou prazo: vem da obra e muda por la */
+  const daObra = ['obra', 'execucao', 'prazo'].includes(turno?.origem)
   const somenteLeitura = !edita || daObra
 
   useEffect(() => {
@@ -213,23 +214,56 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
     }
   }
 
-  /* o turno que vem da obra: so a leitura e o caminho ate ela */
+  /* o que vem das obras (o ponto de encontro, a execucao e os prazos):
+     so a leitura e o caminho ate a obra, que e onde ele muda */
   if (daObra) {
     const pessoa = pessoaPorId(turno.usuarioId)
+    const dias =
+      turno.dataInicio === turno.dataFim
+        ? dataBR(turno.dataInicio)
+        : `${dataBR(turno.dataInicio)} a ${dataBR(turno.dataFim)}`
+    const leitura = {
+      obra: {
+        subtitulo: 'Turno do ponto de encontro da obra',
+        linhas: [
+          ['Pessoa', pessoa?.nome ?? '—'],
+          ['Dia', dias],
+          ['Horário', turno.horaInicio],
+          ['Obra', turno.subtitulo || turno.titulo],
+        ],
+        nota: 'Ele vem do check com horário da obra: o dia, o horário e quem vai mudam por lá.',
+      },
+      execucao: {
+        subtitulo: 'Execução da obra',
+        linhas: [
+          ['Obra', turno.obraNome],
+          ['Dias', dias],
+          ['Carro', turno.veiculo ?? 'nenhum reservado'],
+        ],
+        nota: 'Os dias da execução mudam na própria obra, no período de execução.',
+      },
+      prazo: {
+        subtitulo: 'Prazo de tarefa da obra',
+        linhas: [
+          ['Tarefa', turno.titulo],
+          ['Obra', turno.obraNome],
+          ['Prazo', dias],
+        ],
+        nota: 'A tarefa sai daqui quando o check for marcado na obra.',
+      },
+    }[turno.origem]
     return (
-      <Modal aberto={aberto} aoFechar={aoFechar} titulo={turno.titulo} subtitulo="Turno do ponto de encontro da obra" largura={440}>
+      <Modal aberto={aberto} aoFechar={aoFechar} titulo={turno.titulo} subtitulo={leitura.subtitulo} largura={440}>
         <div className="turnoform__obra">
           <dl>
-            <dt>Pessoa</dt>
-            <dd>{pessoa?.nome ?? '—'}</dd>
-            <dt>Dia</dt>
-            <dd>{dataBR(turno.dataInicio)}</dd>
-            <dt>Horário</dt>
-            <dd>{turno.horaInicio}</dd>
-            <dt>Obra</dt>
-            <dd>{turno.subtitulo || turno.titulo}</dd>
+            {leitura.linhas.map(([rotulo, valor]) => (
+              <div key={rotulo} className="turnoform__dado">
+                <dt>{rotulo}</dt>
+                <dd>{valor}</dd>
+              </div>
+            ))}
           </dl>
-          <p>Ele vem do check com horário da obra: o dia, o horário e quem vai mudam por lá.</p>
+          <p>{leitura.nota}</p>
           <footer className="formobra__acoes">
             <button type="button" className="formobra__cancelar" onClick={aoFechar}>
               Fechar

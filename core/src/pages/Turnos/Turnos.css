@@ -512,6 +512,11 @@ button.turnos__celula:hover {
   font-size: 0.86rem;
 }
 
+/* cada par rotulo/valor: a caixa some e os dois caem na grade da lista */
+.turnoform__dado {
+  display: contents;
+}
+
 .turnoform__obra dt {
   color: var(--text-faint);
 }
