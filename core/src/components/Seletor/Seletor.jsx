@@ -222,6 +222,11 @@ export default function Seletor({
  * `aoMudar` recebe a lista nova inteira — quem chama nao precisa saber
  * se entrou ou saiu.
  */
+/* quantas pastilhas aparecem no botao; as outras viram o "+N" (os nomes
+   delas ficam na dica). Com 30 pessoas escolhidas o botao crescia ate
+   virar um balao com todos os nomes. */
+const PASTILHAS_A_VISTA = 8
+
 export function SeletorMulti({
   valores = [],
   aoMudar,
@@ -248,13 +253,15 @@ export function SeletorMulti({
   }
 
   const escolhidas = opcoes.filter((o) => marcados.includes(String(o.valor)))
+  const aVista = escolhidas.slice(0, PASTILHAS_A_VISTA)
+  const resto = escolhidas.slice(PASTILHAS_A_VISTA)
 
   return (
     <div className={`sel ${largo ? 'sel--largo' : ''}`.trim()} ref={caixa}>
       <button
         type="button"
         id={id}
-        className={`sel__botao ${aberto ? 'is-aberto' : ''} ${
+        className={`sel__botao sel__botao--multi ${aberto ? 'is-aberto' : ''} ${
           escolhidas.length ? '' : 'is-vazio'
         }`.trim()}
         onClick={() => setAberto((v) => !v)}
@@ -267,7 +274,7 @@ export function SeletorMulti({
           <span className="sel__valor">{vazio}</span>
         ) : (
           <span className="sel__pastilhas">
-            {escolhidas.map((o) => (
+            {aVista.map((o) => (
               <span
                 key={o.valor}
                 className="sel__pastilha"
@@ -276,6 +283,11 @@ export function SeletorMulti({
                 {o.rotulo}
               </span>
             ))}
+            {resto.length > 0 && (
+              <span className="sel__pastilha sel__pastilha--mais" title={resto.map((o) => o.rotulo).join(', ')}>
+                +{resto.length}
+              </span>
+            )}
           </span>
         )}
         <Seta />

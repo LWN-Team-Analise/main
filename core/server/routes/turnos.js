@@ -12,6 +12,7 @@ import {
   dataValida,
   diasEntre,
   lerHora,
+  somarDias,
 } from '../../src/domain/turnos.js'
 
 /* ============================================================
@@ -27,9 +28,16 @@ import {
      PUT    /cronogramas/:id       renomeia e/ou troca as pessoas
      DELETE /cronogramas/:id       apaga (com os turnos dele)
 
-   Os turnos que vem das OBRAS (o check com horario: cada pessoa de
-   cada data) nao moram aqui: sao lidos de obra_horario a cada GET, e
-   mudam pela obra. Assim nao ha duas copias para ficarem diferentes.
+   Os turnos que vem das OBRAS nao moram aqui: sao lidos das proprias
+   obras a cada GET, e mudam por la — assim nao ha duas copias para
+   ficarem diferentes:
+
+     o check com horario   cada pessoa de cada data (o ponto de
+                           encontro), na linha da pessoa;
+     a execucao            os dias da execucao de cada obra (com o
+                           carro reservado), na secao "Obras";
+     os prazos             os checks com prazo ainda nao feitos, no dia
+                           do prazo, na secao "Obras".
 
    Quem pode: ver_turnos ve; editar_turnos cria e muda turnos,
    anotacoes e cronogramas.
@@ -44,6 +52,26 @@ const texto = (valor) => String(valor ?? '').trim()
 const idValido = (valor) => /^\d{1,15}$/.test(String(valor ?? ''))
 /* o periodo de uma leitura: as duas semanas da tela, com folga */
 const PERIODO_MAXIMO = 62
+/* execucao sem os dias escolhidos (periodo corrido de antes da
+   atualizacao 20): no maximo isto de dias */
+const DIAS_CORRIDOS_MAXIMOS = 120
+
+/** Tabela ou coluna que ainda nao existe (atualizacao nao rodada) vale como vazia. */
+const vazioSeFaltar = (erro) => {
+  if (erro.code === '42P01' || erro.code === '42703') return { rows: [] }
+  throw erro
+}
+
+/** ['2026-10-06', '2026-10-07', '2026-10-09'] -> [['2026-10-06', '2026-10-07'], ['2026-10-09', '2026-10-09']] */
+function trechos(dias) {
+  const lista = []
+  for (const dia of dias) {
+    const ultimo = lista.at(-1)
+    if (ultimo && somarDias(ultimo[1], 1) === dia) ultimo[1] = dia
+    else lista.push([dia, dia])
+  }
+  return lista
+}
 
 function falhou(erro, res, onde) {
   if (erro.code === '42P01' || erro.code === '42703') {
@@ -89,7 +117,7 @@ router.get('/', exigeSessao, exige(VER), async (req, res) => {
   if (!dataValida(de) || !dataValida(ate) || ate < de) return res.status(400).json({ erro: 'Período inválido.' })
   if (diasEntre(de, ate) > PERIODO_MAXIMO) return res.status(400).json({ erro: 'Período longo demais.' })
   try {
-    const [cronogramas, membros, turnos, daObra, anotacoes] = await Promise.all([
+    const [cronogramas, membros, turnos, daObra, anotacoes, execucoes, reservas, prazos] = await Promise.all([
       query('SELECT id, nome, ordem FROM cronograma ORDER BY ordem, id'),
       query(
         `SELECT m.cronograma_id, m.usuario_id
@@ -120,7 +148,89 @@ router.get('/', exigeSessao, exige(VER), async (req, res) => {
         `SELECT to_char(dia, 'YYYY-MM-DD') AS dia, texto FROM turno_anotacao WHERE dia BETWEEN $1 AND $2`,
         [de, ate],
       ),
+      /* a execucao das obras que cai no periodo (atualizacoes 15 e 20) */
+      query(
+        `SELECT o.id, o.proposta, o.tipo, cl.nome AS cliente,
+                to_char(o.execucao_inicio, 'YYYY-MM-DD') AS inicio,
+                to_char(o.execucao_prazo, 'YYYY-MM-DD') AS prazo,
+                to_char(o.data_inicio, 'YYYY-MM-DD') AS data_inicio,
+                ARRAY(SELECT to_char(d, 'YYYY-MM-DD') FROM unnest(coalesce(o.execucao_dias, '{}'::date[])) d ORDER BY d) AS dias
+           FROM obra o
+           LEFT JOIN cliente cl ON cl.id = o.cliente_id
+          WHERE o.execucao_prazo IS NOT NULL
+            AND o.execucao_prazo >= $1
+            AND coalesce(o.execucao_inicio, o.data_inicio, o.execucao_prazo) <= $2`,
+        [de, ate],
+      ).catch(vazioSeFaltar),
+      /* o carro reservado de cada obra (atualizacao 23) */
+      query(
+        `SELECT r.obra_id, v.nome AS veiculo
+           FROM obra_reserva_veiculo r JOIN veiculo v ON v.id = r.veiculo_id`,
+      ).catch(vazioSeFaltar),
+      /* os checks com prazo no periodo que ainda nao foram feitos (atualizacao 13) */
+      query(
+        `SELECT p.obra_id, p.check_id, to_char(p.prazo, 'YYYY-MM-DD') AS prazo, ck.titulo,
+                o.proposta, cl.nome AS cliente
+           FROM obra_prazo_check p
+           JOIN etapa_check ck  ON ck.id = p.check_id
+           JOIN obra o          ON o.id = p.obra_id AND o.concluida_em IS NULL
+           LEFT JOIN cliente cl ON cl.id = o.cliente_id
+          WHERE p.prazo BETWEEN $1 AND $2
+            AND NOT EXISTS (SELECT 1 FROM obra_check oc WHERE oc.obra_id = p.obra_id AND oc.check_id = p.check_id)
+          ORDER BY p.prazo`,
+        [de, ate],
+      ).catch(vazioSeFaltar),
     ])
+
+    /* a execucao de cada obra, em trechos de dias seguidos */
+    const carroDa = Object.fromEntries(reservas.rows.map((l) => [l.obra_id, l.veiculo]))
+    const execucao = execucoes.rows.flatMap((l) => {
+      let dias = l.dias ?? []
+      if (dias.length === 0) {
+        const comeco = l.inicio ?? l.data_inicio ?? l.prazo
+        const total = comeco > l.prazo ? 0 : Math.min(diasEntre(comeco, l.prazo), DIAS_CORRIDOS_MAXIMOS)
+        dias = Array.from({ length: total + 1 }, (_, i) => somarDias(comeco > l.prazo ? l.prazo : comeco, i))
+      }
+      const nome = [l.proposta, l.cliente].filter(Boolean).join(' - ') || 'Obra'
+      return trechos(dias.filter((d) => d >= de && d <= ate)).map(([ini, fim]) => ({
+        id: `exec-${l.id}-${ini}`,
+        origem: 'execucao',
+        linha: 'execucao',
+        cronogramaId: null,
+        usuarioId: null,
+        dataInicio: ini,
+        dataFim: fim,
+        horaInicio: null,
+        horaFim: null,
+        titulo: l.cliente || l.proposta || 'Obra',
+        subtitulo: ['Execução', l.proposta, carroDa[l.id]].filter(Boolean).join(' · '),
+        cor: l.tipo === 'emergencia' ? 'vermelho' : 'verde',
+        obraId: String(l.id),
+        checkId: null,
+        obraNome: nome,
+        veiculo: carroDa[l.id] ?? null,
+      }))
+    })
+
+    const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+    const prazosDeTarefas = prazos.rows.map((l) => ({
+      id: `prazo-${l.obra_id}-${l.check_id}`,
+      origem: 'prazo',
+      linha: 'prazo',
+      cronogramaId: null,
+      usuarioId: null,
+      dataInicio: l.prazo,
+      dataFim: l.prazo,
+      horaInicio: null,
+      horaFim: null,
+      titulo: l.titulo,
+      subtitulo: [l.proposta, l.cliente].filter(Boolean).join(' - '),
+      /* vencido em vermelho; o que ainda vem, em laranja */
+      cor: l.prazo < hoje ? 'vermelho' : 'laranja',
+      obraId: String(l.obra_id),
+      checkId: String(l.check_id),
+      obraNome: [l.proposta, l.cliente].filter(Boolean).join(' - ') || 'Obra',
+    }))
 
     const pessoasDo = {}
     membros.rows.forEach((l) => (pessoasDo[l.cronograma_id] ??= []).push(String(l.usuario_id)))
@@ -152,6 +262,8 @@ router.get('/', exigeSessao, exige(VER), async (req, res) => {
         })),
       ],
       anotacoes: Object.fromEntries(anotacoes.rows.map((l) => [l.dia, l.texto])),
+      /* as tarefas das obras que nao tem pessoa: a secao "Obras" da grade */
+      obras: [...execucao, ...prazosDeTarefas],
     })
   } catch (erro) {
     return falhou(erro, res, 'turnos/ler')

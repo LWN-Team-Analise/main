@@ -1100,6 +1100,10 @@ so os turnos com inicio e fim.
 - `ver_turnos` ve a aba (a atualizacao 31 deu a todo setor, menos o da TV);
   `editar_turnos` cria e muda turnos, anotacoes e cronogramas (so o acesso
   total, de inicio). Rotas em `/api/turnos` (`server/routes/turnos.js`).
+- A secao **Obras**, no alto da grade, vem direto das obras: a **Execucao** (os dias
+  da execucao de cada obra, em trechos, com o carro reservado; emergencia em
+  vermelho) e os **Prazos de tarefas** (checks com prazo ainda nao feitos; saem
+  quando o check e marcado). Nada disso se edita aqui: clicar leva a obra.
 - Toda a equipe ativa comecou no Cronograma LWN; quem e de Anapolis passa pelo
   "Editar" do cronograma. Tirar alguem leva junto os turnos dele ali.
 

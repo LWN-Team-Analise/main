@@ -93,6 +93,13 @@
   gap: 5px;
 }
 
+/* o botao de varias escolhas quebra em linhas: com o raio de pilula ele
+   virava um oval. 21px e a metade da altura de uma linha so — numa linha
+   continua pilula, em varias vira retangulo de cantos redondos */
+.sel__botao--multi {
+  border-radius: 21px;
+}
+
 .sel__pastilha {
   padding: 3px 9px;
   border-radius: var(--radius-pill);
@@ -102,6 +109,12 @@
   font-weight: 600;
   line-height: 1.5;
   white-space: nowrap;
+}
+
+/* o "+N" das escolhidas que nao aparecem */
+.sel__pastilha--mais {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
 }
 
 /* ---------------- Lista aberta ---------------- */
