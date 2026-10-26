@@ -4,6 +4,7 @@ import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
 import Confirma from '@/components/Confirma/Confirma'
 import { CampoSelecao, CampoTexto } from '@/components/Campo/Campo'
+import { CampoData, CampoHora } from '@/components/CampoData/CampoData'
 import { useDados } from '@/context/DadosContext'
 import { CORES, SUBTITULO_MAXIMO, TITULO_MAXIMO, corPorId } from '@/domain/turnos'
 import * as turnosApi from '@/services/turnosService'
@@ -368,13 +369,12 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
           </div>
 
           <div className="turnoform__dupla">
-            <CampoTexto rotulo="Início" type="date" value={form.dataInicio} onChange={mudar('dataInicio')} erro={erros.dataInicio} />
-            <CampoTexto
+            <CampoData rotulo="Início" valor={form.dataInicio} aoMudar={mudar('dataInicio')} erro={erros.dataInicio} />
+            <CampoData
               rotulo="Fim"
-              type="date"
+              valor={form.dataFim}
               min={form.dataInicio || undefined}
-              value={form.dataFim}
-              onChange={mudar('dataFim')}
+              aoMudar={mudar('dataFim')}
               erro={erros.dataFim}
             />
           </div>
@@ -386,8 +386,8 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
 
           {!form.diaInteiro && (
             <div className="turnoform__dupla">
-              <CampoTexto rotulo="Das" type="time" value={form.horaInicio} onChange={mudar('horaInicio')} erro={erros.horaInicio} />
-              <CampoTexto rotulo="Às" type="time" value={form.horaFim} onChange={mudar('horaFim')} erro={erros.horaFim} />
+              <CampoHora rotulo="Das" valor={form.horaInicio} aoMudar={mudar('horaInicio')} erro={erros.horaInicio} />
+              <CampoHora rotulo="Às" valor={form.horaFim} aoMudar={mudar('horaFim')} erro={erros.horaFim} />
             </div>
           )}
         </fieldset>
