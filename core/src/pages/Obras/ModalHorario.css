@@ -1,0 +1,206 @@
+/* O check com horario (ModalHorario.jsx): as datas, o horario e quem vai */
+
+.horario {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.horario__vazio {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+.horario__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* uma data: o dia, o horario, quem vai e o x */
+.horario__linha {
+  display: grid;
+  grid-template-columns: 58px 112px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  --avatar-anel: var(--surface);
+}
+
+.horario__linha.is-definida {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+}
+
+.horario__data {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.horario__data em {
+  font-size: 0.66rem;
+  font-style: normal;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.horario__data strong {
+  font-size: 0.92rem;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.horario__hora input,
+.horario__nova input {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 9px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.horario__hora input:focus,
+.horario__nova input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.horario__pessoas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.horario__pessoa {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 4px 2px 2px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-base);
+}
+
+.horario__pessoa button {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-faint);
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.horario__pessoa button:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.horario__adicionar {
+  min-width: 110px;
+}
+
+.horario__ninguem {
+  font-size: 0.74rem;
+  color: var(--text-faint);
+}
+
+.horario__tirar {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--control-border);
+  border-radius: 50%;
+  background: var(--control-bg);
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.horario__tirar:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.horario__nova {
+  display: flex;
+  gap: 8px;
+}
+
+.horario__nova input {
+  width: auto;
+  flex: 0 1 190px;
+}
+
+/* a caixa que marca o check */
+.horario__marcar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.horario__marcar.is-marcado {
+  border-color: color-mix(in srgb, var(--etapa-ok) 45%, var(--line));
+  background: var(--pri-baixa-suave);
+}
+
+.horario__marcar input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--etapa-ok);
+}
+
+.horario__marcar span {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.horario__marcar em {
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 500;
+  color: var(--text-faint);
+}
+
+@media (max-width: 560px) {
+  .horario__linha {
+    grid-template-columns: 52px minmax(0, 1fr) 28px;
+    grid-auto-flow: dense;
+  }
+
+  .horario__pessoas {
+    grid-column: 1 / -1;
+  }
+}

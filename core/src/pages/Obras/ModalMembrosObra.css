@@ -1,0 +1,244 @@
+/* Os membros de UMA obra (ModalMembrosObra.jsx): pelo check, os
+   incluidos a mao (membro parcial) e o "Incluir membro" */
+
+.mobra {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.mobra__pedido {
+  padding: 13px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+.mobra__bloco,
+.mobra__incluir {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobra__incluir {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.mobra__titulo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.mobra__titulo span {
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  letter-spacing: 0;
+}
+
+.mobra__vazio,
+.mobra__nota {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-faint);
+}
+
+.mobra__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* uma pessoa: foto, nome e setor; no incluido, a situacao e o lixo a
+   direita e, embaixo, quem incluiu e o motivo da recusa */
+.mobra__pessoa {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  --avatar-anel: var(--surface);
+}
+
+.mobra__quem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+
+.mobra__quem strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.mobra__eu {
+  flex: none;
+  padding: 0 7px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.6rem;
+  font-style: normal;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mobra__cargo {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: 1px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--cargo-cor);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 600;
+}
+
+.mobra__situacao {
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mobra__situacao[data-status='pendente'] {
+  background: var(--pri-media-suave);
+  color: var(--pri-media);
+}
+
+.mobra__situacao[data-status='aceito'] {
+  background: var(--pri-baixa-suave);
+  color: var(--etapa-ok);
+}
+
+.mobra__situacao[data-status='recusado'] {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.mobra__tirar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--control-border);
+  border-radius: 50%;
+  background: var(--control-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.mobra__tirar:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.mobra__tirar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.mobra__meta,
+.mobra__motivo {
+  grid-column: 2 / -1;
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--text-faint);
+  overflow-wrap: anywhere;
+}
+
+.mobra__motivo {
+  padding: 6px 9px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--text-base);
+}
+
+.mobra__motivo strong {
+  color: var(--danger);
+}
+
+.mobra__form {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.mobra__form > .campo {
+  flex: 1;
+  min-width: 0;
+}
+
+/* o botao padrao ocupa a linha inteira; aqui ele fica ao lado da escolha */
+.mobra__form .btn {
+  flex: none;
+  width: auto;
+}
+
+.mobra__erro,
+.mobra__ok {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.mobra__erro {
+  color: var(--danger);
+}
+
+.mobra__ok {
+  color: var(--etapa-ok);
+}
+
+@media (max-width: 480px) {
+  .mobra__pessoa {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .mobra__situacao {
+    grid-column: 2 / 3;
+    justify-self: start;
+  }
+
+  .mobra__form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mobra__form .btn {
+    width: 100%;
+  }
+}

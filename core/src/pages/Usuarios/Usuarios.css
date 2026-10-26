@@ -109,79 +109,94 @@
   border-color: var(--accent);
 }
 
-/* editar e excluir aparecem ao passar o mouse pelo card (ou ao tocar
-   nele, no celular). Escondidos, nao ocupam lugar: largura zero e sem
-   margem, e a setinha fica encostada na borda do card. Antes so ficavam
-   transparentes e deixavam um vao vazio do lado da setinha. */
-.pessoa__botoes {
+/* O topo do card tem altura FIXA, para todos os cards fechados terem o
+   mesmo tamanho: antes um nome comprido (quebrando em duas linhas) ou o
+   cargo e o "cadastro incompleto" juntos esticavam um card e deixavam
+   os vizinhos da linha desalinhados. Agora cada informacao tem a sua
+   linha e corta com reticencias o que nao couber. A sobra a direita e
+   o lugar do "v". */
+.pessoa__topo {
   display: flex;
-  gap: 4px;
-  flex-shrink: 0;
-  max-width: 0;
-  margin-left: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: opacity var(--dur-fast) var(--ease-out), max-width var(--dur-fast) var(--ease-out),
-    margin-left var(--dur-fast) var(--ease-out);
+  align-items: center;
+  gap: 12px;
+  height: 4.3rem;
+  padding-right: 26px;
 }
 
-.pessoa:hover .pessoa__botoes,
-.pessoa:focus-within .pessoa__botoes {
-  max-width: 64px;
-  margin-left: 8px;
-  opacity: 1;
-}
-
-.pessoa__botoes button {
-  flex-shrink: 0;
+/* o "v" no canto de cima, a direita: abre e fecha o card */
+.pessoa__abrir {
+  position: absolute;
+  top: 9px;
+  right: 9px;
   display: grid;
   place-items: center;
-  width: 27px;
-  height: 27px;
-  border: 1px solid var(--control-border);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
-  background: var(--control-bg);
-  color: var(--text-muted);
+  background: none;
+  color: var(--text-faint);
   cursor: pointer;
-  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-base) var(--ease-out), color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
 }
 
-.pessoa__botoes button:hover {
+.pessoa__abrir:hover {
   background: var(--control-bg-hover);
   color: var(--text-strong);
 }
 
-.pessoa__botoes button:last-child:hover {
-  background: var(--danger-bg);
-  color: var(--danger);
-}
-
-.pessoa__topo {
-  display: flex;
-  align-items: center;
-}
-
-/* o botao que abre o card: foto, nome, setor, cargo e a setinha */
-.pessoa__abrir {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
+.pessoa.is-aberto .pessoa__abrir {
+  transform: rotate(180deg);
+  color: var(--text-strong);
 }
 
 .pessoa__abrir:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 4px;
-  border-radius: var(--radius-sm);
+  outline-offset: 2px;
+}
+
+/* editar e excluir: so existem com o card aberto pelo "v" — a ultima
+   linha do que ele guarda. Antes apareciam ao passar o mouse pelo card */
+.pessoa__botoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 11px;
+  border-top: 1px solid var(--line);
+}
+
+.pessoa__botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.pessoa__botao:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.pessoa__botao--perigo:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.pessoa__botao:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* a foto com a bolinha de presenca no canto de baixo, a direita */
@@ -216,32 +231,14 @@
   --presenca-cor: #9ca3af;
 }
 
+/* nome, setor e a linha do cargo, um embaixo do outro */
 .pessoa__quem {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   flex: 1;
   min-width: 0;
-}
-
-.pessoa__seta {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  color: var(--text-faint);
-  transition: transform var(--dur-base) var(--ease-out), color var(--dur-fast) var(--ease-out),
-    background var(--dur-fast) var(--ease-out);
-}
-
-.pessoa__abrir:hover .pessoa__seta {
-  background: var(--control-bg-hover);
-  color: var(--text-strong);
-}
-
-.pessoa.is-aberto .pessoa__seta {
-  transform: rotate(180deg);
-  color: var(--text-strong);
 }
 
 /* O que o card guarda. Fechado tem altura zero; abre deslizando (a
@@ -281,25 +278,29 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pessoa__detalhe,
-  .pessoa__seta {
+  .pessoa__abrir {
     transition: none;
   }
 }
 
-/* o nome quebra entre as palavras, nunca no meio de uma (o "anywhere"
-   de antes partia "Guilher-me" quando o card ficava estreito); so uma
-   palavra maior que o card inteiro ainda quebra, para nao vazar */
+/* o nome numa linha so: o que passa corta com reticencias, e o
+   "voce" fica sempre visivel ao lado */
 .pessoa__nome {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 2px 7px;
-  margin: 0 0 5px;
+  gap: 7px;
+  max-width: 100%;
   font-size: 0.9rem;
   font-weight: 600;
   line-height: 1.3;
   color: var(--text-strong);
-  overflow-wrap: break-word;
+}
+
+.pessoa__nometexto {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .pessoa__eu {
@@ -316,6 +317,10 @@
 
 .pessoa__cargo {
   display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   padding: 3px 11px;
   border-radius: var(--radius-pill);
   background: var(--cargo-cor);
@@ -404,17 +409,28 @@
    define permissão) e esta linha é o título dentro dele. Por isso ela
    vem sem fundo, menor e em tom apagado — informa, não classifica. */
 .pessoa__titulo {
-  display: block;
-  margin-top: 3px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-muted);
 }
 
+/* a terceira linha do topo: o cargo e, ao lado, o "cadastro incompleto" */
+.pessoa__extra {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  min-width: 0;
+}
+
 /* quem entrou so pelo e-mail e ainda nao completou o cadastro */
 .pessoa__pendente {
   display: inline-block;
-  margin-top: 5px;
+  flex: none;
   padding: 1px 8px;
   border: 1px dashed var(--line-strong);
   border-radius: var(--radius-pill);

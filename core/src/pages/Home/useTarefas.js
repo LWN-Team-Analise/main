@@ -157,6 +157,10 @@ export default function useTarefas() {
                 aguardando,
                 feitoPor: marca?.feitoPor ?? null,
                 feitoEm: marca?.feitoEm ?? null,
+                /* o prazo DESTE check, definido dentro da obra. A obra
+                   inteira nao tem mais prazo escolhido: o prazo final
+                   dela e o dia do ultimo check */
+                prazo: obra.prazos?.checks?.[check.id] ?? null,
                 /* sem setor no cadastro ninguem tem tarefa "sua" — e a
                    tela cai no modo "todas" para nao ficar vazia */
                 minha: meuSetor ? cargos.includes(meuSetor) : false,

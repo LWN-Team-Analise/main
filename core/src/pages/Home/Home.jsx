@@ -298,18 +298,21 @@ export default function Home() {
    * Prazo vencido na frente de tudo, depois prioridade, depois o prazo
    * mais proximo. Ordenar por nome ou por obra deixaria a emergencia
    * atrasada no meio da lista, que e exatamente onde ela nao pode estar.
+   *
+   * O prazo e o do proprio CHECK (definido dentro da obra): a obra nao
+   * tem mais prazo final escolhido no cadastro.
    */
   const porUrgencia = useMemo(() => {
     const peso = { emergencia: 4, alta: 3, media: 2, baixa: 1 }
     const nota = (t) => (t.obra.tipo === 'emergencia' ? 4 : peso[t.obra.prioridade] ?? 0)
 
     return [...visiveis].sort((a, b) => {
-      const venceA = a.obra.dataConclusao && a.obra.dataConclusao < hoje ? 1 : 0
-      const venceB = b.obra.dataConclusao && b.obra.dataConclusao < hoje ? 1 : 0
+      const venceA = a.prazo && a.prazo < hoje ? 1 : 0
+      const venceB = b.prazo && b.prazo < hoje ? 1 : 0
       if (venceA !== venceB) return venceB - venceA
       if (nota(a) !== nota(b)) return nota(b) - nota(a)
-      const prazoA = a.obra.dataConclusao ?? '9999-12-31'
-      const prazoB = b.obra.dataConclusao ?? '9999-12-31'
+      const prazoA = a.prazo ?? '9999-12-31'
+      const prazoB = b.prazo ?? '9999-12-31'
       return prazoA.localeCompare(prazoB)
     })
   }, [visiveis, hoje])
@@ -333,7 +336,7 @@ export default function Home() {
   }, [porUrgencia])
 
   const vencidas = faltando.filter(
-    (t) => t.obra.dataConclusao && t.obra.dataConclusao < hoje,
+    (t) => t.prazo && t.prazo < hoje,
   ).length
 
   /**
@@ -735,7 +738,7 @@ function Grade({ tarefas, hoje, nomeDoCargo, corDoCargo, aoAbrir, paraVoce = fal
                   </span>
                 </td>
                 <td data-rotulo="Prazo">
-                  <Prazo iso={t.obra.dataConclusao} hoje={hoje} />
+                  <Prazo iso={t.prazo} hoje={hoje} />
                 </td>
                 <td data-rotulo="Estado">
                   <span className="testado" data-estado="andamento">
@@ -774,7 +777,7 @@ function Grade({ tarefas, hoje, nomeDoCargo, corDoCargo, aoAbrir, paraVoce = fal
                   </span>
                 </td>
                 <td data-rotulo="Prazo">
-                  <Prazo iso={t.obra.dataConclusao} hoje={hoje} />
+                  <Prazo iso={t.prazo} hoje={hoje} />
                 </td>
                 <td data-rotulo="Estado">
                   <span className="testado" data-estado="espera">
@@ -886,10 +889,13 @@ function Quadro({ tarefas, hoje, mes, nomeDoCargo, corDoCargo, pessoaPorId, aoAb
           minha: false,
           posso: false,
           checks: 0,
+          /* o prazo mais proximo entre os checks abertos da obra */
+          prazo: null,
           etapas: new Map(),
           aguardando: new Map(),
         }
         g.checks += 1
+        if (t.prazo && (!g.prazo || t.prazo < g.prazo)) g.prazo = t.prazo
         g.minha = g.minha || Boolean(t.minha)
         if (t.posso && !g.posso) {
           g.posso = true
@@ -1107,7 +1113,7 @@ function Quadro({ tarefas, hoje, mes, nomeDoCargo, corDoCargo, pessoaPorId, aoAb
                       <span className="tpri" data-pri={tomPrioridadeObra(g.obra)}>
                         {rotuloPrioridadeObra(g.obra)}
                       </span>
-                      <Prazo iso={g.obra.dataConclusao} hoje={hoje} />
+                      <Prazo iso={g.prazo} hoje={hoje} />
                     </p>
                   </article>
                 ))}

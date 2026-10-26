@@ -353,6 +353,30 @@ export function DadosProvider({ children }) {
 
   const adicionarObra = useCallback((campos) => gravar(() => dados.criarObra(campos)), [gravar])
 
+  /* ---------------- Membro parcial (atualizacao 30) ---------------- */
+
+  const incluirMembroParcial = useCallback(
+    (obraId, usuarioId) => gravar(() => dados.incluirParcial(obraId, usuarioId)),
+    [gravar],
+  )
+
+  /** A resposta de quem foi incluido: { aceitar: true } ou { aceitar: false, motivo }. */
+  const responderInclusao = useCallback(
+    (obraId, resposta) => gravar(() => dados.responderParcial(obraId, user?.id, resposta)),
+    [gravar, user?.id],
+  )
+
+  const tirarMembroParcial = useCallback(
+    (obraId, usuarioId) => gravar(() => dados.tirarParcial(obraId, usuarioId)),
+    [gravar],
+  )
+
+  /* o check com horario: as datas, os horarios e quem vai (atualizacao 31) */
+  const definirHorarios = useCallback(
+    (obraId, checkId, campos) => gravar(() => dados.salvarHorarios(obraId, checkId, campos)),
+    [gravar],
+  )
+
   const atualizarObra = useCallback(
     (id, campos) => gravar(() => dados.editarObra(id, campos)),
     [gravar],
@@ -648,6 +672,30 @@ export function DadosProvider({ children }) {
     () => minhasNotificacoes.filter((a) => !a.lido).length,
     [minhasNotificacoes],
   )
+
+  /**
+   * As inclusoes como membro parcial que esperam a MINHA resposta — o
+   * topo do sino, com Aceitar e Recusar. Ficam la ate serem respondidas:
+   * abrir o sino nao as dispensa.
+   */
+  const minhasSolicitacoes = useMemo(() => {
+    const eu = String(user?.id ?? '')
+    if (!eu) return []
+    return estado.obras
+      .flatMap((obra) =>
+        (obra.parciais ?? [])
+          .filter((p) => p.usuarioId === eu && p.status === 'pendente')
+          .map((p) => ({
+            ...p,
+            obraId: obra.id,
+            obraTipo: obra.tipo,
+            clienteId: obra.clienteId,
+            proposta: obra.proposta,
+            descricao: obra.descricao,
+          })),
+      )
+      .sort((a, b) => String(b.incluidoEm).localeCompare(String(a.incluidoEm)))
+  }, [estado.obras, user?.id])
 
   /** Zera o selo. Muda a tela na hora; a gravacao vai atras. */
   const marcarNotificacoesLidas = useCallback(
@@ -1193,6 +1241,11 @@ export function DadosProvider({ children }) {
       minhasNotificacoes,
       naoLidas,
       marcarNotificacoesLidas,
+      minhasSolicitacoes,
+      incluirMembroParcial,
+      responderInclusao,
+      tirarMembroParcial,
+      definirHorarios,
 
       adicionarAvaliacao,
       atualizarAvaliacao,
@@ -1312,6 +1365,11 @@ export function DadosProvider({ children }) {
       minhasNotificacoes,
       naoLidas,
       marcarNotificacoesLidas,
+      minhasSolicitacoes,
+      incluirMembroParcial,
+      responderInclusao,
+      tirarMembroParcial,
+      definirHorarios,
       adicionarAvaliacao,
       atualizarAvaliacao,
       removerAvaliacao,

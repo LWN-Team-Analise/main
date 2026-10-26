@@ -3,7 +3,8 @@ import { useDados } from '@/context/DadosContext'
 import {
   etapaDeExecucao,
   nomeProprioDaEtapa,
-  obraConcluida,
+  prazoFinalDaObra,
+  prontaEm as momentoPronta,
   rotuloPrioridadeObra,
   tituloDaObra,
   tomPrioridadeObra,
@@ -47,15 +48,13 @@ function textoDoMotivo(m, nomeDoCargo, comSelo = false) {
  *
  * A COR conta como a obra esta (situacaoDaObra, em src/domain/obras.js):
  *
- *   verde     obra padrao em dia, ou ainda sem prazo final;
+ *   verde     obra padrao em dia;
  *   azul      obra de emergencia em dia;
- *   amarelo   o prazo final passou da metade, ou um check passou do
- *             prazo dele (ou vence em ate 3 dias);
- *   laranja   prazo final muito perto;
- *   vermelho  prazo final amanha ou hoje — ou ja vencido, com o selo
- *             "Atrasada".
+ *   amarelo   um check passou do prazo dele (ou vence em ate 3 dias).
  *
- * O prazo da EXECUCAO nao entra na cor: so o prazo final da obra.
+ * O prazo final da obra nao entra na cor: ele so existe depois que o
+ * ultimo check e marcado (e o dia desse check). O da EXECUCAO tambem
+ * nao entra.
  *
  * O FIO DA ESQUERDA e outra coisa: a cor da PRIORIDADE (data-pri), a
  * mesma da palavra em "Prioridade: Alta".
@@ -102,26 +101,14 @@ export default function CardObra({ obra, cliente, pessoas = [], situacao, aoAbri
      Quando o ULTIMO check da obra e marcado, o trabalho acabou — mesmo
      que ninguem tenha clicado em "Concluir obra" ainda. O card diz
      quando isso aconteceu: e o que faz alguem lembrar de fechar. */
-  const tudoMarcado = obraConcluida(roteiro, obra.checks)
-  const prontaEm = tudoMarcado
-    ? Object.values(obra.checks ?? {})
-        .map((m) => m?.feitoEm)
-        .filter(Boolean)
-        .sort()
-        .at(-1)
-    : null
+  const prontaEm = momentoPronta(roteiro, obra)
+  /* o prazo final e o DIA desse ultimo check — so existe com ele */
+  const prazoFinal = prazoFinalDaObra(roteiro, obra)
   const marcas = etiquetasDaObra(obra)
   const pendentes = pendentesDaObra(obra, numeroEtapa)
   const fechada = concluida(obra)
   const tom = situacao?.tom ?? (obra.tipo === 'emergencia' ? 'emergencia' : 'ok')
   const motivos = situacao?.motivos ?? []
-
-  /* ---- O (!) de "falta o prazo final" ----
-
-     Na EMERGENCIA o prazo e obrigatorio no cadastro, entao ali ele nao
-     pode faltar; na obra ja CONCLUIDA o prazo daquela ja passou, e
-     piscar sobre registro fechado e ruido. */
-  const faltaPrazo = !obra.dataConclusao && !fechada && obra.tipo !== 'emergencia'
 
   /* a barra de execucao aparece da etapa de execucao em diante — antes
      disso ela seria sempre 0% e so ocuparia lugar */
@@ -223,8 +210,8 @@ export default function CardObra({ obra, cliente, pessoas = [], situacao, aoAbri
             Prioridade: <strong>{rotuloPrioridadeObra(obra)}</strong>
           </span>
 
-          {/* as duas pontas do prazo: o inicio e o prazo final. O prazo
-              aparece SEMPRE, mesmo em branco — a falta tem de se ver */}
+          {/* o inicio e, quando o ultimo check da obra for marcado, o
+              prazo final — o dia desse check. Antes disso ele nao existe */}
           <span className="obracard__datas">
             {obra.dataInicio && (
               <span className="obracard__data">
@@ -232,22 +219,9 @@ export default function CardObra({ obra, cliente, pessoas = [], situacao, aoAbri
               </span>
             )}
 
-            {obra.dataConclusao ? (
+            {prazoFinal && (
               <span className="obracard__data">
-                prazo final: <strong>{dataBR(obra.dataConclusao)}</strong>
-              </span>
-            ) : (
-              <span className="obracard__data obracard__semprazo">
-                prazo final: <strong>sem data</strong>
-                {faltaPrazo && (
-                  <span
-                    className="pendencia pendencia--parada"
-                    title="Esta obra está sem prazo final. Abra a obra para preencher."
-                    aria-label="Pendente: obra sem prazo final"
-                  >
-                    !
-                  </span>
-                )}
+                prazo final: <strong>{dataBR(prazoFinal)}</strong>
               </span>
             )}
           </span>

@@ -267,6 +267,43 @@ export function obraConcluida(roteiro, marcados) {
 }
 
 /**
+ * O MOMENTO em que a obra ficou pronta: o carimbo do ULTIMO check
+ * marcado, quando nao sobra nenhum por marcar — a 5a etapa inclusive.
+ * Enquanto faltar check, null.
+ */
+export function prontaEm(roteiro, obra) {
+  if (!obra || !obraConcluida(roteiro, obra.checks)) return null
+  return (
+    Object.values(obra.checks ?? {})
+      .map((m) => m?.feitoEm)
+      .filter(Boolean)
+      .sort()
+      .at(-1) ?? null
+  )
+}
+
+/**
+ * O PRAZO FINAL da obra: o DIA em que o ultimo check foi marcado.
+ *
+ * Ele nao se escolhe mais no cadastro. A obra chega a 5a etapa, os
+ * checks vao sendo marcados, e quando o ultimo usuario marca o ultimo
+ * check que faltava para concluir, o prazo final aparece — e e esse dia.
+ * Antes disso a obra nao tem prazo final.
+ *
+ * 'AAAA-MM-DD' no fuso local, ou null. O `dataConclusao` que as obras
+ * antigas ainda guardam (o prazo que se escolhia no cadastro) continua
+ * no banco, mas nao aparece mais nem pinta o card.
+ */
+export function prazoFinalDaObra(roteiro, obra) {
+  const quando = prontaEm(roteiro, obra)
+  if (!quando) return null
+  const d = new Date(quando)
+  if (Number.isNaN(d.getTime())) return String(quando).slice(0, 10)
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+/**
  * A obra foi ENCERRADA por alguem?
  *
  * O carimbo vem do banco (obra.concluida_em), gravado no clique do
@@ -494,15 +531,16 @@ export function aplicarRegraDosGases(roteiro, gases) {
 }
 
 /* ------------------------------------------------------------
-   Dois prazos, e cada um manda numa coisa:
+   As datas da obra, e o que cada uma diz:
 
-     dataInicio     -> dataConclusao   a OBRA inteira — inclusive a
-                                       documentacao e a entrega, que
-                                       vem depois da execucao. E so
-                                       dele que sai a cor do card;
+     dataInicio                        o comeco da obra (cadastro);
      execucaoInicio -> execucaoPrazo   so a ETAPA DE EXECUCAO (3a),
                                        definido dentro da obra. Nao
-                                       mexe na cor nem no tipo.
+                                       mexe na cor nem no tipo;
+     prazo final                       NAO se escolhe: e o dia em que o
+                                       ultimo check da obra foi marcado
+                                       (prazoFinalDaObra). So existe com
+                                       a obra pronta.
 
    O TIPO e o do cadastro: so e Obra Emergencial a que foi aberta como
    emergencia. Execucao curta (hoje, amanha) nao transforma obra padrao
@@ -552,26 +590,20 @@ export function progressoExecucao(obra, nomeDoEnsaio = (id) => id) {
 
    O tom do card, do mais calmo ao mais urgente:
 
-     verde    ('ok')          obra padrao em dia — e toda obra SEM prazo
-                              final, ate ele ser definido;
+     verde    ('ok')          obra padrao em dia;
      azul     ('emergencia')  obra de emergencia em dia;
-     amarelo  ('atraso')      o prazo final passou da metade do periodo
-                              (ou faltam 3 dias), ou um check passou do
-                              prazo dele — ou esta a 3 dias de vencer;
-     laranja  ('laranja')     prazo final muito perto (2 dias, ou um
-                              quarto do periodo);
-     vermelho ('vermelho')    prazo final amanha ou hoje;
-     vencido  ('vencido')     o prazo final ja passou — fica marcado
-                              como atrasado.
+     amarelo  ('atraso')      um check passou do prazo dele — ou esta a
+                              3 dias de vencer.
 
    Vale o MAIS urgente de todos os motivos.
 
-   A escala sai do PRAZO FINAL DA OBRA (dataInicio -> dataConclusao),
-   em qualquer etapa, enquanto sobrar check aberto (urgenciaDoPrazo:
-   o vermelho chega 1 dia antes). O prazo DA EXECUCAO nao entra: com a
-   execucao hoje ou amanha e o prazo final longe, o card continua verde.
+   O PRAZO FINAL da obra nao pinta mais o card: ele deixou de ser uma
+   data escolhida no cadastro e passou a ser o dia em que o ultimo check
+   foi marcado (prazoFinalDaObra) — quando ele existe, nao ha mais nada
+   para atrasar. O prazo DA EXECUCAO tambem nao entra.
 
-   Na EMERGENCIA o card fica azul ate o prazo final vencer.
+   (laranja, vermelho e vencido continuam no PESO_DO_TOM e no CSS: eram
+   do prazo final escolhido no cadastro.)
 
    Check ja feito nao atrasa nada, mesmo com o prazo no passado: o
    prazo serviu.
@@ -685,21 +717,6 @@ export function situacaoDaObra(roteiro, obra, hoje) {
   const marcados = obra.checks ?? {}
   const prazos = obra.prazos ?? {}
   const motivos = []
-
-  /* o PRAZO FINAL DA OBRA: a escala inteira, enquanto sobrar check aberto */
-  if (obra.dataConclusao && !obraConcluida(roteiro, marcados)) {
-    const prazo = obra.dataConclusao
-    const dias = diasAte(prazo, hoje)
-    const tom =
-      obra.tipo === 'emergencia'
-        ? dias < 0
-          ? 'vencido'
-          : null
-        : urgenciaDoPrazo(obra.dataInicio, prazo, hoje)
-    if (tom && tom !== 'ok') {
-      motivos.push({ tom, venceu: dias < 0, alvo: 'obra', prazo, dias, setores: [] })
-    }
-  }
 
   /* o prazo de um CHECK: venceu, ou vence em ate 3 dias — amarelo */
   ;(roteiro ?? []).forEach((etapa) => {

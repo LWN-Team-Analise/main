@@ -102,6 +102,10 @@ export const IconeLixo = ({ tamanho = 16 }) =>
     <path d="M4.5 7h15M9.5 7V5.4A1.4 1.4 0 0 1 10.9 4h2.2a1.4 1.4 0 0 1 1.4 1.4V7M6.5 7l.9 12.1A1.5 1.5 0 0 0 8.9 20.5h6.2a1.5 1.5 0 0 0 1.5-1.4L17.5 7" />,
   )
 
+/* a obra: o predio com a porta — o negocio que ja virou obra */
+export const IconeObra = ({ tamanho = 16 }) =>
+  svg(tamanho, <path d="M4 20V9l8-5 8 5v11M4 20h16M10 20v-5h4v5M8 11h.01M16 11h.01" />)
+
 export const IconeImportar = ({ tamanho = 16 }) =>
   svg(tamanho, <path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14" />)
 

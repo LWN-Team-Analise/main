@@ -76,7 +76,7 @@ export default function EnviosGerais() {
         <header className="envios__topo">
           <Link to="/app/despesas" className="envios__voltar">
             <IconeVoltar />
-            Despesas
+            Reembolso
           </Link>
           <div className="envios__titulo">
             <div>

@@ -6,6 +6,7 @@ import { useDados } from '@/context/DadosContext'
 import Avatar from '@/components/Avatar/Avatar'
 import Busca from '@/components/Busca/Busca'
 import IlhaAviso from '@/components/IlhaAviso/IlhaAviso'
+import PedidoInclusao from '@/components/PedidoInclusao/PedidoInclusao'
 import Confirma from '@/components/Confirma/Confirma'
 import Estrelas from '@/components/Estrelas/Estrelas'
 import { ehAplicativo } from '@/utils/dispositivo'
@@ -79,6 +80,13 @@ const Icone = {
   comercial: () => (
     <svg viewBox="-2 -26 28 28" width="21" height="21" fill="currentColor" aria-hidden="true">
       <path d="M16.96-14L17.04-14Q15.12-14 13.52-13.04Q11.92-12.08 10.96-10.48Q10-8.88 10-6.96Q10-5.04 10.96-3.44Q11.92-1.84 13.52-0.92Q15.12 0 17 0Q18.88 0 20.48-0.96Q22.08-1.92 23.04-3.52Q24-5.12 24-7Q24-8.88 23.04-10.48Q22.08-12.08 20.48-13.04Q18.88-14 16.96-14L16.96-14ZM16.96-2L17.04-2Q15.68-2 14.52-2.68Q13.36-3.36 12.68-4.48Q12-5.60 12-6.96Q12-8.32 12.68-9.48Q13.36-10.64 14.52-11.32Q15.68-12 17-12Q18.32-12 19.48-11.32Q20.64-10.64 21.32-9.48Q22-8.32 22-7Q22-5.68 21.32-4.52Q20.64-3.36 19.48-2.68Q18.32-2 16.96-2L16.96-2ZM18-7.44L18.72-6.72Q19.04-6.40 19.04-6Q19.04-5.60 18.72-5.28Q18.40-4.96 18-4.96Q17.60-4.96 17.28-5.28L17.28-5.28L16.32-6.32Q16-6.56 16-6.96L16-6.96L16-9.04Q16-9.44 16.28-9.72Q16.56-10 17-10Q17.44-10 17.72-9.72Q18-9.44 18-9.04L18-9.04L18-7.44ZM24-16.96L24-17.04L24-15.04Q24-14.56 23.72-14.28Q23.44-14 23-14Q22.56-14 22.28-14.28Q22-14.56 22-15.04L22-15.04L22-17.04Q22-18.24 21.12-19.12Q20.24-20 18.96-20L18.96-20L5.04-20Q3.76-20 2.88-19.12Q2-18.24 2-17.04L2-17.04L2-16L11.04-16Q11.44-16 11.72-15.72Q12-15.44 12-15Q12-14.56 11.72-14.28Q11.44-14 10.96-14L10.96-14L2-14L2-5.04Q2-3.76 2.88-2.88Q3.76-2 5.04-2L5.04-2L9.04-2Q9.44-2 9.72-1.72Q10-1.44 10-1Q10-0.56 9.72-0.28Q9.44 0 9.04 0L9.04 0L5.04 0Q3.68 0 2.52-0.68Q1.36-1.36 0.68-2.52Q0-3.68 0-5.04L0-5.04L0-17.04Q0-18.32 0.68-19.48Q1.36-20.64 2.52-21.32Q3.68-22 5.04-22L5.04-22L6-22L6-23.04Q6-23.44 6.28-23.72Q6.56-24 7-24Q7.44-24 7.72-23.72Q8-23.44 8-22.96L8-22.96L8-22L16-22L16-23.04Q16-23.44 16.28-23.72Q16.56-24 17-24Q17.44-24 17.72-23.72Q18-23.44 18-22.96L18-22.96L18-22L19.04-22Q20.32-22 21.48-21.32Q22.64-20.64 23.32-19.48Q24-18.32 24-16.96L24-16.96Z" />
+    </svg>
+  ),
+  /* Turnos: o calendario com as faixas dos turnos dentro */
+  turnos: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2.2" />
+      <path d="M3.5 9.5h17M8 3v4M16 3v4M7 13.2h5M7 16.6h7.5M14.5 13.2h2.5" />
     </svg>
   ),
   usuarios: () => (
@@ -172,9 +180,10 @@ const MENU = [
   { id: 'obras', rotulo: 'Obras', rota: '/app/obras', permissao: 'ver_obras' },
   { id: 'clientes', rotulo: 'Clientes', rota: '/app/clientes', permissao: 'ver_clientes' },
   { id: 'concluidas', rotulo: 'Concluídas', rota: '/app/concluidas', permissao: 'ver_concluidas' },
-  { id: 'despesas', rotulo: 'Despesas', rota: '/app/despesas', permissao: 'ver_despesas' },
+  { id: 'despesas', rotulo: 'Reembolso', rota: '/app/despesas', permissao: 'ver_despesas' },
   { id: 'frotas', rotulo: 'Frotas', rota: '/app/frotas', permissao: 'ver_frotas' },
   { id: 'comercial', rotulo: 'Comercial', rota: '/app/comercial', permissao: 'ver_comercial' },
+  { id: 'turnos', rotulo: 'Turnos', rota: '/app/turnos', permissao: 'ver_turnos' },
   { id: 'avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes', permissao: 'ver_avaliacoes' },
   {
     id: 'usuarios',
@@ -367,6 +376,11 @@ function MenuUsuario({ naBarra = false }) {
  * que ninguem mais abre. Quem quiser a visao geral tem a coluna de
  * pendencias na tela de Obras. Quem decide isso e `minhasNotificacoes`,
  * no contexto.
+ *
+ * No alto do painel vem as SOLICITACOES: as inclusoes como membro
+ * parcial de uma obra que esperam a resposta da pessoa (atualizacao
+ * 30), com Aceitar e Recusar ali mesmo. Elas contam no selo e so saem
+ * dali respondidas — abrir o sino nao as dispensa.
  */
 function Notificacoes() {
   const navigate = useNavigate()
@@ -374,6 +388,7 @@ function Notificacoes() {
     minhasNotificacoes,
     naoLidas,
     marcarNotificacoesLidas,
+    minhasSolicitacoes,
     clientePorId,
     cargoPorChave,
     rotuloEtapa,
@@ -407,6 +422,9 @@ function Notificacoes() {
   }
 
   const lista = minhasNotificacoes.slice(0, 20)
+  const pedidos = minhasSolicitacoes ?? []
+  /* o selo conta o que nao foi lido e o que espera resposta */
+  const selo = naoLidas + pedidos.length
 
   return (
     <div className="sininho" ref={caixa}>
@@ -417,14 +435,21 @@ function Notificacoes() {
         aria-haspopup="menu"
         aria-expanded={aberto}
         aria-label={
-          naoLidas > 0 ? `Notificações — ${naoLidas} não lidas` : 'Notificações'
+          selo > 0
+            ? `Notificações — ${[
+                naoLidas > 0 && `${naoLidas} não lidas`,
+                pedidos.length > 0 && `${pedidos.length} ${pedidos.length === 1 ? 'solicitação' : 'solicitações'}`,
+              ]
+                .filter(Boolean)
+                .join(', ')}`
+            : 'Notificações'
         }
         title="Notificações"
       >
         <Icone.sino />
-        {naoLidas > 0 && (
+        {selo > 0 && (
           <span className="sininho__selo" aria-hidden="true">
-            {naoLidas > 99 ? '99+' : naoLidas}
+            {selo > 99 ? '99+' : selo}
           </span>
         )}
       </button>
@@ -433,11 +458,39 @@ function Notificacoes() {
         <div className="sininho__painel" role="menu">
           <header className="sininho__topo">
             <h2>Notificações</h2>
-            <span>{minhasNotificacoes.length}</span>
+            <span>{minhasNotificacoes.length + pedidos.length}</span>
           </header>
 
+          {/* as inclusoes em obra que esperam resposta: no alto */}
+          {pedidos.length > 0 && (
+            <ul className="sininho__lista sininho__pedidos" aria-label="Solicitações">
+              {pedidos.map((pedido) => {
+                const cliente = clientePorId(pedido.clienteId)
+                const obra = [pedido.proposta, cliente?.nome].filter(Boolean).join(' - ') || 'Obra'
+                return (
+                  <li key={`${pedido.obraId}-${pedido.usuarioId}`} className="sininho__pedido">
+                    <span className="sininho__marca" data-tipo={pedido.obraTipo} aria-hidden="true" />
+                    <div className="sininho__corpo">
+                      <button
+                        type="button"
+                        className="sininho__obra"
+                        onClick={() => {
+                          setAberto(false)
+                          navigate(`/app/obras/${pedido.obraId}`)
+                        }}
+                      >
+                        Solicitação · {obra}
+                      </button>
+                      <PedidoInclusao pedido={pedido} obra={obra} />
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+
           {lista.length === 0 ? (
-            <p className="sininho__vazio">Nenhuma notificação pendente.</p>
+            pedidos.length === 0 && <p className="sininho__vazio">Nenhuma notificação pendente.</p>
           ) : (
             <ul className="sininho__lista">
               {lista.map((aviso) => {

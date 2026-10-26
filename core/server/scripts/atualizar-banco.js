@@ -56,6 +56,8 @@ const ARQUIVOS = [
   'db/atualizacao-27.sql.txt',
   'db/atualizacao-28.sql.txt',
   'db/atualizacao-29.sql.txt',
+  'db/atualizacao-30.sql.txt',
+  'db/atualizacao-31.sql.txt',
 ]
 
 /**
@@ -166,6 +168,14 @@ const CONFERENCIA = [
   ['negocio.probabilidade', col('negocio', 'probabilidade')],
   ['negocio.contato_tipo', col('negocio', 'contato_tipo')],
   ['cliente_pessoa.cliente_id aceita NULL', nulavel('cliente_pessoa', 'cliente_id')],
+  ['negocio.obra_id', col('negocio', 'obra_id')],
+  ['obra_membro_parcial', "SELECT to_regclass('public.obra_membro_parcial') IS NOT NULL AS ok"],
+  ['excluir_membro_parcial no acesso total', permissaoNoAcessoTotal('excluir_membro_parcial')],
+  ['etapa_check.horario', col('etapa_check', 'horario')],
+  ['obra_horario', "SELECT to_regclass('public.obra_horario') IS NOT NULL AS ok"],
+  ['cronograma', "SELECT to_regclass('public.cronograma') IS NOT NULL AS ok"],
+  ['turno', "SELECT to_regclass('public.turno') IS NOT NULL AS ok"],
+  ['ver_turnos no acesso total', permissaoNoAcessoTotal('ver_turnos')],
 ]
 
 function col(tabela, coluna) {

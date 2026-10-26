@@ -13,7 +13,7 @@
  * volta erro, e a tela mostra o recado.
  */
 
-import { del, get, post } from './api'
+import { del, get, post, put } from './api'
 
 function consulta(base, { usuarios, categoria } = {}) {
   const partes = []
@@ -23,6 +23,18 @@ function consulta(base, { usuarios, categoria } = {}) {
   }
   if (categoria) partes.push(`categoria=${encodeURIComponent(categoria)}`)
   return partes.length ? `${base}&${partes.join('&')}` : base
+}
+
+/** A tabela dos valores pre-definidos: { tipo: valor }. Tipo fora dela e digitado. */
+export async function carregarValores() {
+  const { valores } = await get('/despesas/valores')
+  return valores ?? {}
+}
+
+/** Grava a tabela inteira (definir_valores_reembolso). Devolve a que ficou gravada. */
+export async function salvarValores(valores) {
+  const resposta = await put('/despesas/valores', { valores })
+  return resposta.valores ?? {}
 }
 
 /** campos: { categoria, tipo, data, clienteId, obraId?, valor?, justificativa?, observacao?, anexo? } */

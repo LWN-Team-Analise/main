@@ -81,11 +81,20 @@ const ATALHOS = [
   {
     id: 'tela-despesas',
     grupo: 'Telas',
-    titulo: 'Despesas',
+    titulo: 'Reembolso',
     detalhe: 'Enviar despesa, refeição ou bônus',
     rota: '/app/despesas',
     permissao: 'ver_despesas',
     termos: 'despesas despesa reembolso gasto recibo comprovante nota fiscal vale transporte combustivel refeicao almoco janta bonus viagem apartamento',
+  },
+  {
+    id: 'tela-turnos',
+    grupo: 'Telas',
+    titulo: 'Turnos',
+    detalhe: 'A escala da equipe por cronograma, dia a dia',
+    rota: '/app/turnos',
+    permissao: 'ver_turnos',
+    termos: 'turnos escala cronograma folga plantao agenda equipe teams horario ponto de encontro',
   },
   {
     id: 'tela-meus-envios',

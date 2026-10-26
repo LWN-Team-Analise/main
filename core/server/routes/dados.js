@@ -272,6 +272,9 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     reservas,
     itensObra,
     linhasItem,
+    parciais,
+    horarios,
+    horarioMembros,
   ] = await Promise.all([
     lerClientes(imagens),
     /* os setores vem junto: sao poucos e a tela de Clientes precisa
@@ -341,6 +344,19 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
              FROM obra_item_ensaio l
              LEFT JOIN usuario u ON u.id = l.registrado_por
             ORDER BY l.item_id, l.ordem, l.id`).catch(semTabelaVazia),
+    /* os membros parciais (atualizacao 30): incluidos a mao, com a
+       resposta de cada um. Sem a tabela, nenhuma obra tem */
+    query(`SELECT p.obra_id, p.usuario_id, p.status, p.motivo, p.incluido_por, p.incluido_em,
+                  p.respondido_em, u.name AS incluido_por_nome
+             FROM obra_membro_parcial p
+             LEFT JOIN usuario u ON u.id = p.incluido_por
+            ORDER BY p.incluido_em`).catch(semTabelaVazia),
+    /* os horarios dos checks com horario (atualizacao 31): cada data da
+       obra com o ponto de encontro e quem vai. Sem as tabelas, nenhum */
+    query(`SELECT obra_id, check_id, to_char(dia, 'YYYY-MM-DD') AS dia, to_char(hora, 'HH24:MI') AS hora
+             FROM obra_horario ORDER BY dia`).catch(semTabelaVazia),
+    query(`SELECT obra_id, check_id, to_char(dia, 'YYYY-MM-DD') AS dia, usuario_id
+             FROM obra_horario_membro`).catch(semTabelaVazia),
   ])
 
   const junta = (linhas, chave, monta) => {
@@ -394,6 +410,39 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
   })
 
   const membrosDaObra = junta(membros.rows, 'obra_id', (l) => String(l.usuario_id))
+  /* o membro parcial que ACEITOU e membro como qualquer outro: fotos da
+     obra, "em andamento" da pessoa, avaliacoes, chat. Pendente e
+     recusado ficam so na lista de parciais da obra */
+  parciais.rows.forEach((l) => {
+    if (l.status !== 'aceito') return
+    const lista = (membrosDaObra[l.obra_id] ??= [])
+    if (!lista.includes(String(l.usuario_id))) lista.push(String(l.usuario_id))
+  })
+  /* obra -> check -> [{ dia, hora, membros }] */
+  const quemVai = {}
+  horarioMembros.rows.forEach((l) => {
+    const chave = `${l.obra_id}|${l.check_id}|${l.dia}`
+    ;(quemVai[chave] ??= []).push(String(l.usuario_id))
+  })
+  const horariosDaObra = {}
+  horarios.rows.forEach((l) => {
+    const daObra = (horariosDaObra[l.obra_id] ??= {})
+    ;(daObra[String(l.check_id)] ??= []).push({
+      dia: l.dia,
+      hora: l.hora,
+      membros: quemVai[`${l.obra_id}|${l.check_id}|${l.dia}`] ?? [],
+    })
+  })
+
+  const parciaisDaObra = junta(parciais.rows, 'obra_id', (l) => ({
+    usuarioId: String(l.usuario_id),
+    status: l.status,
+    motivo: l.motivo ?? '',
+    incluidoPor: l.incluido_por === null ? null : String(l.incluido_por),
+    incluidoPorNome: l.incluido_por_nome ?? null,
+    incluidoEm: l.incluido_em,
+    respondidoEm: l.respondido_em ?? null,
+  }))
   const obsDaObra = junta(observacoes.rows, 'obra_id', (l) => ({
     id: String(l.id),
     autorId: l.usuario_id === null ? null : String(l.usuario_id),
@@ -515,13 +564,15 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
       tipo: o.tipo,
       prioridade: o.prioridade,
       dataInicio: o.data_inicio,
-      /* o prazo final: a entrega da documentacao */
+      /* o prazo que se escolhia no cadastro — so obras antigas tem; fica
+         como historico (painel de atraso das fechadas, exportacao). O
+         prazo final de agora e o dia do ultimo check (tela) */
       dataConclusao: o.data_conclusao,
       /* a entrada em campo — o periodo de execucao vai daqui ate o
          prazo da execucao. null = ainda nao definida (vale o inicio da obra) */
       execucaoInicio: soData(o.execucao_inicio ?? null),
-      /* o prazo da ETAPA DE EXECUCAO (3a) — nao o da obra inteira, que e
-         o dataConclusao. null = ainda nao definido */
+      /* o prazo da ETAPA DE EXECUCAO (3a) — nao o da obra inteira. null =
+         ainda nao definido */
       execucaoPrazo: soData(o.execucao_prazo ?? null),
       /* os dias da execucao, escolhidos um a um (atualizacao 20). null =
          periodo corrido, do inicio ao prazo da execucao */
@@ -552,6 +603,10 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
       servico: o.servico ?? null,
       itens: itensDaObra[o.id] ?? [],
       membros: membrosDaObra[o.id] ?? [],
+      /* os incluidos a mao: pendente, aceito ou recusado (com o motivo) */
+      parciais: parciaisDaObra[o.id] ?? [],
+      /* check com horario -> [{ dia, hora, membros }] (atualizacao 31) */
+      horarios: horariosDaObra[o.id] ?? {},
       observacoes: obsDaObra[o.id] ?? [],
       avisos: avisosDaObra[o.id] ?? [],
       etiquetas: etiquetasDaObra[o.id] ?? [],
@@ -1307,19 +1362,23 @@ router.delete('/chat/:id', exigeSessao, async (req, res) => {
 const PRIORIDADES = ['baixa', 'media', 'alta']
 
 /* ------------------------------------------------------------
-   Dois prazos, e cada um manda numa coisa:
+   As datas da obra:
 
-     data_inicio     -> data_conclusao   a OBRA inteira (inclusive a
-                                         documentacao e a entrega,
-                                         que vem depois da execucao);
+     data_inicio                         o cadastro (vem com hoje);
      execucao_inicio -> execucao_prazo   so a ETAPA DE EXECUCAO (3a),
                                          definido dentro da obra
                                          (PUT /obras/:id/execucao).
 
-   O cadastro da obra so tem o inicio e o prazo final. O TIPO e o do
-   cadastro: so e emergencia a obra aberta como emergencia — data
-   nenhuma (nem execucao em menos de 3 dias) transforma obra padrao em
-   emergencia.
+   O PRAZO FINAL nao se escolhe mais: o cadastro e a edicao ignoram o
+   data_conclusao. Ele e o dia em que o ultimo check da obra foi marcado
+   — a tela tira dos proprios checks (prazoFinalDaObra, em
+   src/domain/obras.js). O data_conclusao que obras antigas guardam
+   fica no banco como historico (o painel de atraso das obras fechadas
+   ainda le), mas nao trava mais data nenhuma.
+
+   O TIPO e o do cadastro: so e emergencia a obra aberta como
+   emergencia — data nenhuma (nem execucao em menos de 3 dias)
+   transforma obra padrao em emergencia.
    ------------------------------------------------------------ */
 
 /** Hoje no calendario do Brasil: o servidor pode estar rodando em UTC. */
@@ -1341,7 +1400,6 @@ async function datasDaObra(obraId) {
   return {
     tipo: o.tipo,
     inicio: soData(o.data_inicio),
-    prazoFinal: soData(o.data_conclusao),
     execucaoInicio: soData(o.execucao_inicio ?? null),
     execucaoPrazo: soData(o.execucao_prazo ?? null),
   }
@@ -1384,43 +1442,25 @@ router.post('/obras', exigeSessao, exige('editar_obras'), async (req, res) => {
      "obra" e "-" no lugar dela */
   const descricao = texto(req.body?.descricao)
   const dataInicio = texto(req.body?.dataInicio) || hojeNoBrasil()
-  const dataConclusao = texto(req.body?.dataConclusao) || null
 
   /* o tipo e o do botao que abriu o cadastro, e so ele */
   const tipo = req.body?.tipo === 'emergencia' ? 'emergencia' : 'padrao'
   // emergencia e sempre alta; o gatilho do banco garante, aqui so evita ida a toa
   const prioridade = tipo === 'emergencia' ? 'alta' : (req.body?.prioridade ?? 'media')
 
-  for (const data of [dataInicio, dataConclusao]) {
-    if (data && !dataValida(data)) return res.status(400).json({ erro: 'Data inválida.' })
-  }
-  const erroDeDatas = conferirDatas({ inicio: dataInicio, prazoFinal: dataConclusao })
-  if (erroDeDatas) return res.status(400).json({ erro: erroDeDatas })
+  if (!dataValida(dataInicio)) return res.status(400).json({ erro: 'Data inválida.' })
 
   if (!clienteId) return res.status(400).json({ erro: 'Escolha a empresa.' })
   if (!proposta) return res.status(400).json({ erro: 'Informe o n° da proposta.' })
   if (!PRIORIDADES.includes(prioridade)) return res.status(400).json({ erro: 'Prioridade inválida.' })
 
-  /* Emergencia SEM prazo e uma contradicao: sem uma data ate a qual
-     aquilo precisa estar resolvido, o que existe e uma obra urgente —
-     e urgente ja e a prioridade alta da obra padrao. Alem disso e o
-     prazo que faz a obra aparecer como atrasada e entrar na conta de
-     atraso do painel; sem ele a emergencia seria a unica que nunca
-     cobra ninguem.
-
-     A tela ja barra isso, mas ela e so a primeira porta: quem chama a
-     API direto passaria por cima dela. */
-  if (tipo === 'emergencia' && !dataConclusao) {
-    return res.status(400).json({ erro: 'Obra de emergência precisa de uma data de conclusão.' })
-  }
-
   try {
     const { rows } = await query(
       `INSERT INTO obra (cliente_id, proposta, descricao, tipo, prioridade,
-                         data_inicio, data_conclusao, criado_por, atualizado_por)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
+                         data_inicio, criado_por, atualizado_por)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
        RETURNING id`,
-      [clienteId, proposta, descricao, tipo, prioridade, dataInicio, dataConclusao, req.dono.sub],
+      [clienteId, proposta, descricao, tipo, prioridade, dataInicio, req.dono.sub],
     )
     await registrarAtividade(req, {
       acao: 'obra.criada',
@@ -1452,11 +1492,9 @@ router.patch('/obras/:id', exigeSessao, exige('editar_obras'), obraAberta, async
   }
   if (req.body?.clienteId !== undefined) por('cliente_id', req.body.clienteId)
   if (req.body?.dataInicio !== undefined) por('data_inicio', req.body.dataInicio || null)
-  if (req.body?.dataConclusao !== undefined) por('data_conclusao', req.body.dataConclusao || null)
-  for (const campo of ['dataInicio', 'dataConclusao']) {
-    const valor = texto(req.body?.[campo])
-    if (valor && !dataValida(valor)) return res.status(400).json({ erro: 'Data inválida.' })
-  }
+  /* o prazo final (dataConclusao) nao se edita: e o dia do ultimo check */
+  const novoInicio = texto(req.body?.dataInicio)
+  if (novoInicio && !dataValida(novoInicio)) return res.status(400).json({ erro: 'Data inválida.' })
   if (req.body?.tipo !== undefined) {
     if (!['padrao', 'emergencia'].includes(req.body.tipo)) {
       return res.status(400).json({ erro: 'Tipo de obra inválido.' })
@@ -1464,46 +1502,12 @@ router.patch('/obras/:id', exigeSessao, exige('editar_obras'), obraAberta, async
     por('tipo', req.body.tipo)
   }
 
-  /* A mesma regra da criacao, na edicao — e aqui ela precisa olhar o
-     BANCO, nao so o corpo da chamada. Sao dois caminhos ate a mesma
-     contradicao: apagar a data de uma emergencia que ja existe, e
-     transformar em emergencia uma obra padrao que esta sem data. */
-  if (req.body?.tipo === 'emergencia' || req.body?.dataConclusao !== undefined) {
-    try {
-      const { rows } = await query('SELECT tipo, data_conclusao FROM obra WHERE id = $1', [
-        req.params.id,
-      ])
-      if (!rows[0]) return res.status(404).json({ erro: 'Obra não encontrada.' })
-
-      const tipoFinal = req.body?.tipo ?? rows[0].tipo
-      const dataFinal =
-        req.body?.dataConclusao !== undefined
-          ? texto(req.body.dataConclusao)
-          : rows[0].data_conclusao
-
-      if (tipoFinal === 'emergencia' && !dataFinal) {
-        return res
-          .status(400)
-          .json({ erro: 'Obra de emergência precisa de uma data de conclusão.' })
-      }
-    } catch (e) {
-      return tratar(e, res, 'dados/obra-editar-conferir')
-    }
-  }
-
-  /* as datas novas contra as que ficam: o prazo final nao vem antes do
-     inicio, nem antes da execucao ja definida dentro da obra */
-  if (req.body?.dataInicio !== undefined || req.body?.dataConclusao !== undefined) {
+  /* o inicio novo contra a execucao ja definida dentro da obra */
+  if (req.body?.dataInicio !== undefined) {
     try {
       const antes = await datasDaObra(req.params.id)
       if (!antes) return res.status(404).json({ erro: 'Obra não encontrada.' })
-      const erroDeDatas = conferirDatas({
-        ...antes,
-        ...(req.body?.dataInicio !== undefined && { inicio: texto(req.body.dataInicio) || null }),
-        ...(req.body?.dataConclusao !== undefined && {
-          prazoFinal: texto(req.body.dataConclusao) || null,
-        }),
-      })
+      const erroDeDatas = conferirDatas({ ...antes, inicio: novoInicio || null })
       if (erroDeDatas) return res.status(400).json({ erro: erroDeDatas })
     } catch (e) {
       return tratar(e, res, 'dados/obra-editar-datas')
@@ -1957,6 +1961,21 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
     const regra = await regraDoCheck(req.params.checkId)
     const pergunta = regra.simNao
     const resposta = req.body?.resposta
+
+    /* o check com horario (atualizacao 31) marca no pop-up dele, com as
+       datas e os horarios; sem horario nenhum definido, nao fecha */
+    const { rows: comHorario } = await query(
+      `SELECT ck.horario,
+              EXISTS (SELECT 1 FROM obra_horario h WHERE h.obra_id = $2 AND h.check_id = ck.id) AS definido
+         FROM etapa_check ck WHERE ck.id = $1`,
+      [req.params.checkId, req.params.id],
+    ).catch((erro) => {
+      if (erro.code === '42703' || erro.code === '42P01') return { rows: [] }
+      throw erro
+    })
+    if (comHorario[0]?.horario && !comHorario[0].definido) {
+      return res.status(409).json({ erro: 'Defina o horário das datas no próprio check antes de marcar.' })
+    }
     if (pergunta && typeof resposta !== 'boolean') {
       return res.status(400).json({ erro: 'Este check pede uma resposta: Sim ou Não.' })
     }
@@ -2194,15 +2213,15 @@ router.put('/obras/:id/prazos', exigeSessao, exige('definir_prazos'), obraAberta
    execucao_dias, e o primeiro e o ultimo continuam em execucao_inicio
    e execucao_prazo — e dali que o resto le o prazo da execucao.
 
-   O prazo final da obra (data_conclusao) NAO muda aqui: a obra continua
-   depois da execucao, com a documentacao e a entrega. A etapa de
-   execucao nao anda sem o prazo dela.
+   A obra continua depois da execucao, com a documentacao e a entrega;
+   o prazo final dela e o dia do ultimo check (nao e escolhido). A
+   etapa de execucao nao anda sem o prazo dela.
 
    Quem define e quem tem `definir_prazos` — a mesma permissao dos
    prazos de check — ou quem marca o check "Prazo da execucao" da 1a
    etapa (o Time Tecnico; atualizacao 19). Definir o prazo MARCA esse
    check. Periodo curto (hoje, amanha) nao muda o tipo da obra, e o
-   prazo dela nao mexe na cor do card: a cor vem do prazo final.
+   prazo dela nao mexe na cor do card.
    ------------------------------------------------------------ */
 
 /**
@@ -2210,21 +2229,12 @@ router.put('/obras/:id/prazos', exigeSessao, exige('definir_prazos'), obraAberta
  * execucao.
  * Devolve o recado do primeiro problema, ou null.
  */
-function conferirDatas({ inicio, prazoFinal, execucaoInicio, execucaoPrazo }) {
-  if (prazoFinal && inicio && prazoFinal < inicio) {
-    return 'O prazo final não pode ser antes do início.'
-  }
+function conferirDatas({ inicio, execucaoInicio, execucaoPrazo }) {
   if (execucaoInicio && execucaoPrazo && execucaoInicio > execucaoPrazo) {
     return 'O início da execução não pode ser depois do prazo da execução.'
   }
   if (execucaoPrazo && inicio && execucaoPrazo < inicio) {
     return 'O prazo da execução não pode ser antes do início da obra.'
-  }
-  if (execucaoPrazo && prazoFinal && execucaoPrazo > prazoFinal) {
-    return `O prazo da execução não pode passar do prazo final da obra (${dataLida(prazoFinal)}).`
-  }
-  if (execucaoInicio && prazoFinal && execucaoInicio > prazoFinal) {
-    return 'O início da execução não pode ser depois do prazo final da obra.'
   }
   return null
 }
@@ -2285,15 +2295,10 @@ router.put('/obras/:id/execucao', exigeSessao, obraAberta, async (req, res) => {
 
     const antes = await datasDaObra(req.params.id)
     if (!antes) return res.status(404).json({ erro: 'Obra não encontrada.' })
-    /* os dias cabem dentro da obra: do inicio dela ao prazo final */
+    /* os dias comecam no inicio da obra, ou depois */
     if (dias && antes.inicio && inicio < antes.inicio) {
       return res.status(400).json({
         erro: `Os dias da execução não podem ser antes do início da obra (${dataLida(antes.inicio)}).`,
-      })
-    }
-    if (dias && antes.prazoFinal && prazo > antes.prazoFinal) {
-      return res.status(400).json({
-        erro: `Os dias da execução não podem passar do prazo final da obra (${dataLida(antes.prazoFinal)}).`,
       })
     }
     const erroDeDatas = conferirDatas({ ...antes, execucaoInicio: inicio, execucaoPrazo: prazo })
@@ -4105,7 +4110,7 @@ router.post('/obras/:id/chat', exigeSessao, obraAberta, async (req, res) => {
     }
 
     /* quem participa da obra recebe; quem foi citado recebe com o @ */
-    const membros = await query('SELECT usuario_id FROM obra_membro WHERE obra_id = $1', [req.params.id])
+    const membros = await membrosDaObraIds(req.params.id)
     const { obra: proposta, cliente } = await descreverObra(req.params.id)
     await avisarNoCelular({
       destinos: membros.rows.map((l) => l.usuario_id),
@@ -4182,6 +4187,365 @@ router.delete('/obras/:id/chat/:mensagemId', exigeSessao, obraAberta, async (req
     return res.status(204).end()
   } catch (e) {
     return tratar(e, res, 'dados/chat-apagar')
+  }
+})
+
+/* ============================================================
+   MEMBRO PARCIAL (atualizacao 30)
+
+   Membro da obra e quem marcou check nela (obra_membro). Mas nem todo
+   mundo que vai a obra marca check — nem ha check para todos. O membro
+   PARCIAL e quem alguem incluiu na mao:
+
+     POST   /obras/:id/parciais                      inclui { usuarioId }:
+                                                     fica pendente ate a
+                                                     pessoa responder
+     POST   /obras/:id/parciais/:usuarioId/resposta  a PROPRIA pessoa aceita
+                                                     { aceitar: true } ou
+                                                     recusa { motivo }
+     DELETE /obras/:id/parciais/:usuarioId           tira da obra
+
+   Incluir: qualquer um que ve Obras — quem decide e a pessoa incluida,
+   que recebe a solicitacao (no sino e no celular). Quem se inclui
+   entra ja aceito: nao ha a quem perguntar.
+
+   Tirar: quem tem `excluir_membro_parcial`. Sem ela, so quem incluiu,
+   e so enquanto a pessoa ainda nao respondeu — e desfazer o engano.
+
+   Recusada, a inclusao fica registrada com o motivo (quem incluiu ve
+   por que) e pode ser refeita: incluir de novo volta a pendente.
+   ============================================================ */
+
+/** Quem recebe o que acontece na obra: os do check e os parciais que aceitaram. */
+async function membrosDaObraIds(obraId) {
+  const { rows } = await query(
+    `SELECT usuario_id FROM obra_membro WHERE obra_id = $1
+      UNION
+     SELECT usuario_id FROM obra_membro_parcial WHERE obra_id = $1 AND status = 'aceito'`,
+    [obraId],
+  ).catch((erro) => {
+    /* sem a atualizacao 30, so os do check */
+    if (erro.code !== '42P01') throw erro
+    return query('SELECT usuario_id FROM obra_membro WHERE obra_id = $1', [obraId])
+  })
+  return rows.map((l) => l.usuario_id)
+}
+
+const nomeDaObra = async (obraId) => {
+  const { obra, cliente } = await descreverObra(obraId)
+  return [obra, cliente].filter(Boolean).join(' - ') || 'obra'
+}
+
+const idValido = (valor) => /^\d{1,15}$/.test(String(valor ?? ''))
+
+/**
+ * Inclui a pessoa na obra como membro parcial: pendente ate ela
+ * responder (aceito direto quando e a propria pessoa). Avisa no
+ * celular e grava no historico.
+ *
+ * Devolve { status } — ou { ja: 'check' } (marcou check: ja e membro)
+ * ou { ja: 'incluido' } (pendente ou aceita). { erro } se a obra ou a
+ * pessoa nao existe.
+ */
+async function pedirInclusao(req, obraId, usuarioId) {
+  const [obra, pessoa, comCheck] = await Promise.all([
+    query('SELECT id FROM obra WHERE id = $1', [obraId]),
+    query('SELECT name, coalesce(ativo, true) AS ativo FROM usuario WHERE id = $1', [usuarioId]),
+    query('SELECT 1 FROM obra_membro WHERE obra_id = $1 AND usuario_id = $2', [obraId, usuarioId]),
+  ])
+  if (!obra.rows[0]) return { erro: 'Obra não encontrada.', status: 404 }
+  if (!pessoa.rows[0]?.ativo) return { erro: 'Essa pessoa não está mais na equipe.', status: 404 }
+  if (comCheck.rows[0]) return { ja: 'check' }
+
+  const euMesmo = String(usuarioId) === String(req.dono.sub)
+  /* incluir de novo quem tinha recusado volta a perguntar; quem esta
+     pendente ou ja aceitou nao muda */
+  const { rows } = await query(
+    `INSERT INTO obra_membro_parcial (obra_id, usuario_id, incluido_por, status, respondido_em)
+     VALUES ($1, $2, $3, $4, CASE WHEN $4 = 'aceito' THEN now() END)
+     ON CONFLICT (obra_id, usuario_id) DO UPDATE
+        SET status = EXCLUDED.status, motivo = NULL, respondido_em = EXCLUDED.respondido_em,
+            incluido_por = EXCLUDED.incluido_por, incluido_em = now()
+      WHERE obra_membro_parcial.status = 'recusado'
+     RETURNING status`,
+    [obraId, usuarioId, req.dono.sub, euMesmo ? 'aceito' : 'pendente'],
+  )
+  if (!rows[0]) return { ja: 'incluido' }
+
+  const nome = await nomeDaObra(obraId)
+  await registrarAtividade(req, {
+    acao: 'obra.membro_incluido',
+    categoria: 'obra',
+    entidade: ['obra', obraId],
+    descricao: 'Membro parcial incluído na obra',
+    detalhes: { ...(await descreverObra(obraId)), pessoa: pessoa.rows[0].name },
+  })
+  if (!euMesmo) {
+    const { rows: eu } = await query('SELECT name FROM usuario WHERE id = $1', [req.dono.sub])
+    await notificar([usuarioId], {
+      titulo: 'Inclusão em obra',
+      corpo: `${eu[0]?.name ?? 'Alguém'} incluiu você como membro da obra ${nome}. Aceite ou recuse.`,
+      url: `/core/app/obras/${obraId}`,
+      tag: `parcial-${obraId}`,
+    })
+  }
+  return { status: rows[0].status }
+}
+
+router.post('/obras/:id/parciais', exigeSessao, exige('ver_obras'), async (req, res) => {
+  const usuarioId = texto(req.body?.usuarioId)
+  if (!idValido(req.params.id)) return res.status(400).json({ erro: 'Obra inválida.' })
+  if (!idValido(usuarioId)) return res.status(400).json({ erro: 'Escolha a pessoa.' })
+  try {
+    const feito = await pedirInclusao(req, req.params.id, usuarioId)
+    if (feito.erro) return res.status(feito.status).json({ erro: feito.erro })
+    if (feito.ja === 'check') {
+      return res.status(409).json({ erro: 'Essa pessoa já é membro da obra: ela marcou check aqui.' })
+    }
+    if (feito.ja) return res.status(409).json({ erro: 'Essa pessoa já foi incluída nesta obra.' })
+    return res.status(201).json({ status: feito.status })
+  } catch (e) {
+    if (e.code === '42P01') {
+      return res.status(503).json({ erro: 'O banco ainda não tem o membro parcial (atualização 30). Rode npm run db:atualizar.' })
+    }
+    return tratar(e, res, 'dados/parcial-incluir')
+  }
+})
+
+/* sem exige(): quem responde e a propria pessoa incluida, tenha o
+   setor dela a aba Obras ou nao */
+router.post('/obras/:id/parciais/:usuarioId/resposta', exigeSessao, async (req, res) => {
+  if (!idValido(req.params.id) || !idValido(req.params.usuarioId)) {
+    return res.status(400).json({ erro: 'Solicitação inválida.' })
+  }
+  if (String(req.params.usuarioId) !== String(req.dono.sub)) {
+    return res.status(403).json({ erro: 'Só a pessoa incluída responde à solicitação.' })
+  }
+  const aceitar = req.body?.aceitar === true
+  const motivo = aceitar ? null : texto(req.body?.motivo).slice(0, 500)
+  if (!aceitar && !motivo) return res.status(400).json({ erro: 'Escreva o motivo da recusa.', campo: 'motivo' })
+  try {
+    const { rows } = await query(
+      `UPDATE obra_membro_parcial
+          SET status = $1, motivo = $2, respondido_em = now()
+        WHERE obra_id = $3 AND usuario_id = $4 AND status = 'pendente'
+        RETURNING incluido_por`,
+      [aceitar ? 'aceito' : 'recusado', motivo, req.params.id, req.params.usuarioId],
+    )
+    if (!rows[0]) return res.status(409).json({ erro: 'Essa solicitação já foi respondida ou cancelada.' })
+
+    const nome = await nomeDaObra(req.params.id)
+    const { rows: eu } = await query('SELECT name FROM usuario WHERE id = $1', [req.dono.sub])
+    const quem = eu[0]?.name ?? 'A pessoa'
+    await registrarAtividade(req, {
+      acao: aceitar ? 'obra.membro_aceitou' : 'obra.membro_recusou',
+      categoria: 'obra',
+      entidade: ['obra', req.params.id],
+      descricao: aceitar ? 'Aceitou a inclusão na obra' : 'Recusou a inclusão na obra',
+      detalhes: { ...(await descreverObra(req.params.id)), motivo },
+    })
+    /* quem incluiu fica sabendo da resposta */
+    if (rows[0].incluido_por !== null) {
+      await notificar([rows[0].incluido_por], {
+        titulo: aceitar ? 'Inclusão aceita' : 'Inclusão recusada',
+        corpo: aceitar
+          ? `${quem} aceitou ser membro da obra ${nome}.`
+          : `${quem} recusou ser membro da obra ${nome}: ${motivo}`,
+        url: `/core/app/obras/${req.params.id}`,
+        tag: `parcial-resposta-${req.params.id}-${req.params.usuarioId}`,
+      })
+    }
+    return res.json({ status: aceitar ? 'aceito' : 'recusado' })
+  } catch (e) {
+    return tratar(e, res, 'dados/parcial-responder')
+  }
+})
+
+router.delete('/obras/:id/parciais/:usuarioId', exigeSessao, exige('ver_obras'), async (req, res) => {
+  if (!idValido(req.params.id) || !idValido(req.params.usuarioId)) {
+    return res.status(400).json({ erro: 'Solicitação inválida.' })
+  }
+  try {
+    const { rows } = await query(
+      'SELECT p.status, p.incluido_por, u.name FROM obra_membro_parcial p JOIN usuario u ON u.id = p.usuario_id WHERE p.obra_id = $1 AND p.usuario_id = $2',
+      [req.params.id, req.params.usuarioId],
+    )
+    if (!rows[0]) return res.status(404).json({ erro: 'Essa pessoa não está incluída nesta obra.' })
+
+    const podeTirar = cargoPode(await meuCargo(req.dono.sub), 'excluir_membro_parcial')
+    const desfazendo = rows[0].status === 'pendente' && String(rows[0].incluido_por) === String(req.dono.sub)
+    if (!podeTirar && !desfazendo) {
+      return res.status(403).json({ erro: 'Seu setor não tem permissão para tirar membro parcial da obra.' })
+    }
+
+    await query('DELETE FROM obra_membro_parcial WHERE obra_id = $1 AND usuario_id = $2', [
+      req.params.id,
+      req.params.usuarioId,
+    ])
+    await registrarAtividade(req, {
+      acao: 'obra.membro_removido',
+      categoria: 'obra',
+      entidade: ['obra', req.params.id],
+      descricao: desfazendo && !podeTirar ? 'Inclusão de membro cancelada' : 'Membro parcial tirado da obra',
+      detalhes: { ...(await descreverObra(req.params.id)), pessoa: rows[0].name },
+    })
+    return res.status(204).end()
+  } catch (e) {
+    return tratar(e, res, 'dados/parcial-tirar')
+  }
+})
+
+/* ============================================================
+   O CHECK COM HORARIO (atualizacao 31)
+
+     PUT /obras/:id/horarios/:checkId
+         { dias: [{ dia: 'AAAA-MM-DD', hora: 'HH:MM', membros: [ids] }],
+           marcar?: true | false }
+
+   O pop-up do check (ex.: "Ponto de encontro") manda a lista inteira:
+   cada data da obra com o horario e quem vai. Data que saiu da lista
+   sai do banco. `marcar` marca ou desmarca o check no mesmo gesto
+   (sem ele, o check fica como esta).
+
+   Quem vai numa data e ainda nao e membro da obra recebe a solicitacao
+   de inclusao (o membro parcial) — e o "adicionar membros" por aqui.
+   Cada pessoa de cada data vira um turno na aba Turnos.
+
+   Quem pode: quem marca o check (podeMarcar), na obra aberta.
+   ============================================================ */
+
+const DIAS_MAXIMOS = 120
+
+router.put('/obras/:id/horarios/:checkId', exigeSessao, obraAberta, async (req, res) => {
+  const { id: obraId, checkId } = req.params
+  if (!idValido(obraId) || !idValido(checkId)) return res.status(400).json({ erro: 'Check inválido.' })
+
+  const bruto = Array.isArray(req.body?.dias) ? req.body.dias : null
+  if (!bruto) return res.status(400).json({ erro: 'Mande as datas e os horários.' })
+  if (bruto.length > DIAS_MAXIMOS) return res.status(400).json({ erro: `No máximo ${DIAS_MAXIMOS} datas.` })
+  const dias = []
+  for (const item of bruto) {
+    const dia = texto(item?.dia)
+    const hora = texto(item?.hora)
+    if (!dataValida(dia)) return res.status(400).json({ erro: 'Uma das datas é inválida.' })
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)) {
+      return res.status(400).json({ erro: `Informe o horário de ${dia.split('-').reverse().join('/')}.` })
+    }
+    if (dias.some((d) => d.dia === dia)) return res.status(400).json({ erro: 'Há uma data repetida.' })
+    const membros = [...new Set((Array.isArray(item?.membros) ? item.membros : []).map(String))]
+    if (membros.some((m) => !idValido(m))) return res.status(400).json({ erro: 'Uma das pessoas é inválida.' })
+    dias.push({ dia, hora, membros })
+  }
+  const marcar = typeof req.body?.marcar === 'boolean' ? req.body.marcar : undefined
+
+  try {
+    if (!(await podeMarcar(req.dono.sub, checkId, obraId))) {
+      return res.status(403).json({ erro: 'Este check é de outro setor.' })
+    }
+    const { rows: ck } = await query('SELECT horario FROM etapa_check WHERE id = $1', [checkId]).catch((erro) => {
+      if (erro.code === '42703') return { rows: [] }
+      throw erro
+    })
+    if (!ck[0]?.horario) return res.status(400).json({ erro: 'Este check não tem horário.' })
+
+    const todos = [...new Set(dias.flatMap((d) => d.membros))]
+    if (todos.length) {
+      const { rows: ativos } = await query('SELECT id FROM usuario WHERE id = ANY($1::bigint[]) AND ativo', [todos])
+      if (ativos.length !== todos.length) {
+        return res.status(400).json({ erro: 'Uma das pessoas escolhidas não está mais na equipe.' })
+      }
+    }
+
+    if (marcar === true) {
+      if (dias.length === 0) {
+        return res.status(400).json({ erro: 'Defina o horário de ao menos uma data antes de marcar o check.' })
+      }
+      const regra = await regraDoCheck(checkId)
+      if (regra.papel === 'execucao') {
+        const datas = await datasDaObra(obraId)
+        if (!datas?.execucaoPrazo) {
+          return res.status(409).json({
+            erro: 'A etapa de execução exige o prazo da execução. Defina o período de execução antes de marcar os checks dela.',
+          })
+        }
+      }
+    }
+
+    const marcouAgora = await emTransacao(async (db) => {
+      await db.query(
+        'DELETE FROM obra_horario WHERE obra_id = $1 AND check_id = $2 AND NOT (dia = ANY($3::date[]))',
+        [obraId, checkId, dias.map((d) => d.dia)],
+      )
+      for (const d of dias) {
+        await db.query(
+          `INSERT INTO obra_horario (obra_id, check_id, dia, hora, atualizado_por)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (obra_id, check_id, dia) DO UPDATE
+              SET hora = EXCLUDED.hora, atualizado_por = EXCLUDED.atualizado_por, atualizado_em = now()`,
+          [obraId, checkId, d.dia, d.hora, req.dono.sub],
+        )
+        await db.query('DELETE FROM obra_horario_membro WHERE obra_id = $1 AND check_id = $2 AND dia = $3', [
+          obraId,
+          checkId,
+          d.dia,
+        ])
+        if (d.membros.length) {
+          await db.query(
+            `INSERT INTO obra_horario_membro (obra_id, check_id, dia, usuario_id)
+             SELECT $1, $2, $3, unnest($4::bigint[])`,
+            [obraId, checkId, d.dia, d.membros],
+          )
+        }
+      }
+      if (marcar === true) {
+        const { rowCount } = await db.query(
+          `INSERT INTO obra_check (obra_id, check_id, feito_por) VALUES ($1, $2, $3)
+           ON CONFLICT (obra_id, check_id) DO NOTHING`,
+          [obraId, checkId, req.dono.sub],
+        )
+        return rowCount > 0
+      }
+      if (marcar === false) {
+        await db.query('DELETE FROM obra_check WHERE obra_id = $1 AND check_id = $2', [obraId, checkId])
+      }
+      return false
+    })
+
+    /* quem vai e ainda nao e membro da obra recebe a solicitacao */
+    for (const usuarioId of todos) {
+      await pedirInclusao(req, obraId, usuarioId).catch((erro) => {
+        if (erro.code !== '42P01') throw erro
+      })
+    }
+
+    const curta = (iso) => iso.split('-').reverse().slice(0, 2).join('/')
+    await registrarAtividade(req, {
+      acao: 'obra.horarios',
+      categoria: 'obra',
+      entidade: ['obra', obraId],
+      descricao: 'Horários do check definidos',
+      detalhes: {
+        ...(await descreverObra(obraId)),
+        ...(await descreverCheck(checkId)),
+        datas: dias.map((d) => `${curta(d.dia)} ${d.hora}`).join('; ') || 'nenhuma',
+      },
+    })
+    if (marcouAgora) {
+      await registrarAtividade(req, {
+        acao: 'check.marcado',
+        categoria: 'check',
+        entidade: ['obra', obraId],
+        descricao: 'Check concluído',
+        detalhes: { ...(await descreverObra(obraId)), ...(await descreverCheck(checkId)) },
+      })
+    }
+    return res.json({ ok: true })
+  } catch (e) {
+    if (e.code === '42P01') {
+      return res.status(503).json({ erro: 'O banco ainda não tem o check com horário (atualização 31). Rode npm run db:atualizar.' })
+    }
+    if (e.code === '23503') return res.status(404).json({ erro: 'Obra ou check não encontrado.' })
+    return tratar(e, res, 'dados/horarios')
   }
 })
 

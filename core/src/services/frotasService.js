@@ -28,6 +28,9 @@ export const registrarSaida = (campos) => post('/frotas/saidas', campos)
 /** Os da saida (sem obraId) e mais { checklist: { pneus: 'sim' | 'nao', ... }, posto }. */
 export const registrarDevolucao = (campos) => post('/frotas/devolucoes', campos)
 
+/** Apaga uma saida, troca ou devolucao (excluir_registro_frota). */
+export const excluirRegistro = (id) => del(`/frotas/registros/${encodeURIComponent(id)}`)
+
 /**
  * Uma pagina de registros, do mais novo para o mais antigo.
  * filtros: { veiculo, tipo, alertas, mes, busca, pagina }

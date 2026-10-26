@@ -334,81 +334,73 @@ export default function Usuarios() {
                   className={`pessoa ${pessoa.souEu ? 'is-eu' : ''} ${aberto ? 'is-aberto' : ''}`.trim()}
                   style={{ '--cargo-cor': cargo?.cor ?? '#6b7280' }}
                 >
+                  {/* O topo tem altura FIXA: todos os cards fechados ficam do
+                      mesmo tamanho, com nome grande, cargo ou "cadastro
+                      incompleto". O que nao cabe corta com reticencias (o
+                      texto inteiro aparece ao parar o mouse). */}
                   <header className="pessoa__topo">
-                    {/* o card inteiro (menos editar/excluir) e o botao que abre */}
-                    <button
-                      type="button"
-                      className="pessoa__abrir"
-                      aria-expanded={aberto}
-                      aria-controls={detalhe}
-                      onClick={() => alternarAberto(pessoa.id)}
-                    >
-                      <span className="pessoa__foto">
-                        <Avatar nome={pessoa.nome} foto={pessoa.foto} tamanho={46} titulo={pessoa.nome} />
-                        <span
-                          className={`pessoa__presenca pessoa__presenca--${estado}`}
-                          title={PRESENCA[estado]}
-                        >
-                          <span className="sr-only">{PRESENCA[estado]}</span>
-                        </span>
+                    <span className="pessoa__foto">
+                      <Avatar nome={pessoa.nome} foto={pessoa.foto} tamanho={46} titulo={pessoa.nome} />
+                      <span
+                        className={`pessoa__presenca pessoa__presenca--${estado}`}
+                        title={PRESENCA[estado]}
+                      >
+                        <span className="sr-only">{PRESENCA[estado]}</span>
                       </span>
-                      <span className="pessoa__quem">
-                        <span className="pessoa__nome">
+                    </span>
+                    <span className="pessoa__quem">
+                      <span className="pessoa__nome">
+                        <span className="pessoa__nometexto" title={pessoa.nome}>
                           {pessoa.nome}
-                          {pessoa.souEu && <span className="pessoa__eu">você</span>}
                         </span>
+                        {pessoa.souEu && <span className="pessoa__eu">você</span>}
+                      </span>
                       {/* O SETOR na etiqueta colorida — o acesso total dele
                           não aparece em lugar nenhum da tela, de propósito —
                           e, abaixo, o CARGO da pessoa dentro do setor. Sem
                           cargo cadastrado, a linha simplesmente não existe:
                           é campo opcional. */}
-                        <span className="pessoa__cargo">
-                          {cargo?.nome ?? pessoa.cargoNome ?? 'Sem setor'}
-                        </span>
-                        {pessoa.cargoTitulo && (
-                          <span className="pessoa__titulo">{pessoa.cargoTitulo}</span>
-                        )}
+                      <span className="pessoa__cargo">
+                        {cargo?.nome ?? pessoa.cargoNome ?? 'Sem setor'}
+                      </span>
                       {/* cadastrado so pelo e-mail: o nome ainda e o
                           provisorio e faltam nascimento e CPF. Some
                           sozinho quando a pessoa completa em Configuracoes. */}
-                        {podeUsuarios && pessoa.cadastroPendente && (
-                          <span className="pessoa__pendente" title="A pessoa ainda não preencheu nome, nascimento e CPF">
-                            Cadastro incompleto
-                          </span>
-                        )}
-                      </span>
-                      <span className="pessoa__seta" aria-hidden="true">
-                        <Icone.seta />
-                      </span>
-                    </button>
+                      {(pessoa.cargoTitulo || (podeUsuarios && pessoa.cadastroPendente)) && (
+                        <span className="pessoa__extra">
+                          {pessoa.cargoTitulo && (
+                            <span className="pessoa__titulo" title={pessoa.cargoTitulo}>
+                              {pessoa.cargoTitulo}
+                            </span>
+                          )}
+                          {podeUsuarios && pessoa.cadastroPendente && (
+                            <span className="pessoa__pendente" title="A pessoa ainda não preencheu nome, nascimento e CPF">
+                              Cadastro incompleto
+                            </span>
+                          )}
+                        </span>
+                      )}
+                    </span>
 
-                    {/* aparecem ao passar o mouse pelo card.
-                        Sem a permissao, cada um so mexe no proprio
-                        cadastro — e isso e em Configuracoes. */}
-                    {podeUsuarios && (
-                      <div className="pessoa__botoes">
-                        <button
-                          type="button"
-                          onClick={() => abrirEdicao(pessoa)}
-                          aria-label={`Editar ${pessoa.nome}`}
-                          title="Editar"
-                        >
-                          <Icone.lapis />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setApagando(pessoa)}
-                          aria-label={`Excluir ${pessoa.nome}`}
-                          title="Excluir"
-                        >
-                          <Icone.lixo />
-                        </button>
-                      </div>
-                    )}
+                    {/* o "v" no canto de cima, a direita: e ele que abre o
+                        card — contato, nota e, para quem pode, editar e
+                        excluir */}
+                    <button
+                      type="button"
+                      className="pessoa__abrir"
+                      aria-expanded={aberto}
+                      aria-controls={detalhe}
+                      aria-label={`${aberto ? 'Fechar' : 'Abrir'} ${pessoa.nome}`}
+                      title={aberto ? 'Fechar' : 'Abrir'}
+                      onClick={() => alternarAberto(pessoa.id)}
+                    >
+                      <Icone.seta />
+                    </button>
                   </header>
 
-                  {/* o que o card guarda: abre e fecha deslizando */}
-                  <div className="pessoa__detalhe" id={detalhe} aria-hidden={!aberto}>
+                  {/* o que o card guarda: abre e fecha deslizando. Fechado,
+                      nada aqui dentro recebe foco nem clique (inert) */}
+                  <div className="pessoa__detalhe" id={detalhe} aria-hidden={!aberto} inert={!aberto}>
                     <div className="pessoa__dentro">
                       {pessoa.email || pessoa.telefone ? (
                         <dl className="pessoa__contato">
@@ -445,6 +437,26 @@ export default function Usuarios() {
                         </span>
                         <span className="pessoa__andamento">{emAndamento} em andamento</span>
                       </footer>
+
+                      {/* so aparecem com o card aberto pelo "v". Sem a
+                          permissao, cada um so mexe no proprio cadastro —
+                          e isso e em Configuracoes. */}
+                      {podeUsuarios && (
+                        <div className="pessoa__botoes">
+                          <button type="button" className="pessoa__botao" onClick={() => abrirEdicao(pessoa)}>
+                            <Icone.lapis />
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            className="pessoa__botao pessoa__botao--perigo"
+                            onClick={() => setApagando(pessoa)}
+                          >
+                            <Icone.lixo />
+                            Excluir
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </li>

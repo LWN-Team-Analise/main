@@ -17,7 +17,9 @@ import {
   JUSTIFICATIVA_MAXIMA,
   OBSERVACAO_MAXIMA,
   VALOR_MAXIMO,
+  VALORES_FIXOS,
   anexoAceito,
+  comprovanteObrigatorio,
   rotuloDoValor,
   tiposDa,
   valorFixo,
@@ -33,8 +35,12 @@ import { prepararImagem } from '@/utils/imagem'
  * em que a pessoa pensa em cada caso:
  *
  *   despesa   data · cliente · tipo · (justificativa) · valor · comprovante · observacao
- *   refeicao  data · cliente · tipo · valor (fixo) · observacao
+ *   refeicao  data · cliente · tipo · valor (pre-definido) · observacao
  *   bonus     data · tipo · cliente · valor · observacao
+ *
+ * O comprovante e obrigatorio no combustivel e no "outros"; nos
+ * transportes ele e opcional. O valor pre-definido (`valores`, a
+ * tabela que a aba leu do banco) trava o campo.
  *
  * Nas tres, o cliente e obrigatorio. A obra saiu do formulario: o envio
  * e lancado so para o cliente.
@@ -119,7 +125,7 @@ async function prepararComprovante(arquivo) {
   }
 }
 
-export default function ModalEnvio({ categoria, aoFechar, aoEnviado }) {
+export default function ModalEnvio({ categoria, valores = VALORES_FIXOS, aoFechar, aoEnviado }) {
   const { clientes, recarregar } = useDados()
   const aberto = Boolean(categoria)
   const config = CATEGORIAS[categoria] ?? null
@@ -159,7 +165,9 @@ export default function ModalEnvio({ categoria, aoFechar, aoEnviado }) {
   }
 
   /* ---- valor ---- */
-  const fixo = categoria === 'refeicao' ? (valorFixo(form.tipo) ?? valorFixo('almoco')) : valorFixo(form.tipo)
+  /* a refeicao sem tipo escolhido ainda mostra o valor do almoco */
+  const fixo =
+    categoria === 'refeicao' && !form.tipo ? valorFixo('almoco', valores) : valorFixo(form.tipo, valores)
   const travado = fixo !== null
   const centavos = travado ? Math.round(fixo * 100) : form.centavos
 
@@ -199,7 +207,9 @@ export default function ModalEnvio({ categoria, aoFechar, aoEnviado }) {
       else if (centavos / 100 > VALOR_MAXIMO) novos.valor = `O limite é ${reais(VALOR_MAXIMO)} por envio.`
     }
 
-    if (categoria === 'despesa' && !anexo?.conteudo) novos.anexo = 'Anexe o comprovante da despesa.'
+    if (categoria === 'despesa' && comprovanteObrigatorio(form.tipo) && !anexo?.conteudo) {
+      novos.anexo = 'Anexe o comprovante da despesa.'
+    }
     return novos
   }
 
@@ -225,7 +235,7 @@ export default function ModalEnvio({ categoria, aoFechar, aoEnviado }) {
         valor: travado ? undefined : (centavos / 100).toFixed(2),
         justificativa: form.tipo === 'outros' ? form.justificativa.trim() : undefined,
         observacao: form.observacao.trim(),
-        anexo: categoria === 'despesa' ? anexo : undefined,
+        anexo: categoria === 'despesa' && anexo?.conteudo ? anexo : undefined,
       })
       aoEnviado?.({ categoria, tipo: form.tipo, data: form.data, valor: resposta.valor })
       aoFechar()
@@ -330,14 +340,14 @@ export default function ModalEnvio({ categoria, aoFechar, aoEnviado }) {
     categoria === 'despesa' ? (
       <CampoArquivo
         key="anexo"
-        rotulo="Anexo (comprovante)"
+        rotulo={form.tipo && !comprovanteObrigatorio(form.tipo) ? 'Anexo (comprovante, opcional)' : 'Anexo (comprovante)'}
         arquivo={anexo}
         aceita={ANEXO_ACEITA}
         ocupado={preparando}
         aoEscolher={escolherArquivo}
         aoRemover={() => setAnexo(null)}
         erro={erros.anexo}
-        dica="Imagem, PDF, ZIP ou documento, até 3 MB. Foto grande é reduzida automaticamente."
+        dica="Imagem, PDF, ZIP ou documento."
       />
     ) : null
 

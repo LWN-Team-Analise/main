@@ -16,6 +16,14 @@ export const IconeDespesa = ({ tamanho = 24 }) => (
   </svg>
 )
 
+/** Etiqueta de preco: os valores pre-definidos. */
+export const IconeValores = ({ tamanho = 18 }) => (
+  <svg viewBox="0 0 24 24" width={tamanho} height={tamanho} {...traco}>
+    <path d="M3.5 12.6V4.5a1 1 0 0 1 1-1h8.1a1 1 0 0 1 .7.3l7.2 7.2a1 1 0 0 1 0 1.4l-8.1 8.1a1 1 0 0 1-1.4 0l-7.2-7.2a1 1 0 0 1-.3-.7z" />
+    <circle cx="8.2" cy="8.2" r="1.4" />
+  </svg>
+)
+
 /** Garfo e faca: a refeicao. */
 export const IconeRefeicao = ({ tamanho = 24 }) => (
   <svg viewBox="0 0 24 24" width={tamanho} height={tamanho} {...traco}>

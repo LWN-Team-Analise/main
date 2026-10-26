@@ -223,7 +223,11 @@ export default function CardSetor({
           const reservaCarro = !modelo && check.tipo === CHECK_RESERVA
           const retiradaCarro = !modelo && check.tipo === CHECK_RETIRADA
           const doCarro = reservaCarro || retiradaCarro
-          const abreSemPermissao = (doSistema || proposta || doCarro) && !travado
+          /* o check com horario (atualizacao 31) abre as datas mesmo para
+             quem nao marca: la ele ve os horarios e quem vai */
+          const comHorario = Boolean(check.horario)
+          const horarios = comHorario && !modelo ? (obra.horarios?.[check.id] ?? []) : []
+          const abreSemPermissao = (doSistema || proposta || doCarro || (comHorario && !modelo)) && !travado
           /* "Material de gases": obrigatorio so com ensaio de GASES na obra.
              O porque vai na dica, antes das informacoes do check. */
           const gases = check.tipo === CHECK_GASES
@@ -311,6 +315,18 @@ export default function CardSetor({
                 )}
                 {/* o check que ainda pede resposta: o selo avisa antes do clique */}
                 {check.simNao && !feito && <span className="tarefa__pergunta">Sim/Não</span>}
+                {/* o check com horario: o horario (um so), quantas datas, ou o convite */}
+                {comHorario && (
+                  <span className="tarefa__ensaios">
+                    {modelo
+                      ? 'horário'
+                      : horarios.length === 0
+                        ? 'definir horário'
+                        : horarios.length === 1
+                          ? horarios[0].hora
+                          : `${horarios.length} datas`}
+                  </span>
+                )}
                 {/* os do sistema dizem em que pe estao */}
                 {planejamento && !modelo && (
                   <span className="tarefa__ensaios">

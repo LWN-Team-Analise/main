@@ -331,6 +331,76 @@
   margin-left: auto;
 }
 
+/* Membros e um botao: abre a lista da obra (ModalMembrosObra) */
+.info--botao {
+  padding: 4px 8px;
+  margin-top: -4px;
+  margin-bottom: -4px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.info--botao:hover {
+  background: var(--control-bg-hover);
+}
+
+.info--botao:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.info__linha {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* incluidos que ainda nao responderam */
+.info__aguardando {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--pri-media-suave);
+  color: var(--pri-media);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* a solicitacao de quem foi incluido, logo abaixo da faixa da obra */
+.pedido-obra {
+  padding: 13px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: var(--radius-lg);
+}
+
+@media (min-width: 721px) {
+  .pedido-obra .pedido {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 14px;
+  }
+
+  .pedido-obra .pedido__texto {
+    flex: 1 1 320px;
+  }
+
+  .pedido-obra .pedido__quando {
+    margin: 0;
+  }
+
+  .pedido-obra .pedido__motivo {
+    flex: 1 1 100%;
+  }
+}
+
 .info__avatares {
   display: inline-flex;
   --avatar-anel: var(--surface);

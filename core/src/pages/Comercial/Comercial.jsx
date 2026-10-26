@@ -808,7 +808,11 @@ export default function Comercial() {
         aoSalvo={(n, novo) => {
           if (n.funil === funilId || visao === 'arquivo') trocarUm(n)
           else setNegocios((lista) => lista.filter((x) => x.id !== n.id))
-          avisar(novo ? `Negócio “${n.titulo}” adicionado.` : `Negócio “${n.titulo}” salvo.`)
+          avisar(
+            novo
+              ? `Negócio “${n.titulo}” adicionado${n.obraId ? ' e a obra criada em Obras' : ''}.`
+              : `Negócio “${n.titulo}” salvo.`,
+          )
         }}
         aoGanhar={(n) => mudarStatus(n, 'ganho')}
         aoPerder={(n) => {

@@ -15,6 +15,7 @@ import MeusEnvios from '@/pages/Despesas/MeusEnvios'
 import EnviosGerais, { EnviosDaPessoa } from '@/pages/Despesas/EnviosGerais'
 import Frotas from '@/pages/Frotas/Frotas'
 import Comercial from '@/pages/Comercial/Comercial'
+import Turnos from '@/pages/Turnos/Turnos'
 import Registros from '@/pages/Frotas/Registros'
 import RetornoOutlook from '@/pages/Login/RetornoOutlook'
 import ChatEquipe from '@/pages/Chat/ChatEquipe'
@@ -95,6 +96,15 @@ export default function AppRoutes() {
         element={
           <Interna permissao="ver_comercial">
             <Comercial />
+          </Interna>
+        }
+      />
+      {/* os turnos da equipe, no desenho dos Turnos do Teams (atualizacao 31) */}
+      <Route
+        path="/app/turnos"
+        element={
+          <Interna permissao="ver_turnos">
+            <Turnos />
           </Interna>
         }
       />

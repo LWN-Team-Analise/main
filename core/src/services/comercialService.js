@@ -20,7 +20,11 @@ export function carregarNegocios(funil) {
  * campos: { funil, etapa, titulo, clienteId, organizacao, pessoaId,
  *           contatoNome, contatoEmail, contatoTelefone, valor,
  *           responsavelId, etiqueta, proximaAtividade, atividadeDescricao,
- *           previsaoFechamento, observacao }
+ *           previsaoFechamento, observacao, proposta }
+ *
+ * No funil "Novos negocios" o negocio novo cria a obra junto: vai o
+ * `proposta` (o n° da obra) e o cliente tem de ser cadastrado. A
+ * resposta traz `negocio.obraId`.
  */
 export const criarNegocio = (campos) => post('/comercial/negocios', campos)
 export const editarNegocio = (id, campos) => put(`/comercial/negocios/${encodeURIComponent(id)}`, campos)
@@ -47,6 +51,12 @@ export const conferirEmails = (funil) => post('/comercial/emails/conferir', { fu
 export async function carregarResumoClientes() {
   const { resumo } = await get('/comercial/resumo-clientes')
   return resumo ?? {}
+}
+
+/** O n° de proposta sugerido para a obra do negocio novo (funil Novos negocios). */
+export async function proximaProposta() {
+  const { proposta } = await get('/comercial/proxima-proposta')
+  return proposta ?? ''
 }
 
 /** Todos os contatos (cliente_pessoa), de qualquer empresa ou de nenhuma. */

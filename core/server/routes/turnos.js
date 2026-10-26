@@ -1,0 +1,465 @@
+import { Router } from 'express'
+import { emTransacao, query } from '../db.js'
+import { exige, exigeSessao, tratar } from '../sessao.js'
+import { registrarAtividade } from '../atividade.js'
+import {
+  ANOTACAO_MAXIMA,
+  CORES,
+  COR_DA_OBRA,
+  DIAS_MAXIMOS,
+  SUBTITULO_MAXIMO,
+  TITULO_MAXIMO,
+  dataValida,
+  diasEntre,
+  lerHora,
+} from '../../src/domain/turnos.js'
+
+/* ============================================================
+   TURNOS — /api/turnos (atualizacao 31)
+
+     GET    /?de=&ate=             os cronogramas (com as pessoas), os
+                                   turnos do periodo e as anotacoes
+     POST   /                      cria um turno
+     PUT    /:id                   edita
+     DELETE /:id                   apaga
+     PUT    /anotacoes/:dia        a "Anotacao do dia" (vazia apaga)
+     POST   /cronogramas           cria um cronograma
+     PUT    /cronogramas/:id       renomeia e/ou troca as pessoas
+     DELETE /cronogramas/:id       apaga (com os turnos dele)
+
+   Os turnos que vem das OBRAS (o check com horario: cada pessoa de
+   cada data) nao moram aqui: sao lidos de obra_horario a cada GET, e
+   mudam pela obra. Assim nao ha duas copias para ficarem diferentes.
+
+   Quem pode: ver_turnos ve; editar_turnos cria e muda turnos,
+   anotacoes e cronogramas.
+   ============================================================ */
+
+const router = Router()
+
+const VER = 'ver_turnos'
+const EDITAR = 'editar_turnos'
+
+const texto = (valor) => String(valor ?? '').trim()
+const idValido = (valor) => /^\d{1,15}$/.test(String(valor ?? ''))
+/* o periodo de uma leitura: as duas semanas da tela, com folga */
+const PERIODO_MAXIMO = 62
+
+function falhou(erro, res, onde) {
+  if (erro.code === '42P01' || erro.code === '42703') {
+    return res.status(503).json({
+      erro: 'O banco ainda não tem a aba Turnos (atualização 31 em core/db). Rode npm run db:atualizar e suba a API de novo.',
+    })
+  }
+  if (erro.code === '23505') return res.status(409).json({ erro: 'Já existe um cronograma com esse nome.', campo: 'nome' })
+  if (erro.code === '23503') return res.status(400).json({ erro: 'A pessoa, a obra ou o cronograma não existe mais.' })
+  return tratar(erro, res, onde)
+}
+
+function paraTurno(l) {
+  return {
+    id: String(l.id),
+    origem: 'manual',
+    cronogramaId: String(l.cronograma_id),
+    usuarioId: l.usuario_id === null ? null : String(l.usuario_id),
+    dataInicio: l.data_inicio,
+    dataFim: l.data_fim,
+    horaInicio: l.hora_inicio ?? null,
+    horaFim: l.hora_fim ?? null,
+    titulo: l.titulo,
+    subtitulo: l.subtitulo ?? '',
+    cor: l.cor,
+    obraId: l.obra_id === null ? null : String(l.obra_id),
+    checkId: l.check_id === null ? null : String(l.check_id),
+  }
+}
+
+const SELECT_TURNO = `
+  SELECT t.id, t.cronograma_id, t.usuario_id,
+         to_char(t.data_inicio, 'YYYY-MM-DD') AS data_inicio, to_char(t.data_fim, 'YYYY-MM-DD') AS data_fim,
+         to_char(t.hora_inicio, 'HH24:MI') AS hora_inicio, to_char(t.hora_fim, 'HH24:MI') AS hora_fim,
+         t.titulo, t.subtitulo, t.cor, t.obra_id, t.check_id
+    FROM turno t`
+
+/* ---------------- leitura ---------------- */
+
+router.get('/', exigeSessao, exige(VER), async (req, res) => {
+  const de = texto(req.query.de)
+  const ate = texto(req.query.ate)
+  if (!dataValida(de) || !dataValida(ate) || ate < de) return res.status(400).json({ erro: 'Período inválido.' })
+  if (diasEntre(de, ate) > PERIODO_MAXIMO) return res.status(400).json({ erro: 'Período longo demais.' })
+  try {
+    const [cronogramas, membros, turnos, daObra, anotacoes] = await Promise.all([
+      query('SELECT id, nome, ordem FROM cronograma ORDER BY ordem, id'),
+      query(
+        `SELECT m.cronograma_id, m.usuario_id
+           FROM cronograma_membro m
+           JOIN usuario u ON u.id = m.usuario_id AND coalesce(u.ativo, true)
+          ORDER BY lower(u.name)`,
+      ),
+      query(
+        `${SELECT_TURNO}
+          WHERE t.data_inicio <= $2 AND t.data_fim >= $1
+          ORDER BY t.data_inicio, t.hora_inicio NULLS FIRST, t.id`,
+        [de, ate],
+      ),
+      /* o check com horario das obras: cada pessoa de cada data */
+      query(
+        `SELECT h.obra_id, h.check_id, to_char(h.dia, 'YYYY-MM-DD') AS dia, to_char(h.hora, 'HH24:MI') AS hora,
+                m.usuario_id, o.proposta, cl.nome AS cliente, ck.titulo AS check_titulo
+           FROM obra_horario h
+           JOIN obra_horario_membro m ON m.obra_id = h.obra_id AND m.check_id = h.check_id AND m.dia = h.dia
+           JOIN obra o                ON o.id = h.obra_id
+           LEFT JOIN cliente cl       ON cl.id = o.cliente_id
+           JOIN etapa_check ck        ON ck.id = h.check_id
+          WHERE h.dia BETWEEN $1 AND $2
+          ORDER BY h.dia, h.hora`,
+        [de, ate],
+      ),
+      query(
+        `SELECT to_char(dia, 'YYYY-MM-DD') AS dia, texto FROM turno_anotacao WHERE dia BETWEEN $1 AND $2`,
+        [de, ate],
+      ),
+    ])
+
+    const pessoasDo = {}
+    membros.rows.forEach((l) => (pessoasDo[l.cronograma_id] ??= []).push(String(l.usuario_id)))
+
+    return res.json({
+      cronogramas: cronogramas.rows.map((c) => ({
+        id: String(c.id),
+        nome: c.nome,
+        ordem: c.ordem,
+        membros: pessoasDo[c.id] ?? [],
+      })),
+      turnos: [
+        ...turnos.rows.map(paraTurno),
+        ...daObra.rows.map((l) => ({
+          id: `obra-${l.obra_id}-${l.check_id}-${l.dia}-${l.usuario_id}`,
+          origem: 'obra',
+          /* sem cronograma: aparece na linha da pessoa em todo cronograma dela */
+          cronogramaId: null,
+          usuarioId: String(l.usuario_id),
+          dataInicio: l.dia,
+          dataFim: l.dia,
+          horaInicio: l.hora,
+          horaFim: null,
+          titulo: l.cliente || l.proposta || 'Obra',
+          subtitulo: [l.proposta, l.check_titulo].filter(Boolean).join(' · '),
+          cor: COR_DA_OBRA,
+          obraId: String(l.obra_id),
+          checkId: String(l.check_id),
+        })),
+      ],
+      anotacoes: Object.fromEntries(anotacoes.rows.map((l) => [l.dia, l.texto])),
+    })
+  } catch (erro) {
+    return falhou(erro, res, 'turnos/ler')
+  }
+})
+
+/* ---------------- os turnos ---------------- */
+
+/** Le e confere o turno do corpo. Devolve { erro, campo } ou { campos } (colunas). */
+async function lerTurno(corpo) {
+  const cronogramaId = texto(corpo?.cronogramaId)
+  if (!idValido(cronogramaId)) return { erro: 'Escolha o cronograma.', campo: 'cronogramaId' }
+  const { rows: cr } = await query('SELECT id FROM cronograma WHERE id = $1', [cronogramaId])
+  if (!cr[0]) return { erro: 'Esse cronograma não existe mais.', campo: 'cronogramaId' }
+
+  /* sem pessoa = turno aberto */
+  const usuarioId = texto(corpo?.usuarioId) || null
+  if (usuarioId) {
+    if (!idValido(usuarioId)) return { erro: 'Pessoa inválida.', campo: 'usuarioId' }
+    const { rows } = await query(
+      'SELECT 1 FROM cronograma_membro WHERE cronograma_id = $1 AND usuario_id = $2',
+      [cronogramaId, usuarioId],
+    )
+    if (!rows[0]) return { erro: 'Essa pessoa não está neste cronograma.', campo: 'usuarioId' }
+  }
+
+  const titulo = texto(corpo?.titulo)
+  if (!titulo) return { erro: 'Dê um título ao turno.', campo: 'titulo' }
+  if (titulo.length > TITULO_MAXIMO) return { erro: `O título passa de ${TITULO_MAXIMO} letras.`, campo: 'titulo' }
+  const subtitulo = texto(corpo?.subtitulo)
+  if (subtitulo.length > SUBTITULO_MAXIMO) {
+    return { erro: `A observação passa de ${SUBTITULO_MAXIMO} letras.`, campo: 'subtitulo' }
+  }
+
+  const cor = texto(corpo?.cor) || CORES[0].id
+  if (!CORES.some((c) => c.id === cor)) return { erro: 'Cor desconhecida.', campo: 'cor' }
+
+  const dataInicio = texto(corpo?.dataInicio)
+  const dataFim = texto(corpo?.dataFim) || dataInicio
+  if (!dataValida(dataInicio)) return { erro: 'Informe a data de início.', campo: 'dataInicio' }
+  if (!dataValida(dataFim)) return { erro: 'Informe a data de fim.', campo: 'dataFim' }
+  if (dataFim < dataInicio) return { erro: 'O fim não pode ser antes do início.', campo: 'dataFim' }
+  if (diasEntre(dataInicio, dataFim) >= DIAS_MAXIMOS) {
+    return { erro: 'Um turno cobre no máximo um ano.', campo: 'dataFim' }
+  }
+
+  /* os dois horarios, ou nenhum (o dia inteiro) */
+  const horaInicio = texto(corpo?.horaInicio) ? lerHora(corpo.horaInicio) : null
+  const horaFim = texto(corpo?.horaFim) ? lerHora(corpo.horaFim) : null
+  if (texto(corpo?.horaInicio) && !horaInicio) return { erro: 'Horário de início inválido.', campo: 'horaInicio' }
+  if (texto(corpo?.horaFim) && !horaFim) return { erro: 'Horário de fim inválido.', campo: 'horaFim' }
+  if (Boolean(horaInicio) !== Boolean(horaFim)) {
+    return { erro: 'Informe o início e o fim — ou marque o dia inteiro.', campo: horaInicio ? 'horaFim' : 'horaInicio' }
+  }
+
+  /* a tarefa da obra, quando o turno veio de uma */
+  const obraId = texto(corpo?.obraId) || null
+  const checkId = texto(corpo?.checkId) || null
+  if (obraId) {
+    if (!idValido(obraId)) return { erro: 'Obra inválida.', campo: 'obraId' }
+    const { rows } = await query('SELECT id FROM obra WHERE id = $1', [obraId])
+    if (!rows[0]) return { erro: 'Essa obra não existe mais.', campo: 'obraId' }
+  }
+  if (checkId && (!obraId || !idValido(checkId))) return { erro: 'Tarefa inválida.', campo: 'checkId' }
+
+  return {
+    campos: {
+      cronograma_id: cronogramaId,
+      usuario_id: usuarioId,
+      data_inicio: dataInicio,
+      data_fim: dataFim,
+      hora_inicio: horaInicio,
+      hora_fim: horaFim,
+      titulo,
+      subtitulo: subtitulo || null,
+      cor,
+      obra_id: obraId,
+      check_id: checkId,
+    },
+  }
+}
+
+async function descreverTurno(turnoId) {
+  const { rows } = await query(
+    `SELECT t.titulo, to_char(t.data_inicio, 'DD/MM/YYYY') AS de, to_char(t.data_fim, 'DD/MM/YYYY') AS ate,
+            u.name AS pessoa, c.nome AS cronograma
+       FROM turno t
+       JOIN cronograma c  ON c.id = t.cronograma_id
+       LEFT JOIN usuario u ON u.id = t.usuario_id
+      WHERE t.id = $1`,
+    [turnoId],
+  )
+  const l = rows[0]
+  if (!l) return {}
+  return {
+    turno: l.titulo,
+    pessoa: l.pessoa ?? 'turno aberto',
+    cronograma: l.cronograma,
+    dias: l.de === l.ate ? l.de : `${l.de} a ${l.ate}`,
+  }
+}
+
+router.post('/', exigeSessao, exige(EDITAR), async (req, res) => {
+  try {
+    const lido = await lerTurno(req.body)
+    if (lido.erro) return res.status(400).json(lido)
+    const c = { ...lido.campos, criado_por: req.dono.sub }
+    const colunas = Object.keys(c)
+    const { rows } = await query(
+      `INSERT INTO turno (${colunas.join(', ')})
+       VALUES (${colunas.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING id`,
+      Object.values(c),
+    )
+    const { rows: novo } = await query(`${SELECT_TURNO} WHERE t.id = $1`, [rows[0].id])
+    await registrarAtividade(req, {
+      acao: 'turno.criado',
+      categoria: 'turno',
+      entidade: ['turno', rows[0].id],
+      descricao: 'Turno criado',
+      detalhes: await descreverTurno(rows[0].id),
+    })
+    return res.status(201).json({ turno: paraTurno(novo[0]) })
+  } catch (erro) {
+    return falhou(erro, res, 'turnos/criar')
+  }
+})
+
+/* ---------------- anotacoes do dia ---------------- */
+
+router.put('/anotacoes/:dia', exigeSessao, exige(EDITAR), async (req, res) => {
+  const dia = req.params.dia
+  if (!dataValida(dia)) return res.status(400).json({ erro: 'Data inválida.' })
+  const valor = texto(req.body?.texto)
+  if (valor.length > ANOTACAO_MAXIMA) {
+    return res.status(400).json({ erro: `A anotação passa de ${ANOTACAO_MAXIMA} letras.` })
+  }
+  try {
+    if (!valor) {
+      await query('DELETE FROM turno_anotacao WHERE dia = $1', [dia])
+    } else {
+      await query(
+        `INSERT INTO turno_anotacao (dia, texto, atualizado_por) VALUES ($1, $2, $3)
+         ON CONFLICT (dia) DO UPDATE
+            SET texto = EXCLUDED.texto, atualizado_por = EXCLUDED.atualizado_por, atualizado_em = now()`,
+        [dia, valor, req.dono.sub],
+      )
+    }
+    return res.json({ dia, texto: valor })
+  } catch (erro) {
+    return falhou(erro, res, 'turnos/anotacao')
+  }
+})
+
+/* ---------------- cronogramas ---------------- */
+
+/** As pessoas da lista: todas ativas? Devolve os ids limpos, ou null. */
+async function lerPessoas(bruto) {
+  const ids = [...new Set((Array.isArray(bruto) ? bruto : []).map(String))]
+  if (ids.some((id) => !idValido(id))) return null
+  if (ids.length === 0) return ids
+  const { rows } = await query('SELECT id FROM usuario WHERE id = ANY($1::bigint[]) AND ativo', [ids])
+  return rows.length === ids.length ? ids : null
+}
+
+router.post('/cronogramas', exigeSessao, exige(EDITAR), async (req, res) => {
+  const nome = texto(req.body?.nome).slice(0, 80)
+  if (!nome) return res.status(400).json({ erro: 'Dê um nome ao cronograma.', campo: 'nome' })
+  const pessoas = await lerPessoas(req.body?.membros)
+  if (!pessoas) return res.status(400).json({ erro: 'Uma das pessoas não está mais na equipe.', campo: 'membros' })
+  try {
+    const id = await emTransacao(async (db) => {
+      const { rows } = await db.query(
+        `INSERT INTO cronograma (nome, ordem)
+         VALUES ($1, coalesce((SELECT max(ordem) FROM cronograma), -1) + 1) RETURNING id`,
+        [nome],
+      )
+      if (pessoas.length) {
+        await db.query(
+          'INSERT INTO cronograma_membro (cronograma_id, usuario_id) SELECT $1, unnest($2::bigint[])',
+          [rows[0].id, pessoas],
+        )
+      }
+      return rows[0].id
+    })
+    await registrarAtividade(req, {
+      acao: 'cronograma.criado',
+      categoria: 'turno',
+      entidade: ['cronograma', id],
+      descricao: 'Cronograma criado',
+      detalhes: { cronograma: nome, pessoas: pessoas.length },
+    })
+    return res.status(201).json({ cronograma: { id: String(id), nome, membros: pessoas } })
+  } catch (erro) {
+    return falhou(erro, res, 'turnos/cronograma-criar')
+  }
+})
+
+router.put('/cronogramas/:id', exigeSessao, exige(EDITAR), async (req, res) => {
+  if (!idValido(req.params.id)) return res.status(400).json({ erro: 'Cronograma inválido.' })
+  const nome = req.body?.nome === undefined ? null : texto(req.body.nome).slice(0, 80)
+  if (nome === '') return res.status(400).json({ erro: 'Dê um nome ao cronograma.', campo: 'nome' })
+  const pessoas = req.body?.membros === undefined ? undefined : await lerPessoas(req.body.membros)
+  if (pessoas === null) {
+    return res.status(400).json({ erro: 'Uma das pessoas não está mais na equipe.', campo: 'membros' })
+  }
+  try {
+    const achou = await emTransacao(async (db) => {
+      const { rows } = await db.query('SELECT nome FROM cronograma WHERE id = $1 FOR UPDATE', [req.params.id])
+      if (!rows[0]) return null
+      if (nome) await db.query('UPDATE cronograma SET nome = $1 WHERE id = $2', [nome, req.params.id])
+      if (pessoas) {
+        await db.query(
+          'DELETE FROM cronograma_membro WHERE cronograma_id = $1 AND NOT (usuario_id = ANY($2::bigint[]))',
+          [req.params.id, pessoas],
+        )
+        if (pessoas.length) {
+          await db.query(
+            `INSERT INTO cronograma_membro (cronograma_id, usuario_id)
+             SELECT $1, unnest($2::bigint[]) ON CONFLICT DO NOTHING`,
+            [req.params.id, pessoas],
+          )
+        }
+        /* quem saiu do cronograma leva junto os turnos que tinha nele */
+        await db.query(
+          'DELETE FROM turno WHERE cronograma_id = $1 AND usuario_id IS NOT NULL AND NOT (usuario_id = ANY($2::bigint[]))',
+          [req.params.id, pessoas],
+        )
+      }
+      return rows[0].nome
+    })
+    if (achou === null) return res.status(404).json({ erro: 'Cronograma não encontrado.' })
+    await registrarAtividade(req, {
+      acao: 'cronograma.editado',
+      categoria: 'turno',
+      entidade: ['cronograma', req.params.id],
+      descricao: 'Cronograma editado',
+      detalhes: { cronograma: nome || achou, pessoas: pessoas?.length },
+    })
+    return res.json({ ok: true })
+  } catch (erro) {
+    return falhou(erro, res, 'turnos/cronograma-editar')
+  }
+})
+
+router.delete('/cronogramas/:id', exigeSessao, exige(EDITAR), async (req, res) => {
+  if (!idValido(req.params.id)) return res.status(400).json({ erro: 'Cronograma inválido.' })
+  try {
+    const { rows } = await query('DELETE FROM cronograma WHERE id = $1 RETURNING nome', [req.params.id])
+    if (!rows[0]) return res.status(404).json({ erro: 'Cronograma não encontrado.' })
+    await registrarAtividade(req, {
+      acao: 'cronograma.excluido',
+      categoria: 'turno',
+      entidade: ['cronograma', req.params.id],
+      descricao: 'Cronograma excluído',
+      detalhes: { cronograma: rows[0].nome },
+    })
+    return res.status(204).end()
+  } catch (erro) {
+    return falhou(erro, res, 'turnos/cronograma-apagar')
+  }
+})
+
+/* ---------------- editar e apagar um turno (depois das rotas fixas) ---------------- */
+
+router.put('/:id', exigeSessao, exige(EDITAR), async (req, res) => {
+  if (!idValido(req.params.id)) return res.status(400).json({ erro: 'Turno inválido.' })
+  try {
+    const lido = await lerTurno(req.body)
+    if (lido.erro) return res.status(400).json(lido)
+    const c = lido.campos
+    const colunas = Object.keys(c)
+    const { rowCount } = await query(
+      `UPDATE turno SET ${colunas.map((col, i) => `${col} = $${i + 1}`).join(', ')}, atualizado_em = now()
+        WHERE id = $${colunas.length + 1}`,
+      [...Object.values(c), req.params.id],
+    )
+    if (!rowCount) return res.status(404).json({ erro: 'Turno não encontrado.' })
+    const { rows } = await query(`${SELECT_TURNO} WHERE t.id = $1`, [req.params.id])
+    await registrarAtividade(req, {
+      acao: 'turno.editado',
+      categoria: 'turno',
+      entidade: ['turno', req.params.id],
+      descricao: 'Turno editado',
+      detalhes: await descreverTurno(req.params.id),
+    })
+    return res.json({ turno: paraTurno(rows[0]) })
+  } catch (erro) {
+    return falhou(erro, res, 'turnos/editar')
+  }
+})
+
+router.delete('/:id', exigeSessao, exige(EDITAR), async (req, res) => {
+  if (!idValido(req.params.id)) return res.status(400).json({ erro: 'Turno inválido.' })
+  try {
+    const detalhes = await descreverTurno(req.params.id)
+    const { rowCount } = await query('DELETE FROM turno WHERE id = $1', [req.params.id])
+    if (!rowCount) return res.status(404).json({ erro: 'Turno não encontrado.' })
+    await registrarAtividade(req, {
+      acao: 'turno.excluido',
+      categoria: 'turno',
+      entidade: ['turno', req.params.id],
+      descricao: 'Turno excluído',
+      detalhes,
+    })
+    return res.status(204).end()
+  } catch (erro) {
+    return falhou(erro, res, 'turnos/apagar')
+  }
+})
+
+export default router

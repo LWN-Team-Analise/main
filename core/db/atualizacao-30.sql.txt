@@ -1,0 +1,105 @@
+-- ============================================================
+--  ATUALIZACAO 30 — O NEGOCIO VIRA OBRA E O MEMBRO PARCIAL
+--
+--  1. negocio.obra_id — o negocio criado no funil "Novos negocios"
+--     ja nasce com a obra dele em Obras (o Comercial cadastra a obra
+--     por la). Aqui fica o vinculo: o negocio sabe qual obra gerou.
+--     Apagar a obra solta o negocio (SET NULL); apagar o negocio nao
+--     mexe na obra.
+--
+--  2. obra_membro_parcial — membro da obra que NAO marcou check.
+--     Nem todo mundo que vai a obra marca check (nem ha check para
+--     todos), entao alguem inclui a pessoa na mao. Ela recebe a
+--     solicitacao e ACEITA ou RECUSA — recusar exige um motivo.
+--
+--     Mora numa tabela propria, e nao em obra_membro, de proposito:
+--     obra_membro e so de quem marcou check (o gatilho obra_check_sai
+--     tira quem desmarca o ultimo, e a limpeza da atualizacao 2 apaga
+--     quem nao tem check toda vez que as atualizacoes rodam). Uma
+--     inclusao feita a mao ali sumiria sozinha.
+--
+--     Aceito, o membro parcial conta como membro em tudo: fotos da
+--     obra, "em andamento" da pessoa e a media das avaliacoes (view
+--     usuario_media, refeita aqui).
+--
+--  3. a permissao nova `excluir_membro_parcial` — tirar da obra um
+--     membro incluido a mao. Entra no setor de acesso total (que ja
+--     passa por tudo; e so para a tela de Setores mostrar marcada).
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao duplica nada.
+-- ============================================================
+
+BEGIN;
+
+-- ---- 1. o negocio sabe a obra que gerou ----
+ALTER TABLE public.negocio
+    ADD COLUMN IF NOT EXISTS obra_id bigint REFERENCES public.obra (id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS negocio_obra_idx ON public.negocio (obra_id);
+
+COMMENT ON COLUMN public.negocio.obra_id IS
+    'A obra criada junto com o negocio (funil Novos negocios). NULL = negocio sem obra.';
+
+-- ---- 2. o membro parcial ----
+CREATE TABLE IF NOT EXISTS public.obra_membro_parcial (
+    obra_id       bigint      NOT NULL REFERENCES public.obra (id)    ON DELETE CASCADE,
+    usuario_id    bigint      NOT NULL REFERENCES public.usuario (id) ON DELETE CASCADE,
+    status        text        NOT NULL DEFAULT 'pendente',
+    motivo        text,
+    incluido_por  bigint      REFERENCES public.usuario (id) ON DELETE SET NULL,
+    incluido_em   timestamptz NOT NULL DEFAULT now(),
+    respondido_em timestamptz,
+    PRIMARY KEY (obra_id, usuario_id),
+    CONSTRAINT obra_membro_parcial_status CHECK (status IN ('pendente', 'aceito', 'recusado')),
+    CONSTRAINT obra_membro_parcial_motivo CHECK (status <> 'recusado' OR length(btrim(coalesce(motivo, ''))) > 0)
+);
+
+-- as solicitacoes que esperam resposta de cada pessoa
+CREATE INDEX IF NOT EXISTS obra_membro_parcial_pendente_idx
+    ON public.obra_membro_parcial (usuario_id) WHERE status = 'pendente';
+
+COMMENT ON TABLE public.obra_membro_parcial IS
+    'Membro da obra incluido a mao (nao marcou check). pendente -> aceito, ou recusado com motivo.';
+
+-- ---- a media de cada pessoa conta tambem as obras em que ela e membro parcial aceito ----
+CREATE OR REPLACE VIEW public.usuario_media AS
+SELECT u.id                  AS usuario_id,
+       count(a.obra_id)      AS obras_avaliadas,
+       round(avg(a.nota), 1) AS media
+  FROM public.usuario u
+  JOIN (SELECT obra_id, usuario_id FROM public.obra_membro
+         UNION
+        SELECT obra_id, usuario_id FROM public.obra_membro_parcial WHERE status = 'aceito') m
+    ON m.usuario_id = u.id
+  JOIN public.obra_avaliacao a ON a.obra_id = m.obra_id
+ GROUP BY u.id;
+
+-- ---- 3. a permissao nova, uma vez so ----
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['excluir_membro_parcial']
+ WHERE acesso_total
+   AND NOT ('excluir_membro_parcial' = ANY (permissoes))
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_30');
+
+INSERT INTO public.configuracao (chave, valor)
+VALUES ('marco_atualizacao_30', 'permissoes da atualizacao 30 distribuidas')
+ON CONFLICT (chave) DO NOTHING;
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'negocio.obra_id' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'negocio' AND column_name = 'obra_id') AS ok
+UNION ALL
+SELECT 'obra_membro_parcial', to_regclass('public.obra_membro_parcial') IS NOT NULL
+UNION ALL
+SELECT 'excluir_membro_parcial no acesso total',
+       NOT EXISTS (SELECT 1 FROM public.cargo
+                    WHERE acesso_total AND NOT ('excluir_membro_parcial' = ANY (permissoes)));

@@ -275,6 +275,8 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-27.sql.txt` | Comercial (negocio, negocio_email), pessoas/dono/proximo contato do cliente, setor "Painel TV" e as permissoes novas |
 | `db/atualizacao-28.sql.txt` | presenca (a bolinha verde/vermelha/cinza da tela de Usuarios) |
 | `db/atualizacao-29.sql.txt` | negocio.moeda, negocio.probabilidade, negocio.contato_tipo; contato (cliente_pessoa) sem empresa |
+| `db/atualizacao-31.sql.txt` | check com horario (etapa_check.horario, obra_horario, obra_horario_membro) e a aba Turnos (cronograma, turno, turno_anotacao) com `ver_turnos` / `editar_turnos` |
+| `db/atualizacao-30.sql.txt` | negocio.obra_id (o negocio de Novos negocios vira obra), obra_membro_parcial e a permissao `excluir_membro_parcial` |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
 Rode o primeiro na ordem indicada dentro dele; depois rode os outros
@@ -1047,6 +1049,91 @@ O cadastro do cliente ganhou (atualizacao 27):
 fechados, Negócios em aberto, Ticket médio, Próximo contato, Proprietário,
 Nota de satisfação média) e **Pessoas** (uma por linha).
 
+### O negocio de Novos negocios vira obra (atualizacao 30)
+
+Negocio **criado** no funil **Novos negocios** ja nasce com a obra dele em
+**Obras** — o Comercial cadastra a obra por la. O cadastro manual em Obras
+continua do mesmo jeito.
+
+- No formulario aparece o bloco da obra com o **N° da proposta**, ja sugerido
+  como no "Nova obra" (o da ultima, mais um; `GET /api/comercial/proxima-proposta`,
+  liberado para quem tem `editar_negocios`).
+- A empresa tem de ser um **cliente cadastrado** (a obra precisa dele): nesse
+  funil some o "Empresa nao cadastrada".
+- A obra nasce padrao, prioridade media, inicio hoje, com o **titulo do
+  negocio como descricao**. Negocio e obra sao gravados juntos (uma transacao).
+- O negocio guarda a obra (`negocio.obra_id`) e mostra o atalho **Obra 1234**
+  na linha da etapa. Apagar a obra solta o negocio; apagar o negocio nao mexe
+  na obra.
+- So na criacao: importar planilha, editar ou trocar de funil depois nao cria
+  obra.
+
+## O check com horario (ponto de encontro)
+
+No editor do check (no modelo ou dentro da obra), a caixa **"Check com horario"**
+transforma o check — ex.: "Ponto de encontro" — num check de datas: clicar nele
+dentro da obra abre o pop-up (`ModalHorario`) com as datas da obra (os dias da
+execucao, mais as que alguem acrescentar ali), cada uma com o **horario** (06:30)
+e **quem vai** naquele dia. O check e marcado no proprio pop-up ("Check
+concluido"), com ao menos uma data com horario. Nao junta com o Sim/Nao.
+
+- Quem vai numa data e ainda nao e membro da obra recebe a solicitacao de
+  inclusao (o membro parcial) — e o "adicionar membros" por ali.
+- Cada pessoa de cada data vira um turno na aba Turnos (borda tracejada), que
+  so muda pela obra.
+- `PUT /api/dados/obras/:id/horarios/:checkId` grava a lista inteira; marcar o
+  check no clique, sem horario nenhum, e recusado.
+
+## Turnos (a escala da equipe)
+
+A aba **Turnos** (abaixo de Comercial) copia os Turnos do Teams: o periodo
+(Hoje, setas, uma ou duas semanas), a linha dos dias (pessoas e horas de cada
+dia), as **Anotacoes do dia** e os **cronogramas** — Cronograma LWN e
+Cronograma Anapolis, e os que forem criados no "+ Cronograma". Cada cronograma
+abre e fecha e tem os "Turnos abertos" (sem pessoa) e uma linha por pessoa.
+
+O turno e um bloco de fundo transparente, so com a borda na cor. Tem titulo,
+linha de baixo, dias (um ou um trecho, como uma folga), horario (ou o dia
+inteiro) e pode vir de uma tarefa de obra (a obra e o check). As horas contam
+so os turnos com inicio e fim.
+
+- `ver_turnos` ve a aba (a atualizacao 31 deu a todo setor, menos o da TV);
+  `editar_turnos` cria e muda turnos, anotacoes e cronogramas (so o acesso
+  total, de inicio). Rotas em `/api/turnos` (`server/routes/turnos.js`).
+- Toda a equipe ativa comecou no Cronograma LWN; quem e de Anapolis passa pelo
+  "Editar" do cronograma. Tirar alguem leva junto os turnos dele ali.
+
+## Frotas: excluir saida ou devolucao
+
+Em **Saídas e devoluções**, o registro aberto mostra **Excluir saída / devolução
+/ troca de condutor** para quem tem `excluir_registro_frota`
+(`DELETE /api/frotas/registros/:id`). Saem o registro e as fotos. Se era o
+ultimo registro do veiculo, o KM atual volta ao do registro anterior; se era a
+saida que retirou o carro reservado de uma obra, a reserva volta a esperar a
+retirada e o check "Retirada do carro" e desmarcado.
+
+## Prazo final: o dia do ultimo check
+
+O prazo final **nao se escolhe mais** — saiu do cadastro e da edicao da obra
+(`ModalObra`), inclusive da emergencia, que antes o exigia. Ele aparece sozinho
+quando a obra chega a 5a etapa e o ultimo usuario marca o ultimo check que
+faltava: e o **dia desse check** (`prazoFinalDaObra`, em `src/domain/obras.js`).
+Antes disso a faixa da obra diz "ao concluir os checks" e o card nao mostra
+prazo.
+
+Consequencias:
+
+- a cor do card nao vem mais do prazo final (verde/laranja/vermelho/atrasada):
+  so o prazo de cada **check** pinta de amarelo;
+- a coluna **Prazo** da pagina inicial mostra o prazo do proprio check;
+- no quadro de Obras, o filtro "Data ate" e a ordem "Data de inicio" olham o
+  inicio da obra;
+- o calendario do periodo de execucao nao tem mais teto;
+- o `data_conclusao` que obras antigas guardam continua no banco como
+  historico (o painel de atraso das obras fechadas e a exportacao ainda leem),
+  mas nao aparece nem trava data nenhuma. A API ignora `dataConclusao` no
+  cadastro e na edicao.
+
 ## Obra nova: o n° da proposta ja vem preenchido
 
 Abrir o cadastro de uma obra nova busca `GET /api/dados/obras/proxima-proposta`:
@@ -1100,6 +1187,17 @@ npm run db:painel -- lwnteamanalise@lwnengenharia.com.br "SenhaDaTV"
 Para criar no Neon, rode com o `DATABASE_URL` dele no ambiente. Rodar de
 novo com o mesmo e-mail troca a senha. Na TV: `/core/login`, com o e-mail e a
 senha.
+
+## Usuarios: os cards
+
+Todos os cards fechados tem o **mesmo tamanho**: o topo tem altura fixa, o nome
+fica numa linha so e o que nao cabe corta com reticencias (o texto inteiro
+aparece ao parar o mouse). Embaixo do nome, o setor e, na terceira linha, o
+cargo e o "Cadastro incompleto".
+
+O **"v" no canto de cima, a direita** abre o card: contato, nota e, para quem
+tem a permissao de usuarios, os botoes **Editar** e **Excluir** — que so
+aparecem ali, com o card aberto (antes apareciam ao passar o mouse).
 
 ## Usuarios: quem esta online (a bolinha)
 
@@ -2165,9 +2263,36 @@ quando ela marca, e `obra_check_sai` a tira quando ela desmarca o ultimo check
 dela naquela obra. Sem o segundo, quem marcasse por engano e desmarcasse ficava
 como participante para sempre.
 
-Na tela, obra sem nenhum check marcado mostra "ninguem marcou check ainda". Ela
-mostrava os quatro primeiros da equipe como se fossem os participantes — gente
-que nunca tinha encostado naquela obra aparecendo como responsavel por ela.
+Na tela, obra sem nenhum membro mostra "ninguem ainda". Ela mostrava os quatro
+primeiros da equipe como se fossem os participantes — gente que nunca tinha
+encostado naquela obra aparecendo como responsavel por ela.
+
+#### Membro parcial (atualizacao 30)
+
+Nem todo mundo que vai a obra marca check — nem ha check para todos. Por isso
+da para **incluir a pessoa na mao**: clicar em **Membros** na tela da obra abre
+a lista (`ModalMembrosObra`), com quem entrou pelo check, os incluidos e o
+**Incluir membro**.
+
+- Incluir: qualquer um que ve Obras. A pessoa recebe a **solicitacao** — no
+  alto do sino, numa faixa na tela da obra e no celular — e **aceita** ou
+  **recusa**. Recusar exige o **motivo**, que quem incluiu ve na lista (e
+  recebe no celular). Quem inclui a si mesmo entra ja aceito.
+- Aceito, o membro parcial conta como membro em tudo: fotos da obra, "em
+  andamento" da pessoa, chat da obra e a media das avaliacoes (a view
+  `usuario_media` foi refeita para somar os dois).
+- Tirar da obra: setor com `excluir_membro_parcial` (entra marcada no acesso
+  total). Sem ela, so quem incluiu, e so enquanto a pessoa nao respondeu.
+- Quem recusou pode ser incluido de novo: a solicitacao volta a pendente.
+
+Mora numa tabela propria, `obra_membro_parcial`, e nao em `obra_membro`, de
+proposito: `obra_membro` e so do check (o `obra_check_sai` tira quem desmarca
+o ultimo, e a limpeza da atualizacao 2 apaga, toda vez que as atualizacoes
+rodam, quem nao tem check). Uma inclusao feita a mao ali sumiria sozinha.
+
+Rotas: `POST /api/dados/obras/:id/parciais` (incluir),
+`POST .../parciais/:usuarioId/resposta` (a propria pessoa responde) e
+`DELETE .../parciais/:usuarioId` (tirar).
 
 ### Setor e cargo
 
@@ -2356,7 +2481,25 @@ A tarja colorida do card do cliente sai da **cor predominante da logo**
 agrupados em baldes de cor, descartando branco, preto e cinza — senao quase toda
 logo devolveria "branco". Sem logo, entra a cor derivada do nome.
 
-## Despesas
+## Reembolso (a aba que se chamava Despesas)
+
+A aba mudou de nome na tela (menu, titulo, busca); a rota (`/app/despesas`), a
+API (`/api/despesas`) e as chaves das permissoes continuam as mesmas.
+
+### O que mudou
+
+- **Comprovante**: obrigatorio so no **Combustível** e em **Outros**. Vale
+  Transporte e Transporte Intermunicipal aceitam o anexo, mas nao exigem.
+- **Bônus apartamento**: R$ 35,00, o mesmo para todo cliente, travado no
+  formulario.
+- **Valores pré-definidos**: o botao da aba, para quem tem
+  `definir_valores_reembolso`, abre a lista de todos os tipos. Marcado, o tipo
+  tem o valor da casa (travado para quem envia); desmarcado, quem envia digita.
+  A tabela fica em `configuracao` (`valores_reembolso`, JSON); sem ela valem os
+  padroes de `VALORES_FIXOS` (almoco e janta R$ 41,50, bonus apartamento R$ 35).
+  Rotas: `GET /api/despesas/valores` e `PUT /api/despesas/valores`.
+
+As tabelas abaixo sao de antes dessas mudancas: valem com as tres excecoes acima.
 
 Tres permissoes, conferidas **na API** a cada chamada de `/api/despesas`:
 
