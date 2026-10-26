@@ -3,6 +3,7 @@ import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
 import Avatar from '@/components/Avatar/Avatar'
 import Seletor from '@/components/Seletor/Seletor'
+import { CampoData, CampoHora } from '@/components/CampoData/CampoData'
 import { useDados } from '@/context/DadosContext'
 import { diasDaExecucao } from '@/domain/obras'
 import { dataBR } from '@/utils/formato'
@@ -21,8 +22,9 @@ const diaDaSemana = (iso) => SEMANA[new Date(`${iso}T12:00:00`).getDay()]
  *   - quem vai e ainda nao e membro da obra recebe a solicitacao de
  *     inclusao (o membro parcial) — e o "adicionar membros" por aqui;
  *   - cada pessoa de cada data vira um turno na aba Turnos;
- *   - o check e marcado AQUI, na caixa do rodape (e so com ao menos uma
- *     data com horario).
+ *   - o check e obrigatorio ter horario: ele fica MARCADO sozinho
+ *     enquanto houver ao menos uma data com horario, e desmarca quando
+ *     nao sobra nenhuma.
  *
  * Data sem horario nao e gravada. Quem nao marca o check (outro setor,
  * obra fechada) ve tudo, sem mexer.
@@ -30,7 +32,6 @@ const diaDaSemana = (iso) => SEMANA[new Date(`${iso}T12:00:00`).getDay()]
 export default function ModalHorario({ aberto, obra, check, somenteLeitura = false, aoFechar }) {
   const { equipe, pessoaPorId, cargoPorChave, definirHorarios } = useDados()
   const [linhas, setLinhas] = useState([])
-  const [marcado, setMarcado] = useState(false)
   const [novaData, setNovaData] = useState('')
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -47,7 +48,6 @@ export default function ModalHorario({ aberto, obra, check, somenteLeitura = fal
         return { dia, hora: salvo?.hora ?? '', membros: salvo?.membros ?? [] }
       }),
     )
-    setMarcado(Boolean(obra.checks?.[check.id]))
     setNovaData('')
     setErro('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -89,16 +89,14 @@ export default function ModalHorario({ aberto, obra, check, somenteLeitura = fal
       setErro(`Informe o horário de ${dataBR(semHora.dia).slice(0, 5)}: há pessoas nesse dia.`)
       return
     }
-    if (marcado && comHorario.length === 0) {
-      setErro('Defina o horário de ao menos uma data para marcar o check.')
-      return
-    }
     setSalvando(true)
     try {
+      /* com horario, o check fica marcado; sem nenhum, desmarca */
       const jaEstava = Boolean(obra.checks?.[check.id])
+      const marcar = comHorario.length > 0
       await definirHorarios(obra.id, check.id, {
         dias: comHorario.map(({ dia, hora, membros }) => ({ dia, hora, membros })),
-        marcar: marcado !== jaEstava ? marcado : undefined,
+        marcar: marcar !== jaEstava ? marcar : undefined,
       })
       aoFechar()
     } catch (e) {
@@ -128,15 +126,13 @@ export default function ModalHorario({ aberto, obra, check, somenteLeitura = fal
                     <strong>{dataBR(l.dia).slice(0, 5)}</strong>
                   </span>
 
-                  <label className="horario__hora">
-                    <span className="sr-only">Horário de {dataBR(l.dia)}</span>
-                    <input
-                      type="time"
-                      value={l.hora}
-                      onChange={(e) => mudar(l.dia, 'hora', e.target.value)}
-                      disabled={somenteLeitura}
-                    />
-                  </label>
+                  <div className="horario__hora">
+                    {somenteLeitura ? (
+                      <span className="horario__horatexto">{l.hora || '—'}</span>
+                    ) : (
+                      <CampoHora valor={l.hora} aoMudar={(hora) => mudar(l.dia, 'hora', hora)} vazio="--:--" />
+                    )}
+                  </div>
 
                   <div className="horario__pessoas">
                     {l.membros.map((id) => {
@@ -193,33 +189,12 @@ export default function ModalHorario({ aberto, obra, check, somenteLeitura = fal
 
         {!somenteLeitura && (
           <div className="horario__nova">
-            <input
-              type="date"
-              value={novaData}
-              onChange={(e) => setNovaData(e.target.value)}
-              aria-label="Outra data"
-            />
+            <CampoData valor={novaData} aoMudar={setNovaData} vazio="Outra data" />
             <button type="button" className="ferramenta" onClick={acrescentarData} disabled={!novaData}>
               Acrescentar data
             </button>
           </div>
         )}
-
-        <label className={`horario__marcar ${marcado ? 'is-marcado' : ''}`.trim()}>
-          <input
-            type="checkbox"
-            checked={marcado}
-            onChange={(e) => {
-              setMarcado(e.target.checked)
-              setErro('')
-            }}
-            disabled={somenteLeitura}
-          />
-          <span>
-            Check concluído
-            <em>{comHorario.length ? `${comHorario.length} data${comHorario.length > 1 ? 's' : ''} com horário` : 'nenhuma data com horário'}</em>
-          </span>
-        </label>
 
         {erro && (
           <p className="formrot__erro" role="alert">

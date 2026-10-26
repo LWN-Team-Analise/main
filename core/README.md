@@ -1070,12 +1070,13 @@ continua do mesmo jeito.
 
 ## O check com horario (ponto de encontro)
 
-No editor do check (no modelo ou dentro da obra), a caixa **"Check com horario"**
+No editor do check (no modelo ou dentro da obra), a caixa **"Horário"**
 transforma o check — ex.: "Ponto de encontro" — num check de datas: clicar nele
 dentro da obra abre o pop-up (`ModalHorario`) com as datas da obra (os dias da
 execucao, mais as que alguem acrescentar ali), cada uma com o **horario** (06:30)
-e **quem vai** naquele dia. O check e marcado no proprio pop-up ("Check
-concluido"), com ao menos uma data com horario. Nao junta com o Sim/Nao.
+e **quem vai** naquele dia. Esse check e obrigatorio ter horario: ele fica
+marcado sozinho enquanto houver ao menos uma data com horario. Nao junta com o
+Sim/Nao.
 
 - Quem vai numa data e ainda nao e membro da obra recebe a solicitacao de
   inclusao (o membro parcial) — e o "adicionar membros" por ali.

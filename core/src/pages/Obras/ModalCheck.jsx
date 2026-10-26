@@ -186,7 +186,7 @@ export default function ModalCheck({
                   if (e.target.checked) setSimNao(false)
                 }}
               />
-              <span>Check com horário (ex.: Ponto de encontro às 06:30, um horário para cada data da obra)</span>
+              <span>Horário</span>
             </label>
           </div>
         )}

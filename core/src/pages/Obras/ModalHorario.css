@@ -59,23 +59,17 @@
   font-variant-numeric: tabular-nums;
 }
 
-.horario__hora input,
-.horario__nova input {
-  width: 100%;
-  min-height: 36px;
-  padding: 6px 9px;
-  border: 1px solid var(--control-border);
-  border-radius: var(--radius-sm);
-  background: var(--control-bg);
-  color: var(--text-strong);
-  font: inherit;
-  font-size: 0.86rem;
+/* o horario e a data usam os campos do site (CampoHora / CampoData),
+   e nao os do navegador */
+.horario__hora {
+  min-width: 0;
 }
 
-.horario__hora input:focus,
-.horario__nova input:focus {
-  outline: none;
-  border-color: var(--accent);
+.horario__horatexto {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
 }
 
 .horario__pessoas {
@@ -152,46 +146,12 @@
   gap: 8px;
 }
 
-.horario__nova input {
-  width: auto;
-  flex: 0 1 190px;
-}
-
-/* a caixa que marca o check */
-.horario__marcar {
-  display: flex;
+.horario__nova {
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  cursor: pointer;
 }
 
-.horario__marcar.is-marcado {
-  border-color: color-mix(in srgb, var(--etapa-ok) 45%, var(--line));
-  background: var(--pri-baixa-suave);
-}
-
-.horario__marcar input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--etapa-ok);
-}
-
-.horario__marcar span {
-  display: flex;
-  flex-direction: column;
-  font-size: 0.86rem;
-  font-weight: 600;
-  color: var(--text-strong);
-}
-
-.horario__marcar em {
-  font-size: 0.72rem;
-  font-style: normal;
-  font-weight: 500;
-  color: var(--text-faint);
+.horario__nova .campo {
+  flex: 0 1 200px;
 }
 
 @media (max-width: 560px) {
