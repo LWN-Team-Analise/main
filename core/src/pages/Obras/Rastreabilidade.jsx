@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Avatar from '@/components/Avatar/Avatar'
 import { useDados } from '@/context/DadosContext'
+import { TIPO_LINK } from '@/domain/anexos'
 import { cargosDoCheck, chaveDoCargo } from '@/domain/obras'
 import { useTheme } from '@/context/ThemeContext'
 import { textoSobre } from '@/utils/cor'
@@ -246,7 +247,7 @@ export default function Rastreabilidade({ obra, roteiro }) {
         quando: a.enviadoEm ?? a.criadoEm,
         quem: a.autorNome ?? '—',
         titulo: a.nome,
-        corpo: 'Documento anexado à obra',
+        corpo: a.tipo === TIPO_LINK ? 'Link anexado à obra' : 'Documento anexado à obra',
       })
     })
 

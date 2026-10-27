@@ -293,7 +293,7 @@ Nada e apagado — o arquivo so **acrescenta**:
 - `obra.data_inicio`, `obra.data_conclusao` e `obra.atualizado_por`
   (a `data_prevista` continua na tabela so para nao perder o historico);
 - `etiqueta` + `obra_etiqueta`: os rotulos das obras;
-- `obra_anexo`: os documentos da obra;
+- `obra_anexo`: os documentos da obra (arquivo ou link: o link tem `tipo` = `text/uri-list` e o endereco em `conteudo`);
 - `obra_chat` + `obra_chat_mencao`: a conversa de cada obra;
 - `obra_avaliacao_item`: as varias notas por obra (diretor, cliente, ...) —
   `obra_avaliacao` passa a guardar a **media** delas, mantida por gatilho;
@@ -535,7 +535,7 @@ Senha padrao do sistema: `123456`.
 | `POST /api/dados/avisos/lidos` | marca avisos como lidos (zera o sininho)     |
 | `GET/POST /api/dados/obras/:id/chat` | a conversa da obra                     |
 | `POST /api/dados/obras/:id/etiquetas` | marca a obra com uma etiqueta         |
-| `POST /api/dados/obras/:id/anexos` | anexa um documento a obra                |
+| `POST /api/dados/obras/:id/anexos` | anexa um documento (ou um `link`) a obra |
 | `GET /api/dados/anexos/:id`     | baixa o conteudo de um anexo                 |
 | `GET /api/roteiro`              | o roteiro inteiro: etapas > cards > checks   |
 | `POST/PATCH/DELETE /api/roteiro/etapas` | etapas (permissao `editar_etapa`)   |
@@ -2274,6 +2274,18 @@ Os **anexos** guardam os documentos da obra (ate 4 MB cada). A lista que chega
 com o quadro traz so nome, tipo e tamanho; o arquivo em si so e buscado no
 clique de baixar — senao cada carregamento arrastaria todos os documentos de
 todas as obras junto.
+
+O **Anexar** pergunta o que anexar: um **arquivo** do computador (vai para o
+banco) ou um **link** do documento que ja mora em outra nuvem — Google Drive,
+OneDrive, SharePoint, Dropbox. O link nao ocupa espaco: no banco fica so o
+endereco, numa linha de `obra_anexo` como as outras, com `tipo` =
+`text/uri-list` e o endereco em `conteudo` — **sem atualizacao do banco**. O
+endereco vem junto na carga (e curto) e abre numa aba nova; o nome e opcional
+("Link do Google Drive" quando fica em branco). So `http(s)` passa: quem cola
+`drive.google.com/...` ganha o `https://`, e `javascript:`/`data:` sao recusados
+(ver `src/domain/anexos.js`, que a API importa). A **Proposta tecnica** aceita o
+link do mesmo jeito. Para a equipe abrir, o arquivo precisa estar compartilhado
+como "Qualquer pessoa com o link".
 
 ### Quem pode editar o que
 

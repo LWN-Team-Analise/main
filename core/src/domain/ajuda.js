@@ -132,10 +132,11 @@ export const ASSUNTOS = [
   {
     id: 'anexos',
     titulo: 'Anexos e fotos',
-    gatilhos: ['anexo', 'foto', 'arquivo', 'documento', 'imagem', 'pdf', 'upload'],
+    gatilhos: ['anexo', 'foto', 'arquivo', 'documento', 'imagem', 'pdf', 'upload', 'link', 'drive', 'onedrive'],
     resposta:
-      'Dentro da obra, na aba de anexos. No chat também dá para mandar arquivo e foto pela câmera — o ' +
-      'mesmo recurso nos dois chats, porque são a mesma peça.',
+      'Dentro da obra, na aba de anexos. O Anexar aceita um arquivo do computador (até 4 MB) ou um link ' +
+      'do Google Drive / OneDrive — o link não ocupa espaço no sistema. No chat também dá para mandar ' +
+      'arquivo e foto pela câmera.',
   },
   {
     id: 'outlook',

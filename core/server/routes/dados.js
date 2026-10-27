@@ -8,6 +8,7 @@ import { notificar, pessoasDosSetores, todosAtivos } from '../push.js'
 import { IMAGEM_INVALIDA, imagemValida } from '../utils/imagem.js'
 import { proximaProposta } from '../../src/domain/proposta.js'
 import { UNIDADES_MAXIMO, UNIDADE_MAXIMA, nomeCurtoDaUnidade, nomeDaUnidade } from '../../src/domain/clientes.js'
+import { NOME_MAXIMO, TIPO_LINK, linkValido, nomeDoLink } from '../../src/domain/anexos.js'
 import {
   CONDICOES,
   LIMITES_ITEM,
@@ -337,8 +338,12 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     query('SELECT * FROM observacao_quadro ORDER BY enviada_em DESC'),
     query('SELECT * FROM etiqueta ORDER BY lower(nome)'),
     query('SELECT obra_id, etiqueta_id FROM obra_etiqueta'),
-    query(`SELECT id, obra_id, nome, tipo, tamanho, autor_nome, enviado_por, enviado_em
-             FROM obra_anexo ORDER BY enviado_em DESC`),
+    query(
+      `SELECT id, obra_id, nome, tipo, tamanho, autor_nome, enviado_por, enviado_em,
+              CASE WHEN tipo = $1 THEN conteudo END AS link
+         FROM obra_anexo ORDER BY enviado_em DESC`,
+      [TIPO_LINK],
+    ),
     query('SELECT aviso_id FROM aviso_leitura WHERE usuario_id = $1', [usuarioId]),
     lerTermos(),
     /* os prazos (atualizacao 13). Sem as tabelas, nenhuma obra tem prazo
@@ -555,6 +560,8 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     nome: l.nome,
     tipo: l.tipo ?? '',
     tamanho: l.tamanho ?? 0,
+    /* o link (Google Drive, OneDrive...): abre direto, sem passar pela API */
+    link: l.link ?? null,
     autorNome: l.autor_nome,
     enviadoPor: l.enviado_por === null ? null : String(l.enviado_por),
     enviadoEm: l.enviado_em,
@@ -4061,14 +4068,25 @@ router.delete('/obras/:id/etiquetas/:etiquetaId', exigeSessao, exige('editar_obr
    O conteudo (data URL) NAO vem na leitura do quadro: seria
    arrastar megabytes a cada carregamento. A lista traz nome e
    tamanho; o arquivo em si so quando alguem clica para baixar.
+
+   O anexo tambem pode ser um LINK (Google Drive, OneDrive...): chega
+   em `link`, vai para `conteudo` com o tipo TIPO_LINK e volta na
+   carga, porque e curto (ver src/domain/anexos.js).
    ------------------------------------------------------------ */
 
 router.post('/obras/:id/anexos', exigeSessao, exige('editar_obras'), obraAberta, async (req, res) => {
-  const nome = texto(req.body?.nome)
-  const conteudo = String(req.body?.conteudo ?? '')
+  const deLink = req.body?.link != null
+  const link = deLink ? linkValido(req.body.link) : null
+  if (deLink && !link) {
+    return res.status(400).json({ erro: 'Esse link não parece certo. Copie o endereço inteiro, começando por https://.' })
+  }
+  const nome = texto(req.body?.nome).slice(0, NOME_MAXIMO) || (link ? nomeDoLink(link) : '')
+  const conteudo = link ?? String(req.body?.conteudo ?? '')
+  /* arquivo nunca passa por link: um .uri enviado vira texto comum */
+  const tipo = link ? TIPO_LINK : texto(req.body?.tipo) === TIPO_LINK ? 'text/plain' : texto(req.body?.tipo) || null
 
   if (!nome) return res.status(400).json({ erro: 'O arquivo precisa de um nome.' })
-  if (!conteudo.startsWith('data:')) {
+  if (!link && !conteudo.startsWith('data:')) {
     return res.status(400).json({ erro: 'Arquivo inválido.' })
   }
 
@@ -4080,8 +4098,8 @@ router.post('/obras/:id/anexos', exigeSessao, exige('editar_obras'), obraAberta,
       [
         req.params.id,
         nome,
-        texto(req.body?.tipo) || null,
-        Number(req.body?.tamanho) || conteudo.length,
+        tipo,
+        link ? null : Number(req.body?.tamanho) || conteudo.length,
         conteudo,
         req.dono.sub,
         await nomeDoDono(req),
@@ -4092,10 +4110,10 @@ router.post('/obras/:id/anexos', exigeSessao, exige('editar_obras'), obraAberta,
       acao: 'anexo.enviado',
       categoria: 'documento',
       entidade: ['obra', req.params.id],
-      descricao: 'Documento anexado à obra',
-      detalhes: { ...(await descreverObra(req.params.id)), arquivo: nome },
+      descricao: link ? 'Link anexado à obra' : 'Documento anexado à obra',
+      detalhes: { ...(await descreverObra(req.params.id)), arquivo: nome, ...(link ? { link } : {}) },
     })
-    return res.status(201).json({ id: String(rows[0].id), enviadoEm: rows[0].enviado_em })
+    return res.status(201).json({ id: String(rows[0].id), enviadoEm: rows[0].enviado_em, nome, link })
   } catch (e) {
     if (e.code === '23503') return res.status(404).json({ erro: 'Obra não encontrada.' })
     return tratar(e, res, 'dados/anexo-criar')
