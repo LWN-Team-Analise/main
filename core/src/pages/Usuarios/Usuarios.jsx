@@ -109,8 +109,8 @@ export default function Usuarios() {
   const { user } = useAuth()
   const presenca = usePresencaDaEquipe()
 
-  /* quem nao pode mexer em usuario ainda entra aqui pela permissao de
-     cargo — so nao ve os botoes de cadastrar e editar os outros */
+  /* a aba abre com `ver_usuarios`: quem so ve a equipe nao ganha os
+     botoes de cadastrar, editar e excluir (nem os de setor e cargo) */
   const podeUsuarios = pode('editar_usuario')
   const podeCargos = pode('editar_cargo')
   /* atribuir cargo tem permissao propria: sem ela ninguem escolhe o

@@ -585,7 +585,7 @@ esconde o botao e a API recusa a chamada usando exatamente as mesmas chaves.
 
 | Grupo        | Chaves                                                              |
 | ------------ | ------------------------------------------------------------------- |
-| Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_avaliacoes`, `ver_avisos` |
+| Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_turnos`, `ver_avaliacoes`, `ver_usuarios`, `ver_avisos` |
 | Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
 
 Alteracao **sempre** depende da visualizacao correspondente: desmarcar "Obras"
@@ -622,8 +622,12 @@ Tres chaves valem uma nota:
 - **`editar_cargo_titulo`** manda no cadastro de **cargos** e, junto com ele,
   em ATRIBUIR um cargo a alguem. Sem ela o campo Cargo fica travado no cadastro
   do colaborador e tambem em Configuracoes — ninguem se promove sozinho no
-  proprio perfil. Ela nao depende de nenhuma visualizacao: quem so tem ela
-  entra na aba Usuarios pela lista de Cargos.
+  proprio perfil.
+- **`ver_usuarios`** abre a aba **Usuarios** so para ver a equipe (os cards, o
+  setor, o cargo, o contato). `editar_usuario`, `editar_cargo` e
+  `editar_cargo_titulo` dependem dela. O setor gravado antes dela, com alguma
+  dessas tres, continua vendo a aba: `normalizar()` acrescenta a `ver_usuarios`
+  na leitura (sem atualizacao no banco) e ela entra na lista no proximo salvar.
 
 ### E-mail (esqueci minha senha)
 
