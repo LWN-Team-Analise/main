@@ -4113,7 +4113,8 @@ router.post('/obras/:id/chat', exigeSessao, obraAberta, async (req, res) => {
     const membros = await membrosDaObraIds(req.params.id)
     const { obra: proposta, cliente } = await descreverObra(req.params.id)
     await avisarNoCelular({
-      destinos: membros.rows.map((l) => l.usuario_id),
+      /* os do check e os parciais que aceitaram (membrosDaObraIds ja devolve os ids) */
+      destinos: membros,
       mencoes,
       linha: rows[0],
       onde: `Chat da obra ${[proposta, cliente].filter(Boolean).join(' - ')}`.trim(),
