@@ -397,6 +397,16 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
           <span>{form.subtitulo || ' '}</span>
         </p>
 
+        {/* o rascunho: a equipe so ve depois do "Compartilhar com a equipe" */}
+        {(!turno || turno.compartilhado === false) && edita && (
+          <p className="turnoform__rascunho">
+            <span aria-hidden="true">✱</span>
+            {turno
+              ? 'Ainda não compartilhado com a equipe. Escolha o card na grade e clique em "Compartilhar com a equipe".'
+              : 'O turno novo chega sem compartilhar: a equipe só vê depois do "Compartilhar com a equipe".'}
+          </p>
+        )}
+
         {erros.geral && (
           <p className="formdesp__erro" role="alert">
             {erros.geral}

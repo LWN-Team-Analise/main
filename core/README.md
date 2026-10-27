@@ -277,6 +277,7 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-29.sql.txt` | negocio.moeda, negocio.probabilidade, negocio.contato_tipo; contato (cliente_pessoa) sem empresa |
 | `db/atualizacao-31.sql.txt` | check com horario (etapa_check.horario, obra_horario, obra_horario_membro) e a aba Turnos (cronograma, turno, turno_anotacao) com `ver_turnos` / `editar_turnos` |
 | `db/atualizacao-30.sql.txt` | negocio.obra_id (o negocio de Novos negocios vira obra), obra_membro_parcial e a permissao `excluir_membro_parcial` |
+| `db/atualizacao-32.sql.txt` | turno.compartilhado (+ compartilhado_em/por): o turno novo, colado ou copiado da agenda nasce sem compartilhar com a equipe |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
 Rode o primeiro na ordem indicada dentro dele; depois rode os outros
@@ -1090,7 +1091,7 @@ Sim/Nao.
 A aba **Turnos** (abaixo de Comercial) copia os Turnos do Teams: o periodo
 (Hoje, setas, uma ou duas semanas), a linha dos dias (pessoas e horas de cada
 dia), as **Anotacoes do dia** e os **cronogramas** — Cronograma LWN e
-Cronograma Anapolis, e os que forem criados no "+ Cronograma". Cada cronograma
+Cronograma Anapolis, e os que forem criados no "Adicionar cronograma". Cada cronograma
 abre e fecha e tem os "Turnos abertos" (sem pessoa) e uma linha por pessoa.
 
 O turno e um bloco de fundo transparente, so com a borda na cor. Tem titulo,
@@ -1106,7 +1107,23 @@ so os turnos com inicio e fim.
   vermelho) e os **Prazos de tarefas** (checks com prazo ainda nao feitos; saem
   quando o check e marcado). Nada disso se edita aqui: clicar leva a obra.
 - Toda a equipe ativa comecou no Cronograma LWN; quem e de Anapolis passa pelo
-  "Editar" do cronograma. Tirar alguem leva junto os turnos dele ali.
+  "Adicionar membros" do cronograma. Tirar alguem leva junto os turnos dele ali.
+- As barras de cima seguem as do Teams: **Copiar agenda**, **Compartilhar com a
+  equipe**, "+ Turno"; Hoje/setas/periodo, **Conflitos** (a mesma pessoa com dois
+  turnos que se cruzam no dia, ou uma folga com outro turno), a visao,
+  **Imprimir** (so a grade, folha deitada), **Filtrar** (pessoa ou titulo) e
+  **Exibir** (anotacoes, Obras e turnos abertos, guardado no navegador).
+- **Copiar e colar** (quem tem `editar_turnos`): clicar no turno escolhe
+  (Ctrl/Shift junta mais; clicar de novo abre); clicar num dia escolhe a celula
+  (de novo, cria o turno ali). Copiar/Ctrl+C, Colar/Ctrl+V, Delete exclui, Esc
+  desfaz — tambem pela barra que flutua embaixo. `POST /api/turnos/colar`
+  mantem dias, horario, titulo e cor; o primeiro copiado cai no dia escolhido.
+- **Compartilhar** (atualizacao 32): o turno criado, colado ou vindo do "Copiar
+  agenda" (`POST /api/turnos/copiar-agenda`, o periodo anterior para o atual,
+  sem duplicar) nasce como rascunho — italico, com o ✱ na barra da esquerda — e
+  so quem edita o ve. "Compartilhar com a equipe" (`POST /api/turnos/compartilhar`)
+  manda os escolhidos ou, sem escolha, todos os do periodo. Editar um turno ja
+  compartilhado nao o tira da equipe.
 
 ## Frotas: excluir saida ou devolucao
 

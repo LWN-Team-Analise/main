@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { emTransacao, query } from '../db.js'
-import { exige, exigeSessao, tratar } from '../sessao.js'
+import { cargoPode, exige, exigeSessao, meuCargo, tratar } from '../sessao.js'
 import { registrarAtividade } from '../atividade.js'
 import {
   ANOTACAO_MAXIMA,
@@ -20,7 +20,13 @@ import {
 
      GET    /?de=&ate=             os cronogramas (com as pessoas), os
                                    turnos do periodo e as anotacoes
-     POST   /                      cria um turno
+     POST   /                      cria um turno (nasce sem compartilhar)
+     POST   /colar                 cola os turnos copiados num dia de uma
+                                   pessoa (ou dos turnos abertos)
+     POST   /copiar-agenda         copia a agenda do periodo anterior para
+                                   o atual
+     POST   /compartilhar          compartilha com a equipe os escolhidos
+                                   (ou todos os do periodo)
      PUT    /:id                   edita
      DELETE /:id                   apaga
      PUT    /anotacoes/:dia        a "Anotacao do dia" (vazia apaga)
@@ -41,6 +47,12 @@ import {
 
    Quem pode: ver_turnos ve; editar_turnos cria e muda turnos,
    anotacoes e cronogramas.
+
+   COMPARTILHAR (atualizacao 32), como no Teams: o turno criado, colado
+   ou copiado da agenda anterior nasce como RASCUNHO — quem edita ve (em
+   italico, com o asterisco), a equipe nao. Ele passa a valer para todos
+   no "Compartilhar com a equipe". Editar um turno ja compartilhado nao o
+   tira da equipe.
    ============================================================ */
 
 const router = Router()
@@ -76,7 +88,7 @@ function trechos(dias) {
 function falhou(erro, res, onde) {
   if (erro.code === '42P01' || erro.code === '42703') {
     return res.status(503).json({
-      erro: 'O banco ainda não tem a aba Turnos (atualização 31 em core/db). Rode npm run db:atualizar e suba a API de novo.',
+      erro: 'O banco ainda não está atualizado para os Turnos (atualizações 31 e 32 em core/db). Rode npm run db:atualizar e suba a API de novo.',
     })
   }
   if (erro.code === '23505') return res.status(409).json({ erro: 'Já existe um cronograma com esse nome.', campo: 'nome' })
@@ -99,6 +111,8 @@ function paraTurno(l) {
     cor: l.cor,
     obraId: l.obra_id === null ? null : String(l.obra_id),
     checkId: l.check_id === null ? null : String(l.check_id),
+    /* false = rascunho: so quem edita os turnos ve */
+    compartilhado: l.compartilhado !== false,
   }
 }
 
@@ -106,12 +120,19 @@ const SELECT_TURNO = `
   SELECT t.id, t.cronograma_id, t.usuario_id,
          to_char(t.data_inicio, 'YYYY-MM-DD') AS data_inicio, to_char(t.data_fim, 'YYYY-MM-DD') AS data_fim,
          to_char(t.hora_inicio, 'HH24:MI') AS hora_inicio, to_char(t.hora_fim, 'HH24:MI') AS hora_fim,
-         t.titulo, t.subtitulo, t.cor, t.obra_id, t.check_id
+         t.titulo, t.subtitulo, t.cor, t.obra_id, t.check_id, t.compartilhado
     FROM turno t`
 
 /* ---------------- leitura ---------------- */
 
 router.get('/', exigeSessao, exige(VER), async (req, res) => {
+  /* o rascunho (ainda nao compartilhado) so aparece para quem edita */
+  let edita = false
+  try {
+    edita = cargoPode(await meuCargo(req.dono.sub), EDITAR)
+  } catch (erro) {
+    return falhou(erro, res, 'turnos/ler')
+  }
   const de = texto(req.query.de)
   const ate = texto(req.query.ate)
   if (!dataValida(de) || !dataValida(ate) || ate < de) return res.status(400).json({ erro: 'Período inválido.' })
@@ -128,8 +149,9 @@ router.get('/', exigeSessao, exige(VER), async (req, res) => {
       query(
         `${SELECT_TURNO}
           WHERE t.data_inicio <= $2 AND t.data_fim >= $1
+            AND (t.compartilhado OR $3)
           ORDER BY t.data_inicio, t.hora_inicio NULLS FIRST, t.id`,
-        [de, ate],
+        [de, ate, edita],
       ),
       /* o check com horario das obras: cada pessoa de cada data */
       query(
@@ -370,7 +392,8 @@ router.post('/', exigeSessao, exige(EDITAR), async (req, res) => {
   try {
     const lido = await lerTurno(req.body)
     if (lido.erro) return res.status(400).json(lido)
-    const c = { ...lido.campos, criado_por: req.dono.sub }
+    /* nasce como rascunho: a equipe so ve depois do "Compartilhar" */
+    const c = { ...lido.campos, criado_por: req.dono.sub, compartilhado: false }
     const colunas = Object.keys(c)
     const { rows } = await query(
       `INSERT INTO turno (${colunas.join(', ')})
@@ -388,6 +411,164 @@ router.post('/', exigeSessao, exige(EDITAR), async (req, res) => {
     return res.status(201).json({ turno: paraTurno(novo[0]) })
   } catch (erro) {
     return falhou(erro, res, 'turnos/criar')
+  }
+})
+
+/* ---------------- copiar, colar e compartilhar ---------------- */
+
+const COLUNAS_DA_COPIA = 'hora_inicio, hora_fim, titulo, subtitulo, cor, obra_id, check_id'
+
+/**
+ * Cola os turnos copiados num DIA de uma linha (pessoa, ou os turnos
+ * abertos) de um cronograma. O primeiro deles cai no dia escolhido e os
+ * outros guardam a distancia que tinham entre si; cada um mantem os
+ * dias que cobria, o horario, o titulo e a cor. Os colados nascem como
+ * rascunho.
+ *
+ * { origem: [ids], cronogramaId, usuarioId (vazio = aberto), dia }
+ */
+router.post('/colar', exigeSessao, exige(EDITAR), async (req, res) => {
+  const origem = [...new Set((Array.isArray(req.body?.origem) ? req.body.origem : []).map(String))]
+  const cronogramaId = texto(req.body?.cronogramaId)
+  const usuarioId = texto(req.body?.usuarioId) || null
+  const dia = texto(req.body?.dia)
+  if (origem.length === 0 || origem.length > 100 || origem.some((id) => !idValido(id))) {
+    return res.status(400).json({ erro: 'Copie um ou mais turnos antes de colar.' })
+  }
+  if (!idValido(cronogramaId)) return res.status(400).json({ erro: 'Escolha onde colar.' })
+  if (!dataValida(dia)) return res.status(400).json({ erro: 'Escolha o dia onde colar.' })
+  try {
+    if (usuarioId) {
+      if (!idValido(usuarioId)) return res.status(400).json({ erro: 'Pessoa inválida.' })
+      const { rows } = await query(
+        'SELECT 1 FROM cronograma_membro WHERE cronograma_id = $1 AND usuario_id = $2',
+        [cronogramaId, usuarioId],
+      )
+      if (!rows[0]) return res.status(400).json({ erro: 'Essa pessoa não está neste cronograma.' })
+    }
+    const { rows: fontes } = await query(
+      `SELECT id, to_char(data_inicio, 'YYYY-MM-DD') AS inicio, to_char(data_fim, 'YYYY-MM-DD') AS fim
+         FROM turno WHERE id = ANY($1::bigint[]) ORDER BY data_inicio, id`,
+      [origem],
+    )
+    if (fontes.length === 0) return res.status(404).json({ erro: 'Os turnos copiados não existem mais.' })
+
+    const deslocar = diasEntre(fontes[0].inicio, dia)
+    const novos = await emTransacao(async (db) => {
+      const ids = []
+      for (const fonte of fontes) {
+        const { rows } = await db.query(
+          `INSERT INTO turno (cronograma_id, usuario_id, data_inicio, data_fim, ${COLUNAS_DA_COPIA},
+                              criado_por, compartilhado)
+           SELECT $2, $3, data_inicio + $4::int, data_fim + $4::int, ${COLUNAS_DA_COPIA}, $5, false
+             FROM turno WHERE id = $1
+           RETURNING id`,
+          [fonte.id, cronogramaId, usuarioId, deslocar, req.dono.sub],
+        )
+        ids.push(rows[0].id)
+      }
+      return ids
+    })
+    await registrarAtividade(req, {
+      acao: 'turno.colado',
+      categoria: 'turno',
+      entidade: ['cronograma', cronogramaId],
+      descricao: novos.length === 1 ? 'Turno colado' : 'Turnos colados',
+      detalhes: { turnos: novos.length, dia: dia.split('-').reverse().join('/') },
+    })
+    /* os ids voltam para a tela deixar os colados escolhidos (prontos para o "Compartilhar") */
+    return res.status(201).json({ colados: novos.length, ids: novos.map(String) })
+  } catch (erro) {
+    return falhou(erro, res, 'turnos/colar')
+  }
+})
+
+/**
+ * O "Copiar agenda" do Teams: os turnos que comecam no periodo ANTERIOR
+ * (do mesmo tamanho do que esta na tela) vem para este, os mesmos dias
+ * da semana, como rascunho. Os das obras nao entram (eles vem das obras).
+ * Copiar de novo nao duplica: o turno que ja tem a sua copia igual no
+ * periodo (mesma linha, dias, horario e titulo) fica de fora.
+ *
+ * { de, ate } — o periodo que esta na tela.
+ */
+router.post('/copiar-agenda', exigeSessao, exige(EDITAR), async (req, res) => {
+  const de = texto(req.body?.de)
+  const ate = texto(req.body?.ate)
+  if (!dataValida(de) || !dataValida(ate) || ate < de || diasEntre(de, ate) > PERIODO_MAXIMO) {
+    return res.status(400).json({ erro: 'Período inválido.' })
+  }
+  const dias = diasEntre(de, ate) + 1
+  try {
+    const { rows } = await query(
+      `INSERT INTO turno (cronograma_id, usuario_id, data_inicio, data_fim, ${COLUNAS_DA_COPIA},
+                          criado_por, compartilhado)
+       SELECT cronograma_id, usuario_id, data_inicio + $3::int, data_fim + $3::int, ${COLUNAS_DA_COPIA}, $4, false
+         FROM turno o
+        WHERE o.data_inicio BETWEEN ($1::date - $3::int) AND ($2::date - $3::int)
+          AND NOT EXISTS (
+                SELECT 1 FROM turno c
+                 WHERE c.cronograma_id = o.cronograma_id
+                   AND c.usuario_id IS NOT DISTINCT FROM o.usuario_id
+                   AND c.data_inicio = o.data_inicio + $3::int
+                   AND c.data_fim = o.data_fim + $3::int
+                   AND c.hora_inicio IS NOT DISTINCT FROM o.hora_inicio
+                   AND c.hora_fim IS NOT DISTINCT FROM o.hora_fim
+                   AND c.titulo = o.titulo)
+       RETURNING id`,
+      [de, ate, dias, req.dono.sub],
+    )
+    await registrarAtividade(req, {
+      acao: 'turno.agenda_copiada',
+      categoria: 'turno',
+      entidade: ['turno', 'agenda'],
+      descricao: 'Agenda copiada do período anterior',
+      detalhes: { turnos: rows.length, periodo: `${de.split('-').reverse().join('/')} a ${ate.split('-').reverse().join('/')}` },
+    })
+    return res.status(201).json({ copiados: rows.length, ids: rows.map((l) => String(l.id)) })
+  } catch (erro) {
+    return falhou(erro, res, 'turnos/copiar-agenda')
+  }
+})
+
+/**
+ * "Compartilhar com a equipe": { ids: [...] } compartilha os escolhidos;
+ * sem ids, { de, ate } compartilha todos os rascunhos do periodo.
+ */
+router.post('/compartilhar', exigeSessao, exige(EDITAR), async (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? [...new Set(req.body.ids.map(String))] : null
+  const de = texto(req.body?.de)
+  const ate = texto(req.body?.ate)
+  if (ids && (ids.length === 0 || ids.some((id) => !idValido(id)))) {
+    return res.status(400).json({ erro: 'Escolha os turnos para compartilhar.' })
+  }
+  if (!ids && (!dataValida(de) || !dataValida(ate) || ate < de)) {
+    return res.status(400).json({ erro: 'Período inválido.' })
+  }
+  try {
+    const { rowCount } = ids
+      ? await query(
+          `UPDATE turno SET compartilhado = true, compartilhado_em = now(), compartilhado_por = $2
+            WHERE id = ANY($1::bigint[]) AND NOT compartilhado`,
+          [ids, req.dono.sub],
+        )
+      : await query(
+          `UPDATE turno SET compartilhado = true, compartilhado_em = now(), compartilhado_por = $3
+            WHERE NOT compartilhado AND data_inicio <= $2 AND data_fim >= $1`,
+          [de, ate, req.dono.sub],
+        )
+    if (rowCount) {
+      await registrarAtividade(req, {
+        acao: 'turno.compartilhado',
+        categoria: 'turno',
+        entidade: ['turno', 'equipe'],
+        descricao: rowCount === 1 ? 'Turno compartilhado com a equipe' : 'Turnos compartilhados com a equipe',
+        detalhes: { turnos: rowCount },
+      })
+    }
+    return res.json({ compartilhados: rowCount })
+  } catch (erro) {
+    return falhou(erro, res, 'turnos/compartilhar')
   }
 })
 

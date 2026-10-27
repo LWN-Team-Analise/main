@@ -1,0 +1,35 @@
+-- ============================================================
+--  ATUALIZACAO 32 — TURNO COMPARTILHADO (como no Teams)
+--
+--  turno.compartilhado — o turno criado, colado ou vindo do "Copiar
+--  agenda" nasce SEM estar compartilhado: quem edita a escala ve (em
+--  italico, com o asterisco), a equipe nao. Ele aparece para todos
+--  quando alguem seleciona os cards e clica em "Compartilhar com a
+--  equipe". Os turnos que ja existiam ficam compartilhados.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao duplica nada.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.turno ADD COLUMN IF NOT EXISTS compartilhado boolean NOT NULL DEFAULT true;
+ALTER TABLE public.turno ADD COLUMN IF NOT EXISTS compartilhado_em timestamptz;
+ALTER TABLE public.turno ADD COLUMN IF NOT EXISTS compartilhado_por bigint REFERENCES public.usuario (id) ON DELETE SET NULL;
+
+COMMENT ON COLUMN public.turno.compartilhado IS
+    'false = rascunho: so quem edita os turnos ve, ate o "Compartilhar com a equipe".';
+
+CREATE INDEX IF NOT EXISTS turno_rascunho_idx ON public.turno (data_inicio) WHERE NOT compartilhado;
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t"
+-- ============================================================
+
+SELECT 'turno.compartilhado' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'turno' AND column_name = 'compartilhado') AS ok;

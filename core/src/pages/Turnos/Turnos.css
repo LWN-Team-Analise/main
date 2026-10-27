@@ -16,17 +16,251 @@
   min-width: 0;
 }
 
+/* 1a barra: o titulo e, a direita, o que mexe na agenda inteira */
 .turnos__topo {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
 }
 
+.turnos__topo .tela__titulo {
+  margin: 0;
+}
+
+.turnos__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 2a barra: o periodo e as ferramentas da grade */
 .turnos__barra {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* a ferramenta, no jeito do Teams: o icone e o nome, sem caixa ate o mouse chegar */
+.turnos__ferramenta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.turnos__ferramenta svg {
+  flex: none;
+  color: var(--text-muted);
+}
+
+.turnos__ferramenta:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+.turnos__ferramenta:disabled {
+  color: var(--text-faint);
+  cursor: default;
+}
+
+.turnos__ferramenta.is-borda {
+  border-color: var(--control-border);
+  background: var(--control-bg);
+}
+
+.turnos__ferramenta.is-ligada {
+  background: var(--control-bg-hover);
+  border-color: var(--control-border);
+}
+
+/* os conflitos: em vermelho quando ha algum */
+.turnos__ferramenta.is-alerta,
+.turnos__ferramenta.is-alerta svg {
+  color: var(--danger);
+}
+
+/* "Compartilhar com a equipe": o botao forte quando ha o que mandar */
+.turnos__compartilhar {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-faint);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.turnos__compartilhar.is-pendente {
+  border-color: transparent;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 10px 22px -14px var(--accent);
+}
+
+.turnos__compartilhar.is-pendente:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.turnos__compartilhar span {
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+/* os menus da barra (Conflitos, Exibir): o painel cai embaixo do botao */
+.turnos__menu {
+  position: relative;
+}
+
+.turnos__painel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 240px;
+  padding: 10px;
+  border: 1px solid var(--modal-borda, var(--line));
+  border-radius: var(--radius-md);
+  background: var(--modal-bg);
+  box-shadow: var(--modal-sombra);
+}
+
+.turnos__painel--largo {
+  width: min(380px, calc(100vw - 32px));
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.turnos__paineltitulo {
+  margin: 0 0 4px;
+  padding: 0 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.turnos__conflitos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.turnos__conflitos button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-left: 3px solid var(--danger);
+  border-radius: 6px;
+  background: none;
+  color: var(--text-strong);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.turnos__conflitos button:hover {
+  background: var(--control-bg-hover);
+}
+
+.turnos__conflitos strong {
+  font-size: 0.82rem;
+}
+
+.turnos__conflitos span {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.turnos__parte {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 6px;
+  border-radius: 6px;
+  font-size: 0.84rem;
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.turnos__parte:hover {
+  background: var(--control-bg-hover);
+}
+
+.turnos__parte input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+/* o Filtrar: o campo aparece embaixo da barra */
+.turnos__filtro {
+  display: flex;
+  align-items: center;
   gap: 8px;
+  max-width: 420px;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-muted);
+}
+
+.turnos__filtro input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.turnos__filtro input:focus {
+  outline: none;
+}
+
+.turnos__aviso {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
 }
 
 .turnos__hoje,
@@ -281,6 +515,9 @@ button.turnos__nota:hover {
 }
 
 .turnos__editar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 4px 12px;
   border: 1px solid var(--control-border);
   border-radius: var(--radius-pill);
@@ -295,6 +532,13 @@ button.turnos__nota:hover {
 .turnos__editar:hover {
   background: var(--control-bg-hover);
   color: var(--text-strong);
+}
+
+.turnos__editar--icone {
+  width: 30px;
+  height: 28px;
+  justify-content: center;
+  padding: 0;
 }
 
 .turnos__grupo > .turnos__linha:first-of-type {
@@ -361,6 +605,34 @@ button.turnos__celula:hover {
   background: color-mix(in srgb, var(--accent) 7%, transparent);
 }
 
+/* o dia escolhido: a moldura e o "+" (clicar de novo cria o turno ali;
+   com turnos copiados, o Colar da barra de baixo poe eles aqui) */
+.turnos__celula {
+  position: relative;
+}
+
+.turnos__celula.is-escolhida {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.turnos__mais {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 /* o turno: fundo transparente, so a borda na cor dele (a da esquerda
    mais grossa, como no Teams) */
 .turno {
@@ -424,6 +696,145 @@ button.turnos__celula:hover {
 .turno.is-obra {
   border-style: dashed;
   border-left-style: solid;
+}
+
+/* ainda NAO compartilhado (o rascunho), como no Teams: o texto em
+   italico e o asterisco na barra da esquerda, que engrossa para caber */
+.turno.is-rascunho {
+  padding-left: 9px;
+  border-left-width: 15px;
+}
+
+.turno.is-rascunho::before {
+  content: '✱';
+  position: absolute;
+  top: 50%;
+  left: -14px;
+  width: 13px;
+  transform: translateY(-50%);
+  color: #fff;
+  font-size: 0.68rem;
+  font-style: normal;
+  line-height: 1;
+  text-align: center;
+}
+
+.turno.is-rascunho strong,
+.turno.is-rascunho span,
+.turno.is-rascunho em {
+  font-style: italic;
+}
+
+/* o escolhido: a moldura escura por fora, como no Teams */
+.turno.is-escolhido {
+  outline: 2px solid var(--text-strong);
+  outline-offset: 1px;
+  z-index: 2;
+}
+
+/* o conflito: a pastilha vermelha no canto */
+.turno__conflito {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  /* o vermelho fixo: o --danger do escuro e claro demais para o "!" branco */
+  background: #d13438;
+  box-shadow: 0 0 0 2px var(--surface);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* ---------------- a barra da escolha (flutua embaixo) ---------------- */
+
+.turnos__escolha {
+  position: sticky;
+  bottom: 18px;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-self: center;
+  gap: 4px;
+  max-width: calc(100% - 16px);
+  padding: 6px 6px 6px 16px;
+  border: 1px solid var(--modal-borda, var(--line));
+  border-radius: 22px;
+  background: var(--modal-bg);
+  box-shadow: var(--modal-sombra);
+}
+
+.turnos__escolhatexto {
+  margin-right: 6px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.turnos__escolhatexto em {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.turnos__botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.turnos__botao:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+.turnos__botao:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.turnos__botao--forte {
+  background: var(--accent);
+  color: #fff;
+}
+
+.turnos__botao--forte:hover:not(:disabled) {
+  background: var(--accent);
+  filter: brightness(1.08);
+}
+
+.turnos__botao--perigo {
+  color: var(--danger);
+}
+
+.turnos__botao--icone {
+  width: 34px;
+  justify-content: center;
+  padding: 0;
+  color: var(--text-muted);
+}
+
+/* a lista do "Excluir N turnos?" */
+.turnos__lista {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.84rem;
+  color: var(--text-base);
 }
 
 /* ---------------- os pop-ups ---------------- */
@@ -504,6 +915,21 @@ button.turnos__celula:hover {
   color: var(--pri-media);
 }
 
+.turnoform__rascunho {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.turnoform__rascunho span {
+  font-style: normal;
+  color: var(--accent);
+}
+
 .turnoform__obra dl {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -547,7 +973,24 @@ button.turnos__celula:hover {
     font-size: 0.92rem;
   }
 
-  .turnos__espaco {
+  .turnos__barra .turnos__espaco {
+    display: none;
+  }
+
+  .turnos__topo .turnos__espaco {
+    display: none;
+  }
+
+  .turnos__acoes {
+    width: 100%;
+  }
+
+  .turnos__barra .turnos__ferramenta {
+    padding: 0 10px;
+  }
+
+  /* imprimir e coisa do computador */
+  .turnos__barra .turnos__imprimir {
     display: none;
   }
 
@@ -559,7 +1002,153 @@ button.turnos__celula:hover {
     gap: 7px;
   }
 
+  /* o cabecalho do cronograma numa linha so: os botoes ficam so com o icone */
+  .turnos__grupotopo {
+    gap: 8px;
+  }
+
+  .turnos__abrir {
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .turnos__abrir strong {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 1rem;
+  }
+
+  .turnos__info {
+    white-space: nowrap;
+  }
+
+  .turnos__texto {
+    display: none;
+  }
+
+  .turnos__editar {
+    flex: none;
+    padding: 4px 8px;
+  }
+
+  /* a barra da escolha: a frase em cima, os botoes (so o icone)
+     embaixo, longe do botao do chat */
+  .turnos__escolha {
+    bottom: 84px;
+    align-self: flex-start;
+    max-width: calc(100% - 64px);
+    border-radius: 18px;
+  }
+
+  .turnos__escolhatexto {
+    width: 100%;
+    padding: 2px 0;
+  }
+
+  .turnos__escolhatexto em {
+    display: none;
+  }
+
+  .turnos__botao {
+    padding: 0 10px;
+  }
+
   .turnoform__dupla {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------------- a impressao (o "Imprimir") ----------------
+
+   So a grade: some o menu do sistema, a barra de cima, as ferramentas
+   e a barra da escolha; a grade abre inteira (sem rolar de lado), na
+   folha deitada. */
+
+@page turnos {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+@media print {
+  .turnos {
+    page: turnos;
+    --col-quem: 150px;
+    --col-dia: 0px;
+  }
+
+  body:has(.turnos) .shell > :not(.shell__coluna),
+  body:has(.turnos) .topbar,
+  body:has(.turnos) .shell__erro,
+  .turnos__acoes,
+  .turnos__barra > :not(.turnos__periodo),
+  .turnos__filtro,
+  .turnos__aviso,
+  .turnos__escolha,
+  .turnos__editar {
+    display: none !important;
+  }
+
+  body:has(.turnos) .shell__coluna,
+  body:has(.turnos) .shell__conteudo {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .turnos__barra {
+    border: 0;
+    padding: 0;
+  }
+
+  .turnos__quadro {
+    overflow: visible;
+    border-radius: 0;
+  }
+
+  .turnos__grade {
+    min-width: 0;
+  }
+
+  .turnos__canto,
+  .turnos__grupotopo {
+    position: static;
+  }
+
+  .turnos__linha {
+    break-inside: avoid;
+  }
+
+  /* o dia no papel: o numero, o dia da semana e as horas, um embaixo do outro */
+  .turnos__dia {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'numero'
+      'semana'
+      'horas';
+    padding: 4px 6px;
+  }
+
+  .turnos__pessoas {
+    display: none;
+  }
+
+  .turnos__horas {
+    justify-self: start;
+  }
+
+  .turno {
+    margin: 2px;
+    padding: 3px 5px 3px 7px;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .turno strong {
+    font-size: 0.66rem;
+  }
+
+  .turno span,
+  .turno em {
+    font-size: 0.6rem;
   }
 }
