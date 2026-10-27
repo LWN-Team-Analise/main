@@ -310,7 +310,6 @@ export default function ModalAnexos({ aberto, obra, somenteLeitura = false, aoFe
                   value={link}
                   onChange={(e) => setLink(e.target.value)}
                   maxLength={LINK_MAXIMO}
-                  dica="No Drive, compartilhe como “Qualquer pessoa com o link” para a equipe conseguir abrir."
                   autoFocus
                 />
                 <CampoTexto

@@ -210,7 +210,6 @@ export default function ModalProposta({
                   value={link}
                   onChange={(e) => setLink(e.target.value)}
                   maxLength={LINK_MAXIMO}
-                  dica="No Drive, compartilhe como “Qualquer pessoa com o link” para a equipe conseguir abrir."
                   autoFocus
                 />
                 <button
