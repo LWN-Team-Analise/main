@@ -17,6 +17,7 @@ import {
 } from '@/components/CutoutCard/CutoutCard'
 import { useDados } from '@/context/DadosContext'
 import { ordemDosClientes } from '@/domain/obras'
+import { raizDoCliente } from '@/domain/clientes'
 import Estrelas from '@/components/Estrelas/Estrelas'
 import { dataBR, dataHora, formatarCEP, hojeISO } from '@/utils/formato'
 import useCorDaLogo from '@/hooks/useCorDaLogo'
@@ -96,6 +97,43 @@ export default function Clientes() {
     }
   }, [clientes])
 
+  /* As UNIDADES (atualizacao 33): na aba fica so o cliente "de cima"; as
+     unidades dele (Einstein Anapolis, Einstein Alphaville) entram no card
+     dele, e as obras, as notas e os negocios delas somam no dele. */
+  const { principais, unidadesDe, raizDe } = useMemo(() => {
+    const unidades = new Map()
+    clientes.forEach((c) => {
+      if (!c.matrizId) return
+      const chave = String(c.matrizId)
+      if (!unidades.has(chave)) unidades.set(chave, [])
+      unidades.get(chave).push(c)
+    })
+    unidades.forEach((lista) => lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')))
+    return {
+      principais: clientes.filter((c) => !c.matrizId),
+      unidadesDe: unidades,
+      raizDe: new Map(clientes.map((c) => [String(c.id), raizDoCliente(c)])),
+    }
+  }, [clientes])
+
+  /* os negocios do Comercial somados por cliente "de cima": ganhos,
+     abertos e o ticket medio pesado pelos ganhos de cada unidade */
+  const resumoDoGrupo = useMemo(() => {
+    const soma = {}
+    Object.entries(resumo).forEach(([id, r]) => {
+      const chave = raizDe.get(String(id)) ?? String(id)
+      const atual = soma[chave] ?? { ganhos: 0, abertos: 0, valor: 0 }
+      atual.ganhos += r?.ganhos ?? 0
+      atual.abertos += r?.abertos ?? 0
+      atual.valor += (r?.ticketMedio ?? 0) * (r?.ganhos ?? 0)
+      soma[chave] = atual
+    })
+    Object.values(soma).forEach((r) => {
+      r.ticketMedio = r.ganhos ? r.valor / r.ganhos : null
+    })
+    return soma
+  }, [resumo, raizDe])
+
   const [modal, setModal] = useState(false)
   const [editando, setEditando] = useState(null)
   /* A busca do topo manda o nome procurado no estado da rota: quem
@@ -118,11 +156,11 @@ export default function Clientes() {
 
   const lista = useMemo(() => {
     const alvo = busca.trim().toLowerCase()
+    /* a busca acha o cliente tambem pelo nome ou pela cidade de uma unidade */
+    const bate = (c) => `${c.nome} ${c.cidade} ${c.estado}`.toLowerCase().includes(alvo)
     let filtrados = alvo
-      ? clientes.filter((c) =>
-          `${c.nome} ${c.cidade} ${c.estado}`.toLowerCase().includes(alvo),
-        )
-      : clientes
+      ? principais.filter((c) => bate(c) || (unidadesDe.get(String(c.id)) ?? []).some(bate))
+      : principais
 
     /* "sem" e uma escolha de verdade, nao a ausencia de filtro: e assim
        que se acha quem falta classificar */
@@ -133,19 +171,21 @@ export default function Clientes() {
 
     /* as unidades da LWN (prioritarias) sempre na frente */
     return [...filtrados].sort(ordemDosClientes)
-  }, [clientes, busca, setorFiltro])
+  }, [principais, unidadesDe, busca, setorFiltro])
 
   /* quantas obras cada cliente tem, e quantas ainda estao abertas */
   const contagem = useMemo(() => {
     const mapa = {}
     obras.forEach((o) => {
-      const atual = mapa[o.clienteId] ?? { total: 0, abertas: 0 }
+      /* a obra da unidade conta no cliente dela */
+      const chave = raizDe.get(String(o.clienteId)) ?? String(o.clienteId)
+      const atual = mapa[chave] ?? { total: 0, abertas: 0 }
       atual.total += 1
       if (!concluida(o)) atual.abertas += 1
-      mapa[o.clienteId] = atual
+      mapa[chave] = atual
     })
     return mapa
-  }, [obras, concluida])
+  }, [obras, concluida, raizDe])
 
   /**
    * A avaliacao de cada cliente.
@@ -162,11 +202,12 @@ export default function Clientes() {
     const mapa = {}
     obras.forEach((o) => {
       if (!o.avaliacao) return
-      const atual = mapa[o.clienteId] ?? { soma: 0, quantas: 0, obras: [] }
+      const chave = raizDe.get(String(o.clienteId)) ?? String(o.clienteId)
+      const atual = mapa[chave] ?? { soma: 0, quantas: 0, obras: [] }
       atual.soma += Number(o.avaliacao.nota)
       atual.quantas += 1
       atual.obras.push(o)
-      mapa[o.clienteId] = atual
+      mapa[chave] = atual
     })
 
     Object.values(mapa).forEach((v) => {
@@ -179,7 +220,7 @@ export default function Clientes() {
       )
     })
     return mapa
-  }, [obras])
+  }, [obras, raizDe])
 
   const abrirNovo = () => {
     setEditando(null)
@@ -210,6 +251,7 @@ export default function Clientes() {
         .filter(Boolean)
         .join(' — ')
     const ordenados = [...clientes].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+    const nomeDoCliente = (id) => clientes.find((x) => String(x.id) === String(id))?.nome ?? ''
     baixarPlanilha(
       [
         {
@@ -217,6 +259,7 @@ export default function Clientes() {
           tabela: 'Clientes',
           colunas: [
             { titulo: 'Empresa', tipo: 'texto', largura: 34 },
+            { titulo: 'Unidade de', tipo: 'texto', largura: 26 },
             { titulo: 'Endereço', tipo: 'texto', largura: 48 },
             { titulo: 'Cidade', tipo: 'texto', largura: 18 },
             { titulo: 'UF', tipo: 'texto', largura: 5 },
@@ -231,6 +274,7 @@ export default function Clientes() {
           ],
           linhas: ordenados.map((c) => [
             c.nome,
+            c.matrizId ? nomeDoCliente(c.matrizId) : '',
             enderecoDe(c),
             c.cidade,
             c.estado,
@@ -241,7 +285,8 @@ export default function Clientes() {
             resumo[c.id]?.ticketMedio ?? null,
             c.proximoContato || null,
             nomeDe(c.proprietarioId),
-            avaliacoes[c.id]?.media ?? null,
+            /* a nota fica na linha do cliente, ja somando as unidades */
+            c.matrizId ? null : (avaliacoes[c.id]?.media ?? null),
           ]),
         },
         {
@@ -310,7 +355,7 @@ export default function Clientes() {
               type="button"
               className="acao acao--fraca"
               onClick={exportarClientes}
-              disabled={clientes.length === 0}
+              disabled={principais.length === 0}
               title="Baixar todos os clientes numa planilha do Excel"
             >
               <Icone.exportar />
@@ -359,7 +404,7 @@ export default function Clientes() {
               </button>
             ))}
 
-            {clientes.some((c) => !c.setorId) && (
+            {principais.some((c) => !c.setorId) && (
               <button
                 type="button"
                 className={`chip ${setorFiltro === 'sem' ? 'is-atual' : ''}`.trim()}
@@ -381,6 +426,7 @@ export default function Clientes() {
               <CardCliente
                 key={cliente.id}
                 cliente={cliente}
+                unidades={unidadesDe.get(String(cliente.id)) ?? []}
                 numeros={contagem[cliente.id] ?? { total: 0, abertas: 0 }}
                 nota={avaliacoes[cliente.id] ?? null}
                 setor={setorPorId(cliente.setorId)}
@@ -399,7 +445,7 @@ export default function Clientes() {
       <ModalCliente
         aberto={modal}
         cliente={editando}
-        resumo={editando ? resumo[editando.id] ?? null : null}
+        resumo={editando ? resumoDoGrupo[editando.id] ?? null : null}
         nota={editando ? avaliacoes[editando.id] ?? null : null}
         aoFechar={() => setModal(false)}
         aoSalvar={salvar}
@@ -408,10 +454,14 @@ export default function Clientes() {
       <Confirma
         aberto={Boolean(apagando)}
         titulo={`Apagar ${apagando?.nome ?? 'cliente'}?`}
-        mensagem="O cadastro sai da lista e não dá para desfazer."
+        mensagem={
+          (unidadesDe.get(String(apagando?.id)) ?? []).length > 0
+            ? `O cadastro e as ${unidadesDe.get(String(apagando.id)).length} unidade(s) dele saem da lista, e não dá para desfazer.`
+            : 'O cadastro sai da lista e não dá para desfazer.'
+        }
         aviso={
           (contagem[apagando?.id]?.total ?? 0) > 0
-            ? `Este cliente tem ${contagem[apagando.id].total} obra(s). Elas serão apagadas junto, com as etapas, observações e avaliações.`
+            ? `Este cliente tem ${contagem[apagando.id].total} obra(s), somando as unidades. Elas serão apagadas junto, com as etapas, observações e avaliações.`
             : undefined
         }
         rotuloConfirmar="Apagar cliente"
@@ -468,7 +518,7 @@ function iniciais(nome) {
  * clicou para abrir e o gesto que a mao ja espera — e o resto do
  * cartao, que antes era area morta, agora responde igual.
  */
-function CardCliente({ cliente, numeros, nota, setor, podeMexer, aoEditar, aoApagar, aoVer }) {
+function CardCliente({ cliente, unidades = [], numeros, nota, setor, podeMexer, aoEditar, aoApagar, aoVer }) {
   const { isDark } = useTheme()
   const cor = useCorDaLogo(cliente.logo, cliente.nome)
   const [aberto, setAberto] = useState(false)
@@ -526,7 +576,7 @@ function CardCliente({ cliente, numeros, nota, setor, podeMexer, aoEditar, aoApa
             descobrir — então ela sobe para o cabeçalho, que é a única
             parte sempre visível. Dentro do card ela continua, com as
             notas obra a obra. */}
-        {(nota || setor) && (
+        {(nota || setor || unidades.length > 0) && (
           <span className="cliente__selos">
             {nota && (
               <span
@@ -543,6 +593,12 @@ function CardCliente({ cliente, numeros, nota, setor, podeMexer, aoEditar, aoApa
             {setor && (
               <span className="cliente__setor" style={{ '--setor-cor': corAdaptada(setor.cor, isDark) }}>
                 {setor.nome}
+              </span>
+            )}
+
+            {unidades.length > 0 && (
+              <span className="cliente__qtdunid" title={unidades.map((u) => u.nome).join(', ')}>
+                {unidades.length} unidade{unidades.length === 1 ? '' : 's'}
               </span>
             )}
           </span>
@@ -640,6 +696,25 @@ function CardCliente({ cliente, numeros, nota, setor, podeMexer, aoEditar, aoApa
               </dd>
             </div>
           </dl>
+
+          {/* as unidades: o nome e o endereco de cada uma */}
+          {unidades.length > 0 && (
+            <div className="cliente__unidades">
+              <p className="cliente__unidtitulo">Unidades</p>
+              <ul>
+                {unidades.map((u) => (
+                  <li key={u.id}>
+                    <strong>{u.unidade || u.nome}</strong>
+                    <span>
+                      {[u.endereco, u.bairro, u.cidade && u.estado ? `${u.cidade}/${u.estado}` : u.cidade, u.cep ? formatarCEP(u.cep) : '']
+                        .filter(Boolean)
+                        .join(' — ')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* ---------------- Avaliação do cliente ----------------
 

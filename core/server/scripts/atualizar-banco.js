@@ -59,6 +59,7 @@ const ARQUIVOS = [
   'db/atualizacao-30.sql.txt',
   'db/atualizacao-31.sql.txt',
   'db/atualizacao-32.sql.txt',
+  'db/atualizacao-33.sql.txt',
 ]
 
 /**
@@ -178,6 +179,7 @@ const CONFERENCIA = [
   ['turno', "SELECT to_regclass('public.turno') IS NOT NULL AS ok"],
   ['ver_turnos no acesso total', permissaoNoAcessoTotal('ver_turnos')],
   ['turno.compartilhado', col('turno', 'compartilhado')],
+  ['cliente.matriz_id', col('cliente', 'matriz_id')],
 ]
 
 function col(tabela, coluna) {

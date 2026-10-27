@@ -1210,10 +1210,11 @@ export function Vazio({ titulo, texto, arte = 'sol' }) {
           que ele esta falando. O numero e o de CLIENTES, e nao o de
           estados: "clientes em 1 estado" e uma frase sobre o mapa, e quem
           olha quer saber o tamanho da carteira. */}
-      {arte === 'globo' && clientes.length > 0 && (
+      {/* a unidade (Einstein Anapolis) nao e outro cliente: conta so o de cima */}
+      {arte === 'globo' && clientes.some((c) => !c.matrizId) && (
         <p className="vaziot__legenda">
           <span className="vaziot__ponto" aria-hidden="true" />
-          {clientes.length} cliente{clientes.length === 1 ? '' : 's'}
+          {clientes.filter((c) => !c.matrizId).length} cliente{clientes.filter((c) => !c.matrizId).length === 1 ? '' : 's'}
         </p>
       )}
     </div>

@@ -7,6 +7,7 @@ import { CampoSelecao, CampoTexto } from '@/components/Campo/Campo'
 import { CampoData } from '@/components/CampoData/CampoData'
 import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
+import { UNIDADE_MAXIMA, nomeCurtoDaUnidade, nomeDaUnidade } from '@/domain/clientes'
 import { valorCurto } from '@/domain/comercial'
 import { carregarImagemDoCliente } from '@/services/dadosService'
 import { buscarCEP, listarCidades, listarEstados } from '@/services/enderecoService'
@@ -38,9 +39,15 @@ const VAZIO = {
   proprietarioId: '',
   proximoContato: '',
   pessoas: [],
+  /* as unidades (atualizacao 33): Einstein Anapolis, Einstein Alphaville... */
+  unidades: [],
 }
 
 const PESSOA_VAZIA = { id: null, nome: '', cargo: '', email: '', telefone: '' }
+const UNIDADE_VAZIA = { id: null, unidade: '', cep: '', endereco: '', bairro: '', estado: '', cidade: '' }
+/* a chave da unidade na tela: a nova ainda nao tem id */
+let proximaChave = 0
+const novaChave = () => `u${(proximaChave += 1)}`
 const emailCerto = (email) => /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)
 
 /**
@@ -49,7 +56,7 @@ const emailCerto = (email) => /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)
  * editaveis na mao — o cadastro nunca fica preso.
  */
 export default function ModalCliente({ aberto, cliente = null, resumo = null, nota = null, aoFechar, aoSalvar }) {
-  const { setores, equipe } = useDados()
+  const { setores, equipe, clientes, obras } = useDados()
   const { user } = useAuth()
   const [form, setForm] = useState(VAZIO)
   const [erros, setErros] = useState({})
@@ -78,6 +85,19 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
               proprietarioId: cliente.proprietarioId ?? '',
               proximoContato: cliente.proximoContato ?? '',
               pessoas: (cliente.pessoas ?? []).map((p) => ({ ...PESSOA_VAZIA, ...p })),
+              unidades: clientes
+                .filter((c) => String(c.matrizId) === String(cliente.id))
+                .map((c) => ({
+                  ...UNIDADE_VAZIA,
+                  chave: `id${c.id}`,
+                  id: c.id,
+                  unidade: c.unidade ?? nomeCurtoDaUnidade(cliente.nome, c.nome),
+                  cep: c.cep ? formatarCEP(c.cep) : '',
+                  endereco: c.endereco ?? '',
+                  bairro: c.bairro ?? '',
+                  estado: c.estado ?? '',
+                  cidade: c.cidade ?? '',
+                })),
             }
           : /* cliente novo e de quem esta cadastrando, ate alguem trocar */
             { ...VAZIO, proprietarioId: user?.id ? String(user.id) : '' },
@@ -87,6 +107,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
       setErroImagem('')
       setImagemMexida(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aberto, cliente, user?.id])
 
   /* estados: uma vez so, na primeira abertura */
@@ -198,6 +219,25 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
     .map((p) => ({ valor: String(p.id), rotulo: p.nome }))
     .sort((a, b) => a.rotulo.localeCompare(b.rotulo, 'pt-BR'))
 
+  /* ---------------- Unidades ---------------- */
+
+  const mudarUnidade = (chave, mudanca) => {
+    setForm((atual) => ({
+      ...atual,
+      unidades: atual.unidades.map((u) => (u.chave === chave ? { ...u, ...mudanca } : u)),
+    }))
+    setErros((atual) => ({ ...atual, [`unidade-${chave}`]: undefined }))
+  }
+
+  const novaUnidade = () =>
+    setForm((atual) => ({ ...atual, unidades: [...atual.unidades, { ...UNIDADE_VAZIA, chave: novaChave() }] }))
+
+  const tirarUnidade = (chave) =>
+    setForm((atual) => ({ ...atual, unidades: atual.unidades.filter((u) => u.chave !== chave) }))
+
+  /* quantas obras cada unidade ja tem: a que tem obra nao sai daqui */
+  const obrasDaUnidade = (id) => (id ? obras.filter((o) => String(o.clienteId) === String(id)).length : 0)
+
   /* trocar o estado na mao invalida a cidade que estava escolhida */
   const mudarEstado = (evento) => {
     const sigla = evento.target.value
@@ -245,6 +285,16 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
       if (!p.nome.trim()) novosErros[`pessoa${i}`] = 'Escreva o nome da pessoa.'
       else if (p.email.trim() && !emailCerto(p.email.trim())) novosErros[`pessoa${i}`] = 'O e-mail não parece certo.'
     })
+    const nomesDasUnidades = new Set()
+    form.unidades.forEach((u) => {
+      const curto = nomeCurtoDaUnidade(form.nome, u.unidade).toLowerCase()
+      const chave = `unidade-${u.chave}`
+      if (!curto) novosErros[chave] = 'Dê um nome à unidade (ex.: Anápolis).'
+      else if (nomesDasUnidades.has(curto)) novosErros[chave] = 'Já há uma unidade com esse nome.'
+      else if (!u.estado) novosErros[chave] = 'Escolha o estado da unidade.'
+      else if (!u.cidade.trim()) novosErros[chave] = 'Informe a cidade da unidade.'
+      nomesDasUnidades.add(curto)
+    })
 
     if (Object.keys(novosErros).length > 0) {
       setErros(novosErros)
@@ -262,6 +312,15 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
         telefone: p.telefone.trim(),
       }))
       .filter((p) => p.nome || p.email || p.telefone || p.cargo)
+    campos.unidades = form.unidades.map((u) => ({
+      id: u.id,
+      unidade: u.unidade.trim(),
+      cep: u.cep,
+      endereco: u.endereco.trim(),
+      bairro: u.bairro.trim(),
+      estado: u.estado,
+      cidade: u.cidade.trim(),
+    }))
     campos.proprietarioId = form.proprietarioId || null
     campos.proximoContato = form.proximoContato || null
     /* a imagem viaja em bloco, e SO quando alguem mexeu nela: os dois
@@ -435,6 +494,37 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
           />
         )}
 
+        {/* ---------------- Unidades ----------------
+            O mesmo cliente em outros enderecos: na aba Clientes ele
+            continua UM so; nas listas de escolher cliente (obra,
+            comercial, reembolso) cada unidade aparece com o nome
+            inteiro — "Einstein Anápolis". */}
+        <fieldset className="formcli__pessoas formcli__unidades">
+          <legend>Unidades</legend>
+          {form.unidades.length === 0 && (
+            <p className="formcli__nada">
+              O mesmo cliente em outro endereço? Adicione uma unidade em vez de cadastrar outro cliente: ela aparece
+              nas listas de clientes como “{nomeDaUnidade(form.nome || 'Cliente', 'Anápolis')}”.
+            </p>
+          )}
+          {form.unidades.map((u, i) => (
+            <CampoUnidade
+              key={u.chave}
+              ordem={i + 1}
+              unidade={u}
+              nomeDoCliente={form.nome}
+              estados={estados}
+              erro={erros[`unidade-${u.chave}`]}
+              obras={obrasDaUnidade(u.id)}
+              aoMudar={(mudanca) => mudarUnidade(u.chave, mudanca)}
+              aoTirar={() => tirarUnidade(u.chave)}
+            />
+          ))}
+          <button type="button" className="formcli__mais" onClick={novaUnidade}>
+            + Adicionar unidade
+          </button>
+        </fieldset>
+
         {/* quem responde pela empresa — vem com quem esta cadastrando */}
         <CampoSelecao
           rotulo="Proprietário"
@@ -571,5 +661,133 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
         aoFechar={() => setAjustando(null)}
       />
     </Modal>
+  )
+}
+
+/**
+ * Uma unidade no cadastro: o nome (o curto, "Anápolis") e o endereço
+ * dela. O CEP preenche o resto, como no cliente; as cidades vêm do
+ * estado escolhido NESTA unidade.
+ */
+function CampoUnidade({ ordem, unidade, nomeDoCliente, estados, erro, obras, aoMudar, aoTirar }) {
+  const [cidades, setCidades] = useState([])
+  const [buscandoCEP, setBuscandoCEP] = useState(false)
+  const [avisoCEP, setAvisoCEP] = useState('')
+
+  useEffect(() => {
+    if (!unidade.estado) {
+      setCidades([])
+      return undefined
+    }
+    let valido = true
+    listarCidades(unidade.estado)
+      .then((lista) => valido && setCidades(lista))
+      .catch(() => valido && setCidades([]))
+    return () => {
+      valido = false
+    }
+  }, [unidade.estado])
+
+  const mudar = (campo) => (evento) => aoMudar({ [campo]: evento?.target ? evento.target.value : evento })
+
+  const mudarCEP = async (evento) => {
+    const formatado = formatarCEP(evento.target.value)
+    aoMudar({ cep: formatado })
+    setAvisoCEP('')
+    const digitos = formatado.replace(/\D/g, '')
+    if (digitos.length !== 8) return
+    setBuscandoCEP(true)
+    try {
+      const achado = await buscarCEP(digitos)
+      if (!achado) {
+        setAvisoCEP('CEP não encontrado — preencha à mão.')
+        return
+      }
+      aoMudar(achado)
+      setAvisoCEP('Endereço preenchido pelo CEP.')
+    } catch {
+      setAvisoCEP('Não foi possível consultar o CEP agora.')
+    } finally {
+      setBuscandoCEP(false)
+    }
+  }
+
+  const curto = unidade.unidade.trim()
+  return (
+    <div className={`formcli__unidade ${erro ? 'has-erro' : ''}`.trim()}>
+      <div className="formcli__unidtopo">
+        <strong>Unidade {ordem}</strong>
+        <span className="formcli__unidnome">
+          {curto ? (
+            <>
+              Nas listas: <b>{nomeDaUnidade(nomeDoCliente || 'Cliente', curto)}</b>
+            </>
+          ) : (
+            'Dê um nome à unidade'
+          )}
+        </span>
+        <button
+          type="button"
+          className="formcli__tirar"
+          onClick={aoTirar}
+          disabled={obras > 0}
+          aria-label={`Tirar a unidade ${curto || ordem}`}
+          title={
+            obras > 0
+              ? `Tem ${obras} obra${obras === 1 ? '' : 's'}: troque o cliente delas antes de tirar a unidade`
+              : 'Tirar a unidade'
+          }
+        >
+          ×
+        </button>
+      </div>
+      <div className="formcli__unidcampos">
+        <CampoTexto
+          rotulo="Nome da unidade"
+          placeholder="Ex.: Anápolis"
+          value={unidade.unidade}
+          onChange={mudar('unidade')}
+          maxLength={UNIDADE_MAXIMA}
+        />
+        <CampoTexto
+          rotulo="CEP"
+          inputMode="numeric"
+          placeholder="00000-000"
+          value={unidade.cep}
+          onChange={mudarCEP}
+          dica={buscandoCEP ? 'Consultando...' : avisoCEP || undefined}
+        />
+        <CampoTexto rotulo="Endereço" placeholder="Rua e número" value={unidade.endereco} onChange={mudar('endereco')} />
+        <CampoTexto rotulo="Bairro" placeholder="Bairro" value={unidade.bairro} onChange={mudar('bairro')} />
+        <CampoSelecao
+          rotulo="Estado"
+          value={unidade.estado}
+          onChange={(evento) => aoMudar({ estado: evento.target.value, cidade: '' })}
+          vazio={estados.length === 0 ? 'Carregando...' : 'Escolha o estado...'}
+          opcoes={estados.map((e) => ({ valor: e.sigla, rotulo: `${e.sigla} — ${e.nome}` }))}
+        />
+        {cidades.length > 0 ? (
+          <CampoSelecao
+            rotulo="Cidade"
+            value={unidade.cidade}
+            onChange={mudar('cidade')}
+            vazio="Escolha a cidade..."
+            opcoes={cidades.map((c) => ({ valor: c, rotulo: c }))}
+          />
+        ) : (
+          <CampoTexto
+            rotulo="Cidade"
+            placeholder={unidade.estado ? 'Carregando cidades...' : 'Escolha o estado antes'}
+            value={unidade.cidade}
+            onChange={mudar('cidade')}
+          />
+        )}
+      </div>
+      {erro && (
+        <span className="campo__nota campo__nota--erro" role="alert">
+          {erro}
+        </span>
+      )}
+    </div>
   )
 }

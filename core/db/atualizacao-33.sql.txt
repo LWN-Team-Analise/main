@@ -1,0 +1,55 @@
+-- ============================================================
+--  ATUALIZACAO 33 — UNIDADES DO CLIENTE
+--
+--  Um cliente pode ter varias UNIDADES (Einstein Anapolis, Einstein
+--  Alphaville...), cada uma com o seu endereco. Na aba Clientes fica
+--  um so cliente (o Einstein) com as unidades dentro; nas listas de
+--  escolher cliente (obra, comercial, reembolso...) aparecem ele e
+--  todas as unidades.
+--
+--  A unidade e uma linha da propria tabela cliente:
+--
+--    cliente.matriz_id   o cliente de que ela e unidade (NULL = o
+--                        cliente mesmo). A obra, o negocio e o
+--                        reembolso apontam para a unidade como
+--                        apontam para qualquer cliente;
+--    cliente.unidade     o nome curto dela ("Anapolis"). O `nome`
+--                        guarda o nome inteiro ("Einstein Anapolis"),
+--                        montado pela API, para toda tela e relatorio
+--                        que ja le cliente.nome mostrar certo.
+--
+--  A logo, a capa e o setor sao os do cliente (a API le de la).
+--  Apagar o cliente leva as unidades junto (a API faz, na ordem).
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao duplica nada.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.cliente ADD COLUMN IF NOT EXISTS matriz_id bigint REFERENCES public.cliente (id) ON DELETE RESTRICT;
+ALTER TABLE public.cliente ADD COLUMN IF NOT EXISTS unidade text;
+
+COMMENT ON COLUMN public.cliente.matriz_id IS
+    'O cliente de que esta linha e UNIDADE (Einstein Anapolis -> Einstein). NULL = cliente mesmo.';
+COMMENT ON COLUMN public.cliente.unidade IS
+    'O nome curto da unidade ("Anapolis"). O nome inteiro fica em cliente.nome.';
+
+/* a unidade tem nome e nao e unidade de si mesma */
+ALTER TABLE public.cliente DROP CONSTRAINT IF EXISTS cliente_unidade_forma;
+ALTER TABLE public.cliente ADD CONSTRAINT cliente_unidade_forma
+    CHECK (matriz_id IS NULL OR (matriz_id <> id AND coalesce(btrim(unidade), '') <> ''));
+
+CREATE INDEX IF NOT EXISTS cliente_matriz_idx ON public.cliente (matriz_id) WHERE matriz_id IS NOT NULL;
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t"
+-- ============================================================
+
+SELECT 'cliente.matriz_id' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'cliente' AND column_name = 'matriz_id') AS ok;

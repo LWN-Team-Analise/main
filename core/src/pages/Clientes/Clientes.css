@@ -694,3 +694,61 @@
     background: transparent;
   }
 }
+
+/* ---------------- Unidades (atualizacao 33) ---------------- */
+
+/* o selo no cabecalho: quantas unidades o cliente tem */
+.cliente__qtdunid {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* a lista dentro do card aberto: o nome e o endereco de cada uma */
+.cliente__unidades {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.cliente__unidtitulo {
+  margin: 0 0 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.cliente__unidades ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cliente__unidades li {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 10px;
+  border-left: 2px solid var(--cor-logo, var(--accent));
+}
+
+.cliente__unidades strong {
+  font-size: 0.84rem;
+  color: var(--text-strong);
+}
+
+.cliente__unidades span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
