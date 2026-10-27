@@ -501,12 +501,6 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
             inteiro — "Einstein Anápolis". */}
         <fieldset className="formcli__pessoas formcli__unidades">
           <legend>Unidades</legend>
-          {form.unidades.length === 0 && (
-            <p className="formcli__nada">
-              O mesmo cliente em outro endereço? Adicione uma unidade em vez de cadastrar outro cliente: ela aparece
-              nas listas de clientes como “{nomeDaUnidade(form.nome || 'Cliente', 'Anápolis')}”.
-            </p>
-          )}
           {form.unidades.map((u, i) => (
             <CampoUnidade
               key={u.chave}
@@ -556,11 +550,6 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
         {/* ---------------- Pessoas de contato ---------------- */}
         <fieldset className="formcli__pessoas">
           <legend>Pessoas de contato</legend>
-          {form.pessoas.length === 0 && (
-            <p className="formcli__nada">
-              Nenhuma pessoa ainda. O e-mail delas é para onde vai o “Responder?” dos negócios no Comercial.
-            </p>
-          )}
           {form.pessoas.map((p, i) => (
             <div key={p.id ?? `nova-${i}`} className="formcli__pessoa">
               <input
