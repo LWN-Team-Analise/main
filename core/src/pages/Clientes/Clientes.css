@@ -752,3 +752,27 @@
   color: var(--text-muted);
   overflow-wrap: anywhere;
 }
+
+/* quem pode mexer abre a unidade no clique: o botao some no texto e
+   so aparece no hover */
+.cliente__unidade {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: calc(100% + 12px);
+  margin: -4px -6px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.cliente__unidade:hover,
+.cliente__unidade:focus-visible {
+  background: var(--control-bg-hover);
+}

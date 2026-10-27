@@ -278,6 +278,7 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-31.sql.txt` | check com horario (etapa_check.horario, obra_horario, obra_horario_membro) e a aba Turnos (cronograma, turno, turno_anotacao) com `ver_turnos` / `editar_turnos` |
 | `db/atualizacao-30.sql.txt` | negocio.obra_id (o negocio de Novos negocios vira obra), obra_membro_parcial e a permissao `excluir_membro_parcial` |
 | `db/atualizacao-33.sql.txt` | unidades do cliente: cliente.matriz_id e cliente.unidade (Einstein Anapolis e unidade do Einstein) |
+| `db/atualizacao-34.sql.txt` | servico da unidade: cliente.servico ("Albert Einstein Anapolis - Faturamento") |
 | `db/atualizacao-32.sql.txt` | turno.compartilhado (+ compartilhado_em/por): o turno novo, colado ou copiado da agenda nasce sem compartilhar com a equipe |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
@@ -1155,6 +1156,35 @@ inteiro: "Einstein Anapolis", "Einstein Alphaville".
 - A unidade que tem obra nao sai do cadastro (o x fica travado e a API recusa).
   Apagar o cliente apaga as unidades e as obras delas junto.
 - O Excel de clientes traz uma linha por unidade, com a coluna "Unidade de".
+
+### O servico da unidade e o "Unidade de"
+
+A unidade tem dois nomes, e precisa de um deles pelo menos (atualizacao 34):
+
+- o **servico** (`cliente.servico`), o titulo dela — o que ela presta para o
+  cliente: Faturamento, Obra, Administracao;
+- o **nome da unidade** (`cliente.unidade`), o lugar. Na tela ele se completa
+  sozinho com a cidade do endereco (enquanto ninguem escrever outro).
+
+Nas listas: "Albert Einstein Anapolis - Faturamento", "Albert Einstein
+Anapolis", "Albert Einstein - Administracao". Duas unidades do mesmo cliente nao
+podem ter o mesmo lugar e o mesmo servico. Quem digita "Albert Einstein - Obra"
+no servico fica com "Obra".
+
+No **Novo cliente**, o campo **Unidade de** escolhe um cliente que ja existe e
+troca o cadastro por uma unidade dele: o formulario vem com o endereco, as
+pessoas de contato, o proprietario e o proximo contato do cliente, e so se
+troca o que e da unidade. A logo, o nome e o setor ficam com o cliente. A API
+recebe isso como `POST /api/dados/clientes` com `matrizId`.
+
+Na aba Clientes, clicar numa unidade dentro do card abre a mesma tela para
+editar so ela (`PATCH /api/dados/clientes/:id` de uma unidade): servico,
+lugar, endereco e as **pessoas de contato dela**, que sao separadas das do
+cliente. No cadastro do cliente, cada bloco de **+ Adicionar unidade** tambem
+ganhou o campo Servico.
+
+Banco sem a atualizacao 34: as unidades continuam aparecendo e gravando sem
+servico; mandar um servico devolve o recado para rodar a atualizacao.
 
 ## Frotas: excluir saida ou devolucao
 

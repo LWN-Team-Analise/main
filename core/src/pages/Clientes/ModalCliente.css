@@ -267,3 +267,53 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ============================================================
+   A unidade sozinha (o "Unidade de" do Novo cliente, ou a unidade
+   aberta pelo card): o cliente dela no topo — a logo e o nome são
+   dele — e o nome que ela vai ter nas listas.
+   ============================================================ */
+
+.formcli__matriz {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+}
+
+.formcli__matriztexto {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.formcli__matriz small {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.formcli__matriz strong {
+  font-size: 0.95rem;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.formcli__nalista {
+  grid-column: 1 / -1;
+  margin: -6px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.formcli__nalista b {
+  font-weight: 600;
+  color: var(--text-strong);
+}

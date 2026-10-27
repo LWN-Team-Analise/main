@@ -17,7 +17,7 @@ import {
 } from '@/components/CutoutCard/CutoutCard'
 import { useDados } from '@/context/DadosContext'
 import { ordemDosClientes } from '@/domain/obras'
-import { raizDoCliente } from '@/domain/clientes'
+import { raizDoCliente, rotuloDaUnidade } from '@/domain/clientes'
 import Estrelas from '@/components/Estrelas/Estrelas'
 import { dataBR, dataHora, formatarCEP, hojeISO } from '@/utils/formato'
 import useCorDaLogo from '@/hooks/useCorDaLogo'
@@ -432,6 +432,7 @@ export default function Clientes() {
                 setor={setorPorId(cliente.setorId)}
                 podeMexer={podeMexer}
                 aoEditar={() => abrirEdicao(cliente)}
+                aoEditarUnidade={(unidade) => abrirEdicao(unidade)}
                 aoApagar={() => setApagando(cliente)}
                 aoVer={() => navigate('/app/obras')}
               />
@@ -445,7 +446,7 @@ export default function Clientes() {
       <ModalCliente
         aberto={modal}
         cliente={editando}
-        resumo={editando ? resumoDoGrupo[editando.id] ?? null : null}
+        resumo={editando && !editando.matrizId ? resumoDoGrupo[editando.id] ?? null : null}
         nota={editando ? avaliacoes[editando.id] ?? null : null}
         aoFechar={() => setModal(false)}
         aoSalvar={salvar}
@@ -518,7 +519,7 @@ function iniciais(nome) {
  * clicou para abrir e o gesto que a mao ja espera — e o resto do
  * cartao, que antes era area morta, agora responde igual.
  */
-function CardCliente({ cliente, unidades = [], numeros, nota, setor, podeMexer, aoEditar, aoApagar, aoVer }) {
+function CardCliente({ cliente, unidades = [], numeros, nota, setor, podeMexer, aoEditar, aoEditarUnidade, aoApagar, aoVer }) {
   const { isDark } = useTheme()
   const cor = useCorDaLogo(cliente.logo, cliente.nome)
   const [aberto, setAberto] = useState(false)
@@ -697,21 +698,38 @@ function CardCliente({ cliente, unidades = [], numeros, nota, setor, podeMexer, 
             </div>
           </dl>
 
-          {/* as unidades: o nome e o endereco de cada uma */}
+          {/* as unidades: o lugar, o servico e o endereco de cada uma. Quem
+              pode mexer abre a unidade no clique (o endereco e as pessoas
+              dela se editam ali). */}
           {unidades.length > 0 && (
             <div className="cliente__unidades">
               <p className="cliente__unidtitulo">Unidades</p>
               <ul>
-                {unidades.map((u) => (
-                  <li key={u.id}>
-                    <strong>{u.unidade || u.nome}</strong>
-                    <span>
-                      {[u.endereco, u.bairro, u.cidade && u.estado ? `${u.cidade}/${u.estado}` : u.cidade, u.cep ? formatarCEP(u.cep) : '']
-                        .filter(Boolean)
-                        .join(' — ')}
-                    </span>
-                  </li>
-                ))}
+                {unidades.map((u) => {
+                  const endereco = [u.endereco, u.bairro, u.cidade && u.estado ? `${u.cidade}/${u.estado}` : u.cidade, u.cep ? formatarCEP(u.cep) : '']
+                    .filter(Boolean)
+                    .join(' — ')
+                  return (
+                    <li key={u.id}>
+                      {podeMexer ? (
+                        <button
+                          type="button"
+                          className="cliente__unidade"
+                          onClick={() => aoEditarUnidade(u)}
+                          title={`Editar ${u.nome}`}
+                        >
+                          <strong>{rotuloDaUnidade(u)}</strong>
+                          <span>{endereco}</span>
+                        </button>
+                      ) : (
+                        <>
+                          <strong>{rotuloDaUnidade(u)}</strong>
+                          <span>{endereco}</span>
+                        </>
+                      )}
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           )}
