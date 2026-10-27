@@ -425,15 +425,25 @@ const COLUNAS_DA_COPIA = 'hora_inicio, hora_fim, titulo, subtitulo, cor, obra_id
  * dias que cobria, o horario, o titulo e a cor. Os colados nascem como
  * rascunho.
  *
- * { origem: [ids], cronogramaId, usuarioId (vazio = aberto), dia }
+ * Os cards que vem das obras (ponto de encontro, execucao, prazo de
+ * tarefa) nao sao linhas da tabela turno: chegam em `modelos`, com os
+ * campos do card, e viram turnos feitos a mao (conferidos como no criar).
+ *
+ * { origem: [ids], modelos: [{ titulo, subtitulo, cor, dataInicio, dataFim,
+ *   horaInicio, horaFim, obraId, checkId }], cronogramaId, usuarioId
+ *   (vazio = aberto), dia }
  */
 router.post('/colar', exigeSessao, exige(EDITAR), async (req, res) => {
   const origem = [...new Set((Array.isArray(req.body?.origem) ? req.body.origem : []).map(String))]
   const cronogramaId = texto(req.body?.cronogramaId)
   const usuarioId = texto(req.body?.usuarioId) || null
   const dia = texto(req.body?.dia)
-  if (origem.length === 0 || origem.length > 100 || origem.some((id) => !idValido(id))) {
+  const modelos = Array.isArray(req.body?.modelos) ? req.body.modelos.filter((m) => m && typeof m === 'object') : []
+  if (origem.length + modelos.length === 0 || origem.length + modelos.length > 100 || origem.some((id) => !idValido(id))) {
     return res.status(400).json({ erro: 'Copie um ou mais turnos antes de colar.' })
+  }
+  if (modelos.some((m) => !dataValida(texto(m.dataInicio)) || (texto(m.dataFim) && !dataValida(texto(m.dataFim))))) {
+    return res.status(400).json({ erro: 'Um dos cards copiados está sem data.' })
   }
   if (!idValido(cronogramaId)) return res.status(400).json({ erro: 'Escolha onde colar.' })
   if (!dataValida(dia)) return res.status(400).json({ erro: 'Escolha o dia onde colar.' })
@@ -446,14 +456,34 @@ router.post('/colar', exigeSessao, exige(EDITAR), async (req, res) => {
       )
       if (!rows[0]) return res.status(400).json({ erro: 'Essa pessoa não está neste cronograma.' })
     }
-    const { rows: fontes } = await query(
-      `SELECT id, to_char(data_inicio, 'YYYY-MM-DD') AS inicio, to_char(data_fim, 'YYYY-MM-DD') AS fim
-         FROM turno WHERE id = ANY($1::bigint[]) ORDER BY data_inicio, id`,
-      [origem],
-    )
-    if (fontes.length === 0) return res.status(404).json({ erro: 'Os turnos copiados não existem mais.' })
+    const { rows: fontes } = origem.length
+      ? await query(
+          `SELECT id, to_char(data_inicio, 'YYYY-MM-DD') AS inicio, to_char(data_fim, 'YYYY-MM-DD') AS fim
+             FROM turno WHERE id = ANY($1::bigint[]) ORDER BY data_inicio, id`,
+          [origem],
+        )
+      : { rows: [] }
+    if (fontes.length + modelos.length === 0) return res.status(404).json({ erro: 'Os turnos copiados não existem mais.' })
 
-    const deslocar = diasEntre(fontes[0].inicio, dia)
+    /* o primeiro de todos (turno ou card da obra) cai no dia escolhido */
+    const primeiro = [...fontes.map((l) => l.inicio), ...modelos.map((m) => texto(m.dataInicio))].sort()[0]
+    const deslocar = diasEntre(primeiro, dia)
+
+    /* os cards das obras passam pela mesma conferencia do criar */
+    const lidos = []
+    for (const m of modelos) {
+      const inicio = texto(m.dataInicio)
+      const lido = await lerTurno({
+        ...m,
+        cronogramaId,
+        usuarioId,
+        dataInicio: somarDias(inicio, deslocar),
+        dataFim: somarDias(texto(m.dataFim) || inicio, deslocar),
+      })
+      if (lido.erro) return res.status(400).json(lido)
+      lidos.push(lido.campos)
+    }
+
     const novos = await emTransacao(async (db) => {
       const ids = []
       for (const fonte of fontes) {
@@ -464,6 +494,17 @@ router.post('/colar', exigeSessao, exige(EDITAR), async (req, res) => {
              FROM turno WHERE id = $1
            RETURNING id`,
           [fonte.id, cronogramaId, usuarioId, deslocar, req.dono.sub],
+        )
+        ids.push(rows[0].id)
+      }
+      for (const campos of lidos) {
+        const c = { ...campos, criado_por: req.dono.sub, compartilhado: false }
+        const colunas = Object.keys(c)
+        const { rows } = await db.query(
+          `INSERT INTO turno (${colunas.join(', ')})
+           VALUES (${colunas.map((_, i) => `$${i + 1}`).join(', ')})
+           RETURNING id`,
+          Object.values(c),
         )
         ids.push(rows[0].id)
       }

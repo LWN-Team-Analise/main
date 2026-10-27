@@ -1113,11 +1113,16 @@ so os turnos com inicio e fim.
   turnos que se cruzam no dia, ou uma folga com outro turno), a visao,
   **Imprimir** (so a grade, folha deitada), **Filtrar** (pessoa ou titulo) e
   **Exibir** (anotacoes, Obras e turnos abertos, guardado no navegador).
-- **Copiar e colar** (quem tem `editar_turnos`): clicar no turno escolhe
+- **Copiar e colar** (quem tem `editar_turnos`): clicar num card escolhe
   (Ctrl/Shift junta mais; clicar de novo abre); clicar num dia escolhe a celula
   (de novo, cria o turno ali). Copiar/Ctrl+C, Colar/Ctrl+V, Delete exclui, Esc
-  desfaz — tambem pela barra que flutua embaixo. `POST /api/turnos/colar`
+  desfaz — tambem pela barra que flutua embaixo. O Ctrl+V cola no dia escolhido
+  ou, sem ele, no dia do card escolhido (na linha dele). `POST /api/turnos/colar`
   mantem dias, horario, titulo e cor; o primeiro copiado cai no dia escolhido.
+- As **tarefas das obras** (ponto de encontro, execucao, prazo de tarefa) tambem
+  se copiam: vao em `modelos` e viram turnos feitos aqui, com a obra e o check
+  (o ponto de encontro fica de dia inteiro, com "encontro as HH:MM" embaixo). O
+  original continua mudando so pela obra, e so se exclui turno feito aqui.
 - **Compartilhar** (atualizacao 32): o turno criado, colado ou vindo do "Copiar
   agenda" (`POST /api/turnos/copiar-agenda`, o periodo anterior para o atual,
   sem duplicar) nasce como rascunho — italico, com o ✱ na barra da esquerda — e

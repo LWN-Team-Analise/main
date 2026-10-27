@@ -4,7 +4,16 @@ import Avatar from '@/components/Avatar/Avatar'
 import Confirma from '@/components/Confirma/Confirma'
 import Seletor from '@/components/Seletor/Seletor'
 import { useDados } from '@/context/DadosContext'
-import { corPorId, diaDaSemana, diasEntre, domingoDe, minutosDoTurno, somarDias } from '@/domain/turnos'
+import {
+  SUBTITULO_MAXIMO,
+  TITULO_MAXIMO,
+  corPorId,
+  diaDaSemana,
+  diasEntre,
+  domingoDe,
+  minutosDoTurno,
+  somarDias,
+} from '@/domain/turnos'
 import * as turnosApi from '@/services/turnosService'
 import { hojeISO } from '@/utils/formato'
 import ModalTurno from './ModalTurno'
@@ -44,13 +53,19 @@ import './Turnos.css'
 
    QUEM EDITA (`editar_turnos`) trabalha como no Teams:
 
-     clicar num turno       escolhe (Ctrl/Shift + clique junta mais);
-                            clicar de novo no escolhido abre para editar;
+     clicar num card        escolhe (Ctrl/Shift + clique junta mais);
+                            clicar de novo no escolhido abre;
      clicar num dia         escolhe o dia (a celula); clicar de novo cria
                             o turno ali;
-     Copiar / Ctrl+C        guarda os turnos escolhidos;
-     Colar / Ctrl+V         poe os copiados no dia escolhido;
+     Copiar / Ctrl+C        guarda os cards escolhidos — os turnos e
+                            tambem as tarefas das obras (ponto de
+                            encontro, execucao, prazo);
+     Colar / Ctrl+V         poe os copiados no dia escolhido, ou no dia
+                            do card escolhido (a linha dele);
      Delete                 exclui os escolhidos; Esc desfaz a escolha.
+
+   A tarefa da obra colada vira um turno feito aqui (a obra e o check
+   vao junto): o original continua mudando so pela obra.
 
    O turno criado, colado ou copiado da agenda nasce SEM COMPARTILHAR:
    em italico, com o ✱ na barra da esquerda, e a equipe ainda nao o ve.
@@ -123,8 +138,32 @@ const simples = (texto) =>
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
 
-/** So o turno feito aqui se escolhe, copia e compartilha (o das obras muda pela obra). */
+/** O turno feito aqui: so ele se exclui e se compartilha (o das obras muda pela obra). */
 const ehManual = (turno) => !turno.origem || turno.origem === 'manual'
+
+/**
+ * A copia de um card que vem das obras (ponto de encontro, execucao,
+ * prazo de tarefa): os campos dele, para colar como turno feito aqui.
+ * O ponto de encontro so tem a hora de chegada — ela vai na linha de
+ * baixo e o turno colado fica de dia inteiro.
+ */
+function modeloDe(turno) {
+  const encontro = turno.origem === 'obra' && turno.horaInicio && !turno.horaFim
+  return {
+    titulo: String(turno.titulo ?? 'Tarefa').slice(0, TITULO_MAXIMO),
+    subtitulo: [turno.subtitulo, encontro ? `encontro às ${turno.horaInicio}` : '']
+      .filter(Boolean)
+      .join(' · ')
+      .slice(0, SUBTITULO_MAXIMO),
+    cor: turno.cor,
+    dataInicio: turno.dataInicio,
+    dataFim: turno.dataFim,
+    horaInicio: encontro ? null : turno.horaInicio,
+    horaFim: encontro ? null : turno.horaFim,
+    obraId: turno.obraId ?? null,
+    checkId: turno.checkId ?? null,
+  }
+}
 
 /**
  * Cada turno no seu lugar da linha: as colunas (do primeiro ao ultimo
@@ -300,7 +339,7 @@ const IconeMais = () => (
  * se e a escolhida. Sem `aoCelula` (a secao Obras, ou quem so ve) os
  * dias nao se clicam.
  */
-function Linha({ quem, linha, turnos, dias, hoje, celula, selecao, conflitos, aoCelula, aoTurno }) {
+function Linha({ quem, linha, turnos, dias, hoje, celula, selecao, conflitos, escolhe, aoCelula, aoTurno }) {
   const { colocados, faixas } = colocar(turnos, dias)
   return (
     <div className="turnos__linha">
@@ -352,8 +391,8 @@ function Linha({ quem, linha, turnos, dias, hoje, celula, selecao, conflitos, ao
               type="button"
               className={classe}
               style={{ gridColumn: `${ini + 1} / ${fim + 2}`, gridRow: faixa + 1, '--turno-cor': corPorId(turno.cor).cor }}
-              onClick={(evento) => aoTurno(turno, evento)}
-              aria-pressed={ehManual(turno) && aoCelula ? escolhido : undefined}
+              onClick={(evento) => aoTurno(turno, evento, linha)}
+              aria-pressed={escolhe ? escolhido : undefined}
               title={[
                 turno.titulo,
                 turno.subtitulo,
@@ -412,6 +451,8 @@ export default function Turnos() {
   const [selecao, setSelecao] = useState(() => new Set())
   const [celula, setCelula] = useState(null) // { chave, cronogramaId, usuarioId, dia }
   const [copiados, setCopiados] = useState([])
+  /* o ultimo card clicado e a linha dele: o Ctrl+V sem dia escolhido cola ali */
+  const [ultimo, setUltimo] = useState(null) // { id, linha }
 
   const de = dias[0]
   const ate = dias.at(-1)
@@ -423,7 +464,7 @@ export default function Turnos() {
       setDados(novos)
       setErro('')
       /* o escolhido que sumiu (excluido, ou fora do periodo) sai da escolha */
-      const existem = new Set((novos.turnos ?? []).map((t) => t.id))
+      const existem = new Set([...(novos.turnos ?? []), ...(novos.obras ?? [])].map((t) => t.id))
       setSelecao((atual) => (Array.from(atual).every((id) => existem.has(id)) ? atual : new Set(Array.from(atual).filter((id) => existem.has(id)))))
     } catch (e) {
       setErro(e.message)
@@ -524,7 +565,7 @@ export default function Turnos() {
       conflitos: acharConflitos(turnos, dias),
       /* os que a equipe ainda nao ve */
       rascunhos: turnos.filter((t) => t.compartilhado === false),
-      porId: new Map(turnos.map((t) => [t.id, t])),
+      porId: new Map([...turnos, ...(dados.obras ?? [])].map((t) => [t.id, t])),
     }
   }, [dados, dias])
 
@@ -533,6 +574,7 @@ export default function Turnos() {
     [contas, selecao],
   )
   const rascunhosEscolhidos = escolhidos.filter((t) => t.compartilhado === false)
+  const manuaisEscolhidos = escolhidos.filter(ehManual)
 
   const nomeDe = (usuarioId) => (usuarioId ? (pessoaPorId(usuarioId)?.nome ?? 'Pessoa') : 'Turnos abertos')
 
@@ -546,13 +588,16 @@ export default function Turnos() {
     setCelula(null)
   }
 
-  /** O clique no turno: o das obras so abre; o manual escolhe (e abre no segundo clique). */
-  const clicarTurno = (turno, evento) => {
-    if (!edita || !ehManual(turno)) {
+  /** O clique no card: quem so ve, abre; quem edita escolhe (e abre no segundo clique). */
+  const clicarTurno = (turno, evento, linha) => {
+    if (!edita) {
       setEditando({ turno })
       return
     }
+    /* o Shift + clique nao deixa texto marcado (ele seguraria o Ctrl+C) */
+    window.getSelection?.()?.removeAllRanges()
     setCelula(null)
+    setUltimo({ id: turno.id, linha })
     if (evento.ctrlKey || evento.metaKey || evento.shiftKey) {
       setSelecao((atual) => {
         const nova = new Set(atual)
@@ -595,18 +640,36 @@ export default function Turnos() {
 
   const copiar = () => {
     if (escolhidos.length === 0) return
-    setCopiados(escolhidos.map((t) => ({ id: t.id, titulo: t.titulo })))
-    setAviso(`${plural(escolhidos.length, 'turno copiado', 'turnos copiados')}. Escolha o dia e clique em Colar (ou Ctrl+V).`)
+    /* o turno daqui vai pelo id; a tarefa da obra, pelos campos do card */
+    setCopiados(escolhidos.map((t) => (ehManual(t) ? { id: t.id, titulo: t.titulo } : { modelo: modeloDe(t), titulo: t.titulo })))
+    setAviso(`${plural(escolhidos.length, 'card copiado', 'cards copiados')}. Escolha o dia e aperte Ctrl+V (ou Colar).`)
   }
 
+  /**
+   * Onde o Ctrl+V cola: o dia escolhido; sem ele, o dia do card escolhido,
+   * na linha dele (a pessoa ou os turnos abertos daquele cronograma).
+   * Nas linhas da secao Obras nao se cola.
+   */
+  const destino = (() => {
+    if (celula) return celula
+    if (!ultimo || !selecao.has(ultimo.id) || !contas) return null
+    const [cronogramaId, usuarioId] = ultimo.linha.split('|')
+    if (cronogramaId === 'obras') return null
+    const turno = contas.porId.get(ultimo.id)
+    if (!turno) return null
+    return { cronogramaId, usuarioId: usuarioId || null, dia: turno.dataInicio < de ? de : turno.dataInicio }
+  })()
+
   const colar = () => {
-    if (!celula || copiados.length === 0) return
+    if (!destino || copiados.length === 0) return
+    const alvo = destino
     executar(async () => {
       const r = await turnosApi.colarTurnos({
-        origem: copiados.map((t) => t.id),
-        cronogramaId: celula.cronogramaId,
-        usuarioId: celula.usuarioId,
-        dia: celula.dia,
+        origem: copiados.filter((t) => t.id).map((t) => t.id),
+        modelos: copiados.filter((t) => t.modelo).map((t) => t.modelo),
+        cronogramaId: alvo.cronogramaId,
+        usuarioId: alvo.usuarioId,
+        dia: alvo.dia,
       })
       await recarregar()
       /* os colados ficam escolhidos: prontos para o "Compartilhar com a equipe" */
@@ -617,7 +680,7 @@ export default function Turnos() {
   }
 
   const excluir = () => {
-    const ids = escolhidos.map((t) => t.id)
+    const ids = manuaisEscolhidos.map((t) => t.id)
     setConfirmando(null)
     executar(async () => {
       await Promise.all(ids.map((id) => turnosApi.apagarTurno(id)))
@@ -672,15 +735,21 @@ export default function Turnos() {
     if (!edita || editando || anotando || cronograma || confirmando) return
     const alvo = evento.target
     if (alvo?.closest?.('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return
-    const ctrl = evento.ctrlKey || evento.metaKey
-    const tecla = evento.key.toLowerCase()
-    if (ctrl && tecla === 'c' && escolhidos.length > 0 && !window.getSelection()?.toString()) {
+    const ctrl = (evento.ctrlKey || evento.metaKey) && !evento.altKey
+    /* pela tecla e pelo lugar dela: o C e o V valem em qualquer layout de teclado */
+    const tecla = String(evento.key ?? '').toLowerCase()
+    const eC = tecla === 'c' || evento.code === 'KeyC'
+    const eV = tecla === 'v' || evento.code === 'KeyV'
+    /* texto marcado de proposito (fora da grade) ainda copia texto, como sempre */
+    const naGrade = Boolean(document.activeElement?.closest?.('.turnos__quadro, .turnos__escolha'))
+    const textoMarcado = Boolean(window.getSelection?.()?.toString())
+    if (ctrl && eC && escolhidos.length > 0 && (naGrade || !textoMarcado)) {
       evento.preventDefault()
       copiar()
-    } else if (ctrl && tecla === 'v' && celula && copiados.length > 0) {
+    } else if (ctrl && eV && destino && copiados.length > 0) {
       evento.preventDefault()
       colar()
-    } else if ((evento.key === 'Delete' || evento.key === 'Backspace') && escolhidos.length > 0) {
+    } else if ((evento.key === 'Delete' || evento.key === 'Backspace') && manuaisEscolhidos.length > 0) {
       evento.preventDefault()
       setConfirmando('excluir')
     } else if (evento.key === 'Escape' && (selecao.size > 0 || celula)) {
@@ -708,6 +777,7 @@ export default function Turnos() {
     celula: celula?.chave ?? null,
     selecao,
     conflitos: contas?.conflitos.ids ?? new Set(),
+    escolhe: edita,
     aoTurno: clicarTurno,
   }
 
@@ -815,10 +885,9 @@ export default function Turnos() {
                         type="button"
                         onClick={() => {
                           setMenu(null)
-                          const manuais = [c.a, c.b].filter(ehManual)
-                          if (edita && manuais.length) {
+                          if (edita) {
                             setCelula(null)
-                            setSelecao(new Set(manuais.map((t) => t.id)))
+                            setSelecao(new Set([c.a.id, c.b.id]))
                           } else setEditando({ turno: c.a })
                         }}
                       >
@@ -1141,7 +1210,7 @@ export default function Turnos() {
             {escolhidos.length > 0 ? (
               <>
                 <span className="turnos__escolhatexto">
-                  {plural(escolhidos.length, 'turno escolhido', 'turnos escolhidos')}
+                  {plural(escolhidos.length, 'card escolhido', 'cards escolhidos')}
                   {rascunhosEscolhidos.length > 0 && <em> · {rascunhosEscolhidos.length} sem compartilhar</em>}
                 </span>
                 {escolhidos.length === 1 && (
@@ -1154,22 +1223,30 @@ export default function Turnos() {
                   <IconeCopiar />
                   <span className="turnos__texto">Copiar</span>
                 </button>
+                {copiados.length > 0 && destino && (
+                  <button type="button" className="turnos__botao" onClick={colar} disabled={ocupado} title="Colar no dia deste card (Ctrl+V)">
+                    <IconeColar />
+                    <span className="turnos__texto">Colar</span>
+                  </button>
+                )}
                 {rascunhosEscolhidos.length > 0 && (
                   <button type="button" className="turnos__botao turnos__botao--forte" onClick={compartilhar} disabled={ocupado}>
                     <IconeCompartilhar />
                     Compartilhar<span className="turnos__texto"> com a equipe</span>
                   </button>
                 )}
-                <button
-                  type="button"
-                  className="turnos__botao turnos__botao--perigo"
-                  onClick={() => setConfirmando('excluir')}
-                  disabled={ocupado}
-                  title="Excluir (Delete)"
-                >
-                  <IconeLixo />
-                  <span className="turnos__texto">Excluir</span>
-                </button>
+                {manuaisEscolhidos.length > 0 && (
+                  <button
+                    type="button"
+                    className="turnos__botao turnos__botao--perigo"
+                    onClick={() => setConfirmando('excluir')}
+                    disabled={ocupado}
+                    title="Excluir (Delete)"
+                  >
+                    <IconeLixo />
+                    <span className="turnos__texto">Excluir</span>
+                  </button>
+                )}
               </>
             ) : celula ? (
               <>
@@ -1186,13 +1263,13 @@ export default function Turnos() {
                 {copiados.length > 0 && (
                   <button type="button" className="turnos__botao turnos__botao--forte" onClick={colar} disabled={ocupado}>
                     <IconeColar />
-                    Colar {copiados.length > 1 ? `${copiados.length} turnos` : `"${copiados[0].titulo}"`}
+                    Colar {copiados.length > 1 ? `${copiados.length} cards` : `"${copiados[0].titulo}"`}
                   </button>
                 )}
               </>
             ) : (
               <span className="turnos__escolhatexto">
-                {plural(copiados.length, 'turno copiado', 'turnos copiados')} — escolha o dia onde colar
+                {plural(copiados.length, 'card copiado', 'cards copiados')} — escolha o dia e aperte Ctrl+V
               </span>
             )}
             <button
@@ -1238,15 +1315,15 @@ export default function Turnos() {
 
       <Confirma
         aberto={confirmando === 'excluir'}
-        titulo={escolhidos.length === 1 ? 'Excluir este turno?' : `Excluir ${escolhidos.length} turnos?`}
+        titulo={manuaisEscolhidos.length === 1 ? 'Excluir este turno?' : `Excluir ${manuaisEscolhidos.length} turnos?`}
         detalhes={
           <ul className="turnos__lista">
-            {escolhidos.slice(0, 5).map((t) => (
+            {manuaisEscolhidos.slice(0, 5).map((t) => (
               <li key={t.id}>
                 {t.titulo} · {nomeDe(t.usuarioId)} · {curta(t.dataInicio)}
               </li>
             ))}
-            {escolhidos.length > 5 && <li>e mais {escolhidos.length - 5}</li>}
+            {manuaisEscolhidos.length > 5 && <li>e mais {manuaisEscolhidos.length - 5}</li>}
           </ul>
         }
         rotuloConfirmar="Excluir"
