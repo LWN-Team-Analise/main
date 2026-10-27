@@ -1,0 +1,47 @@
+-- ============================================================
+--  ATUALIZACAO 34 — O SERVICO DA UNIDADE DO CLIENTE
+--
+--  A unidade (atualizacao 33) ganha um TITULO: o servico que ela
+--  presta para o cliente — Faturamento, Obra, Administracao. O mesmo
+--  Albert Einstein pode ter varias unidades na mesma cidade, cada uma
+--  num endereco e com um papel:
+--
+--    Albert Einstein Anapolis - Faturamento
+--    Albert Einstein Anapolis - Obra
+--    Albert Einstein - Administracao
+--
+--    cliente.servico    o titulo da unidade ("Faturamento"). O `nome`
+--                       continua guardando o nome inteiro, montado
+--                       pela API (cliente + unidade + servico).
+--
+--  A regra da unidade muda junto: ela precisa do nome curto (o lugar,
+--  "Anapolis") OU do servico — "Albert Einstein - Administracao" nao
+--  tem lugar no nome.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao duplica nada.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.cliente ADD COLUMN IF NOT EXISTS servico text;
+
+COMMENT ON COLUMN public.cliente.servico IS
+    'O titulo da UNIDADE: o servico que ela presta ("Faturamento", "Obra"). NULL no cliente mesmo.';
+
+/* a unidade tem lugar ou servico, e nao e unidade de si mesma */
+ALTER TABLE public.cliente DROP CONSTRAINT IF EXISTS cliente_unidade_forma;
+ALTER TABLE public.cliente ADD CONSTRAINT cliente_unidade_forma
+    CHECK (matriz_id IS NULL OR (matriz_id <> id AND (coalesce(btrim(unidade), '') <> '' OR coalesce(btrim(servico), '') <> '')));
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t"
+-- ============================================================
+
+SELECT 'cliente.servico' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'cliente' AND column_name = 'servico') AS ok;

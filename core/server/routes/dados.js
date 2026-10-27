@@ -8,6 +8,17 @@ import { notificar, pessoasDosSetores, todosAtivos } from '../push.js'
 import { IMAGEM_INVALIDA, imagemValida } from '../utils/imagem.js'
 import { proximaProposta } from '../../src/domain/proposta.js'
 import {
+  SERVICO_MAXIMO,
+  UNIDADES_MAXIMO,
+  UNIDADE_MAXIMA,
+  chaveDaUnidade,
+  nomeCurtoDaUnidade,
+  nomeDaUnidade,
+  rotuloDaUnidade,
+  servicoDaUnidade,
+} from '../../src/domain/clientes.js'
+import { NOME_MAXIMO, TIPO_LINK, linkValido, nomeDoLink } from '../../src/domain/anexos.js'
+import {
   CONDICOES,
   LIMITES_ITEM,
   SERVICOS,
@@ -175,6 +186,13 @@ const paraCliente = (l) => ({
     email: p.email ?? '',
     telefone: p.telefone ?? '',
   })),
+  /* a UNIDADE (atualizacao 33): o cliente de que ela e unidade, o lugar
+     ("Anapolis") e o servico dela (atualizacao 34, "Faturamento"). O
+     `nome` ja vem inteiro ("Albert Einstein Anapolis - Faturamento"); a
+     logo, a capa e o setor vem os do cliente (ver lerClientes). */
+  matrizId: l.matriz_id === null || l.matriz_id === undefined ? null : String(l.matriz_id),
+  unidade: l.unidade ?? null,
+  servico: l.servico ?? null,
   criadoEm: l.criado_em,
 })
 
@@ -208,21 +226,58 @@ async function lerTermos() {
 }
 
 /* As colunas do cliente que a tela usa. A logo_original fica de fora
-   sempre (ver paraCliente); a logo e a capa, so na carga leve. */
-const COLUNAS_CLIENTE = `id, nome, recorte_logo, recorte_capa, setor_id, endereco, bairro,
+   sempre (ver paraCliente); a logo e a capa, so na carga leve.
+
+   `c` e a linha; `i` e de onde vem a imagem, o setor e a prioridade:
+   o proprio cliente, ou — na UNIDADE (atualizacao 33) — o cliente dela,
+   para o Einstein Anapolis ter a logo e o setor do Einstein. */
+const COLUNAS_CLIENTE = `c.id, c.nome, i.recorte_logo, i.recorte_capa, i.setor_id, c.endereco, c.bairro,
+  c.cidade, c.estado, c.cep, c.criado_em, i.ordem_prioridade, c.proprietario_id, c.proximo_contato,
+  c.matriz_id, c.unidade, c.servico,
+  md5(coalesce(i.logo, '') || '|' || coalesce(i.capa, '')) AS imagem_versao`
+
+/* banco com as unidades e sem o servico delas (sem a atualizacao 34) */
+const COLUNAS_CLIENTE_33 = COLUNAS_CLIENTE.replace(' c.servico,', '')
+
+const ORDEM_CLIENTES = 'ORDER BY i.ordem_prioridade NULLS LAST, lower(i.nome), i.id, c.matriz_id NULLS FIRST, lower(c.nome)'
+
+/* a mesma lista de antes das unidades (banco sem a atualizacao 33) */
+const COLUNAS_CLIENTE_ANTIGAS = `id, nome, recorte_logo, recorte_capa, setor_id, endereco, bairro,
   cidade, estado, cep, criado_em, ordem_prioridade, proprietario_id, proximo_contato,
   md5(coalesce(logo, '') || '|' || coalesce(capa, '')) AS imagem_versao`
 
 async function lerClientes(imagens) {
   const [clientes, pessoas] = await Promise.all([
     query(
-      /* os prioritarios (as unidades da LWN, atualizacao 23) primeiro, na ordem deles */
-      `SELECT ${COLUNAS_CLIENTE}${imagens ? ', logo, capa' : ''} FROM cliente ORDER BY ordem_prioridade NULLS LAST, lower(nome)`,
-    ).catch((erro) => {
-      /* banco antigo, sem alguma das colunas: tudo, com as imagens */
-      if (erro.code !== '42703') throw erro
-      return query('SELECT * FROM cliente ORDER BY lower(nome)')
-    }),
+      /* os prioritarios (as unidades da LWN, atualizacao 23) primeiro, na
+         ordem deles; cada unidade logo depois do cliente dela */
+      `SELECT ${COLUNAS_CLIENTE}${imagens ? ', i.logo, i.capa' : ''}
+         FROM cliente c
+         JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
+        ${ORDEM_CLIENTES}`,
+    )
+      .catch((erro) => {
+        /* banco sem o servico das unidades: as unidades sem ele */
+        if (erro.code !== '42703') throw erro
+        return query(
+          `SELECT ${COLUNAS_CLIENTE_33}${imagens ? ', i.logo, i.capa' : ''}
+             FROM cliente c
+             JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
+            ${ORDEM_CLIENTES}`,
+        )
+      })
+      .catch((erro) => {
+        /* banco sem as unidades: a lista de antes */
+        if (erro.code !== '42703') throw erro
+        return query(
+          `SELECT ${COLUNAS_CLIENTE_ANTIGAS}${imagens ? ', logo, capa' : ''} FROM cliente ORDER BY ordem_prioridade NULLS LAST, lower(nome)`,
+        )
+      })
+      .catch((erro) => {
+        /* banco antigo, sem alguma das colunas: tudo, com as imagens */
+        if (erro.code !== '42703') throw erro
+        return query('SELECT * FROM cliente ORDER BY lower(nome)')
+      }),
     /* as pessoas de contato (atualizacao 27); sem a tabela, ninguem */
     query('SELECT id, cliente_id, nome, cargo, email, telefone FROM cliente_pessoa ORDER BY cliente_id, ordem, id').catch(
       (erro) => {
@@ -309,8 +364,12 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     query('SELECT * FROM observacao_quadro ORDER BY enviada_em DESC'),
     query('SELECT * FROM etiqueta ORDER BY lower(nome)'),
     query('SELECT obra_id, etiqueta_id FROM obra_etiqueta'),
-    query(`SELECT id, obra_id, nome, tipo, tamanho, autor_nome, enviado_por, enviado_em
-             FROM obra_anexo ORDER BY enviado_em DESC`),
+    query(
+      `SELECT id, obra_id, nome, tipo, tamanho, autor_nome, enviado_por, enviado_em,
+              CASE WHEN tipo = $1 THEN conteudo END AS link
+         FROM obra_anexo ORDER BY enviado_em DESC`,
+      [TIPO_LINK],
+    ),
     query('SELECT aviso_id FROM aviso_leitura WHERE usuario_id = $1', [usuarioId]),
     lerTermos(),
     /* os prazos (atualizacao 13). Sem as tabelas, nenhuma obra tem prazo
@@ -527,6 +586,8 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     nome: l.nome,
     tipo: l.tipo ?? '',
     tamanho: l.tamanho ?? 0,
+    /* o link (Google Drive, OneDrive...): abre direto, sem passar pela API */
+    link: l.link ?? null,
     autorNome: l.autor_nome,
     enviadoPor: l.enviado_por === null ? null : String(l.enviado_por),
     enviadoEm: l.enviado_em,
@@ -756,6 +817,199 @@ function camposCliente(corpo) {
 const PESSOAS_MAXIMO = 50
 
 /**
+ * Uma UNIDADE como veio da tela: o lugar ("Anapolis"), o servico
+ * ("Faturamento", atualizacao 34) — um dos dois, pelo menos — e o
+ * endereco. Devolve { erro } ou { unidade }.
+ */
+function lerUnidade(u, nomeDoCliente) {
+  const curto = nomeCurtoDaUnidade(nomeDoCliente, u?.unidade)
+  const servico = servicoDaUnidade(nomeDoCliente, u?.servico)
+  if (!curto && !servico) return { erro: 'Dê um nome ou um serviço a cada unidade (ex.: Anápolis, Faturamento).' }
+  if (curto.length > UNIDADE_MAXIMA) return { erro: `O nome da unidade passa de ${UNIDADE_MAXIMA} letras.` }
+  if (servico.length > SERVICO_MAXIMO) return { erro: `O serviço da unidade passa de ${SERVICO_MAXIMO} letras.` }
+  const qual = rotuloDaUnidade({ unidade: curto, servico })
+  const cidade = texto(u?.cidade)
+  const estado = texto(u?.estado).toUpperCase()
+  const cep = soDigitos(u?.cep)
+  if (!cidade) return { erro: `Informe a cidade da unidade ${qual}.` }
+  if (!/^[A-Z]{2}$/.test(estado)) return { erro: `Informe o estado da unidade ${qual}.` }
+  if (cep && cep.length !== 8) return { erro: `O CEP da unidade ${qual} precisa ter 8 dígitos.` }
+  return {
+    unidade: {
+      id: /^\d{1,15}$/.test(texto(u?.id)) ? texto(u.id) : null,
+      unidade: curto || null,
+      servico: servico || null,
+      endereco: texto(u?.endereco) || null,
+      bairro: texto(u?.bairro) || null,
+      cidade,
+      estado,
+      cep: cep || null,
+      chave: chaveDaUnidade(nomeDoCliente, curto, servico),
+      rotulo: qual,
+    },
+  }
+}
+
+/**
+ * As UNIDADES do cliente (atualizacao 33), como vieram da tela: a lista
+ * inteira, como as pessoas — a que veio com id e atualizada, a sem id
+ * e nova, a que sumiu sai. Sem `unidades` no corpo, elas nao mudam.
+ *
+ * Devolve { erro } ou { unidades } (null = nao mexer).
+ */
+function lerUnidades(corpo, nomeDoCliente) {
+  if (!Array.isArray(corpo?.unidades)) return { unidades: null }
+  if (corpo.unidades.length > UNIDADES_MAXIMO) return { erro: `No máximo ${UNIDADES_MAXIMO} unidades por cliente.` }
+  const vistas = new Set()
+  const unidades = []
+  for (const u of corpo.unidades) {
+    const lida = lerUnidade(u, nomeDoCliente)
+    if (lida.erro) return lida
+    /* duas unidades iguais (mesmo lugar e mesmo servico) nao se distinguem na lista */
+    if (vistas.has(lida.unidade.chave)) return { erro: `Há duas unidades "${lida.unidade.rotulo}".` }
+    vistas.add(lida.unidade.chave)
+    unidades.push(lida.unidade)
+  }
+  return { unidades }
+}
+
+const SEM_UNIDADES = 'O banco ainda não tem as unidades de cliente (atualização 33 em core/db). Rode npm run db:atualizar e suba a API de novo.'
+const SEM_SERVICO = 'O banco ainda não tem o serviço das unidades (atualização 34 em core/db). Rode npm run db:atualizar e suba a API de novo.'
+
+/**
+ * Grava com a coluna `servico` (atualizacao 34) e, num banco sem ela,
+ * sem — a nao ser que um servico tenha vindo, que ai nao da para
+ * perder calado. `gravar(comServico)` faz a gravacao.
+ */
+async function comOuSemServico(temServico, gravar) {
+  try {
+    return await gravar(true)
+  } catch (erro) {
+    if (erro.code === '42703' && /servico/.test(erro.message)) {
+      if (temServico) throw Object.assign(new Error(SEM_SERVICO), { status: 400 })
+      return gravar(false)
+    }
+    /* a regra da atualizacao 33 ainda pede o lugar: unidade so com servico */
+    if (erro.code === '23514' && erro.constraint === 'cliente_unidade_forma') {
+      throw Object.assign(new Error(SEM_SERVICO), { status: 400 })
+    }
+    throw erro
+  }
+}
+
+/**
+ * A unidade que repete outra do mesmo cliente (mesmo lugar e mesmo
+ * servico) — fora a propria, na edicao. Devolve o recado, ou null.
+ */
+async function unidadeRepetida(matriz, unidade, propriaId = null) {
+  const { rows } = await query('SELECT id, unidade, servico FROM cliente WHERE matriz_id = $1', [matriz.id]).catch(
+    (erro) => {
+      if (erro.code !== '42703') throw erro
+      return query('SELECT id, unidade, NULL AS servico FROM cliente WHERE matriz_id = $1', [matriz.id])
+    },
+  )
+  const igual = rows.find(
+    (r) => String(r.id) !== String(propriaId) && chaveDaUnidade(matriz.nome, r.unidade, r.servico) === unidade.chave,
+  )
+  return igual ? `${matriz.nome} já tem a unidade ${unidade.rotulo}.` : null
+}
+
+/**
+ * Antes de gravar: a unidade que sai da lista nao pode ter obra (a obra
+ * ficaria sem cliente). Devolve o recado, ou null.
+ */
+async function unidadeQueNaoPodeSair(clienteId, unidades) {
+  if (!unidades) return null
+  const ficam = unidades.filter((u) => u.id).map((u) => u.id)
+  try {
+    const { rows } = await query(
+      `SELECT c.nome, count(o.id)::int AS obras
+         FROM cliente c JOIN obra o ON o.cliente_id = c.id
+        WHERE c.matriz_id = $1 AND NOT (c.id = ANY($2::bigint[]))
+        GROUP BY c.id, c.nome
+        ORDER BY c.nome
+        LIMIT 1`,
+      [clienteId, ficam],
+    )
+    if (!rows[0]) return null
+    return `A unidade ${rows[0].nome} tem ${rows[0].obras} obra${rows[0].obras === 1 ? '' : 's'}: troque o cliente dessas obras antes de tirar a unidade.`
+  } catch (erro) {
+    if (erro.code === '42703') return unidades.length ? SEM_UNIDADES : null
+    throw erro
+  }
+}
+
+/**
+ * Grava as unidades do cliente e acerta o nome inteiro de todas elas
+ * ("Albert Einstein" + "Anapolis" + "Faturamento") — tambem quando so o
+ * nome do cliente mudou.
+ */
+async function gravarUnidades(clienteId, nomeDoCliente, unidades) {
+  const gravar = (comServico) =>
+    emTransacao(async (db) => {
+      const { rows: atuais } = await db.query(
+        `SELECT id, unidade, ${comServico ? 'servico' : 'NULL AS servico'} FROM cliente WHERE matriz_id = $1`,
+        [clienteId],
+      )
+      if (unidades) {
+        const ficam = new Set(unidades.filter((u) => u.id).map((u) => String(u.id)))
+        const saem = atuais.filter((a) => !ficam.has(String(a.id))).map((a) => a.id)
+        if (saem.length) await db.query('DELETE FROM cliente WHERE matriz_id = $1 AND id = ANY($2::bigint[])', [clienteId, saem])
+        for (const u of unidades) {
+          const valores = [
+            nomeDaUnidade(nomeDoCliente, u.unidade, u.servico),
+            u.unidade,
+            u.endereco,
+            u.bairro,
+            u.cidade,
+            u.estado,
+            u.cep,
+            ...(comServico ? [u.servico] : []),
+          ]
+          if (u.id && atuais.some((a) => String(a.id) === String(u.id))) {
+            await db.query(
+              `UPDATE cliente SET nome = $1, unidade = $2, endereco = $3, bairro = $4, cidade = $5, estado = $6, cep = $7
+                                  ${comServico ? ', servico = $8' : ''}
+                WHERE id = $${valores.length + 1} AND matriz_id = $${valores.length + 2}`,
+              [...valores, u.id, clienteId],
+            )
+          } else {
+            await db.query(
+              `INSERT INTO cliente (nome, unidade, endereco, bairro, cidade, estado, cep${comServico ? ', servico' : ''}, matriz_id)
+               VALUES (${valores.map((_, i) => `$${i + 1}`).join(', ')}, $${valores.length + 1})`,
+              [...valores, clienteId],
+            )
+          }
+        }
+      } else {
+        /* sem lista nova: so o nome inteiro acompanha o do cliente */
+        for (const a of atuais) {
+          await db.query('UPDATE cliente SET nome = $1 WHERE id = $2', [
+            nomeDaUnidade(nomeDoCliente, a.unidade, a.servico),
+            a.id,
+          ])
+        }
+      }
+    })
+  try {
+    await comOuSemServico(
+      (unidades ?? []).some((u) => u.servico),
+      gravar,
+    )
+  } catch (erro) {
+    /* banco sem a atualizacao 33: sem unidade para gravar, segue */
+    if (erro.code === '42703') {
+      if (unidades?.length) throw Object.assign(new Error(SEM_UNIDADES), { status: 400 })
+      return
+    }
+    if (erro.code === '23503') {
+      throw Object.assign(new Error('Uma das unidades tiradas ainda tem obra ligada a ela.'), { status: 400 })
+    }
+    throw erro
+  }
+}
+
+/**
  * As pessoas de contato, o proprietario e o proximo contato do cliente
  * (atualizacao 27). Vem depois do INSERT/UPDATE do cadastro, numa
  * transacao propria: banco sem as colunas novas continua gravando o
@@ -955,11 +1209,127 @@ router.delete('/setores/:id', exigeSessao, exige('editar_clientes'), async (req,
   }
 })
 
+/**
+ * A UNIDADE nova de um cliente que ja existe — o "Unidade de" do Novo
+ * cliente. Ela nasce com o lugar, o servico e o endereco dela, e com as
+ * pessoas, o proprietario e o proximo contato que a tela trouxe (a tela
+ * copia os do cliente, para so mexer no que muda). A logo, a capa e o
+ * setor sao os do cliente (ver lerClientes).
+ */
+async function criarUnidade(req, res) {
+  const matrizId = texto(req.body?.matrizId)
+  if (!/^\d{1,15}$/.test(matrizId)) return res.status(400).json({ erro: 'Escolha o cliente desta unidade.' })
+  const extras = lerExtrasDoCliente(req.body)
+  if (extras.erro) return res.status(400).json({ erro: extras.erro })
+
+  try {
+    const { rows: achadas } = await query('SELECT id, nome, matriz_id FROM cliente WHERE id = $1', [matrizId])
+    const matriz = achadas[0]
+    if (!matriz) return res.status(404).json({ erro: 'Cliente não encontrado.' })
+    if (matriz.matriz_id) return res.status(400).json({ erro: 'Uma unidade não tem unidades: escolha o cliente principal.' })
+
+    const lida = lerUnidade({ ...req.body, id: null }, matriz.nome)
+    if (lida.erro) return res.status(400).json({ erro: lida.erro })
+    const u = lida.unidade
+    const repetida = await unidadeRepetida(matriz, u)
+    if (repetida) return res.status(400).json({ erro: repetida })
+
+    const { rows } = await comOuSemServico(Boolean(u.servico), (comServico) => {
+      const valores = [
+        nomeDaUnidade(matriz.nome, u.unidade, u.servico),
+        u.unidade,
+        u.endereco,
+        u.bairro,
+        u.cidade,
+        u.estado,
+        u.cep,
+        matriz.id,
+        ...(comServico ? [u.servico] : []),
+      ]
+      return query(
+        `INSERT INTO cliente (nome, unidade, endereco, bairro, cidade, estado, cep, matriz_id${comServico ? ', servico' : ''})
+         VALUES (${valores.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING id, nome, cidade, estado`,
+        valores,
+      )
+    })
+    await registrarAtividade(req, {
+      acao: 'cliente.criado',
+      categoria: 'cliente',
+      entidade: ['cliente', rows[0].id],
+      descricao: 'Nova unidade de cliente cadastrada',
+      detalhes: { cliente: rows[0].nome, 'unidade de': matriz.nome, cidade: `${rows[0].cidade}/${rows[0].estado}` },
+    })
+    await gravarExtrasDoCliente(rows[0].id, extras, { novo: true, usuarioId: req.dono.sub })
+    return res.status(201).json({ cliente: await lerClienteCompleto(rows[0].id) })
+  } catch (e) {
+    if (e.status === 400) return res.status(400).json({ erro: e.message })
+    if (e.code === '42703') return res.status(400).json({ erro: SEM_UNIDADES })
+    return tratar(e, res, 'dados/unidade-criar')
+  }
+}
+
+/**
+ * A UNIDADE editada sozinha (o clique nela, no card do cliente): o
+ * lugar, o servico, o endereco, as pessoas, o proprietario e o proximo
+ * contato. O nome inteiro se refaz com o do cliente.
+ */
+async function editarUnidade(req, res, matrizId) {
+  if (Array.isArray(req.body?.unidades) && req.body.unidades.length) {
+    return res.status(400).json({ erro: 'Uma unidade não tem unidades: cadastre-as no cliente principal.' })
+  }
+  const extras = lerExtrasDoCliente(req.body)
+  if (extras.erro) return res.status(400).json({ erro: extras.erro })
+
+  const { rows: achadas } = await query('SELECT id, nome FROM cliente WHERE id = $1', [matrizId])
+  const matriz = achadas[0]
+  if (!matriz) return res.status(404).json({ erro: 'Cliente não encontrado.' })
+  const lida = lerUnidade({ ...req.body, id: req.params.id }, matriz.nome)
+  if (lida.erro) return res.status(400).json({ erro: lida.erro })
+  const u = lida.unidade
+  const repetida = await unidadeRepetida(matriz, u, req.params.id)
+  if (repetida) return res.status(400).json({ erro: repetida })
+
+  const { rows } = await comOuSemServico(Boolean(u.servico), (comServico) => {
+    const valores = [
+      nomeDaUnidade(matriz.nome, u.unidade, u.servico),
+      u.unidade,
+      u.endereco,
+      u.bairro,
+      u.cidade,
+      u.estado,
+      u.cep,
+      req.params.id,
+      ...(comServico ? [u.servico] : []),
+    ]
+    return query(
+      `UPDATE cliente SET nome = $1, unidade = $2, endereco = $3, bairro = $4, cidade = $5, estado = $6, cep = $7
+                          ${comServico ? ', servico = $9' : ''}
+        WHERE id = $8 RETURNING id, nome`,
+      valores,
+    )
+  })
+  if (!rows[0]) return res.status(404).json({ erro: 'Cliente não encontrado.' })
+  await registrarAtividade(req, {
+    acao: 'cliente.editado',
+    categoria: 'cliente',
+    entidade: ['cliente', rows[0].id],
+    descricao: 'Unidade de cliente editada',
+    detalhes: { cliente: rows[0].nome, 'unidade de': matriz.nome },
+  })
+  await gravarExtrasDoCliente(rows[0].id, extras, { novo: false, usuarioId: req.dono.sub })
+  return res.json({ cliente: await lerClienteCompleto(rows[0].id) })
+}
+
 router.post('/clientes', exigeSessao, exige('editar_clientes'), async (req, res) => {
+  /* "Unidade de" escolhido no Novo cliente: e uma unidade, nao um cliente */
+  if (req.body?.matrizId) return criarUnidade(req, res)
+
   const { erro, valores } = camposCliente(req.body)
   if (erro) return res.status(400).json({ erro })
   const extras = lerExtrasDoCliente(req.body)
   if (extras.erro) return res.status(400).json({ erro: extras.erro })
+  const lidas = lerUnidades(req.body, valores[0])
+  if (lidas.erro) return res.status(400).json({ erro: lidas.erro })
 
   const imagem = camposImagem(req.body) ?? {}
   if (!imagemDoClienteValida(imagem)) return res.status(400).json({ erro: IMAGEM_INVALIDA })
@@ -981,6 +1351,7 @@ router.post('/clientes', exigeSessao, exige('editar_clientes'), async (req, res)
       detalhes: { cliente: rows[0].nome, cidade: `${rows[0].cidade}/${rows[0].estado}` },
     })
     await gravarExtrasDoCliente(rows[0].id, extras, { novo: true, usuarioId: req.dono.sub })
+    if (lidas.unidades?.length) await gravarUnidades(rows[0].id, rows[0].nome, lidas.unidades)
     return res.status(201).json({ cliente: (await lerClienteCompleto(rows[0].id)) ?? paraCliente(rows[0]) })
   } catch (e) {
     if (e.status === 400) return res.status(400).json({ erro: e.message })
@@ -989,10 +1360,23 @@ router.post('/clientes', exigeSessao, exige('editar_clientes'), async (req, res)
 })
 
 router.patch('/clientes/:id', exigeSessao, exige('editar_clientes'), async (req, res) => {
+  /* a UNIDADE se edita pelo que e dela (ver editarUnidade) */
+  try {
+    const linha = await query('SELECT matriz_id FROM cliente WHERE id = $1', [req.params.id]).catch((e) =>
+      e.code === '42703' ? { rows: [] } : Promise.reject(e),
+    )
+    if (linha.rows[0]?.matriz_id) return await editarUnidade(req, res, String(linha.rows[0].matriz_id))
+  } catch (e) {
+    if (e.status === 400) return res.status(400).json({ erro: e.message })
+    return tratar(e, res, 'dados/unidade-editar')
+  }
+
   const { erro, valores } = camposCliente(req.body)
   if (erro) return res.status(400).json({ erro })
   const extras = lerExtrasDoCliente(req.body)
   if (extras.erro) return res.status(400).json({ erro: extras.erro })
+  const lidas = lerUnidades(req.body, valores[0])
+  if (lidas.erro) return res.status(400).json({ erro: lidas.erro })
 
   /* a imagem so entra no UPDATE quando a tela mexeu nela; sem isso,
      salvar um endereco novo apagaria a logo do cliente */
@@ -1004,6 +1388,10 @@ router.patch('/clientes/:id', exigeSessao, exige('editar_clientes'), async (req,
     .join('')
 
   try {
+    if (lidas.unidades) {
+      const barrada = await unidadeQueNaoPodeSair(req.params.id, lidas.unidades)
+      if (barrada) return res.status(400).json({ erro: barrada })
+    }
     const { rows } = await query(
       `UPDATE cliente SET nome = $1, endereco = $2, bairro = $3,
                           cidade = $4, estado = $5, cep = $6, setor_id = $7${colunasDaImagem}
@@ -1019,6 +1407,8 @@ router.patch('/clientes/:id', exigeSessao, exige('editar_clientes'), async (req,
       detalhes: { cliente: rows[0].nome, imagem: colunasDaImagem ? 'imagem alterada' : null },
     })
     await gravarExtrasDoCliente(rows[0].id, extras, { novo: false, usuarioId: req.dono.sub })
+    /* as unidades (e o nome inteiro delas, se o do cliente mudou) */
+    if (!rows[0].matriz_id) await gravarUnidades(rows[0].id, rows[0].nome, lidas.unidades)
     return res.json({ cliente: (await lerClienteCompleto(rows[0].id)) ?? paraCliente(rows[0]) })
   } catch (e) {
     if (e.status === 400) return res.status(400).json({ erro: e.message })
@@ -1047,10 +1437,22 @@ router.get('/clientes/:id/imagem', exigeSessao, async (req, res) => {
   }
 })
 
-/** Apagar cliente leva junto as obras dele — a tela ja avisa disso. */
+/**
+ * Apagar cliente leva junto as obras dele — a tela ja avisa disso. As
+ * UNIDADES dele (atualizacao 33) saem antes, com as obras delas.
+ */
 router.delete('/clientes/:id', exigeSessao, exige('editar_clientes'), async (req, res) => {
   try {
-    const obras = await query('DELETE FROM obra WHERE cliente_id = $1', [req.params.id])
+    const obras = await query(
+      'DELETE FROM obra WHERE cliente_id = $1 OR cliente_id IN (SELECT id FROM cliente WHERE matriz_id = $1)',
+      [req.params.id],
+    ).catch((erro) => {
+      if (erro.code !== '42703') throw erro
+      return query('DELETE FROM obra WHERE cliente_id = $1', [req.params.id])
+    })
+    await query('DELETE FROM cliente WHERE matriz_id = $1', [req.params.id]).catch((erro) => {
+      if (erro.code !== '42703') throw erro
+    })
     const { rows } = await query('DELETE FROM cliente WHERE id = $1 RETURNING nome', [
       req.params.id,
     ])
@@ -3891,14 +4293,25 @@ router.delete('/obras/:id/etiquetas/:etiquetaId', exigeSessao, exige('editar_obr
    O conteudo (data URL) NAO vem na leitura do quadro: seria
    arrastar megabytes a cada carregamento. A lista traz nome e
    tamanho; o arquivo em si so quando alguem clica para baixar.
+
+   O anexo tambem pode ser um LINK (Google Drive, OneDrive...): chega
+   em `link`, vai para `conteudo` com o tipo TIPO_LINK e volta na
+   carga, porque e curto (ver src/domain/anexos.js).
    ------------------------------------------------------------ */
 
 router.post('/obras/:id/anexos', exigeSessao, exige('editar_obras'), obraAberta, async (req, res) => {
-  const nome = texto(req.body?.nome)
-  const conteudo = String(req.body?.conteudo ?? '')
+  const deLink = req.body?.link != null
+  const link = deLink ? linkValido(req.body.link) : null
+  if (deLink && !link) {
+    return res.status(400).json({ erro: 'Esse link não parece certo. Copie o endereço inteiro, começando por https://.' })
+  }
+  const nome = texto(req.body?.nome).slice(0, NOME_MAXIMO) || (link ? nomeDoLink(link) : '')
+  const conteudo = link ?? String(req.body?.conteudo ?? '')
+  /* arquivo nunca passa por link: um .uri enviado vira texto comum */
+  const tipo = link ? TIPO_LINK : texto(req.body?.tipo) === TIPO_LINK ? 'text/plain' : texto(req.body?.tipo) || null
 
   if (!nome) return res.status(400).json({ erro: 'O arquivo precisa de um nome.' })
-  if (!conteudo.startsWith('data:')) {
+  if (!link && !conteudo.startsWith('data:')) {
     return res.status(400).json({ erro: 'Arquivo inválido.' })
   }
 
@@ -3910,8 +4323,8 @@ router.post('/obras/:id/anexos', exigeSessao, exige('editar_obras'), obraAberta,
       [
         req.params.id,
         nome,
-        texto(req.body?.tipo) || null,
-        Number(req.body?.tamanho) || conteudo.length,
+        tipo,
+        link ? null : Number(req.body?.tamanho) || conteudo.length,
         conteudo,
         req.dono.sub,
         await nomeDoDono(req),
@@ -3922,10 +4335,10 @@ router.post('/obras/:id/anexos', exigeSessao, exige('editar_obras'), obraAberta,
       acao: 'anexo.enviado',
       categoria: 'documento',
       entidade: ['obra', req.params.id],
-      descricao: 'Documento anexado à obra',
-      detalhes: { ...(await descreverObra(req.params.id)), arquivo: nome },
+      descricao: link ? 'Link anexado à obra' : 'Documento anexado à obra',
+      detalhes: { ...(await descreverObra(req.params.id)), arquivo: nome, ...(link ? { link } : {}) },
     })
-    return res.status(201).json({ id: String(rows[0].id), enviadoEm: rows[0].enviado_em })
+    return res.status(201).json({ id: String(rows[0].id), enviadoEm: rows[0].enviado_em, nome, link })
   } catch (e) {
     if (e.code === '23503') return res.status(404).json({ erro: 'Obra não encontrada.' })
     return tratar(e, res, 'dados/anexo-criar')

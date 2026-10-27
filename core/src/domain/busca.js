@@ -138,7 +138,7 @@ const ATALHOS = [
     titulo: 'Usuários',
     detalhe: 'A equipe, os setores e os cargos',
     rota: '/app/usuarios',
-    permissoes: ['editar_usuario', 'editar_cargo', 'editar_cargo_titulo'],
+    permissao: 'ver_usuarios',
     termos: 'usuarios equipe pessoas colaboradores funcionarios cargos setores permissoes',
   },
   {
@@ -334,7 +334,7 @@ export function procurar(termo, dados) {
   }
 
   /* ---------------- pessoas ---------------- */
-  if (pode('editar_usuario') || pode('editar_cargo') || pode('editar_cargo_titulo')) {
+  if (pode('ver_usuarios')) {
     for (const p of equipe) {
       const peso = melhor([p.nome, p.email, p.cargoNome, p.cargoTitulo], alvo)
       if (!peso) continue

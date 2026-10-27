@@ -213,9 +213,6 @@ export default function ModalMembrosObra({ aberto, aoFechar, obra, titulo }) {
           <h3 className="mobra__titulo" id="mobra-incluir">
             Incluir membro
           </h3>
-          <p className="mobra__nota">
-            Para quem foi à obra e não marcou check. A pessoa recebe a solicitação e aceita ou recusa.
-          </p>
           <div className="mobra__form">
             <CampoSelecao
               aria-label="Pessoa a incluir"

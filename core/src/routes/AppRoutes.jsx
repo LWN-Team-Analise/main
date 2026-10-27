@@ -119,7 +119,7 @@ export default function AppRoutes() {
       <Route
         path="/app/usuarios"
         element={
-          <Interna permissoes={['editar_usuario', 'editar_cargo', 'editar_cargo_titulo']}>
+          <Interna permissao="ver_usuarios">
             <Usuarios />
           </Interna>
         }

@@ -277,6 +277,8 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-29.sql.txt` | negocio.moeda, negocio.probabilidade, negocio.contato_tipo; contato (cliente_pessoa) sem empresa |
 | `db/atualizacao-31.sql.txt` | check com horario (etapa_check.horario, obra_horario, obra_horario_membro) e a aba Turnos (cronograma, turno, turno_anotacao) com `ver_turnos` / `editar_turnos` |
 | `db/atualizacao-30.sql.txt` | negocio.obra_id (o negocio de Novos negocios vira obra), obra_membro_parcial e a permissao `excluir_membro_parcial` |
+| `db/atualizacao-33.sql.txt` | unidades do cliente: cliente.matriz_id e cliente.unidade (Einstein Anapolis e unidade do Einstein) |
+| `db/atualizacao-34.sql.txt` | servico da unidade: cliente.servico ("Albert Einstein Anapolis - Faturamento") |
 | `db/atualizacao-32.sql.txt` | turno.compartilhado (+ compartilhado_em/por): o turno novo, colado ou copiado da agenda nasce sem compartilhar com a equipe |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
@@ -292,7 +294,7 @@ Nada e apagado — o arquivo so **acrescenta**:
 - `obra.data_inicio`, `obra.data_conclusao` e `obra.atualizado_por`
   (a `data_prevista` continua na tabela so para nao perder o historico);
 - `etiqueta` + `obra_etiqueta`: os rotulos das obras;
-- `obra_anexo`: os documentos da obra;
+- `obra_anexo`: os documentos da obra (arquivo ou link: o link tem `tipo` = `text/uri-list` e o endereco em `conteudo`);
 - `obra_chat` + `obra_chat_mencao`: a conversa de cada obra;
 - `obra_avaliacao_item`: as varias notas por obra (diretor, cliente, ...) —
   `obra_avaliacao` passa a guardar a **media** delas, mantida por gatilho;
@@ -534,7 +536,7 @@ Senha padrao do sistema: `123456`.
 | `POST /api/dados/avisos/lidos` | marca avisos como lidos (zera o sininho)     |
 | `GET/POST /api/dados/obras/:id/chat` | a conversa da obra                     |
 | `POST /api/dados/obras/:id/etiquetas` | marca a obra com uma etiqueta         |
-| `POST /api/dados/obras/:id/anexos` | anexa um documento a obra                |
+| `POST /api/dados/obras/:id/anexos` | anexa um documento (ou um `link`) a obra |
 | `GET /api/dados/anexos/:id`     | baixa o conteudo de um anexo                 |
 | `GET /api/roteiro`              | o roteiro inteiro: etapas > cards > checks   |
 | `POST/PATCH/DELETE /api/roteiro/etapas` | etapas (permissao `editar_etapa`)   |
@@ -585,7 +587,7 @@ esconde o botao e a API recusa a chamada usando exatamente as mesmas chaves.
 
 | Grupo        | Chaves                                                              |
 | ------------ | ------------------------------------------------------------------- |
-| Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_avaliacoes`, `ver_avisos` |
+| Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_turnos`, `ver_avaliacoes`, `ver_usuarios`, `ver_avisos` |
 | Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
 
 Alteracao **sempre** depende da visualizacao correspondente: desmarcar "Obras"
@@ -622,8 +624,12 @@ Tres chaves valem uma nota:
 - **`editar_cargo_titulo`** manda no cadastro de **cargos** e, junto com ele,
   em ATRIBUIR um cargo a alguem. Sem ela o campo Cargo fica travado no cadastro
   do colaborador e tambem em Configuracoes — ninguem se promove sozinho no
-  proprio perfil. Ela nao depende de nenhuma visualizacao: quem so tem ela
-  entra na aba Usuarios pela lista de Cargos.
+  proprio perfil.
+- **`ver_usuarios`** abre a aba **Usuarios** so para ver a equipe (os cards, o
+  setor, o cargo, o contato). `editar_usuario`, `editar_cargo` e
+  `editar_cargo_titulo` dependem dela. O setor gravado antes dela, com alguma
+  dessas tres, continua vendo a aba: `normalizar()` acrescenta a `ver_usuarios`
+  na leitura (sem atualizacao no banco) e ela entra na lista no proximo salvar.
 
 ### E-mail (esqueci minha senha)
 
@@ -1113,17 +1119,72 @@ so os turnos com inicio e fim.
   turnos que se cruzam no dia, ou uma folga com outro turno), a visao,
   **Imprimir** (so a grade, folha deitada), **Filtrar** (pessoa ou titulo) e
   **Exibir** (anotacoes, Obras e turnos abertos, guardado no navegador).
-- **Copiar e colar** (quem tem `editar_turnos`): clicar no turno escolhe
+- **Copiar e colar** (quem tem `editar_turnos`): clicar num card escolhe
   (Ctrl/Shift junta mais; clicar de novo abre); clicar num dia escolhe a celula
   (de novo, cria o turno ali). Copiar/Ctrl+C, Colar/Ctrl+V, Delete exclui, Esc
-  desfaz — tambem pela barra que flutua embaixo. `POST /api/turnos/colar`
+  desfaz — tambem pela barra que flutua embaixo. O Ctrl+V cola no dia escolhido
+  ou, sem ele, no dia do card escolhido (na linha dele). `POST /api/turnos/colar`
   mantem dias, horario, titulo e cor; o primeiro copiado cai no dia escolhido.
+- As **tarefas das obras** (ponto de encontro, execucao, prazo de tarefa) tambem
+  se copiam: vao em `modelos` e viram turnos feitos aqui, com a obra e o check
+  (o ponto de encontro fica de dia inteiro, com "encontro as HH:MM" embaixo). O
+  original continua mudando so pela obra, e so se exclui turno feito aqui.
 - **Compartilhar** (atualizacao 32): o turno criado, colado ou vindo do "Copiar
   agenda" (`POST /api/turnos/copiar-agenda`, o periodo anterior para o atual,
   sem duplicar) nasce como rascunho — italico, com o ✱ na barra da esquerda — e
   so quem edita o ve. "Compartilhar com a equipe" (`POST /api/turnos/compartilhar`)
   manda os escolhidos ou, sem escolha, todos os do periodo. Editar um turno ja
   compartilhado nao o tira da equipe.
+
+## Clientes: unidades
+
+O mesmo cliente em outro endereco e uma **unidade** dele, e nao outro cliente.
+No cadastro e na edicao do cliente, **+ Adicionar unidade** pede o nome dela
+("Anapolis") e o endereco (o CEP preenche o resto). Na aba Clientes fica um card
+so (o Einstein), com o selo "N unidades" e a lista delas dentro; as obras, as
+notas e os negocios das unidades somam no card. Nas listas de escolher cliente
+(obra, comercial, reembolso...) aparecem o Einstein e cada unidade com o nome
+inteiro: "Einstein Anapolis", "Einstein Alphaville".
+
+- No banco (atualizacao 33) a unidade e uma linha de `cliente` com `matriz_id`
+  e `unidade` (o nome curto). O `nome` dela e o inteiro, montado pela API
+  (`nomeDaUnidade`, em `src/domain/clientes.js`), e acompanha quando o nome do
+  cliente muda. Digitar "Einstein Anapolis" na unidade do Einstein guarda so
+  "Anapolis".
+- A logo, a capa, o setor e a prioridade da unidade sao os do cliente (a API le
+  de la, em `lerClientes` e em `/api/carga/imagens`).
+- A unidade que tem obra nao sai do cadastro (o x fica travado e a API recusa).
+  Apagar o cliente apaga as unidades e as obras delas junto.
+- O Excel de clientes traz uma linha por unidade, com a coluna "Unidade de".
+
+### O servico da unidade e o "Unidade de"
+
+A unidade tem dois nomes, e precisa de um deles pelo menos (atualizacao 34):
+
+- o **servico** (`cliente.servico`), o titulo dela — o que ela presta para o
+  cliente: Faturamento, Obra, Administracao;
+- o **nome da unidade** (`cliente.unidade`), o lugar. Na tela ele se completa
+  sozinho com a cidade do endereco (enquanto ninguem escrever outro).
+
+Nas listas: "Albert Einstein Anapolis - Faturamento", "Albert Einstein
+Anapolis", "Albert Einstein - Administracao". Duas unidades do mesmo cliente nao
+podem ter o mesmo lugar e o mesmo servico. Quem digita "Albert Einstein - Obra"
+no servico fica com "Obra".
+
+No **Novo cliente**, o campo **Unidade de** escolhe um cliente que ja existe e
+troca o cadastro por uma unidade dele: o formulario vem com o endereco, as
+pessoas de contato, o proprietario e o proximo contato do cliente, e so se
+troca o que e da unidade. A logo, o nome e o setor ficam com o cliente. A API
+recebe isso como `POST /api/dados/clientes` com `matrizId`.
+
+Na aba Clientes, clicar numa unidade dentro do card abre a mesma tela para
+editar so ela (`PATCH /api/dados/clientes/:id` de uma unidade): servico,
+lugar, endereco e as **pessoas de contato dela**, que sao separadas das do
+cliente. No cadastro do cliente, cada bloco de **+ Adicionar unidade** tambem
+ganhou o campo Servico.
+
+Banco sem a atualizacao 34: as unidades continuam aparecendo e gravando sem
+servico; mandar um servico devolve o recado para rodar a atualizacao.
 
 ## Frotas: excluir saida ou devolucao
 
@@ -2243,6 +2304,18 @@ Os **anexos** guardam os documentos da obra (ate 4 MB cada). A lista que chega
 com o quadro traz so nome, tipo e tamanho; o arquivo em si so e buscado no
 clique de baixar — senao cada carregamento arrastaria todos os documentos de
 todas as obras junto.
+
+O **Anexar** pergunta o que anexar: um **arquivo** do computador (vai para o
+banco) ou um **link** do documento que ja mora em outra nuvem — Google Drive,
+OneDrive, SharePoint, Dropbox. O link nao ocupa espaco: no banco fica so o
+endereco, numa linha de `obra_anexo` como as outras, com `tipo` =
+`text/uri-list` e o endereco em `conteudo` — **sem atualizacao do banco**. O
+endereco vem junto na carga (e curto) e abre numa aba nova; o nome e opcional
+("Link do Google Drive" quando fica em branco). So `http(s)` passa: quem cola
+`drive.google.com/...` ganha o `https://`, e `javascript:`/`data:` sao recusados
+(ver `src/domain/anexos.js`, que a API importa). A **Proposta tecnica** aceita o
+link do mesmo jeito. Para a equipe abrir, o arquivo precisa estar compartilhado
+como "Qualquer pessoa com o link".
 
 ### Quem pode editar o que
 

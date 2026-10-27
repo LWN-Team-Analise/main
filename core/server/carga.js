@@ -119,12 +119,22 @@ router.get('/imagens', exigeSessao, async (req, res) => {
     const usuarios = listaDeIds(req.query.usuarios)
     const [c, u] = await Promise.all([
       clientes.length
-        ? query(
-            `SELECT id, logo, capa,
-                    md5(coalesce(logo, '') || '|' || coalesce(capa, '')) AS imagem_versao
-               FROM cliente WHERE id = ANY($1::bigint[])`,
+        ? /* a UNIDADE (atualizacao 33) mostra a logo e a capa do cliente dela */
+          query(
+            `SELECT c.id, i.logo, i.capa,
+                    md5(coalesce(i.logo, '') || '|' || coalesce(i.capa, '')) AS imagem_versao
+               FROM cliente c JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
+              WHERE c.id = ANY($1::bigint[])`,
             [clientes],
-          )
+          ).catch((erro) => {
+            if (erro.code !== '42703') throw erro
+            return query(
+              `SELECT id, logo, capa,
+                      md5(coalesce(logo, '') || '|' || coalesce(capa, '')) AS imagem_versao
+                 FROM cliente WHERE id = ANY($1::bigint[])`,
+              [clientes],
+            )
+          })
         : { rows: [] },
       usuarios.length
         ? query(

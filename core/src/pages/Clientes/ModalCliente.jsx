@@ -7,6 +7,7 @@ import { CampoSelecao, CampoTexto } from '@/components/Campo/Campo'
 import { CampoData } from '@/components/CampoData/CampoData'
 import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
+import { SERVICO_MAXIMO, UNIDADE_MAXIMA, chaveDaUnidade, nomeDaUnidade } from '@/domain/clientes'
 import { valorCurto } from '@/domain/comercial'
 import { carregarImagemDoCliente } from '@/services/dadosService'
 import { buscarCEP, listarCidades, listarEstados } from '@/services/enderecoService'
@@ -38,18 +39,48 @@ const VAZIO = {
   proprietarioId: '',
   proximoContato: '',
   pessoas: [],
+  /* as unidades (atualizacao 33): Einstein Anapolis, Einstein Alphaville... */
+  unidades: [],
+  /* a UNIDADE cadastrada ou editada sozinha: o cliente dela (o "Unidade
+     de"), o lugar ("Anapolis") e o servico ("Faturamento", atualizacao 34) */
+  matrizId: '',
+  unidade: '',
+  servico: '',
 }
 
 const PESSOA_VAZIA = { id: null, nome: '', cargo: '', email: '', telefone: '' }
+const UNIDADE_VAZIA = { id: null, unidade: '', servico: '', cep: '', endereco: '', bairro: '', estado: '', cidade: '' }
+/* a chave da unidade na tela: a nova ainda nao tem id */
+let proximaChave = 0
+const novaChave = () => `u${(proximaChave += 1)}`
 const emailCerto = (email) => /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)
+
+/**
+ * O nome da unidade (o lugar) se completa com a cidade do endereco:
+ * enquanto ele estiver vazio, ou igual a cidade de antes, acompanha a
+ * cidade nova. Quem escreveu outro nome a mao continua com o dele.
+ */
+function lugarSegueCidade(atual, mudanca) {
+  if (!('cidade' in mudanca)) return mudanca
+  const lugar = String(atual.unidade ?? '').trim()
+  const automatico = !lugar || lugar === String(atual.cidade ?? '').trim()
+  return automatico ? { ...mudanca, unidade: mudanca.cidade ?? '' } : mudanca
+}
 
 /**
  * Cadastro de cliente. O CEP puxa o resto do endereco no ViaCEP; a lista de
  * estados e de cidades vem do IBGE. Se alguma API falhar, os campos seguem
  * editaveis na mao — o cadastro nunca fica preso.
+ *
+ * No Novo cliente, o "Unidade de" troca o cadastro por uma UNIDADE de um
+ * cliente que ja existe: o formulario vem com os dados dele (endereco,
+ * pessoas, proprietario) e so se mexe no que e da unidade — o servico
+ * ("Faturamento"), o lugar ("Anapolis", que segue a cidade) e o endereco.
+ * A logo, a capa e o setor sao os do cliente. A unidade aberta pelo card
+ * do cliente cai no mesmo formulario, para editar.
  */
 export default function ModalCliente({ aberto, cliente = null, resumo = null, nota = null, aoFechar, aoSalvar }) {
-  const { setores, equipe } = useDados()
+  const { setores, equipe, clientes, obras } = useDados()
   const { user } = useAuth()
   const [form, setForm] = useState(VAZIO)
   const [erros, setErros] = useState({})
@@ -75,9 +106,27 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
               ...VAZIO,
               ...cliente,
               setorId: cliente.setorId ?? '',
+              cep: cliente.cep ? formatarCEP(cliente.cep) : '',
               proprietarioId: cliente.proprietarioId ?? '',
               proximoContato: cliente.proximoContato ?? '',
               pessoas: (cliente.pessoas ?? []).map((p) => ({ ...PESSOA_VAZIA, ...p })),
+              matrizId: cliente.matrizId ?? '',
+              unidade: cliente.unidade ?? '',
+              servico: cliente.servico ?? '',
+              unidades: clientes
+                .filter((c) => String(c.matrizId) === String(cliente.id))
+                .map((c) => ({
+                  ...UNIDADE_VAZIA,
+                  chave: `id${c.id}`,
+                  id: c.id,
+                  unidade: c.unidade ?? '',
+                  servico: c.servico ?? '',
+                  cep: c.cep ? formatarCEP(c.cep) : '',
+                  endereco: c.endereco ?? '',
+                  bairro: c.bairro ?? '',
+                  estado: c.estado ?? '',
+                  cidade: c.cidade ?? '',
+                })),
             }
           : /* cliente novo e de quem esta cadastrando, ate alguem trocar */
             { ...VAZIO, proprietarioId: user?.id ? String(user.id) : '' },
@@ -87,6 +136,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
       setErroImagem('')
       setImagemMexida(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aberto, cliente, user?.id])
 
   /* estados: uma vez so, na primeira abertura */
@@ -114,8 +164,49 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
 
   const mudar = (campo) => (evento) => {
     const valor = evento?.target ? evento.target.value : evento
-    setForm((atual) => ({ ...atual, [campo]: valor }))
+    setForm((atual) => ({ ...atual, ...daUnidade(atual, { [campo]: valor }) }))
     setErros((atual) => ({ ...atual, [campo]: undefined }))
+  }
+
+  /* ---------------- A unidade sozinha ---------------- */
+
+  const modoUnidade = Boolean(form.matrizId)
+  const matriz = modoUnidade ? clientes.find((c) => String(c.id) === String(form.matrizId)) ?? null : null
+  /* so o cliente "de cima" pode ter unidade */
+  const principais = clientes
+    .filter((c) => !c.matrizId)
+    .map((c) => ({ valor: String(c.id), rotulo: c.nome }))
+    .sort((a, b) => a.rotulo.localeCompare(b.rotulo, 'pt-BR'))
+
+  /* na unidade, o lugar acompanha a cidade (ver lugarSegueCidade) */
+  const daUnidade = (atual, mudanca) => (atual.matrizId ? lugarSegueCidade(atual, mudanca) : mudanca)
+
+  /* o "Unidade de": o formulario vem com os dados do cliente escolhido,
+     e o que for da unidade se troca por cima. Voltar para "nenhum"
+     limpa tudo — e um cliente novo de novo. */
+  const escolherMatriz = (evento) => {
+    const id = evento.target.value
+    const escolhido = clientes.find((c) => String(c.id) === String(id))
+    setErros({})
+    setAvisoCEP('')
+    if (!escolhido) {
+      setForm({ ...VAZIO, proprietarioId: user?.id ? String(user.id) : '' })
+      return
+    }
+    setForm({
+      ...VAZIO,
+      matrizId: String(escolhido.id),
+      unidade: escolhido.cidade ?? '',
+      cep: escolhido.cep ? formatarCEP(escolhido.cep) : '',
+      endereco: escolhido.endereco ?? '',
+      bairro: escolhido.bairro ?? '',
+      estado: escolhido.estado ?? '',
+      cidade: escolhido.cidade ?? '',
+      proprietarioId: escolhido.proprietarioId ?? (user?.id ? String(user.id) : ''),
+      proximoContato: escolhido.proximoContato ?? '',
+      /* copias: as pessoas da unidade sao dela, sem mexer nas do cliente */
+      pessoas: (escolhido.pessoas ?? []).map((p) => ({ ...PESSOA_VAZIA, ...p, id: null })),
+    })
   }
 
   /* ---------------- Logo, com enquadramento ----------------
@@ -198,10 +289,29 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
     .map((p) => ({ valor: String(p.id), rotulo: p.nome }))
     .sort((a, b) => a.rotulo.localeCompare(b.rotulo, 'pt-BR'))
 
+  /* ---------------- Unidades ---------------- */
+
+  const mudarUnidade = (chave, mudanca) => {
+    setForm((atual) => ({
+      ...atual,
+      unidades: atual.unidades.map((u) => (u.chave === chave ? { ...u, ...lugarSegueCidade(u, mudanca) } : u)),
+    }))
+    setErros((atual) => ({ ...atual, [`unidade-${chave}`]: undefined }))
+  }
+
+  const novaUnidade = () =>
+    setForm((atual) => ({ ...atual, unidades: [...atual.unidades, { ...UNIDADE_VAZIA, chave: novaChave() }] }))
+
+  const tirarUnidade = (chave) =>
+    setForm((atual) => ({ ...atual, unidades: atual.unidades.filter((u) => u.chave !== chave) }))
+
+  /* quantas obras cada unidade ja tem: a que tem obra nao sai daqui */
+  const obrasDaUnidade = (id) => (id ? obras.filter((o) => String(o.clienteId) === String(id)).length : 0)
+
   /* trocar o estado na mao invalida a cidade que estava escolhida */
   const mudarEstado = (evento) => {
     const sigla = evento.target.value
-    setForm((atual) => ({ ...atual, estado: sigla, cidade: '' }))
+    setForm((atual) => ({ ...atual, ...daUnidade(atual, { estado: sigla, cidade: '' }) }))
     setErros((atual) => ({ ...atual, estado: undefined }))
   }
 
@@ -223,7 +333,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
       }
       /* o CEP manda no endereco inteiro: assim cidade e estado nunca
          ficam contradizendo o CEP digitado */
-      setForm((atual) => ({ ...atual, ...achado }))
+      setForm((atual) => ({ ...atual, ...daUnidade(atual, achado) }))
       setAvisoCEP('Endereço preenchido pelo CEP.')
     } catch {
       setAvisoCEP('Não foi possível consultar o CEP agora.')
@@ -236,7 +346,21 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
     evento.preventDefault()
 
     const novosErros = {}
-    if (!form.nome.trim()) novosErros.nome = 'Informe o nome da empresa.'
+    if (modoUnidade) {
+      if (!form.unidade.trim() && !form.servico.trim()) {
+        novosErros.unidade = 'Dê um nome ou um serviço à unidade (ex.: Anápolis, Faturamento).'
+      } else {
+        /* a irma com o mesmo lugar e o mesmo servico nao se distinguiria na lista */
+        const chave = chaveDaUnidade(matriz?.nome, form.unidade, form.servico)
+        const repetida = clientes.some(
+          (c) =>
+            String(c.matrizId) === String(form.matrizId) &&
+            String(c.id) !== String(cliente?.id) &&
+            chaveDaUnidade(matriz?.nome, c.unidade, c.servico) === chave,
+        )
+        if (repetida) novosErros.unidade = 'Este cliente já tem uma unidade com esse nome e esse serviço.'
+      }
+    } else if (!form.nome.trim()) novosErros.nome = 'Informe o nome da empresa.'
     if (!form.cidade.trim()) novosErros.cidade = 'Informe a cidade.'
     if (!form.estado) novosErros.estado = 'Escolha o estado.'
     form.pessoas.forEach((p, i) => {
@@ -245,15 +369,24 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
       if (!p.nome.trim()) novosErros[`pessoa${i}`] = 'Escreva o nome da pessoa.'
       else if (p.email.trim() && !emailCerto(p.email.trim())) novosErros[`pessoa${i}`] = 'O e-mail não parece certo.'
     })
+    const nomesDasUnidades = new Set()
+    form.unidades.forEach((u) => {
+      const qual = chaveDaUnidade(form.nome, u.unidade, u.servico)
+      const chave = `unidade-${u.chave}`
+      if (qual === '|') novosErros[chave] = 'Dê um nome ou um serviço à unidade (ex.: Anápolis, Faturamento).'
+      else if (nomesDasUnidades.has(qual)) novosErros[chave] = 'Já há uma unidade com esse nome e esse serviço.'
+      else if (!u.estado) novosErros[chave] = 'Escolha o estado da unidade.'
+      else if (!u.cidade.trim()) novosErros[chave] = 'Informe a cidade da unidade.'
+      nomesDasUnidades.add(qual)
+    })
 
     if (Object.keys(novosErros).length > 0) {
       setErros(novosErros)
       return
     }
 
-    const { logo, logoOriginal, recorteLogo, capa, recorteCapa, ...campos } = form
     /* linha de pessoa toda em branco nao vai */
-    campos.pessoas = form.pessoas
+    const pessoas = form.pessoas
       .map((p) => ({
         id: p.id,
         nome: p.nome.trim(),
@@ -262,6 +395,39 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
         telefone: p.telefone.trim(),
       }))
       .filter((p) => p.nome || p.email || p.telefone || p.cargo)
+
+    /* a unidade leva so o que e dela; a logo, o setor e o nome do
+       cliente ficam com ele */
+    if (modoUnidade) {
+      aoSalvar({
+        matrizId: form.matrizId,
+        unidade: form.unidade.trim(),
+        servico: form.servico.trim(),
+        cep: form.cep,
+        endereco: form.endereco.trim(),
+        bairro: form.bairro.trim(),
+        estado: form.estado,
+        cidade: form.cidade.trim(),
+        pessoas,
+        proprietarioId: form.proprietarioId || null,
+        proximoContato: form.proximoContato || null,
+      })
+      aoFechar()
+      return
+    }
+
+    const { logo, logoOriginal, recorteLogo, capa, recorteCapa, matrizId, unidade, servico, ...campos } = form
+    campos.pessoas = pessoas
+    campos.unidades = form.unidades.map((u) => ({
+      id: u.id,
+      unidade: u.unidade.trim(),
+      servico: u.servico.trim(),
+      cep: u.cep,
+      endereco: u.endereco.trim(),
+      bairro: u.bairro.trim(),
+      estado: u.estado,
+      cidade: u.cidade.trim(),
+    }))
     campos.proprietarioId = form.proprietarioId || null
     campos.proximoContato = form.proximoContato || null
     /* a imagem viaja em bloco, e SO quando alguem mexeu nela: os dois
@@ -278,110 +444,158 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
     <Modal
       aberto={aberto}
       aoFechar={aoFechar}
-      titulo={cliente ? 'Editar cliente' : 'Novo cliente'}
+      titulo={
+        modoUnidade ? (cliente ? 'Editar unidade' : 'Nova unidade') : cliente ? 'Editar cliente' : 'Novo cliente'
+      }
       largura={720}
     >
       <form className="formcli" onSubmit={enviar} noValidate>
-        {/* ---------------- Logo + prévia do header ----------------
+        {/* ---------------- Unidade de ----------------
+            Só no cadastro novo: escolher um cliente que já existe faz
+            deste cadastro uma unidade dele. */}
+        {!cliente && (
+          <CampoSelecao
+            rotulo="Unidade de"
+            largo
+            value={form.matrizId}
+            onChange={escolherMatriz}
+            vazio="Nenhum — é um cliente novo"
+            opcoes={principais}
+          />
+        )}
 
-            A mesma imagem aparece em DOIS lugares com recortes
-            independentes: o quadrado do card (o avatar) e a faixa larga
-            que abre a tela da obra. Os dois ficam LADO A LADO — o
-            quadrado à esquerda, a faixa à direita —, porque são duas
-            leituras da mesma decisão e compará-las é o ponto.
+        {modoUnidade ? (
+          <>
+            {/* o cliente da unidade: a logo, o nome e o setor são dele */}
+            <div className="formcli__matriz">
+              <Avatar nome={matriz?.nome || '?'} foto={matriz?.logo} tamanho={44} quadrado titulo={matriz?.nome} />
+              <span className="formcli__matriztexto">
+                <small>{cliente ? 'Unidade de' : 'Os dados vieram de'}</small>
+                <strong>{matriz?.nome ?? 'Cliente'}</strong>
+              </span>
+            </div>
 
-            A faixa só existia dentro do editor, e para vê-la era preciso
-            clicar em "Ajustar enquadramento" — justamente a decisão que
-            a prévia deveria ajudar a tomar. Aqui ela é só leitura;
-            mexer nos recortes continua sendo no editor. */}
-        <div className="cliimg">
-          <div className={`campo ${erroImagem ? 'has-erro' : ''}`.trim()}>
-            <span className="campo__rotulo">Logo da empresa</span>
-            <div className="foto">
-              <Avatar
-                nome={form.nome || '?'}
-                foto={form.logo}
-                tamanho={62}
-                quadrado
-                titulo={form.nome}
-              />
-              <div className="foto__acoes">
-                <button
-                  type="button"
-                  className="foto__btn"
-                  onClick={() => entradaLogo.current?.click()}
-                >
-                  {form.logo ? 'Trocar imagem' : 'Enviar imagem'}
-                </button>
-                {form.logo && (
-                  <button type="button" className="foto__btn" onClick={reenquadrar}>
-                    Ajustar enquadramento
-                  </button>
-                )}
-                {form.logo && (
-                  <button
-                    type="button"
-                    className="foto__btn foto__btn--fraco"
-                    onClick={tirarLogo}
-                  >
-                    Remover
-                  </button>
+            <CampoTexto
+              rotulo="Serviço"
+              placeholder="Ex.: Faturamento, Obra, Administração"
+              value={form.servico}
+              onChange={mudar('servico')}
+              maxLength={SERVICO_MAXIMO}
+            />
+            <CampoTexto
+              rotulo="Nome da unidade"
+              placeholder="Ex.: Anápolis"
+              value={form.unidade}
+              onChange={mudar('unidade')}
+              maxLength={UNIDADE_MAXIMA}
+              erro={erros.unidade}
+            />
+            <p className="formcli__nalista">
+              Nas listas:{' '}
+              <b>
+                {form.unidade.trim() || form.servico.trim()
+                  ? nomeDaUnidade(matriz?.nome ?? 'Cliente', form.unidade, form.servico)
+                  : '—'}
+              </b>
+            </p>
+          </>
+        ) : (
+          <>
+            {/* ---------------- Logo + prévia do header ----------------
+
+                A mesma imagem aparece em DOIS lugares com recortes
+                independentes: o quadrado do card (o avatar) e a faixa larga
+                que abre a tela da obra. Os dois ficam LADO A LADO — o
+                quadrado à esquerda, a faixa à direita —, porque são duas
+                leituras da mesma decisão e compará-las é o ponto.
+
+                A faixa só existia dentro do editor, e para vê-la era preciso
+                clicar em "Ajustar enquadramento" — justamente a decisão que
+                a prévia deveria ajudar a tomar. Aqui ela é só leitura;
+                mexer nos recortes continua sendo no editor. */}
+            <div className="cliimg">
+              <div className={`campo ${erroImagem ? 'has-erro' : ''}`.trim()}>
+                <span className="campo__rotulo">Logo da empresa</span>
+                <div className="foto">
+                  <Avatar
+                    nome={form.nome || '?'}
+                    foto={form.logo}
+                    tamanho={62}
+                    quadrado
+                    titulo={form.nome}
+                  />
+                  <div className="foto__acoes">
+                    <button
+                      type="button"
+                      className="foto__btn"
+                      onClick={() => entradaLogo.current?.click()}
+                    >
+                      {form.logo ? 'Trocar imagem' : 'Enviar imagem'}
+                    </button>
+                    {form.logo && (
+                      <button type="button" className="foto__btn" onClick={reenquadrar}>
+                        Ajustar enquadramento
+                      </button>
+                    )}
+                    {form.logo && (
+                      <button
+                        type="button"
+                        className="foto__btn foto__btn--fraco"
+                        onClick={tirarLogo}
+                      >
+                        Remover
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    ref={entradaLogo}
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={escolherLogo}
+                    tabIndex={-1}
+                  />
+                </div>
+                {erroImagem && (
+                  <span className="campo__nota campo__nota--erro" role="alert">
+                    {erroImagem}
+                  </span>
                 )}
               </div>
-              <input
-                ref={entradaLogo}
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={escolherLogo}
-                tabIndex={-1}
-              />
-            </div>
-            {erroImagem && (
-              <span className="campo__nota campo__nota--erro" role="alert">
-                {erroImagem}
-              </span>
-            )}
-          </div>
 
-          {form.logo && (
-            <div className="campo cliimg__header">
-              <span className="campo__rotulo">Header da obra</span>
-              <PreviaHeader capa={form.capa || form.logo} nome={form.nome} />
-              {!form.capa && (
-                <span className="campo__nota">
-                  Sem recorte próprio: a faixa da obra mostra a logo inteira na largura, com o
-                  zoom no centro. Para escolher outro ponto ou outro zoom, abra
-                  &quot;Ajustar enquadramento&quot;.
-                </span>
+              {form.logo && (
+                <div className="campo cliimg__header">
+                  <span className="campo__rotulo">Header da obra</span>
+                  <PreviaHeader capa={form.capa || form.logo} nome={form.nome} />
+                </div>
               )}
             </div>
-          )}
-        </div>
 
-        <CampoTexto
-          rotulo="Nome da empresa"
-          largo
-          placeholder="Razão social ou nome fantasia"
-          value={form.nome}
-          onChange={mudar('nome')}
-          erro={erros.nome}
-        />
+            <CampoTexto
+              rotulo="Nome da empresa"
+              largo
+              placeholder="Razão social ou nome fantasia"
+              value={form.nome}
+              onChange={mudar('nome')}
+              erro={erros.nome}
+            />
 
-        {/* O ramo da empresa. A lista sai do botao "Setores" na tela de
-            Clientes — aqui so se escolhe entre o que ja existe, para nao
-            nascer "Farmaceutico" e "farmaceutica" como dois setores. */}
-        <CampoSelecao
-          rotulo="Setor"
-          value={form.setorId ?? ''}
-          onChange={mudar('setorId')}
-          vazio={
-            setores.length === 0
-              ? 'Nenhum setor cadastrado ainda'
-              : 'Sem setor'
-          }
-          opcoes={setores.map((s) => ({ valor: String(s.id), rotulo: s.nome, cor: s.cor }))}
-        />
+            {/* O ramo da empresa. A lista sai do botao "Setores" na tela de
+                Clientes — aqui so se escolhe entre o que ja existe, para nao
+                nascer "Farmaceutico" e "farmaceutica" como dois setores. */}
+            <CampoSelecao
+              rotulo="Setor"
+              value={form.setorId ?? ''}
+              onChange={mudar('setorId')}
+              vazio={
+                setores.length === 0
+                  ? 'Nenhum setor cadastrado ainda'
+                  : 'Sem setor'
+              }
+              opcoes={setores.map((s) => ({ valor: String(s.id), rotulo: s.nome, cor: s.cor }))}
+            />
+          </>
+        )}
 
         <CampoTexto
           rotulo="CEP"
@@ -435,6 +649,33 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
           />
         )}
 
+        {/* ---------------- Unidades ----------------
+            O mesmo cliente em outros enderecos: na aba Clientes ele
+            continua UM so; nas listas de escolher cliente (obra,
+            comercial, reembolso) cada unidade aparece com o nome
+            inteiro — "Einstein Anápolis". */}
+        {!modoUnidade && (
+          <fieldset className="formcli__pessoas formcli__unidades">
+            <legend>Unidades</legend>
+            {form.unidades.map((u, i) => (
+              <CampoUnidade
+                key={u.chave}
+                ordem={i + 1}
+                unidade={u}
+                nomeDoCliente={form.nome}
+                estados={estados}
+                erro={erros[`unidade-${u.chave}`]}
+                obras={obrasDaUnidade(u.id)}
+                aoMudar={(mudanca) => mudarUnidade(u.chave, mudanca)}
+                aoTirar={() => tirarUnidade(u.chave)}
+              />
+            ))}
+            <button type="button" className="formcli__mais" onClick={novaUnidade}>
+              + Adicionar unidade
+            </button>
+          </fieldset>
+        )}
+
         {/* quem responde pela empresa — vem com quem esta cadastrando */}
         <CampoSelecao
           rotulo="Proprietário"
@@ -466,11 +707,6 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
         {/* ---------------- Pessoas de contato ---------------- */}
         <fieldset className="formcli__pessoas">
           <legend>Pessoas de contato</legend>
-          {form.pessoas.length === 0 && (
-            <p className="formcli__nada">
-              Nenhuma pessoa ainda. O e-mail delas é para onde vai o “Responder?” dos negócios no Comercial.
-            </p>
-          )}
           {form.pessoas.map((p, i) => (
             <div key={p.id ?? `nova-${i}`} className="formcli__pessoa">
               <input
@@ -526,33 +762,37 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
         {/* Os numeros que saem sozinhos: os negocios do Comercial e as notas
             das obras avaliadas. Nao se digita — mudam quando um negocio e
             ganho ou uma obra e avaliada. */}
-        <div className="formcli__resumo">
-          <p className="formcli__resumo-titulo">Calculado pelo sistema</p>
-          <dl>
-            <div>
-              <dt>Negócios fechados</dt>
-              <dd>{resumo?.ganhos ?? 0}</dd>
-            </div>
-            <div>
-              <dt>Negócios em aberto</dt>
-              <dd>{resumo?.abertos ?? 0}</dd>
-            </div>
-            <div>
-              <dt>Ticket médio</dt>
-              <dd>{resumo?.ticketMedio ? valorCurto(resumo.ticketMedio) : '—'}</dd>
-            </div>
-            <div>
-              <dt>Nota de satisfação média</dt>
-              <dd>{nota?.media !== undefined && nota?.media !== null ? String(nota.media).replace('.', ',') : '—'}</dd>
-            </div>
-          </dl>
-        </div>
+        {!modoUnidade && (
+          <div className="formcli__resumo">
+            <p className="formcli__resumo-titulo">Calculado pelo sistema</p>
+            <dl>
+              <div>
+                <dt>Negócios fechados</dt>
+                <dd>{resumo?.ganhos ?? 0}</dd>
+              </div>
+              <div>
+                <dt>Negócios em aberto</dt>
+                <dd>{resumo?.abertos ?? 0}</dd>
+              </div>
+              <div>
+                <dt>Ticket médio</dt>
+                <dd>{resumo?.ticketMedio ? valorCurto(resumo.ticketMedio) : '—'}</dd>
+              </div>
+              <div>
+                <dt>Nota de satisfação média</dt>
+                <dd>{nota?.media !== undefined && nota?.media !== null ? String(nota.media).replace('.', ',') : '—'}</dd>
+              </div>
+            </dl>
+          </div>
+        )}
 
         <footer className="formobra__acoes">
           <button type="button" className="formobra__cancelar" onClick={aoFechar}>
             Cancelar
           </button>
-          <Button type="submit">{cliente ? 'Salvar alterações' : 'Cadastrar cliente'}</Button>
+          <Button type="submit">
+            {cliente ? 'Salvar alterações' : modoUnidade ? 'Cadastrar unidade' : 'Cadastrar cliente'}
+          </Button>
         </footer>
       </form>
 
@@ -571,5 +811,142 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
         aoFechar={() => setAjustando(null)}
       />
     </Modal>
+  )
+}
+
+/**
+ * Uma unidade no cadastro: o serviço ("Faturamento"), o nome (o lugar,
+ * "Anápolis", que acompanha a cidade) e o endereço dela. O CEP preenche
+ * o resto, como no cliente; as cidades vêm do estado escolhido NESTA
+ * unidade.
+ */
+function CampoUnidade({ ordem, unidade, nomeDoCliente, estados, erro, obras, aoMudar, aoTirar }) {
+  const [cidades, setCidades] = useState([])
+  const [buscandoCEP, setBuscandoCEP] = useState(false)
+  const [avisoCEP, setAvisoCEP] = useState('')
+
+  useEffect(() => {
+    if (!unidade.estado) {
+      setCidades([])
+      return undefined
+    }
+    let valido = true
+    listarCidades(unidade.estado)
+      .then((lista) => valido && setCidades(lista))
+      .catch(() => valido && setCidades([]))
+    return () => {
+      valido = false
+    }
+  }, [unidade.estado])
+
+  const mudar = (campo) => (evento) => aoMudar({ [campo]: evento?.target ? evento.target.value : evento })
+
+  const mudarCEP = async (evento) => {
+    const formatado = formatarCEP(evento.target.value)
+    aoMudar({ cep: formatado })
+    setAvisoCEP('')
+    const digitos = formatado.replace(/\D/g, '')
+    if (digitos.length !== 8) return
+    setBuscandoCEP(true)
+    try {
+      const achado = await buscarCEP(digitos)
+      if (!achado) {
+        setAvisoCEP('CEP não encontrado — preencha à mão.')
+        return
+      }
+      aoMudar(achado)
+      setAvisoCEP('Endereço preenchido pelo CEP.')
+    } catch {
+      setAvisoCEP('Não foi possível consultar o CEP agora.')
+    } finally {
+      setBuscandoCEP(false)
+    }
+  }
+
+  const curto = unidade.unidade.trim()
+  const servico = unidade.servico.trim()
+  return (
+    <div className={`formcli__unidade ${erro ? 'has-erro' : ''}`.trim()}>
+      <div className="formcli__unidtopo">
+        <strong>Unidade {ordem}</strong>
+        <span className="formcli__unidnome">
+          {curto || servico ? (
+            <>
+              Nas listas: <b>{nomeDaUnidade(nomeDoCliente || 'Cliente', curto, servico)}</b>
+            </>
+          ) : (
+            'Dê um nome ou um serviço à unidade'
+          )}
+        </span>
+        <button
+          type="button"
+          className="formcli__tirar"
+          onClick={aoTirar}
+          disabled={obras > 0}
+          aria-label={`Tirar a unidade ${[curto, servico].filter(Boolean).join(' - ') || ordem}`}
+          title={
+            obras > 0
+              ? `Tem ${obras} obra${obras === 1 ? '' : 's'}: troque o cliente delas antes de tirar a unidade`
+              : 'Tirar a unidade'
+          }
+        >
+          ×
+        </button>
+      </div>
+      <div className="formcli__unidcampos">
+        <CampoTexto
+          rotulo="Serviço"
+          placeholder="Ex.: Faturamento, Obra"
+          value={unidade.servico}
+          onChange={mudar('servico')}
+          maxLength={SERVICO_MAXIMO}
+        />
+        <CampoTexto
+          rotulo="Nome da unidade"
+          placeholder="Ex.: Anápolis"
+          value={unidade.unidade}
+          onChange={mudar('unidade')}
+          maxLength={UNIDADE_MAXIMA}
+        />
+        <CampoTexto
+          rotulo="CEP"
+          inputMode="numeric"
+          placeholder="00000-000"
+          value={unidade.cep}
+          onChange={mudarCEP}
+          dica={buscandoCEP ? 'Consultando...' : avisoCEP || undefined}
+        />
+        <CampoTexto rotulo="Endereço" placeholder="Rua e número" value={unidade.endereco} onChange={mudar('endereco')} />
+        <CampoTexto rotulo="Bairro" placeholder="Bairro" value={unidade.bairro} onChange={mudar('bairro')} />
+        <CampoSelecao
+          rotulo="Estado"
+          value={unidade.estado}
+          onChange={(evento) => aoMudar({ estado: evento.target.value, cidade: '' })}
+          vazio={estados.length === 0 ? 'Carregando...' : 'Escolha o estado...'}
+          opcoes={estados.map((e) => ({ valor: e.sigla, rotulo: `${e.sigla} — ${e.nome}` }))}
+        />
+        {cidades.length > 0 ? (
+          <CampoSelecao
+            rotulo="Cidade"
+            value={unidade.cidade}
+            onChange={mudar('cidade')}
+            vazio="Escolha a cidade..."
+            opcoes={cidades.map((c) => ({ valor: c, rotulo: c }))}
+          />
+        ) : (
+          <CampoTexto
+            rotulo="Cidade"
+            placeholder={unidade.estado ? 'Carregando cidades...' : 'Escolha o estado antes'}
+            value={unidade.cidade}
+            onChange={mudar('cidade')}
+          />
+        )}
+      </div>
+      {erro && (
+        <span className="campo__nota campo__nota--erro" role="alert">
+          {erro}
+        </span>
+      )}
+    </div>
   )
 }

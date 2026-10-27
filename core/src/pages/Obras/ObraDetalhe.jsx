@@ -35,6 +35,7 @@ import {
   tituloDaObra,
   tomPrioridadeObra,
 } from '@/domain/obras'
+import { nomeDoLink } from '@/domain/anexos'
 import { textoSobre } from '@/utils/cor'
 import { dataBR, dataExtensa, dataHora, hojeISO } from '@/utils/formato'
 import ModalCard from './ModalCard'
@@ -315,15 +316,21 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
      prefixo pelo qual o check o acha) e, so depois de gravado, o check
      e marcado — se o envio falha, nada fica marcado sem documento.
      Anexar uma nova versao com o check ja marcado so acrescenta o
-     arquivo. */
-  const anexarProposta = async (arquivo) => {
+     arquivo. No lugar do arquivo pode vir o LINK dele (Drive, OneDrive):
+     so o endereco vai para o banco. */
+  const anexarProposta = async ({ arquivo, link }) => {
     const { check } = propondo
-    await adicionarAnexo(obra.id, {
-      nome: `${PREFIXO_PROPOSTA}${arquivo.name}`,
-      tipo: arquivo.type || 'application/octet-stream',
-      tamanho: arquivo.size,
-      conteudo: await lerArquivo(arquivo),
-    })
+    await adicionarAnexo(
+      obra.id,
+      link
+        ? { link, nome: `${PREFIXO_PROPOSTA}${nomeDoLink(link)}` }
+        : {
+            nome: `${PREFIXO_PROPOSTA}${arquivo.name}`,
+            tipo: arquivo.type || 'application/octet-stream',
+            tamanho: arquivo.size,
+            conteudo: await lerArquivo(arquivo),
+          },
+    )
     if (!obra.checks?.[check.id]) marcarCheck(check.id)
   }
 

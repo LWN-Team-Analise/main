@@ -189,7 +189,7 @@ const MENU = [
     id: 'usuarios',
     rotulo: 'Usuários',
     rota: '/app/usuarios',
-    permissoes: ['editar_usuario', 'editar_cargo', 'editar_cargo_titulo'],
+    permissao: 'ver_usuarios',
   },
 ]
 

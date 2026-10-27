@@ -42,6 +42,9 @@ export const VISUALIZACAO = [
   { chave: 'ver_comercial', rotulo: 'Comercial', rota: '/app/comercial' },
   { chave: 'ver_turnos', rotulo: 'Turnos', rota: '/app/turnos' },
   { chave: 'ver_avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes' },
+  /* a aba Usuarios: ver a equipe (os cards, o setor, o cargo, o contato).
+     Cadastrar, editar e excluir continuam nas alteracoes de baixo */
+  { chave: 'ver_usuarios', rotulo: 'Usuários', rota: '/app/usuarios' },
   { chave: 'ver_avisos', rotulo: 'Enviar avisos', rota: null },
 ]
 
@@ -63,9 +66,9 @@ export const ALTERACAO = [
      via a pagina inicial ganhou esta junto (atualizacao 27); a tela da TV
      nao tem. */
   { chave: 'ver_historico', rotulo: 'Ver histórico', dependeDe: 'ver_inicio' },
-  { chave: 'editar_usuario', rotulo: 'Adicionar / editar usuário', dependeDe: null },
-  { chave: 'editar_cargo', rotulo: 'Adicionar / editar setor', dependeDe: null },
-  { chave: 'editar_cargo_titulo', rotulo: 'Adicionar / editar cargo', dependeDe: null },
+  { chave: 'editar_usuario', rotulo: 'Adicionar / editar usuário', dependeDe: 'ver_usuarios' },
+  { chave: 'editar_cargo', rotulo: 'Adicionar / editar setor', dependeDe: 'ver_usuarios' },
+  { chave: 'editar_cargo_titulo', rotulo: 'Adicionar / editar cargo', dependeDe: 'ver_usuarios' },
   { chave: 'editar_avaliacoes', rotulo: 'Adicionar / editar avaliações', dependeDe: 'ver_avaliacoes' },
   { chave: 'editar_clientes', rotulo: 'Adicionar / editar clientes', dependeDe: 'ver_clientes' },
   /* a planilha do Excel com o cadastro inteiro (Clientes > Exportar) */
@@ -121,16 +124,17 @@ export const ALTERACAO = [
 
 /**
  * A tela de Setores mostra cada alteracao EMBAIXO da visualizacao de
- * que ela depende. As que nao dependem de nenhuma (as de Usuarios, aba
- * que abre com qualquer uma delas) vao num grupo proprio, no fim.
+ * que ela depende. Alguma que nao dependa de nenhuma iria num grupo
+ * proprio, no fim (hoje nao ha: as de Usuarios ficaram embaixo de
+ * "Usuários").
  */
 export const GRUPOS = [
   ...VISUALIZACAO.map((v) => ({
     visualizacao: v,
     alteracoes: ALTERACAO.filter((a) => a.dependeDe === v.chave),
   })),
-  { visualizacao: null, rotulo: 'Usuários', alteracoes: ALTERACAO.filter((a) => !a.dependeDe) },
-]
+  { visualizacao: null, rotulo: 'Outras', alteracoes: ALTERACAO.filter((a) => !a.dependeDe) },
+].filter((g) => g.visualizacao || g.alteracoes.length > 0)
 
 export const TODAS = [...VISUALIZACAO, ...ALTERACAO]
 
@@ -150,6 +154,8 @@ const DEPENDENCIA = Object.fromEntries(
   ALTERACAO.filter((p) => p.dependeDe).map((p) => [p.chave, p.dependeDe]),
 )
 
+const USUARIOS_ANTES = ['editar_usuario', 'editar_cargo', 'editar_cargo_titulo']
+
 /**
  * Limpa a lista antes de gravar: alteracao sem a visualizacao dela
  * nao entra, e chave desconhecida some. E o mesmo tratamento no
@@ -157,6 +163,11 @@ const DEPENDENCIA = Object.fromEntries(
  */
 export function normalizar(lista) {
   const marcadas = new Set((lista ?? []).filter((c) => CHAVES.includes(c)))
+  /* Antes de existir `ver_usuarios`, a aba Usuarios abria com qualquer
+     uma destas tres. O setor gravado assim continua vendo a aba (e
+     mexendo no que mexia) sem precisar de atualizacao no banco: na
+     proxima vez que for salvo, a lista ja vai com a `ver_usuarios`. */
+  if (!marcadas.has('ver_usuarios') && USUARIOS_ANTES.some((c) => marcadas.has(c))) marcadas.add('ver_usuarios')
   Object.entries(DEPENDENCIA).forEach(([alteracao, visualizacao]) => {
     if (!marcadas.has(visualizacao)) marcadas.delete(alteracao)
   })

@@ -521,7 +521,7 @@ const paraUsuario = (l) => ({
    e o que pinta cards, mencoes e avatares). Os dados pessoais nao:
 
      CPF e nascimento   so para quem edita usuario;
-     telefone           para quem abre a tela de Usuarios;
+     telefone           para quem abre a tela de Usuarios (`ver_usuarios`);
 
    e cada um sempre ve os proprios. Antes a lista inteira, com CPF,
    ia para qualquer pessoa logada — bastava abrir a resposta.
@@ -529,7 +529,7 @@ const paraUsuario = (l) => ({
 function recortarPessoal(usuario, meu, meuId) {
   if (String(usuario.id) === String(meuId)) return usuario
   const gestor = cargoPode(meu, 'editar_usuario')
-  const abreUsuarios = gestor || cargoPode(meu, 'editar_cargo') || cargoPode(meu, 'editar_cargo_titulo')
+  const abreUsuarios = gestor || cargoPode(meu, 'ver_usuarios')
   return {
     ...usuario,
     cpf: gestor ? usuario.cpf : null,
