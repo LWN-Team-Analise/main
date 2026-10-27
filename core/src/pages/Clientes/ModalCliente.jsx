@@ -407,13 +407,6 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
             <div className="campo cliimg__header">
               <span className="campo__rotulo">Header da obra</span>
               <PreviaHeader capa={form.capa || form.logo} nome={form.nome} />
-              {!form.capa && (
-                <span className="campo__nota">
-                  Sem recorte próprio: a faixa da obra mostra a logo inteira na largura, com o
-                  zoom no centro. Para escolher outro ponto ou outro zoom, abra
-                  &quot;Ajustar enquadramento&quot;.
-                </span>
-              )}
             </div>
           )}
         </div>
