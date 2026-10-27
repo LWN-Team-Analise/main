@@ -47,8 +47,7 @@
   letter-spacing: 0;
 }
 
-.mobra__vazio,
-.mobra__nota {
+.mobra__vazio {
   margin: 0;
   font-size: 0.8rem;
   color: var(--text-faint);
