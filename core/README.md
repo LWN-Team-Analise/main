@@ -1199,7 +1199,9 @@ e as pessoas de contato —, uma unidade aberta por vez. Ali, **Editar unidade**
 abre a mesma tela para editar so ela (`PATCH /api/dados/clientes/:id` de uma
 unidade): servico, lugar, endereco e as **pessoas de contato dela**, que sao
 separadas das do cliente. No cadastro do cliente, cada bloco de **+ Adicionar unidade** tambem
-ganhou o campo Servico.
+ganhou o campo Servico. Ali as unidades tambem vem fechadas, so com o nome e a
+cidade: o clique abre os campos de uma (uma por vez), a nova ja abre para
+preencher, e a que tem erro abre sozinha no Salvar.
 
 Banco sem a atualizacao 34: as unidades continuam aparecendo e gravando sem
 servico; mandar um servico devolve o recado para rodar a atualizacao.

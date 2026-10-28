@@ -13,9 +13,11 @@ import {
   chaveDaUnidade,
   codigoPostal,
   enderecoNasUnidades,
+  localDoEndereco,
   nomeDaUnidade,
   ordemDasUnidades,
   primeiraUnidade,
+  rotuloDaUnidade,
 } from '@/domain/clientes'
 import { valorCurto } from '@/domain/comercial'
 import { PAIS_PADRAO, ehBrasil, opcoesDePaises } from '@/domain/paises'
@@ -114,12 +116,18 @@ function lugarSegueCidade(atual, mudanca) {
  * unidade adicionada leva junto o endereco que ele tinha — ele vira a
  * Unidade 1, e a nova e a Unidade 2. Tirando a nova antes de salvar, a
  * Unidade 1 volta a ser o endereco do cliente.
+ *
+ * As unidades vem fechadas, so com o nome, como no card do cliente: o
+ * clique abre os campos de uma (uma por vez). A nova ja abre, e quem
+ * tem erro abre no "Salvar".
  */
 export default function ModalCliente({ aberto, cliente = null, resumo = null, nota = null, aoFechar, aoSalvar }) {
   const { setores, equipe, clientes, obras } = useDados()
   const { user } = useAuth()
   const [form, setForm] = useState(VAZIO)
   const [erros, setErros] = useState({})
+  /* a unidade aberta no formulario (a chave dela); as outras ficam so com o nome */
+  const [unidadeAberta, setUnidadeAberta] = useState(null)
   /* a imagem que o editor de enquadramento esta ajustando; null = fechado */
   const [ajustando, setAjustando] = useState(null)
   const [erroImagem, setErroImagem] = useState('')
@@ -161,6 +169,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
             { ...VAZIO, proprietarioId: user?.id ? String(user.id) : '' },
       )
       setErros({})
+      setUnidadeAberta(null)
       setErroImagem('')
       setImagemMexida(false)
     }
@@ -301,19 +310,25 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
     setErros((atual) => ({ ...atual, [`unidade-${chave}`]: undefined }))
   }
 
-  const novaUnidade = () =>
+  /* as chaves saem fora do setForm: a funcao dele pode rodar duas vezes */
+  const novaUnidade = () => {
+    const chaveNova = novaChave()
+    const chavePrimeira = novaChave()
     setForm((atual) => {
       /* a unidade nova comeca no pais do cliente */
-      const nova = { ...UNIDADE_VAZIA, chave: novaChave(), pais: atual.pais }
+      const nova = { ...UNIDADE_VAZIA, chave: chaveNova, pais: atual.pais }
       if (atual.unidades.length > 0) return { ...atual, unidades: [...atual.unidades, nova] }
       /* a primeira: o endereco que o cliente tinha vira a Unidade 1, e a nova e a 2 */
       const primeira = primeiraUnidade({ nome: atual.nome, ...enderecoDe(atual) })
       if (!primeira) return { ...atual, unidades: [nova] }
       return {
         ...atual,
-        unidades: [{ ...UNIDADE_VAZIA, ...primeira, cep: atual.cep, chave: novaChave(), doCliente: true }, nova],
+        unidades: [{ ...UNIDADE_VAZIA, ...primeira, cep: atual.cep, chave: chavePrimeira, doCliente: true }, nova],
       }
     })
+    /* a nova ja abre, para preencher */
+    setUnidadeAberta(chaveNova)
+  }
 
   const tirarUnidade = (chave) =>
     setForm((atual) => {
@@ -381,6 +396,9 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
 
     if (Object.keys(novosErros).length > 0) {
       setErros(novosErros)
+      /* a unidade com erro abre, para o erro estar a vista */
+      const comErro = form.unidades.find((u) => novosErros[`unidade-${u.chave}`])
+      if (comErro) setUnidadeAberta(comErro.chave)
       return
     }
 
@@ -624,6 +642,8 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
                 nomeDoCliente={form.nome}
                 erro={erros[`unidade-${u.chave}`]}
                 obras={obrasDaUnidade(u.id)}
+                aberta={unidadeAberta === u.chave}
+                aoAlternar={() => setUnidadeAberta((atual) => (atual === u.chave ? null : u.chave))}
                 aoMudar={(mudanca) => mudarUnidade(u.chave, mudanca)}
                 aoTirar={() => tirarUnidade(u.chave)}
               />
@@ -929,27 +949,32 @@ function CamposEndereco({ valor, aoMudar, erros = {} }) {
 }
 
 /**
- * Uma unidade no cadastro: o serviço ("Faturamento"), o nome (o lugar,
- * "Anápolis", que acompanha a cidade) e o endereço dela (CamposEndereco).
+ * Uma unidade no cadastro. Fechada, so o nome dela ("Anápolis -
+ * Faturamento") e onde fica; aberta, o serviço, o nome (o lugar, que
+ * acompanha a cidade) e o endereço (CamposEndereco). O erro fica a vista
+ * mesmo com ela fechada.
  */
-function CampoUnidade({ ordem, unidade, nomeDoCliente, erro, obras, aoMudar, aoTirar }) {
+function CampoUnidade({ ordem, unidade, nomeDoCliente, erro, obras, aberta, aoAlternar, aoMudar, aoTirar }) {
   const mudar = (campo) => (evento) => aoMudar({ [campo]: evento?.target ? evento.target.value : evento })
 
   const curto = unidade.unidade.trim()
   const servico = unidade.servico.trim()
+  const rotulo = rotuloDaUnidade({ unidade: curto, servico })
+  const onde = localDoEndereco(unidade)
+  const id = `formcli-unidade-${unidade.chave}`
   return (
-    <div className={`formcli__unidade ${erro ? 'has-erro' : ''}`.trim()}>
+    <div className={`formcli__unidade ${erro ? 'has-erro' : ''}`.trim()} data-aberta={aberta}>
       <div className="formcli__unidtopo">
-        <strong>Unidade {ordem}</strong>
-        <span className="formcli__unidnome">
-          {curto || servico ? (
-            <>
-              Nas listas: <b>{nomeDaUnidade(nomeDoCliente || 'Cliente', curto, servico)}</b>
-            </>
-          ) : (
-            'Dê um nome ou um serviço à unidade'
-          )}
-        </span>
+        <button type="button" className="formcli__unidabrir" onClick={aoAlternar} aria-expanded={aberta} aria-controls={id}>
+          <strong>Unidade {ordem}</strong>
+          <span className="formcli__unidnome">
+            {rotulo ? <b>{rotulo}</b> : 'Dê um nome ou um serviço à unidade'}
+            {onde && onde !== rotulo && <span className="formcli__unidonde">{onde}</span>}
+          </span>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
         <button
           type="button"
           className="formcli__tirar"
@@ -965,25 +990,32 @@ function CampoUnidade({ ordem, unidade, nomeDoCliente, erro, obras, aoMudar, aoT
           ×
         </button>
       </div>
-      <div className="formcli__unidcampos">
-        <CampoTexto
-          rotulo="Serviço"
-          placeholder="Ex.: Faturamento, Obra"
-          value={unidade.servico}
-          onChange={mudar('servico')}
-          maxLength={SERVICO_MAXIMO}
-        />
-        <CampoTexto
-          rotulo="Nome da unidade"
-          placeholder="Ex.: Anápolis"
-          value={unidade.unidade}
-          onChange={mudar('unidade')}
-          maxLength={UNIDADE_MAXIMA}
-        />
-        <CamposEndereco valor={unidade} aoMudar={aoMudar} />
+      <div className="formcli__unidcorpo" id={id}>
+        <div className="formcli__unidcorpo-int">
+          <p className="formcli__unidlista">
+            Nas listas: <b>{curto || servico ? nomeDaUnidade(nomeDoCliente || 'Cliente', curto, servico) : '—'}</b>
+          </p>
+          <div className="formcli__unidcampos">
+            <CampoTexto
+              rotulo="Serviço"
+              placeholder="Ex.: Faturamento, Obra"
+              value={unidade.servico}
+              onChange={mudar('servico')}
+              maxLength={SERVICO_MAXIMO}
+            />
+            <CampoTexto
+              rotulo="Nome da unidade"
+              placeholder="Ex.: Anápolis"
+              value={unidade.unidade}
+              onChange={mudar('unidade')}
+              maxLength={UNIDADE_MAXIMA}
+            />
+            <CamposEndereco valor={unidade} aoMudar={aoMudar} />
+          </div>
+        </div>
       </div>
       {erro && (
-        <span className="campo__nota campo__nota--erro" role="alert">
+        <span className="campo__nota campo__nota--erro formcli__unidaerro" role="alert">
           {erro}
         </span>
       )}

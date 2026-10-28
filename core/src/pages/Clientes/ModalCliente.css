@@ -200,16 +200,17 @@
 
 /* ---------------- Unidades (atualizacao 33) ----------------
 
-   Cada unidade e um quadro dentro do grupo: o titulo com o nome que vai
-   aparecer nas listas ("Einstein Anápolis"), e os campos do endereco
-   em duas colunas, como os do cliente. */
+   Cada unidade e um quadro dentro do grupo. Fechado, so o titulo: o
+   nome dela e onde fica, para achar a que se quer sem rolar por todos
+   os enderecos. Aberto, o nome que ela vai ter nas listas ("Einstein
+   Anápolis") e os campos do endereco em duas colunas, como os do
+   cliente. Abre e fecha como o card do cliente. */
 
 .formcli__unidade {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px;
   border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
   border-radius: var(--radius-sm);
   background: var(--control-bg);
 }
@@ -221,14 +222,46 @@
 .formcli__unidtopo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
   min-width: 0;
+  padding: 4px 6px 4px 0;
 }
 
-.formcli__unidtopo strong {
+.formcli__unidabrir {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 6px 8px 6px 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.formcli__unidabrir:hover,
+.formcli__unidabrir:focus-visible {
+  background: var(--control-bg-hover);
+}
+
+.formcli__unidabrir > strong {
   flex: none;
   font-size: 0.8rem;
   color: var(--text-strong);
+}
+
+.formcli__unidabrir > svg {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.formcli__unidade[data-aberta='true'] .formcli__unidabrir > svg {
+  transform: rotate(180deg);
 }
 
 .formcli__unidnome {
@@ -246,6 +279,61 @@
   color: var(--text-strong);
 }
 
+.formcli__unidonde {
+  margin-left: 8px;
+  color: var(--text-faint);
+}
+
+/* fechada, os campos saem do caminho do Tab (visibility), como a
+   dobra do card do cliente */
+.formcli__unidcorpo {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition: grid-template-rows 320ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 160ms cubic-bezier(0.32, 0.72, 0, 1),
+    visibility 0s linear 320ms;
+}
+
+.formcli__unidade[data-aberta='true'] .formcli__unidcorpo {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  transition: grid-template-rows 320ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 220ms cubic-bezier(0.32, 0.72, 0, 1) 60ms,
+    visibility 0s linear;
+}
+
+/* a lista de estados e de cidades abre num portal, fora daqui: o
+   overflow nao corta nada */
+.formcli__unidcorpo-int {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.formcli__unidlista {
+  margin: 2px 12px 10px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.formcli__unidlista b {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.formcli__unidaerro {
+  padding: 0 12px 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .formcli__unidcorpo,
+  .formcli__unidabrir > svg {
+    transition: none;
+  }
+}
+
 .formcli__tirar:disabled {
   opacity: 0.35;
   cursor: not-allowed;
@@ -260,6 +348,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+  padding: 0 12px 12px;
 }
 
 @media (max-width: 560px) {
