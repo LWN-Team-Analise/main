@@ -2593,6 +2593,14 @@ API (`/api/despesas`) e as chaves das permissoes continuam as mesmas.
   A tabela fica em `configuracao` (`valores_reembolso`, JSON); sem ela valem os
   padroes de `VALORES_FIXOS` (almoco e janta R$ 41,50, bonus apartamento R$ 35).
   Rotas: `GET /api/despesas/valores` e `PUT /api/despesas/valores`.
+- **Período**: no mesmo "Valores pré-definidos", cada categoria tem o dia em
+  que o periodo dela comeca — a refeicao, do dia 26 ao dia 25 do mes seguinte.
+  O periodo leva o nome do mes em que termina: com a refeicao no dia 26, as
+  refeicoes de novembro sao as de 26/10 a 25/11. Meus envios, Envios gerais e a
+  planilha recortam o mes e o ano de cada categoria pelo periodo dela (o resumo
+  mostra as datas); o Dashboard continua no calendario. Fica em `configuracao`
+  (`periodos_reembolso`, JSON `{ categoria: dia }`, de 1 a 28); sem ela, todas
+  no dia 1. Nao precisa de atualizacao no banco.
 
 As tabelas abaixo sao de antes dessas mudancas: valem com as tres excecoes acima.
 

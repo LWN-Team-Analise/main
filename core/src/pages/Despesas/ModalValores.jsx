@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
+import Seletor from '@/components/Seletor/Seletor'
 import { CampoDinheiro } from '@/components/Campo/Campo'
-import { CATEGORIAS, CHAVES_CATEGORIA } from '@/domain/despesas'
+import { CATEGORIAS, CHAVES_CATEGORIA, DIA_INICIO_MAXIMO, inicioDoPeriodo } from '@/domain/despesas'
 import * as despesasApi from '@/services/despesasService'
 
 /**
@@ -19,10 +20,20 @@ import * as despesasApi from '@/services/despesasService'
  * mudam de valor; os outros podem passar a ser — ou nao. Salvar vale
  * para os envios daqui em diante: o que ja foi enviado guarda o valor
  * do dia.
+ *
+ * Em cima de cada categoria, o PERIODO dela: o dia em que ele comeca
+ * (a refeicao, do dia 26 ao dia 25 do mes seguinte). E por ele que
+ * Meus envios, Envios gerais e a planilha recortam o mes — esse vale
+ * tambem para o que ja foi enviado.
  */
-export default function ModalValores({ aberto, valores, aoFechar, aoSalvo }) {
+
+const DIAS = Array.from({ length: DIA_INICIO_MAXIMO }, (_, i) => ({ valor: String(i + 1), rotulo: String(i + 1) }))
+
+export default function ModalValores({ aberto, valores, periodos, aoFechar, aoSalvo }) {
   /* tipo -> centavos (pre-definido) ou null (digitado) */
   const [linhas, setLinhas] = useState({})
+  /* categoria -> o dia em que o periodo dela comeca */
+  const [dias, setDias] = useState({})
   const [erro, setErro] = useState('')
   const [errosTipo, setErrosTipo] = useState({})
   const [salvando, setSalvando] = useState(false)
@@ -36,9 +47,10 @@ export default function ModalValores({ aberto, valores, aoFechar, aoSalvo }) {
       }),
     )
     setLinhas(inicial)
+    setDias(Object.fromEntries(CHAVES_CATEGORIA.map((categoria) => [categoria, inicioDoPeriodo(categoria, periodos)])))
     setErro('')
     setErrosTipo({})
-  }, [aberto, valores])
+  }, [aberto, valores, periodos])
 
   const marcar = (chave, ligado) => {
     setLinhas((atual) => ({ ...atual, [chave]: ligado ? (atual[chave] ?? 0) : null }))
@@ -62,7 +74,7 @@ export default function ModalValores({ aberto, valores, aoFechar, aoSalvo }) {
           .filter(([, centavos]) => centavos !== null)
           .map(([chave, centavos]) => [chave, (centavos / 100).toFixed(2)]),
       )
-      const salvo = await despesasApi.salvarValores(tabela)
+      const salvo = await despesasApi.salvarValores(tabela, dias)
       aoSalvo(salvo)
       aoFechar()
     } catch (e) {
@@ -84,6 +96,19 @@ export default function ModalValores({ aberto, valores, aoFechar, aoSalvo }) {
         {CHAVES_CATEGORIA.map((categoria) => (
           <fieldset key={categoria} className="valores__grupo">
             <legend>{CATEGORIAS[categoria].plural}</legend>
+            <div className="valores__periodo">
+              <strong>Período</strong>
+              <span className="valores__periodotexto">
+                Do dia
+                <Seletor
+                  valor={String(dias[categoria] ?? 1)}
+                  aoMudar={(dia) => setDias((atual) => ({ ...atual, [categoria]: Number(dia) }))}
+                  opcoes={DIAS}
+                  aria-label={`Dia em que começa o período de ${CATEGORIAS[categoria].plural}`}
+                />
+                {(dias[categoria] ?? 1) > 1 ? `ao dia ${dias[categoria] - 1} do mês seguinte` : 'ao último dia do mês'}
+              </span>
+            </div>
             {CATEGORIAS[categoria].tipos.map(({ chave, rotulo }) => {
               const ligado = linhas[chave] !== null && linhas[chave] !== undefined
               return (

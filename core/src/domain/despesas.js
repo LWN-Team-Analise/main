@@ -108,6 +108,86 @@ export function lerTabelaDeValores(bruto) {
 }
 
 /* ------------------------------------------------------------
+   O PERIODO de cada categoria
+
+   O mes do reembolso nem sempre e o do calendario: a refeicao vai do
+   dia 26 ao dia 25 do mes seguinte. Cada categoria guarda o DIA em que
+   o periodo dela comeca (1 = o mes do calendario), e o periodo leva o
+   nome do mes em que TERMINA — com a refeicao comecando no dia 26,
+   "Novembro" vai de 26/10 a 25/11.
+
+   E por ele que Meus envios, Envios gerais e a planilha recortam o mes
+   e o ano de cada categoria. O Dashboard continua no calendario.
+
+   A tabela mora no banco (configuracao 'periodos_reembolso'), e quem
+   muda e o mesmo "Valores pré-definidos". O dia vai ate 28, que todo
+   mes tem.
+   ------------------------------------------------------------ */
+export const PERIODOS_PADRAO = { despesa: 1, refeicao: 1, bonus: 1 }
+export const DIA_INICIO_MAXIMO = 28
+
+/** O dia em que o periodo da categoria comeca: 1 quando nao ha outro. */
+export function inicioDoPeriodo(categoria, periodos = PERIODOS_PADRAO) {
+  const dia = periodos?.[categoria]
+  return Number.isInteger(dia) && dia >= 1 && dia <= DIA_INICIO_MAXIMO ? dia : 1
+}
+
+/**
+ * Le a tabela de periodos (a do banco ou a da tela) e devolve um dia
+ * para cada categoria — ou { erro, categoria }. Categoria que nao veio
+ * fica com o dia 1.
+ */
+export function lerTabelaDePeriodos(bruto) {
+  const periodos = {}
+  for (const categoria of Object.keys(CATEGORIAS)) {
+    const valor = bruto?.[categoria]
+    if (valor === undefined || valor === null || valor === '') {
+      periodos[categoria] = 1
+      continue
+    }
+    const dia = Number(valor)
+    if (!Number.isInteger(dia) || dia < 1 || dia > DIA_INICIO_MAXIMO) {
+      return { erro: `O período de ${CATEGORIAS[categoria].plural} começa num dia de 1 a ${DIA_INICIO_MAXIMO}.`, categoria }
+    }
+    periodos[categoria] = dia
+  }
+  return { periodos }
+}
+
+const doisDigitos = (n) => String(n).padStart(2, '0')
+
+/** '2026-09' + 1 -> '2026-10' */
+export function somarMes(mes, passo) {
+  const [ano, m] = mes.split('-').map(Number)
+  const total = ano * 12 + (m - 1) + passo
+  return `${Math.floor(total / 12)}-${doisDigitos((total % 12) + 1)}`
+}
+
+/**
+ * O periodo do mes ('AAAA-MM'), com as duas pontas inclusive:
+ * '2026-11' no dia 1 -> 01/11 a 30/11; no dia 26 -> 26/10 a 25/11.
+ */
+export function periodoDoMes(mes, dia = 1) {
+  if (dia <= 1) {
+    const [ano, m] = mes.split('-').map(Number)
+    const ultimo = new Date(Date.UTC(ano, m, 0)).getUTCDate()
+    return { de: `${mes}-01`, ate: `${mes}-${doisDigitos(ultimo)}` }
+  }
+  return { de: `${somarMes(mes, -1)}-${doisDigitos(dia)}`, ate: `${mes}-${doisDigitos(dia - 1)}` }
+}
+
+/** O mes ('AAAA-MM') do periodo em que a data cai: 28/10, com o dia 26, e novembro. */
+export function mesDoPeriodo(data, dia = 1) {
+  const mes = String(data).slice(0, 7)
+  return dia > 1 && Number(String(data).slice(8, 10)) >= dia ? somarMes(mes, 1) : mes
+}
+
+/** "Do dia 26 ao dia 25 do mês seguinte" — o que o "Valores pré-definidos" escreve. */
+export function descreverPeriodo(dia = 1) {
+  return dia <= 1 ? 'Do dia 1 ao último dia do mês' : `Do dia ${dia} ao dia ${dia - 1} do mês seguinte`
+}
+
+/* ------------------------------------------------------------
    Comprovante obrigatorio
 
    So no combustivel e no "outros": o vale transporte e o transporte
