@@ -184,6 +184,7 @@ const CONFERENCIA = [
   ['cliente.matriz_id', col('cliente', 'matriz_id')],
   ['cliente.servico', col('cliente', 'servico')],
   ['cliente.cidade aceita NULL', nulavel('cliente', 'cidade')],
+  ['cliente.pais', col('cliente', 'pais')],
 ]
 
 function col(tabela, coluna) {

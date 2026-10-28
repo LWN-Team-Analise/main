@@ -13,11 +13,14 @@ import {
   UNIDADE_MAXIMA,
   chaveDaUnidade,
   enderecoNasUnidades,
+  localDoEndereco,
   nomeCurtoDaUnidade,
   nomeDaUnidade,
+  primeiraUnidade,
   rotuloDaUnidade,
   servicoDaUnidade,
 } from '../../src/domain/clientes.js'
+import { codigoDoPais, ehBrasil, paisValido } from '../../src/domain/paises.js'
 import { NOME_MAXIMO, TIPO_LINK, linkValido, nomeDoLink } from '../../src/domain/anexos.js'
 import {
   CONDICOES,
@@ -176,6 +179,8 @@ const paraCliente = (l) => ({
   cidade: l.cidade ?? '',
   estado: l.estado ?? '',
   cep: l.cep ?? '',
+  /* o pais do endereco (atualizacao 35); sem a coluna, o Brasil */
+  pais: codigoDoPais(l.pais),
   /* quem cadastrou (ou responde pela) empresa e o proximo contato
      (atualizacao 27). Sem as colunas, os dois vem vazios. */
   proprietarioId: l.proprietario_id === null || l.proprietario_id === undefined ? null : String(l.proprietario_id),
@@ -233,14 +238,19 @@ async function lerTermos() {
    o proprio cliente, ou — na UNIDADE (atualizacao 33) — o cliente dela,
    para o Einstein Anapolis ter a logo e o setor do Einstein. */
 const COLUNAS_CLIENTE = `c.id, c.nome, i.recorte_logo, i.recorte_capa, i.setor_id, c.endereco, c.bairro,
-  c.cidade, c.estado, c.cep, c.criado_em, i.ordem_prioridade, c.proprietario_id, c.proximo_contato,
+  c.cidade, c.estado, c.cep, c.pais, c.criado_em, i.ordem_prioridade, c.proprietario_id, c.proximo_contato,
   c.matriz_id, c.unidade, c.servico,
   md5(coalesce(i.logo, '') || '|' || coalesce(i.capa, '')) AS imagem_versao`
 
-/* banco com as unidades e sem o servico delas (sem a atualizacao 34) */
-const COLUNAS_CLIENTE_33 = COLUNAS_CLIENTE.replace(' c.servico,', '')
+/* banco com o servico das unidades e sem o pais (sem a atualizacao 35) */
+const COLUNAS_CLIENTE_34 = COLUNAS_CLIENTE.replace(' c.pais,', '')
 
-const ORDEM_CLIENTES = 'ORDER BY i.ordem_prioridade NULLS LAST, lower(i.nome), i.id, c.matriz_id NULLS FIRST, lower(c.nome)'
+/* banco com as unidades e sem o servico delas (sem a atualizacao 34) */
+const COLUNAS_CLIENTE_33 = COLUNAS_CLIENTE_34.replace(' c.servico,', '')
+
+/* as unidades na ordem em que foram cadastradas: a unidade 1 (o endereco
+   que o cliente tinha, com a data de cadastro dele) primeiro */
+const ORDEM_CLIENTES = 'ORDER BY i.ordem_prioridade NULLS LAST, lower(i.nome), i.id, c.matriz_id NULLS FIRST, c.criado_em, c.id'
 
 /* a mesma lista de antes das unidades (banco sem a atualizacao 33) */
 const COLUNAS_CLIENTE_ANTIGAS = `id, nome, recorte_logo, recorte_capa, setor_id, endereco, bairro,
@@ -257,6 +267,16 @@ async function lerClientes(imagens) {
          JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
         ${ORDEM_CLIENTES}`,
     )
+      .catch((erro) => {
+        /* banco sem o pais: o endereco e todo do Brasil */
+        if (erro.code !== '42703') throw erro
+        return query(
+          `SELECT ${COLUNAS_CLIENTE_34}${imagens ? ', i.logo, i.capa' : ''}
+             FROM cliente c
+             JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
+            ${ORDEM_CLIENTES}`,
+        )
+      })
       .catch((erro) => {
         /* banco sem o servico das unidades: as unidades sem ele */
         if (erro.code !== '42703') throw erro
@@ -788,11 +808,68 @@ router.patch('/termos', exigeSessao, exige('editar_etapa'), async (req, res) => 
    CLIENTES
    ============================================================ */
 
+const ESTADO_MAXIMO = 80
+
+const SEM_ENDERECO_NOVO =
+  'O banco ainda não tem o endereço nas unidades e o país do cliente (atualização 35 em core/db). Rode npm run db:atualizar e suba a API de novo.'
+
+/* a atualizacao 35 ja rodou? O "sim" fica guardado; o "nao" se pergunta
+   de novo, para nao precisar subir a API outra vez depois do db:atualizar */
+let comAtualizacao35 = false
+async function bancoComPais() {
+  if (comAtualizacao35) return true
+  const { rows } = await query(
+    `SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'cliente' AND column_name = 'pais'`,
+  )
+  comAtualizacao35 = rows.length > 0
+  return comAtualizacao35
+}
+
+/** O banco sem a atualizacao 35 so guarda endereco do Brasil, e sem a coluna do pais. */
+function semPaisNoBanco(linha) {
+  if (!('pais' in linha)) return { linha }
+  if (!ehBrasil(linha.pais)) return { erro: SEM_ENDERECO_NOVO }
+  const { pais, ...resto } = linha
+  return { linha: resto }
+}
+
+/**
+ * O endereco que veio da tela (do cliente ou de uma unidade), no formato
+ * do banco. No Brasil o estado e a UF e o CEP tem 8 digitos; fora dele o
+ * estado e o nome ("Florida" — e pode faltar: Monaco nao tem) e o codigo
+ * postal e livre. `qual` e a unidade, nos recados.
+ *
+ * Devolve { erro } ou { endereco }.
+ */
+function lerEndereco(corpo, qual = '') {
+  const da = qual ? ` da unidade ${qual}` : ''
+  const pais = codigoDoPais(corpo?.pais)
+  if (!paisValido(pais)) return { erro: `Escolha o país${da}.` }
+  const cidade = texto(corpo?.cidade)
+  if (!cidade) return { erro: `Informe a cidade${da}.` }
+  const comum = { pais, endereco: texto(corpo?.endereco) || null, bairro: texto(corpo?.bairro) || null, cidade }
+
+  if (ehBrasil(pais)) {
+    const estado = texto(corpo?.estado).toUpperCase()
+    const cep = soDigitos(corpo?.cep)
+    if (!/^[A-Z]{2}$/.test(estado)) return { erro: qual ? `Informe o estado${da}.` : 'Informe a UF com duas letras.' }
+    if (cep && cep.length !== 8) return { erro: `O CEP${da} precisa ter 8 dígitos.` }
+    return { endereco: { ...comum, estado, cep: cep || null } }
+  }
+
+  const estado = texto(corpo?.estado)
+  const cep = texto(corpo?.cep).toUpperCase().replace(/\s+/g, ' ')
+  if (estado.length > ESTADO_MAXIMO) return { erro: `O estado${da} passa de ${ESTADO_MAXIMO} letras.` }
+  if (cep && !/^[A-Z0-9 -]{1,12}$/.test(cep)) return { erro: `O código postal${da} aceita até 12 letras e números.` }
+  return { endereco: { ...comum, estado: estado || null, cep: cep || null } }
+}
+
 /**
  * Campos do cliente vindos da tela, ja no formato do banco: { coluna: valor }.
  *
- * O cliente com mais de uma unidade (`vitrine`) nao tem endereco: o que
- * vier nem e lido, e quem grava tira o que havia (enderecoSaiDoCliente).
+ * O cliente com unidade (`vitrine`) nao tem endereco: o que vier nem e
+ * lido, e quem grava tira o que havia (enderecoSaiDoCliente).
  */
 function camposCliente(corpo, { vitrine = false } = {}) {
   const nome = texto(corpo?.nome)
@@ -802,24 +879,9 @@ function camposCliente(corpo, { vitrine = false } = {}) {
   const setor = texto(corpo?.setorId) || null
   if (vitrine) return { campos: { nome, setor_id: setor } }
 
-  const cidade = texto(corpo?.cidade)
-  const estado = texto(corpo?.estado).toUpperCase()
-  const cep = soDigitos(corpo?.cep)
-  if (!cidade) return { erro: 'Informe a cidade.' }
-  if (!/^[A-Z]{2}$/.test(estado)) return { erro: 'Informe a UF com duas letras.' }
-  if (cep && cep.length !== 8) return { erro: 'O CEP precisa ter 8 dígitos.' }
-
-  return {
-    campos: {
-      nome,
-      endereco: texto(corpo?.endereco) || null,
-      bairro: texto(corpo?.bairro) || null,
-      cidade,
-      estado,
-      cep: cep || null,
-      setor_id: setor,
-    },
-  }
+  const { erro, endereco } = lerEndereco(corpo)
+  if (erro) return { erro }
+  return { campos: { nome, ...endereco, setor_id: setor } }
 }
 
 /** Quantas unidades o cliente tem no banco (0 no banco sem a atualizacao 33). */
@@ -834,34 +896,102 @@ async function contarUnidades(clienteId) {
 }
 
 /**
- * O cliente com MAIS DE UMA unidade fica sem endereco proprio: ele e a
- * vitrine, e o endereco e o de cada unidade (src/domain/clientes.js).
- * Roda depois de toda gravacao que pode ter dado a ele a segunda
- * unidade; com uma so, nao mexe em nada.
- *
- * O banco sem a atualizacao 35 ainda pede cidade e estado no cliente:
- * ali ele fica com os da primeira unidade, so para o banco aceitar — a
- * tela nao le o endereco dele.
+ * O cliente com unidade fica sem endereco proprio: ele e a vitrine, e o
+ * endereco e o de cada unidade (src/domain/clientes.js). Roda depois de
+ * toda gravacao que pode ter dado a ele a primeira unidade — e quem
+ * chama ja levou o endereco dele para a unidade 1. Sem unidade, nao
+ * mexe em nada.
  */
-async function enderecoSaiDoCliente(clienteId) {
-  const vitrine = '(SELECT count(*) FROM cliente u WHERE u.matriz_id = c.id) > 1'
+async function enderecoSaiDoCliente(clienteId, db = { query }) {
   try {
-    await query(
+    await db.query(
       `UPDATE cliente c SET endereco = NULL, bairro = NULL, cep = NULL, cidade = NULL, estado = NULL
-        WHERE c.id = $1 AND ${vitrine}`,
+        WHERE c.id = $1 AND c.cidade IS NOT NULL
+          AND EXISTS (SELECT 1 FROM cliente u WHERE u.matriz_id = c.id)`,
       [clienteId],
     )
   } catch (erro) {
     /* banco sem as unidades: ninguem e vitrine */
-    if (erro.code === '42703') return
-    if (erro.code !== '23502') throw erro
-    await query(
-      `UPDATE cliente c SET endereco = NULL, bairro = NULL, cep = NULL, cidade = p.cidade, estado = p.estado
-         FROM (SELECT cidade, estado FROM cliente WHERE matriz_id = $1 ORDER BY lower(nome), id LIMIT 1) p
-        WHERE c.id = $1 AND ${vitrine}`,
+    if (erro.code !== '42703') throw erro
+  }
+}
+
+/**
+ * A linha da unidade no banco: { coluna: valor }. O nome e o inteiro
+ * ("Albert Einstein Anapolis - Faturamento"); `servico` so no banco com a
+ * atualizacao 34.
+ */
+const linhaDaUnidade = (u, nomeDoCliente, comServico) => ({
+  nome: nomeDaUnidade(nomeDoCliente, u.unidade, u.servico),
+  unidade: u.unidade || null,
+  endereco: u.endereco || null,
+  bairro: u.bairro || null,
+  cidade: u.cidade,
+  estado: u.estado || null,
+  cep: u.cep || null,
+  pais: codigoDoPais(u.pais),
+  ...(comServico ? { servico: u.servico || null } : {}),
+})
+
+/* "(a, b) VALUES ($1, $2)" e os valores, para o INSERT de uma linha { coluna: valor } */
+function paraInserir(linha) {
+  const colunas = Object.keys(linha)
+  return [`(${colunas.join(', ')}) VALUES (${colunas.map((_, i) => `$${i + 1}`).join(', ')})`, Object.values(linha)]
+}
+
+/* "a = $1, b = $2" e os valores, para o UPDATE; o WHERE usa os $ seguintes */
+function paraAtualizar(linha) {
+  const colunas = Object.keys(linha)
+  return [colunas.map((coluna, i) => `${coluna} = $${i + 1}`).join(', '), Object.values(linha)]
+}
+
+/**
+ * O endereco que o cliente ainda tem, quando ele ja tem unidade, vira a
+ * UNIDADE 1 (primeiraUnidade) — com a data de cadastro dele, para vir
+ * antes das outras — e sai dele. E o caminho de quem cria unidade sem a
+ * lista do cadastro: o "Unidade de" e a API chamada direto. Pede a
+ * atualizacao 35 (quem chama confere antes).
+ */
+async function enderecoViraUnidade(clienteId) {
+  await emTransacao(async (db) => {
+    const { rows } = await db.query(
+      `SELECT id, nome, endereco, bairro, cidade, estado, cep, pais, criado_em
+         FROM cliente WHERE id = $1 AND matriz_id IS NULL FOR UPDATE`,
       [clienteId],
     )
-  }
+    const cliente = rows[0]
+    if (!cliente?.cidade) return
+    const { rows: irmas } = await db.query(
+      'SELECT unidade, servico, endereco, cidade, estado, cep, pais FROM cliente WHERE matriz_id = $1',
+      [clienteId],
+    )
+    if (!irmas.length) return
+    const primeira = primeiraUnidade(cliente, irmas)
+    if (primeira) {
+      const [partes, valores] = paraInserir({
+        ...linhaDaUnidade(primeira, cliente.nome, true),
+        matriz_id: cliente.id,
+        criado_em: cliente.criado_em,
+      })
+      await db.query(`INSERT INTO cliente ${partes}`, valores)
+    }
+    await enderecoSaiDoCliente(cliente.id, db)
+  })
+}
+
+/**
+ * O endereco que veio no corpo junto com as unidades (a tela de antes
+ * desta versao, ou a API chamada direto) vira a unidade 1, na frente das
+ * outras. A tela de agora ja manda a unidade 1 pronta (`doCliente`) e o
+ * endereco do cliente vazio: ai nao ha o que fazer.
+ */
+function comAPrimeira(corpo, unidades, nomeDoCliente) {
+  if (!unidades?.length || unidades.some((u) => u.doCliente) || !texto(corpo?.cidade)) return unidades
+  const { endereco } = lerEndereco(corpo)
+  const primeira = endereco && primeiraUnidade({ nome: nomeDoCliente, ...endereco }, unidades)
+  if (!primeira) return unidades
+  const lida = lerUnidade({ ...primeira, doCliente: true }, nomeDoCliente)
+  return lida.unidade ? [lida.unidade, ...unidades] : unidades
 }
 
 const PESSOAS_MAXIMO = 50
@@ -869,7 +999,9 @@ const PESSOAS_MAXIMO = 50
 /**
  * Uma UNIDADE como veio da tela: o lugar ("Anapolis"), o servico
  * ("Faturamento", atualizacao 34) — um dos dois, pelo menos — e o
- * endereco. Devolve { erro } ou { unidade }.
+ * endereco. `doCliente` marca a unidade 1, a que nasceu do endereco do
+ * cliente: nova, ela ganha a data de cadastro dele. Devolve { erro } ou
+ * { unidade }.
  */
 function lerUnidade(u, nomeDoCliente) {
   const curto = nomeCurtoDaUnidade(nomeDoCliente, u?.unidade)
@@ -878,22 +1010,15 @@ function lerUnidade(u, nomeDoCliente) {
   if (curto.length > UNIDADE_MAXIMA) return { erro: `O nome da unidade passa de ${UNIDADE_MAXIMA} letras.` }
   if (servico.length > SERVICO_MAXIMO) return { erro: `O serviço da unidade passa de ${SERVICO_MAXIMO} letras.` }
   const qual = rotuloDaUnidade({ unidade: curto, servico })
-  const cidade = texto(u?.cidade)
-  const estado = texto(u?.estado).toUpperCase()
-  const cep = soDigitos(u?.cep)
-  if (!cidade) return { erro: `Informe a cidade da unidade ${qual}.` }
-  if (!/^[A-Z]{2}$/.test(estado)) return { erro: `Informe o estado da unidade ${qual}.` }
-  if (cep && cep.length !== 8) return { erro: `O CEP da unidade ${qual} precisa ter 8 dígitos.` }
+  const { erro, endereco } = lerEndereco(u, qual)
+  if (erro) return { erro }
   return {
     unidade: {
       id: /^\d{1,15}$/.test(texto(u?.id)) ? texto(u.id) : null,
       unidade: curto || null,
       servico: servico || null,
-      endereco: texto(u?.endereco) || null,
-      bairro: texto(u?.bairro) || null,
-      cidade,
-      estado,
-      cep: cep || null,
+      ...endereco,
+      doCliente: u?.doCliente === true,
       chave: chaveDaUnidade(nomeDoCliente, curto, servico),
       rotulo: qual,
     },
@@ -992,9 +1117,12 @@ async function unidadeQueNaoPodeSair(clienteId, unidades) {
 /**
  * Grava as unidades do cliente e acerta o nome inteiro de todas elas
  * ("Albert Einstein" + "Anapolis" + "Faturamento") — tambem quando so o
- * nome do cliente mudou.
+ * nome do cliente mudou. A unidade 1 nova (`doCliente`) entra com a data
+ * de cadastro do cliente, para vir antes das outras.
+ *
+ * `comPais`: o banco tem a atualizacao 35. Sem ela, so endereco do Brasil.
  */
-async function gravarUnidades(clienteId, nomeDoCliente, unidades) {
+async function gravarUnidades(clienteId, nomeDoCliente, unidades, comPais) {
   const gravar = (comServico) =>
     emTransacao(async (db) => {
       const { rows: atuais } = await db.query(
@@ -1005,30 +1133,22 @@ async function gravarUnidades(clienteId, nomeDoCliente, unidades) {
         const ficam = new Set(unidades.filter((u) => u.id).map((u) => String(u.id)))
         const saem = atuais.filter((a) => !ficam.has(String(a.id))).map((a) => a.id)
         if (saem.length) await db.query('DELETE FROM cliente WHERE matriz_id = $1 AND id = ANY($2::bigint[])', [clienteId, saem])
+        const { rows: cadastro } = await db.query('SELECT criado_em FROM cliente WHERE id = $1', [clienteId])
         for (const u of unidades) {
-          const valores = [
-            nomeDaUnidade(nomeDoCliente, u.unidade, u.servico),
-            u.unidade,
-            u.endereco,
-            u.bairro,
-            u.cidade,
-            u.estado,
-            u.cep,
-            ...(comServico ? [u.servico] : []),
-          ]
+          const completa = linhaDaUnidade(u, nomeDoCliente, comServico)
+          const { erro, linha } = comPais ? { linha: completa } : semPaisNoBanco(completa)
+          if (erro) throw Object.assign(new Error(erro), { status: 400 })
           if (u.id && atuais.some((a) => String(a.id) === String(u.id))) {
+            const [sets, valores] = paraAtualizar(linha)
             await db.query(
-              `UPDATE cliente SET nome = $1, unidade = $2, endereco = $3, bairro = $4, cidade = $5, estado = $6, cep = $7
-                                  ${comServico ? ', servico = $8' : ''}
-                WHERE id = $${valores.length + 1} AND matriz_id = $${valores.length + 2}`,
+              `UPDATE cliente SET ${sets} WHERE id = $${valores.length + 1} AND matriz_id = $${valores.length + 2}`,
               [...valores, u.id, clienteId],
             )
           } else {
-            await db.query(
-              `INSERT INTO cliente (nome, unidade, endereco, bairro, cidade, estado, cep${comServico ? ', servico' : ''}, matriz_id)
-               VALUES (${valores.map((_, i) => `$${i + 1}`).join(', ')}, $${valores.length + 1})`,
-              [...valores, clienteId],
-            )
+            const nova = { ...linha, matriz_id: clienteId }
+            if (u.doCliente && cadastro[0]) nova.criado_em = cadastro[0].criado_em
+            const [partes, valores] = paraInserir(nova)
+            await db.query(`INSERT INTO cliente ${partes}`, valores)
           }
         }
       } else {
@@ -1265,6 +1385,9 @@ router.delete('/setores/:id', exigeSessao, exige('editar_clientes'), async (req,
  * pessoas, o proprietario e o proximo contato que a tela trouxe (a tela
  * copia os do cliente, para so mexer no que muda). A logo, a capa e o
  * setor sao os do cliente (ver lerClientes).
+ *
+ * Com ela o cliente vira a vitrine: o endereco que ele ainda tinha vira
+ * a unidade 1 (enderecoViraUnidade), e esta fica depois.
  */
 async function criarUnidade(req, res) {
   const matrizId = texto(req.body?.matrizId)
@@ -1273,6 +1396,7 @@ async function criarUnidade(req, res) {
   if (extras.erro) return res.status(400).json({ erro: extras.erro })
 
   try {
+    if (!(await bancoComPais())) return res.status(400).json({ erro: SEM_ENDERECO_NOVO })
     const { rows: achadas } = await query('SELECT id, nome, matriz_id FROM cliente WHERE id = $1', [matrizId])
     const matriz = achadas[0]
     if (!matriz) return res.status(404).json({ erro: 'Cliente não encontrado.' })
@@ -1285,33 +1409,18 @@ async function criarUnidade(req, res) {
     if (repetida) return res.status(400).json({ erro: repetida })
 
     const { rows } = await comOuSemServico(Boolean(u.servico), (comServico) => {
-      const valores = [
-        nomeDaUnidade(matriz.nome, u.unidade, u.servico),
-        u.unidade,
-        u.endereco,
-        u.bairro,
-        u.cidade,
-        u.estado,
-        u.cep,
-        matriz.id,
-        ...(comServico ? [u.servico] : []),
-      ]
-      return query(
-        `INSERT INTO cliente (nome, unidade, endereco, bairro, cidade, estado, cep, matriz_id${comServico ? ', servico' : ''})
-         VALUES (${valores.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING id, nome, cidade, estado`,
-        valores,
-      )
+      const [partes, valores] = paraInserir({ ...linhaDaUnidade(u, matriz.nome, comServico), matriz_id: matriz.id })
+      return query(`INSERT INTO cliente ${partes} RETURNING id, nome, cidade, estado, pais`, valores)
     })
     await registrarAtividade(req, {
       acao: 'cliente.criado',
       categoria: 'cliente',
       entidade: ['cliente', rows[0].id],
       descricao: 'Nova unidade de cliente cadastrada',
-      detalhes: { cliente: rows[0].nome, 'unidade de': matriz.nome, cidade: `${rows[0].cidade}/${rows[0].estado}` },
+      detalhes: { cliente: rows[0].nome, 'unidade de': matriz.nome, cidade: localDoEndereco(rows[0]) },
     })
     await gravarExtrasDoCliente(rows[0].id, extras, { novo: true, usuarioId: req.dono.sub })
-    /* a segunda unidade faz do cliente a vitrine: o endereco e o delas */
-    await enderecoSaiDoCliente(matriz.id)
+    await enderecoViraUnidade(matriz.id)
     return res.status(201).json({ cliente: await lerClienteCompleto(rows[0].id) })
   } catch (e) {
     if (e.status === 400) return res.status(400).json({ erro: e.message })
@@ -1340,25 +1449,17 @@ async function editarUnidade(req, res, matrizId) {
   const u = lida.unidade
   const repetida = await unidadeRepetida(matriz, u, req.params.id)
   if (repetida) return res.status(400).json({ erro: repetida })
+  const comPais = await bancoComPais()
 
   const { rows } = await comOuSemServico(Boolean(u.servico), (comServico) => {
-    const valores = [
-      nomeDaUnidade(matriz.nome, u.unidade, u.servico),
-      u.unidade,
-      u.endereco,
-      u.bairro,
-      u.cidade,
-      u.estado,
-      u.cep,
+    const completa = linhaDaUnidade(u, matriz.nome, comServico)
+    const { erro, linha } = comPais ? { linha: completa } : semPaisNoBanco(completa)
+    if (erro) throw Object.assign(new Error(erro), { status: 400 })
+    const [sets, valores] = paraAtualizar(linha)
+    return query(`UPDATE cliente SET ${sets} WHERE id = $${valores.length + 1} RETURNING id, nome`, [
+      ...valores,
       req.params.id,
-      ...(comServico ? [u.servico] : []),
-    ]
-    return query(
-      `UPDATE cliente SET nome = $1, unidade = $2, endereco = $3, bairro = $4, cidade = $5, estado = $6, cep = $7
-                          ${comServico ? ', servico = $9' : ''}
-        WHERE id = $8 RETURNING id, nome`,
-      valores,
-    )
+    ])
   })
   if (!rows[0]) return res.status(404).json({ erro: 'Cliente não encontrado.' })
   await registrarAtividade(req, {
@@ -1378,7 +1479,7 @@ router.post('/clientes', exigeSessao, exige('editar_clientes'), async (req, res)
 
   const lidas = lerUnidades(req.body, texto(req.body?.nome))
   if (lidas.erro) return res.status(400).json({ erro: lidas.erro })
-  /* com mais de uma unidade, o endereco e o delas (enderecoNasUnidades) */
+  /* com unidade, o endereco e o delas (enderecoNasUnidades) */
   const vitrine = enderecoNasUnidades(lidas.unidades?.length ?? 0)
   const { erro, campos } = camposCliente(req.body, { vitrine })
   if (erro) return res.status(400).json({ erro })
@@ -1387,18 +1488,17 @@ router.post('/clientes', exigeSessao, exige('editar_clientes'), async (req, res)
 
   const imagem = camposImagem(req.body) ?? {}
   if (!imagemDoClienteValida(imagem)) return res.status(400).json({ erro: IMAGEM_INVALIDA })
-  /* a vitrine nasce com a cidade da primeira unidade, que o banco sem a
-     atualizacao 35 ainda pede; enderecoSaiDoCliente tira logo depois */
-  const primeira = vitrine ? { cidade: lidas.unidades[0].cidade, estado: lidas.unidades[0].estado } : {}
-  const linha = { ...campos, ...primeira, ...imagem }
-  const colunas = Object.keys(linha)
 
   try {
-    const { rows } = await query(
-      `INSERT INTO cliente (${colunas.join(', ')})
-       VALUES (${colunas.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING *`,
-      Object.values(linha),
-    )
+    const comPais = await bancoComPais()
+    /* a vitrine nasce sem endereco, e isso e da atualizacao 35 */
+    if (vitrine && !comPais) return res.status(400).json({ erro: SEM_ENDERECO_NOVO })
+    const sem = comPais ? { linha: campos } : semPaisNoBanco(campos)
+    if (sem.erro) return res.status(400).json({ erro: sem.erro })
+    const unidades = vitrine ? comAPrimeira(req.body, lidas.unidades, campos.nome) : lidas.unidades
+    const [partes, valores] = paraInserir({ ...sem.linha, ...imagem })
+
+    const { rows } = await query(`INSERT INTO cliente ${partes} RETURNING *`, valores)
     await registrarAtividade(req, {
       acao: 'cliente.criado',
       categoria: 'cliente',
@@ -1406,12 +1506,11 @@ router.post('/clientes', exigeSessao, exige('editar_clientes'), async (req, res)
       descricao: 'Novo cliente cadastrado',
       detalhes: {
         cliente: rows[0].nome,
-        cidade: vitrine ? `${lidas.unidades.length} unidades` : `${rows[0].cidade}/${rows[0].estado}`,
+        cidade: vitrine ? `${unidades.length} unidade${unidades.length === 1 ? '' : 's'}` : localDoEndereco(rows[0]),
       },
     })
     await gravarExtrasDoCliente(rows[0].id, extras, { novo: true, usuarioId: req.dono.sub })
-    if (lidas.unidades?.length) await gravarUnidades(rows[0].id, rows[0].nome, lidas.unidades)
-    if (vitrine) await enderecoSaiDoCliente(rows[0].id)
+    if (unidades?.length) await gravarUnidades(rows[0].id, rows[0].nome, unidades, comPais)
     return res.status(201).json({ cliente: (await lerClienteCompleto(rows[0].id)) ?? paraCliente(rows[0]) })
   } catch (e) {
     if (e.status === 400) return res.status(400).json({ erro: e.message })
@@ -1442,23 +1541,26 @@ router.patch('/clientes/:id', exigeSessao, exige('editar_clientes'), async (req,
   if (!imagemDoClienteValida(imagem)) return res.status(400).json({ erro: IMAGEM_INVALIDA })
 
   try {
-    /* com mais de uma unidade, o endereco e o delas: o UPDATE nao mexe
-       nele, e enderecoSaiDoCliente tira o que havia */
+    /* com unidade, o endereco e o delas: o UPDATE nao mexe nele, e
+       enderecoSaiDoCliente tira o que havia */
     const vitrine = enderecoNasUnidades(lidas.unidades ? lidas.unidades.length : await contarUnidades(req.params.id))
     const { erro, campos } = camposCliente(req.body, { vitrine })
     if (erro) return res.status(400).json({ erro })
-    const linha = { ...campos, ...imagem }
-    const colunas = Object.keys(linha)
+    const comPais = await bancoComPais()
+    if (vitrine && !comPais) return res.status(400).json({ erro: SEM_ENDERECO_NOVO })
+    const sem = comPais ? { linha: campos } : semPaisNoBanco(campos)
+    if (sem.erro) return res.status(400).json({ erro: sem.erro })
+    const unidades = vitrine ? comAPrimeira(req.body, lidas.unidades, campos.nome) : lidas.unidades
 
-    if (lidas.unidades) {
-      const barrada = await unidadeQueNaoPodeSair(req.params.id, lidas.unidades)
+    if (unidades) {
+      const barrada = await unidadeQueNaoPodeSair(req.params.id, unidades)
       if (barrada) return res.status(400).json({ erro: barrada })
     }
-    const { rows } = await query(
-      `UPDATE cliente SET ${colunas.map((coluna, i) => `${coluna} = $${i + 1}`).join(', ')}
-        WHERE id = $${colunas.length + 1} RETURNING *`,
-      [...Object.values(linha), req.params.id],
-    )
+    const [sets, valores] = paraAtualizar({ ...sem.linha, ...imagem })
+    const { rows } = await query(`UPDATE cliente SET ${sets} WHERE id = $${valores.length + 1} RETURNING *`, [
+      ...valores,
+      req.params.id,
+    ])
     if (!rows[0]) return res.status(404).json({ erro: 'Cliente não encontrado.' })
     await registrarAtividade(req, {
       acao: 'cliente.editado',
@@ -1469,8 +1571,10 @@ router.patch('/clientes/:id', exigeSessao, exige('editar_clientes'), async (req,
     })
     await gravarExtrasDoCliente(rows[0].id, extras, { novo: false, usuarioId: req.dono.sub })
     /* as unidades (e o nome inteiro delas, se o do cliente mudou) */
-    if (!rows[0].matriz_id) await gravarUnidades(rows[0].id, rows[0].nome, lidas.unidades)
-    if (vitrine) await enderecoSaiDoCliente(rows[0].id)
+    if (!rows[0].matriz_id) await gravarUnidades(rows[0].id, rows[0].nome, unidades, comPais)
+    /* a lista veio da tela: o endereco do cliente ja esta na unidade 1.
+       Sem lista, o que ele ainda tiver vira a unidade 1 aqui */
+    if (vitrine) await (unidades ? enderecoSaiDoCliente(rows[0].id) : enderecoViraUnidade(rows[0].id))
     return res.json({ cliente: (await lerClienteCompleto(rows[0].id)) ?? paraCliente(rows[0]) })
   } catch (e) {
     if (e.status === 400) return res.status(400).json({ erro: e.message })

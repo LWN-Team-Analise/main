@@ -279,7 +279,7 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-30.sql.txt` | negocio.obra_id (o negocio de Novos negocios vira obra), obra_membro_parcial e a permissao `excluir_membro_parcial` |
 | `db/atualizacao-33.sql.txt` | unidades do cliente: cliente.matriz_id e cliente.unidade (Einstein Anapolis e unidade do Einstein) |
 | `db/atualizacao-34.sql.txt` | servico da unidade: cliente.servico ("Albert Einstein Anapolis - Faturamento") |
-| `db/atualizacao-35.sql.txt` | cliente com mais de uma unidade sem endereco proprio: cliente.cidade e cliente.estado aceitam NULL (o endereco e o de cada unidade) |
+| `db/atualizacao-35.sql.txt` | cliente com unidade sem endereco proprio (o dele vira a unidade 1; cliente.cidade e cliente.estado aceitam NULL) e o pais do endereco: cliente.pais ('BR' por padrao), estado e CEP em text para os de fora |
 | `db/atualizacao-32.sql.txt` | turno.compartilhado (+ compartilhado_em/por): o turno novo, colado ou copiado da agenda nasce sem compartilhar com a equipe |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
@@ -1157,13 +1157,21 @@ inteiro: "Einstein Anapolis", "Einstein Alphaville".
 - A unidade que tem obra nao sai do cadastro (o x fica travado e a API recusa).
   Apagar o cliente apaga as unidades e as obras delas junto.
 - O Excel de clientes traz uma linha por unidade, com a coluna "Unidade de".
-- Com **mais de uma unidade**, o cliente vira so a vitrine delas: o CEP, o
-  endereco, o estado e a cidade dele somem do cadastro e do card, e o endereco
-  passa a ser o de cada unidade (a tarja do card diz onde elas estao). No banco
-  (atualizacao 35) o endereco dele fica vazio; sem a 35, ele guarda a cidade e
-  o estado da primeira unidade, so para o banco aceitar. Com uma unidade so, o
-  cliente continua com o endereco dele (`enderecoNasUnidades`, em
-  `src/domain/clientes.js`).
+- Com **unidade**, o cliente vira so a vitrine delas: o CEP, o endereco, o
+  estado e a cidade dele somem do cadastro e do card, e o endereco passa a ser o
+  de cada unidade (a tarja do card diz onde elas estao). O endereco que ele
+  tinha nao se perde: a primeira unidade adicionada leva junto a **Unidade 1**,
+  com esse endereco e a cidade como nome, e a nova vira a Unidade 2. Tirar a
+  nova antes de salvar devolve o endereco ao cliente (`primeiraUnidade` e
+  `enderecoNasUnidades`, em `src/domain/clientes.js`).
+- A unidade 1 entra no banco com a data de cadastro do cliente, e as unidades
+  aparecem na ordem do cadastro: ela vem sempre primeiro. Pelo "Unidade de" (e
+  pela API chamada sem a lista de unidades), quem cria a unidade 1 e a API
+  (`enderecoViraUnidade`). Se uma irma ja tem o nome da cidade, ela vira
+  "Cidade - Matriz".
+- No banco (atualizacao 35) o endereco do cliente com unidade fica vazio; a 35
+  faz a unidade 1 de quem ja tinha unidade. Sem a 35, a API recusa cadastrar
+  unidade, com o recado para rodar `npm run db:atualizar`.
 
 ### O servico da unidade e o "Unidade de"
 
@@ -1193,6 +1201,27 @@ ganhou o campo Servico.
 
 Banco sem a atualizacao 34: as unidades continuam aparecendo e gravando sem
 servico; mandar um servico devolve o recado para rodar a atualizacao.
+
+### O pais do endereco
+
+O endereco do cliente e o de cada unidade comecam pelo **Pais** (o Brasil, de
+padrao). No Brasil nada muda: o CEP preenche o resto, os estados (UF) e as
+cidades vem do IBGE. Escolhendo outro pais, o CEP vira **Codigo postal** (livre,
+ate 12 letras e numeros) e os estados e as cidades daquele pais vem da
+**CountriesNow** (`countriesnow.space`, publica e sem chave; liberada no
+`connect-src` do `vercel.json`). Pais sem estados na lista (Monaco, Hong Kong)
+ou a API fora do ar: o estado e a cidade viram campo livre.
+
+- No banco (atualizacao 35): `cliente.pais`, o codigo ISO de duas letras. Fora
+  do Brasil o estado e o nome ("Florida"), nao a UF.
+- A lista de paises e fixa (`src/domain/paises.js`), com os nomes em portugues
+  do proprio navegador (`Intl.DisplayNames`).
+- Na tela, "Miami/Florida (Estados Unidos)"; o Excel ganhou as colunas Estado e
+  Pais. O globo da tela inicial so marca cliente do Brasil.
+- Banco sem a atualizacao 35: endereco fora do Brasil devolve o recado para
+  rodar `npm run db:atualizar`.
+- Nas listas de escolha, digitar as primeiras letras pula para a opcao ("par"
+  acha o Paraguai), como no `<select>` do navegador.
 
 ## Frotas: excluir saida ou devolucao
 
@@ -1597,7 +1626,7 @@ src/
 │   ├── dadosService.js     # clientes, obras, checks e observacoes via /api/dados
 │   ├── roteiroService.js   # etapas, cards e checks via /api/roteiro
 │   ├── equipeService.js    # cargos e usuarios via /api/equipe
-│   └── enderecoService.js  # ViaCEP + IBGE (estados e cidades)
+│   └── enderecoService.js  # ViaCEP + IBGE (Brasil) e CountriesNow (outros paises)
 ├── utils/
 │   ├── corDaImagem.js      # cor predominante de uma imagem
 │   ├── formato.js          # datas, CEP, iniciais, cor a partir do nome
@@ -2575,9 +2604,10 @@ tabelas `etapa`, `etapa_card` e `etapa_check`, e a propria tela da obra cria e
 apaga. Como o roteiro e unico, mexer nele vale para TODAS as obras — por isso so
 cargo com acesso total edita. O que cada obra ja marcou fica em `obra_check`.
 
-O cadastro de cliente usa duas APIs publicas, sem chave: **ViaCEP** (o CEP
+O cadastro de cliente usa tres APIs publicas, sem chave: **ViaCEP** (o CEP
 preenche endereco, bairro, cidade e estado) e **IBGE** (listas de estados e de
-cidades). Se qualquer uma falhar, os campos continuam editaveis na mao.
+cidades) no Brasil, e **CountriesNow** (estados e cidades dos outros paises).
+Se qualquer uma falhar, os campos continuam editaveis na mao.
 
 A tarja colorida do card do cliente sai da **cor predominante da logo**
 (`src/utils/corDaImagem.js`): a imagem e reduzida num canvas e os pixels sao

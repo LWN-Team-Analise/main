@@ -7,10 +7,20 @@ import { CampoSelecao, CampoTexto } from '@/components/Campo/Campo'
 import { CampoData } from '@/components/CampoData/CampoData'
 import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
-import { SERVICO_MAXIMO, UNIDADE_MAXIMA, chaveDaUnidade, enderecoNasUnidades, nomeDaUnidade } from '@/domain/clientes'
+import {
+  SERVICO_MAXIMO,
+  UNIDADE_MAXIMA,
+  chaveDaUnidade,
+  codigoPostal,
+  enderecoNasUnidades,
+  nomeDaUnidade,
+  ordemDasUnidades,
+  primeiraUnidade,
+} from '@/domain/clientes'
 import { valorCurto } from '@/domain/comercial'
+import { PAIS_PADRAO, ehBrasil, opcoesDePaises } from '@/domain/paises'
 import { carregarImagemDoCliente } from '@/services/dadosService'
-import { buscarCEP, listarCidades, listarEstados } from '@/services/enderecoService'
+import { buscarCEP, estadosCarregados, listarCidades, listarEstados } from '@/services/enderecoService'
 import { formatarCEP } from '@/utils/formato'
 import { prepararImagem } from '@/utils/imagem'
 import './ModalCliente.css'
@@ -29,6 +39,7 @@ const VAZIO = {
   capa: null,
   recorteCapa: null,
   setorId: '',
+  pais: PAIS_PADRAO,
   cep: '',
   endereco: '',
   bairro: '',
@@ -49,11 +60,28 @@ const VAZIO = {
 }
 
 const PESSOA_VAZIA = { id: null, nome: '', cargo: '', email: '', telefone: '' }
-const UNIDADE_VAZIA = { id: null, unidade: '', servico: '', cep: '', endereco: '', bairro: '', estado: '', cidade: '' }
+const UNIDADE_VAZIA = { id: null, unidade: '', servico: '', pais: PAIS_PADRAO, cep: '', endereco: '', bairro: '', estado: '', cidade: '' }
 /* a chave da unidade na tela: a nova ainda nao tem id */
 let proximaChave = 0
 const novaChave = () => `u${(proximaChave += 1)}`
 const emailCerto = (email) => /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)
+
+/* o endereco de um cadastro (do cliente ou de uma unidade), sem o resto */
+const enderecoDe = (origem) => ({
+  pais: origem.pais || PAIS_PADRAO,
+  cep: origem.cep ?? '',
+  endereco: origem.endereco ?? '',
+  bairro: origem.bairro ?? '',
+  estado: origem.estado ?? '',
+  cidade: origem.cidade ?? '',
+})
+
+/* o endereco que veio do banco, com o CEP ja na mascara */
+const enderecoDoBanco = (c) => ({ ...enderecoDe(c), cep: c.cep ? codigoPostal(c.cep, c.pais) : '' })
+
+/* o estado so e obrigatorio onde ha estados para escolher: no Brasil
+   sempre, fora dele quando a lista trouxe algum (Monaco nao tem) */
+const pedeEstado = (pais) => ehBrasil(pais) || (estadosCarregados(pais)?.length ?? 0) > 0
 
 /**
  * O nome da unidade (o lugar) se completa com a cidade do endereco:
@@ -68,9 +96,11 @@ function lugarSegueCidade(atual, mudanca) {
 }
 
 /**
- * Cadastro de cliente. O CEP puxa o resto do endereco no ViaCEP; a lista de
- * estados e de cidades vem do IBGE. Se alguma API falhar, os campos seguem
- * editaveis na mao — o cadastro nunca fica preso.
+ * Cadastro de cliente. O endereco comeca pelo pais (o Brasil, de padrao):
+ * no Brasil o CEP puxa o resto no ViaCEP e as listas de estados e cidades
+ * vem do IBGE; fora dele, da CountriesNow. Se alguma API falhar, os
+ * campos seguem editaveis na mao — o cadastro nunca fica preso
+ * (CamposEndereco).
  *
  * No Novo cliente, o "Unidade de" troca o cadastro por uma UNIDADE de um
  * cliente que ja existe: o formulario vem com os dados dele (endereco,
@@ -79,20 +109,17 @@ function lugarSegueCidade(atual, mudanca) {
  * A logo, a capa e o setor sao os do cliente. A unidade aberta pelo card
  * do cliente cai no mesmo formulario, para editar.
  *
- * Com MAIS DE UMA unidade, o cliente vira a vitrine delas: o CEP, o
- * endereco, o estado e a cidade dele somem do formulario (e do banco), e
- * o endereco passa a ser o de cada unidade. Voltando a uma so, os campos
- * voltam.
+ * Com UNIDADE, o cliente vira a vitrine delas: o endereco dele some do
+ * formulario (e do banco) e passa a ser o de cada unidade. A primeira
+ * unidade adicionada leva junto o endereco que ele tinha — ele vira a
+ * Unidade 1, e a nova e a Unidade 2. Tirando a nova antes de salvar, a
+ * Unidade 1 volta a ser o endereco do cliente.
  */
 export default function ModalCliente({ aberto, cliente = null, resumo = null, nota = null, aoFechar, aoSalvar }) {
   const { setores, equipe, clientes, obras } = useDados()
   const { user } = useAuth()
   const [form, setForm] = useState(VAZIO)
   const [erros, setErros] = useState({})
-  const [estados, setEstados] = useState([])
-  const [cidades, setCidades] = useState([])
-  const [buscandoCEP, setBuscandoCEP] = useState(false)
-  const [avisoCEP, setAvisoCEP] = useState('')
   /* a imagem que o editor de enquadramento esta ajustando; null = fechado */
   const [ajustando, setAjustando] = useState(null)
   const [erroImagem, setErroImagem] = useState('')
@@ -110,8 +137,8 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
           ? {
               ...VAZIO,
               ...cliente,
+              ...enderecoDoBanco(cliente),
               setorId: cliente.setorId ?? '',
-              cep: cliente.cep ? formatarCEP(cliente.cep) : '',
               proprietarioId: cliente.proprietarioId ?? '',
               proximoContato: cliente.proximoContato ?? '',
               pessoas: (cliente.pessoas ?? []).map((p) => ({ ...PESSOA_VAZIA, ...p })),
@@ -120,52 +147,25 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
               servico: cliente.servico ?? '',
               unidades: clientes
                 .filter((c) => String(c.matrizId) === String(cliente.id))
+                .sort(ordemDasUnidades)
                 .map((c) => ({
                   ...UNIDADE_VAZIA,
                   chave: `id${c.id}`,
                   id: c.id,
                   unidade: c.unidade ?? '',
                   servico: c.servico ?? '',
-                  cep: c.cep ? formatarCEP(c.cep) : '',
-                  endereco: c.endereco ?? '',
-                  bairro: c.bairro ?? '',
-                  estado: c.estado ?? '',
-                  cidade: c.cidade ?? '',
+                  ...enderecoDoBanco(c),
                 })),
             }
           : /* cliente novo e de quem esta cadastrando, ate alguem trocar */
             { ...VAZIO, proprietarioId: user?.id ? String(user.id) : '' },
       )
       setErros({})
-      setAvisoCEP('')
       setErroImagem('')
       setImagemMexida(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aberto, cliente, user?.id])
-
-  /* estados: uma vez so, na primeira abertura */
-  useEffect(() => {
-    if (!aberto || estados.length > 0) return
-    listarEstados()
-      .then(setEstados)
-      .catch(() => setEstados([]))
-  }, [aberto, estados.length])
-
-  /* cidades acompanham o estado escolhido */
-  useEffect(() => {
-    if (!form.estado) {
-      setCidades([])
-      return
-    }
-    let valido = true
-    listarCidades(form.estado)
-      .then((lista) => valido && setCidades(lista))
-      .catch(() => valido && setCidades([]))
-    return () => {
-      valido = false
-    }
-  }, [form.estado])
 
   const mudar = (campo) => (evento) => {
     const valor = evento?.target ? evento.target.value : evento
@@ -176,7 +176,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
   /* ---------------- A unidade sozinha ---------------- */
 
   const modoUnidade = Boolean(form.matrizId)
-  /* o cliente de varias unidades nao tem endereco proprio (enderecoNasUnidades) */
+  /* o cliente com unidade nao tem endereco proprio (enderecoNasUnidades) */
   const vitrine = !modoUnidade && enderecoNasUnidades(form.unidades.length)
   const matriz = modoUnidade ? clientes.find((c) => String(c.id) === String(form.matrizId)) ?? null : null
   /* so o cliente "de cima" pode ter unidade */
@@ -195,7 +195,6 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
     const id = evento.target.value
     const escolhido = clientes.find((c) => String(c.id) === String(id))
     setErros({})
-    setAvisoCEP('')
     if (!escolhido) {
       setForm({ ...VAZIO, proprietarioId: user?.id ? String(user.id) : '' })
       return
@@ -204,11 +203,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
       ...VAZIO,
       matrizId: String(escolhido.id),
       unidade: escolhido.cidade ?? '',
-      cep: escolhido.cep ? formatarCEP(escolhido.cep) : '',
-      endereco: escolhido.endereco ?? '',
-      bairro: escolhido.bairro ?? '',
-      estado: escolhido.estado ?? '',
-      cidade: escolhido.cidade ?? '',
+      ...enderecoDoBanco(escolhido),
       proprietarioId: escolhido.proprietarioId ?? (user?.id ? String(user.id) : ''),
       proximoContato: escolhido.proximoContato ?? '',
       /* copias: as pessoas da unidade sao dela, sem mexer nas do cliente */
@@ -307,46 +302,41 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
   }
 
   const novaUnidade = () =>
-    setForm((atual) => ({ ...atual, unidades: [...atual.unidades, { ...UNIDADE_VAZIA, chave: novaChave() }] }))
+    setForm((atual) => {
+      /* a unidade nova comeca no pais do cliente */
+      const nova = { ...UNIDADE_VAZIA, chave: novaChave(), pais: atual.pais }
+      if (atual.unidades.length > 0) return { ...atual, unidades: [...atual.unidades, nova] }
+      /* a primeira: o endereco que o cliente tinha vira a Unidade 1, e a nova e a 2 */
+      const primeira = primeiraUnidade({ nome: atual.nome, ...enderecoDe(atual) })
+      if (!primeira) return { ...atual, unidades: [nova] }
+      return {
+        ...atual,
+        unidades: [{ ...UNIDADE_VAZIA, ...primeira, cep: atual.cep, chave: novaChave(), doCliente: true }, nova],
+      }
+    })
 
   const tirarUnidade = (chave) =>
-    setForm((atual) => ({ ...atual, unidades: atual.unidades.filter((u) => u.chave !== chave) }))
+    setForm((atual) => {
+      const saiu = atual.unidades.find((u) => u.chave === chave)
+      const ficam = atual.unidades.filter((u) => u.chave !== chave)
+      /* sobrou so a Unidade 1 que acabou de nascer do endereco do cliente:
+         ela volta a ser o endereco dele */
+      if (ficam.length === 1 && ficam[0].doCliente && !ficam[0].id) {
+        return { ...atual, ...enderecoDe(ficam[0]), unidades: [] }
+      }
+      /* sem unidade nenhuma, o cliente volta a ter endereco — o da ultima
+         que saiu, se ele estava sem */
+      if (ficam.length === 0 && saiu && !atual.cidade.trim()) return { ...atual, ...enderecoDe(saiu), unidades: [] }
+      return { ...atual, unidades: ficam }
+    })
 
   /* quantas obras cada unidade ja tem: a que tem obra nao sai daqui */
   const obrasDaUnidade = (id) => (id ? obras.filter((o) => String(o.clienteId) === String(id)).length : 0)
 
-  /* trocar o estado na mao invalida a cidade que estava escolhida */
-  const mudarEstado = (evento) => {
-    const sigla = evento.target.value
-    setForm((atual) => ({ ...atual, ...daUnidade(atual, { estado: sigla, cidade: '' }) }))
-    setErros((atual) => ({ ...atual, estado: undefined }))
-  }
-
-  const mudarCEP = async (evento) => {
-    const formatado = formatarCEP(evento.target.value)
-    setForm((atual) => ({ ...atual, cep: formatado }))
-    setErros((atual) => ({ ...atual, cep: undefined }))
-    setAvisoCEP('')
-
-    const digitos = formatado.replace(/\D/g, '')
-    if (digitos.length !== 8) return
-
-    setBuscandoCEP(true)
-    try {
-      const achado = await buscarCEP(digitos)
-      if (!achado) {
-        setAvisoCEP('CEP não encontrado — preencha o endereço manualmente.')
-        return
-      }
-      /* o CEP manda no endereco inteiro: assim cidade e estado nunca
-         ficam contradizendo o CEP digitado */
-      setForm((atual) => ({ ...atual, ...daUnidade(atual, achado) }))
-      setAvisoCEP('Endereço preenchido pelo CEP.')
-    } catch {
-      setAvisoCEP('Não foi possível consultar o CEP agora.')
-    } finally {
-      setBuscandoCEP(false)
-    }
+  /* o endereco do cliente (ou da unidade sozinha), pelo CamposEndereco */
+  const mudarEndereco = (mudanca) => {
+    setForm((atual) => ({ ...atual, ...daUnidade(atual, mudanca) }))
+    setErros((atual) => ({ ...atual, ...Object.fromEntries(Object.keys(mudanca).map((campo) => [campo, undefined])) }))
   }
 
   const enviar = (evento) => {
@@ -370,7 +360,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
     } else if (!form.nome.trim()) novosErros.nome = 'Informe o nome da empresa.'
     if (!vitrine) {
       if (!form.cidade.trim()) novosErros.cidade = 'Informe a cidade.'
-      if (!form.estado) novosErros.estado = 'Escolha o estado.'
+      if (!form.estado.trim() && pedeEstado(form.pais)) novosErros.estado = 'Escolha o estado.'
     }
     form.pessoas.forEach((p, i) => {
       const algum = p.nome.trim() || p.email.trim() || p.telefone.trim() || p.cargo.trim()
@@ -384,7 +374,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
       const chave = `unidade-${u.chave}`
       if (qual === '|') novosErros[chave] = 'Dê um nome ou um serviço à unidade (ex.: Anápolis, Faturamento).'
       else if (nomesDasUnidades.has(qual)) novosErros[chave] = 'Já há uma unidade com esse nome e esse serviço.'
-      else if (!u.estado) novosErros[chave] = 'Escolha o estado da unidade.'
+      else if (!u.estado.trim() && pedeEstado(u.pais)) novosErros[chave] = 'Escolha o estado da unidade.'
       else if (!u.cidade.trim()) novosErros[chave] = 'Informe a cidade da unidade.'
       nomesDasUnidades.add(qual)
     })
@@ -412,6 +402,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
         matrizId: form.matrizId,
         unidade: form.unidade.trim(),
         servico: form.servico.trim(),
+        pais: form.pais,
         cep: form.cep,
         endereco: form.endereco.trim(),
         bairro: form.bairro.trim(),
@@ -426,13 +417,16 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
     }
 
     const { logo, logoOriginal, recorteLogo, capa, recorteCapa, matrizId, unidade, servico, ...campos } = form
-    /* a vitrine vai sem endereco: o dele sai do banco, e fica o das unidades */
+    /* a vitrine vai sem endereco: o dele ja esta na Unidade 1, e sai do banco */
     if (vitrine) Object.assign(campos, { cep: '', endereco: '', bairro: '', estado: '', cidade: '' })
     campos.pessoas = pessoas
     campos.unidades = form.unidades.map((u) => ({
       id: u.id,
       unidade: u.unidade.trim(),
       servico: u.servico.trim(),
+      /* a Unidade 1 nova leva a data de cadastro do cliente, para vir antes */
+      doCliente: Boolean(u.doCliente && !u.id),
+      pais: u.pais,
       cep: u.cep,
       endereco: u.endereco.trim(),
       bairro: u.bairro.trim(),
@@ -608,62 +602,10 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
           </>
         )}
 
-        {/* o endereco do cliente; com mais de uma unidade ele some, e
-            cada unidade tem o seu (la embaixo) */}
+        {/* o endereco do cliente; com unidade ele some, e cada unidade
+            tem o seu (la embaixo) */}
         {!vitrine && (
-          <>
-            <CampoTexto
-              rotulo="CEP"
-              inputMode="numeric"
-              placeholder="00000-000"
-              value={form.cep}
-              onChange={mudarCEP}
-              dica={buscandoCEP ? 'Consultando...' : avisoCEP || undefined}
-            />
-
-            <CampoTexto
-              rotulo="Endereço"
-              placeholder="Rua e número"
-              value={form.endereco}
-              onChange={mudar('endereco')}
-            />
-
-            <CampoTexto
-              rotulo="Bairro"
-              placeholder="Bairro"
-              value={form.bairro}
-              onChange={mudar('bairro')}
-            />
-
-            <CampoSelecao
-              rotulo="Estado"
-              value={form.estado}
-              onChange={mudarEstado}
-              erro={erros.estado}
-              vazio={estados.length === 0 ? 'Carregando...' : 'Escolha o estado...'}
-              opcoes={estados.map((e) => ({ valor: e.sigla, rotulo: `${e.sigla} — ${e.nome}` }))}
-            />
-
-            {/* sem lista do IBGE (offline ou API fora), vira campo livre */}
-            {cidades.length > 0 ? (
-              <CampoSelecao
-                rotulo="Cidade"
-                value={form.cidade}
-                onChange={mudar('cidade')}
-                erro={erros.cidade}
-                vazio="Escolha a cidade..."
-                opcoes={cidades.map((c) => ({ valor: c, rotulo: c }))}
-              />
-            ) : (
-              <CampoTexto
-                rotulo="Cidade"
-                placeholder={form.estado ? 'Carregando cidades...' : 'Escolha o estado antes'}
-                value={form.cidade}
-                onChange={mudar('cidade')}
-                erro={erros.cidade}
-              />
-            )}
-          </>
+          <CamposEndereco valor={form} aoMudar={mudarEndereco} erros={{ estado: erros.estado, cidade: erros.cidade }} />
         )}
 
         {/* ---------------- Unidades ----------------
@@ -680,7 +622,6 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
                 ordem={i + 1}
                 unidade={u}
                 nomeDoCliente={form.nome}
-                estados={estados}
                 erro={erros[`unidade-${u.chave}`]}
                 obras={obrasDaUnidade(u.id)}
                 aoMudar={(mudanca) => mudarUnidade(u.chave, mudanca)}
@@ -832,33 +773,69 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
 }
 
 /**
- * Uma unidade no cadastro: o serviço ("Faturamento"), o nome (o lugar,
- * "Anápolis", que acompanha a cidade) e o endereço dela. O CEP preenche
- * o resto, como no cliente; as cidades vêm do estado escolhido NESTA
- * unidade.
+ * O endereco — do cliente ou de uma unidade: o pais, o CEP, a rua, o
+ * bairro, o estado e a cidade.
+ *
+ * No Brasil o CEP preenche o resto (ViaCEP) e as listas vem do IBGE;
+ * fora dele o codigo postal e livre e as listas vem da CountriesNow. A
+ * lista que nao vem (API fora, pais sem estados) vira campo livre — o
+ * cadastro nunca fica preso. O que estava gravado e nao esta na lista
+ * entra nela, para nao sumir da tela.
+ *
+ * `aoMudar` recebe so o que mudou: { cidade: 'Miami' }.
  */
-function CampoUnidade({ ordem, unidade, nomeDoCliente, estados, erro, obras, aoMudar, aoTirar }) {
-  const [cidades, setCidades] = useState([])
+function CamposEndereco({ valor, aoMudar, erros = {} }) {
+  const brasil = ehBrasil(valor.pais)
+  /* null = carregando; [] = sem lista */
+  const [estados, setEstados] = useState(null)
+  const [cidades, setCidades] = useState(null)
   const [buscandoCEP, setBuscandoCEP] = useState(false)
   const [avisoCEP, setAvisoCEP] = useState('')
 
   useEffect(() => {
-    if (!unidade.estado) {
+    let valido = true
+    setEstados(estadosCarregados(valor.pais) ?? null)
+    listarEstados(valor.pais)
+      .then((lista) => valido && setEstados(lista))
+      .catch(() => valido && setEstados([]))
+    return () => {
+      valido = false
+    }
+  }, [valor.pais])
+
+  /* as cidades acompanham o estado escolhido */
+  useEffect(() => {
+    if (!valor.estado) {
       setCidades([])
       return undefined
     }
     let valido = true
-    listarCidades(unidade.estado)
+    setCidades(null)
+    listarCidades(valor.pais, valor.estado)
       .then((lista) => valido && setCidades(lista))
       .catch(() => valido && setCidades([]))
     return () => {
       valido = false
     }
-  }, [unidade.estado])
+  }, [valor.pais, valor.estado])
 
   const mudar = (campo) => (evento) => aoMudar({ [campo]: evento?.target ? evento.target.value : evento })
 
+  /* trocar o pais leva o estado, a cidade e o CEP: nenhum deles vale no outro */
+  const mudarPais = (evento) => {
+    if (evento.target.value === valor.pais) return
+    setAvisoCEP('')
+    aoMudar({ pais: evento.target.value, estado: '', cidade: '', cep: '' })
+  }
+
+  /* trocar o estado na mao invalida a cidade que estava escolhida */
+  const mudarEstado = (evento) => aoMudar({ estado: evento.target.value, cidade: '' })
+
   const mudarCEP = async (evento) => {
+    if (!brasil) {
+      aoMudar({ cep: evento.target.value })
+      return
+    }
     const formatado = formatarCEP(evento.target.value)
     aoMudar({ cep: formatado })
     setAvisoCEP('')
@@ -868,9 +845,11 @@ function CampoUnidade({ ordem, unidade, nomeDoCliente, estados, erro, obras, aoM
     try {
       const achado = await buscarCEP(digitos)
       if (!achado) {
-        setAvisoCEP('CEP não encontrado — preencha à mão.')
+        setAvisoCEP('CEP não encontrado — preencha o endereço manualmente.')
         return
       }
+      /* o CEP manda no endereco inteiro: assim cidade e estado nunca
+         ficam contradizendo o CEP digitado */
       aoMudar(achado)
       setAvisoCEP('Endereço preenchido pelo CEP.')
     } catch {
@@ -879,6 +858,82 @@ function CampoUnidade({ ordem, unidade, nomeDoCliente, estados, erro, obras, aoM
       setBuscandoCEP(false)
     }
   }
+
+  /* a lista com o que estava gravado, mesmo que ela nao o tenha */
+  const comOAtual = (opcoes, atual) =>
+    !atual || opcoes.some((o) => o.valor === atual) ? opcoes : [{ valor: atual, rotulo: atual }, ...opcoes]
+
+  const temEstados = estados === null || estados.length > 0
+  return (
+    <>
+      <CampoSelecao rotulo="País" value={valor.pais} onChange={mudarPais} opcoes={opcoesDePaises()} />
+
+      <CampoTexto
+        rotulo={brasil ? 'CEP' : 'Código postal'}
+        inputMode={brasil ? 'numeric' : undefined}
+        placeholder={brasil ? '00000-000' : 'Código postal'}
+        maxLength={brasil ? undefined : 12}
+        value={valor.cep}
+        onChange={mudarCEP}
+        dica={buscandoCEP ? 'Consultando...' : avisoCEP || undefined}
+      />
+
+      <CampoTexto rotulo="Endereço" placeholder="Rua e número" value={valor.endereco} onChange={mudar('endereco')} />
+
+      <CampoTexto rotulo="Bairro" placeholder="Bairro" value={valor.bairro} onChange={mudar('bairro')} />
+
+      {temEstados ? (
+        <CampoSelecao
+          rotulo="Estado"
+          value={valor.estado}
+          onChange={mudarEstado}
+          erro={erros.estado}
+          vazio={estados === null ? 'Carregando...' : 'Escolha o estado...'}
+          opcoes={comOAtual(estados ?? [], valor.estado)}
+        />
+      ) : (
+        <CampoTexto
+          rotulo="Estado"
+          placeholder={brasil ? 'UF (ex.: SP)' : 'Estado ou província'}
+          maxLength={brasil ? 2 : 80}
+          value={valor.estado}
+          onChange={mudar('estado')}
+          erro={erros.estado}
+        />
+      )}
+
+      {/* sem lista (API fora, ou ela nao conhece o estado), vira campo livre */}
+      {cidades?.length > 0 ? (
+        <CampoSelecao
+          rotulo="Cidade"
+          value={valor.cidade}
+          onChange={mudar('cidade')}
+          erro={erros.cidade}
+          vazio="Escolha a cidade..."
+          opcoes={comOAtual(
+            cidades.map((c) => ({ valor: c, rotulo: c })),
+            valor.cidade,
+          )}
+        />
+      ) : (
+        <CampoTexto
+          rotulo="Cidade"
+          placeholder={cidades === null ? 'Carregando cidades...' : !valor.estado && temEstados ? 'Escolha o estado antes' : 'Cidade'}
+          value={valor.cidade}
+          onChange={mudar('cidade')}
+          erro={erros.cidade}
+        />
+      )}
+    </>
+  )
+}
+
+/**
+ * Uma unidade no cadastro: o serviço ("Faturamento"), o nome (o lugar,
+ * "Anápolis", que acompanha a cidade) e o endereço dela (CamposEndereco).
+ */
+function CampoUnidade({ ordem, unidade, nomeDoCliente, erro, obras, aoMudar, aoTirar }) {
+  const mudar = (campo) => (evento) => aoMudar({ [campo]: evento?.target ? evento.target.value : evento })
 
   const curto = unidade.unidade.trim()
   const servico = unidade.servico.trim()
@@ -925,39 +980,7 @@ function CampoUnidade({ ordem, unidade, nomeDoCliente, estados, erro, obras, aoM
           onChange={mudar('unidade')}
           maxLength={UNIDADE_MAXIMA}
         />
-        <CampoTexto
-          rotulo="CEP"
-          inputMode="numeric"
-          placeholder="00000-000"
-          value={unidade.cep}
-          onChange={mudarCEP}
-          dica={buscandoCEP ? 'Consultando...' : avisoCEP || undefined}
-        />
-        <CampoTexto rotulo="Endereço" placeholder="Rua e número" value={unidade.endereco} onChange={mudar('endereco')} />
-        <CampoTexto rotulo="Bairro" placeholder="Bairro" value={unidade.bairro} onChange={mudar('bairro')} />
-        <CampoSelecao
-          rotulo="Estado"
-          value={unidade.estado}
-          onChange={(evento) => aoMudar({ estado: evento.target.value, cidade: '' })}
-          vazio={estados.length === 0 ? 'Carregando...' : 'Escolha o estado...'}
-          opcoes={estados.map((e) => ({ valor: e.sigla, rotulo: `${e.sigla} — ${e.nome}` }))}
-        />
-        {cidades.length > 0 ? (
-          <CampoSelecao
-            rotulo="Cidade"
-            value={unidade.cidade}
-            onChange={mudar('cidade')}
-            vazio="Escolha a cidade..."
-            opcoes={cidades.map((c) => ({ valor: c, rotulo: c }))}
-          />
-        ) : (
-          <CampoTexto
-            rotulo="Cidade"
-            placeholder={unidade.estado ? 'Carregando cidades...' : 'Escolha o estado antes'}
-            value={unidade.cidade}
-            onChange={mudar('cidade')}
-          />
-        )}
+        <CamposEndereco valor={unidade} aoMudar={aoMudar} />
       </div>
       {erro && (
         <span className="campo__nota campo__nota--erro" role="alert">

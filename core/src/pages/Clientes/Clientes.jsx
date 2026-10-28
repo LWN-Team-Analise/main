@@ -17,9 +17,19 @@ import {
 } from '@/components/CutoutCard/CutoutCard'
 import { useDados } from '@/context/DadosContext'
 import { ordemDosClientes } from '@/domain/obras'
-import { enderecoNasUnidades, locaisDasUnidades, raizDoCliente, rotuloDaUnidade } from '@/domain/clientes'
+import {
+  codigoPostal,
+  enderecoCompleto,
+  enderecoNasUnidades,
+  localDoEndereco,
+  locaisDasUnidades,
+  ordemDasUnidades,
+  raizDoCliente,
+  rotuloDaUnidade,
+} from '@/domain/clientes'
+import { ehBrasil, nomeDoPais } from '@/domain/paises'
 import Estrelas from '@/components/Estrelas/Estrelas'
-import { dataBR, dataHora, formatarCEP, hojeISO } from '@/utils/formato'
+import { dataBR, dataHora, hojeISO } from '@/utils/formato'
 import useCorDaLogo from '@/hooks/useCorDaLogo'
 import Confirma from '@/components/Confirma/Confirma'
 import { carregarResumoClientes } from '@/services/comercialService'
@@ -108,7 +118,7 @@ export default function Clientes() {
       if (!unidades.has(chave)) unidades.set(chave, [])
       unidades.get(chave).push(c)
     })
-    unidades.forEach((lista) => lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')))
+    unidades.forEach((lista) => lista.sort(ordemDasUnidades))
     return {
       principais: clientes.filter((c) => !c.matrizId),
       unidadesDe: unidades,
@@ -156,8 +166,11 @@ export default function Clientes() {
 
   const lista = useMemo(() => {
     const alvo = busca.trim().toLowerCase()
-    /* a busca acha o cliente tambem pelo nome ou pela cidade de uma unidade */
-    const bate = (c) => `${c.nome} ${c.cidade} ${c.estado}`.toLowerCase().includes(alvo)
+    /* a busca acha o cliente tambem pelo nome, pela cidade ou pelo pais de uma unidade */
+    const bate = (c) =>
+      `${c.nome} ${c.cidade} ${c.estado} ${c.cidade && !ehBrasil(c.pais) ? nomeDoPais(c.pais) : ''}`
+        .toLowerCase()
+        .includes(alvo)
     let filtrados = alvo
       ? principais.filter((c) => bate(c) || (unidadesDe.get(String(c.id)) ?? []).some(bate))
       : principais
@@ -246,14 +259,10 @@ export default function Clientes() {
    */
   const exportarClientes = () => {
     const nomeDe = (id) => equipe.find((p) => String(p.id) === String(id))?.nome ?? ''
-    const enderecoDe = (c) =>
-      [c.endereco, c.bairro, c.cidade && c.estado ? `${c.cidade}/${c.estado}` : c.cidade, c.cep ? formatarCEP(c.cep) : '']
-        .filter(Boolean)
-        .join(' — ')
     const ordenados = [...clientes].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
     const nomeDoCliente = (id) => clientes.find((x) => String(x.id) === String(id))?.nome ?? ''
-    /* o cliente de varias unidades sai sem endereco: o de cada unidade
-       esta na linha dela */
+    /* o cliente com unidade sai sem endereco: o de cada unidade esta na
+       linha dela */
     const vitrine = (c) => !c.matrizId && enderecoNasUnidades((unidadesDe.get(String(c.id)) ?? []).length)
     baixarPlanilha(
       [
@@ -265,7 +274,8 @@ export default function Clientes() {
             { titulo: 'Unidade de', tipo: 'texto', largura: 26 },
             { titulo: 'Endereço', tipo: 'texto', largura: 48 },
             { titulo: 'Cidade', tipo: 'texto', largura: 18 },
-            { titulo: 'UF', tipo: 'texto', largura: 5 },
+            { titulo: 'Estado', tipo: 'texto', largura: 14 },
+            { titulo: 'País', tipo: 'texto', largura: 14 },
             { titulo: 'Setor', tipo: 'texto', largura: 18 },
             { titulo: 'Pessoas', tipo: 'texto', largura: 46 },
             { titulo: 'Negócios fechados', tipo: 'inteiro', largura: 12 },
@@ -278,9 +288,10 @@ export default function Clientes() {
           linhas: ordenados.map((c) => [
             c.nome,
             c.matrizId ? nomeDoCliente(c.matrizId) : '',
-            vitrine(c) ? '' : enderecoDe(c),
+            vitrine(c) ? '' : enderecoCompleto(c),
             vitrine(c) ? '' : c.cidade,
             vitrine(c) ? '' : c.estado,
+            vitrine(c) || !c.cidade ? '' : nomeDoPais(c.pais),
             setorPorId(c.setorId)?.nome ?? '',
             (c.pessoas ?? []).map((p) => (p.email ? `${p.nome} <${p.email}>` : p.nome)).join('; '),
             resumo[c.id]?.ganhos ?? 0,
@@ -526,10 +537,10 @@ function CardCliente({ cliente, unidades = [], numeros, nota, setor, podeMexer, 
   const { isDark } = useTheme()
   const cor = useCorDaLogo(cliente.logo, cliente.nome)
   const [aberto, setAberto] = useState(false)
-  /* com mais de uma unidade o card e a vitrine delas: o endereco e o de
-     cada unidade, e a tarja de baixo da foto diz onde elas estao */
+  /* com unidade o card e a vitrine delas: o endereco e o de cada
+     unidade, e a tarja de baixo da foto diz onde elas estao */
   const vitrine = enderecoNasUnidades(unidades.length)
-  const proprio = [cliente.cidade, cliente.estado].filter(Boolean).join('/')
+  const proprio = localDoEndereco(cliente)
   const locais = vitrine || !proprio ? locaisDasUnidades(unidades) : [proprio]
   const onde = locais.length > 2 ? `${locais.slice(0, 2).join(' · ')} +${locais.length - 2}` : locais.join(' · ')
   /* a lista das obras avaliadas fica fechada ate alguem pedir: o card ja
@@ -693,9 +704,15 @@ function CardCliente({ cliente, unidades = [], numeros, nota, setor, podeMexer, 
                   <dd>{cliente.bairro || '—'}</dd>
                 </div>
                 <div>
-                  <dt>CEP</dt>
-                  <dd>{cliente.cep ? formatarCEP(cliente.cep) : '—'}</dd>
+                  <dt>{ehBrasil(cliente.pais) ? 'CEP' : 'Código postal'}</dt>
+                  <dd>{codigoPostal(cliente.cep, cliente.pais) || '—'}</dd>
                 </div>
+                {!ehBrasil(cliente.pais) && (
+                  <div>
+                    <dt>País</dt>
+                    <dd>{nomeDoPais(cliente.pais)}</dd>
+                  </div>
+                )}
               </>
             )}
             <div>
@@ -720,9 +737,7 @@ function CardCliente({ cliente, unidades = [], numeros, nota, setor, podeMexer, 
               <p className="cliente__unidtitulo">Unidades</p>
               <ul>
                 {unidades.map((u) => {
-                  const endereco = [u.endereco, u.bairro, u.cidade && u.estado ? `${u.cidade}/${u.estado}` : u.cidade, u.cep ? formatarCEP(u.cep) : '']
-                    .filter(Boolean)
-                    .join(' — ')
+                  const endereco = enderecoCompleto(u)
                   return (
                     <li key={u.id}>
                       {podeMexer ? (
