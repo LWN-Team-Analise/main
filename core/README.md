@@ -1193,10 +1193,12 @@ pessoas de contato, o proprietario e o proximo contato do cliente, e so se
 troca o que e da unidade. A logo, o nome e o setor ficam com o cliente. A API
 recebe isso como `POST /api/dados/clientes` com `matrizId`.
 
-Na aba Clientes, clicar numa unidade dentro do card abre a mesma tela para
-editar so ela (`PATCH /api/dados/clientes/:id` de uma unidade): servico,
-lugar, endereco e as **pessoas de contato dela**, que sao separadas das do
-cliente. No cadastro do cliente, cada bloco de **+ Adicionar unidade** tambem
+Na aba Clientes, cada unidade dentro do card do cliente e um card pequeno,
+fechado, so com o nome. O clique abre o resto dela — servico, endereco, obras
+e as pessoas de contato —, uma unidade aberta por vez. Ali, **Editar unidade**
+abre a mesma tela para editar so ela (`PATCH /api/dados/clientes/:id` de uma
+unidade): servico, lugar, endereco e as **pessoas de contato dela**, que sao
+separadas das do cliente. No cadastro do cliente, cada bloco de **+ Adicionar unidade** tambem
 ganhou o campo Servico.
 
 Banco sem a atualizacao 34: as unidades continuam aparecendo e gravando sem

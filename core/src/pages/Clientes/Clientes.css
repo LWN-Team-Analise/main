@@ -385,7 +385,9 @@
 @media (prefers-reduced-motion: reduce) {
   .cliente__dobra,
   .cliente__dobra-int,
-  .cliente__topo {
+  .cliente__topo,
+  .cliente__unidcorpo,
+  .cliente__unidtopo svg {
     transition: none;
   }
 }
@@ -710,7 +712,7 @@
   white-space: nowrap;
 }
 
-/* a lista dentro do card aberto: o nome e o endereco de cada uma */
+/* a lista dentro do card aberto: um card pequeno por unidade */
 .cliente__unidades {
   padding: 12px 0;
   border-bottom: 1px solid var(--line);
@@ -725,54 +727,154 @@
   color: var(--text-faint);
 }
 
-.cliente__unidades ul {
+.cliente__unidades > ul {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.cliente__unidades li {
+/* fechada, so o nome: uma faixa baixa com a cor da logo na borda */
+.cliente__unidade {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--cor-logo, var(--accent));
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.cliente__unidtopo {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding-left: 10px;
-  border-left: 2px solid var(--cor-logo, var(--accent));
-}
-
-.cliente__unidades strong {
-  font-size: 0.84rem;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
   color: var(--text-strong);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.cliente__unidades span {
+.cliente__unidtopo strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cliente__unidtopo svg {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  transition: transform var(--dur-cliente) var(--ease-cliente);
+}
+
+.cliente__unidtopo:hover,
+.cliente__unidtopo:focus-visible {
+  background: var(--control-bg-hover);
+}
+
+.cliente__unidade[data-aberta='true'] .cliente__unidtopo svg {
+  transform: rotate(180deg);
+}
+
+/* aberta: o resto desce, do mesmo jeito que o card do cliente abre
+   (.cliente__dobra) — e, fechada, sai do caminho do Tab */
+.cliente__unidcorpo {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition: grid-template-rows var(--dur-cliente) var(--ease-cliente),
+    opacity 160ms var(--ease-cliente),
+    visibility 0s linear var(--dur-cliente);
+}
+
+.cliente__unidade[data-aberta='true'] .cliente__unidcorpo {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  transition: grid-template-rows var(--dur-cliente) var(--ease-cliente),
+    opacity 220ms var(--ease-cliente) 60ms,
+    visibility 0s linear;
+}
+
+.cliente__unidcorpo-int {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cliente__uniddados {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 2px 10px 10px;
+}
+
+.cliente__uniddados > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.cliente__uniddados dt {
+  flex-shrink: 0;
+  width: 70px;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.cliente__uniddados dd {
+  margin: 0;
+  min-width: 0;
   font-size: 0.78rem;
-  color: var(--text-muted);
+  color: var(--text-base);
   overflow-wrap: anywhere;
 }
 
-/* quem pode mexer abre a unidade no clique: o botao some no texto e
-   so aparece no hover */
-.cliente__unidade {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  width: calc(100% + 12px);
-  margin: -4px -6px;
-  padding: 4px 6px;
-  border: 0;
-  border-radius: var(--radius-sm);
+.cliente__unidpessoas {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cliente__unidpessoas strong {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.cliente__unidpessoas span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.cliente__unideditar {
+  margin: 0 10px 10px;
+  padding: 5px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
   background: transparent;
-  color: inherit;
+  color: var(--text-base);
   font: inherit;
-  text-align: left;
+  font-size: 0.76rem;
+  font-weight: 600;
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease-out);
 }
 
-.cliente__unidade:hover,
-.cliente__unidade:focus-visible {
+.cliente__unideditar:hover,
+.cliente__unideditar:focus-visible {
   background: var(--control-bg-hover);
 }
