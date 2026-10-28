@@ -279,6 +279,7 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-30.sql.txt` | negocio.obra_id (o negocio de Novos negocios vira obra), obra_membro_parcial e a permissao `excluir_membro_parcial` |
 | `db/atualizacao-33.sql.txt` | unidades do cliente: cliente.matriz_id e cliente.unidade (Einstein Anapolis e unidade do Einstein) |
 | `db/atualizacao-34.sql.txt` | servico da unidade: cliente.servico ("Albert Einstein Anapolis - Faturamento") |
+| `db/atualizacao-35.sql.txt` | cliente com mais de uma unidade sem endereco proprio: cliente.cidade e cliente.estado aceitam NULL (o endereco e o de cada unidade) |
 | `db/atualizacao-32.sql.txt` | turno.compartilhado (+ compartilhado_em/por): o turno novo, colado ou copiado da agenda nasce sem compartilhar com a equipe |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
@@ -1156,6 +1157,13 @@ inteiro: "Einstein Anapolis", "Einstein Alphaville".
 - A unidade que tem obra nao sai do cadastro (o x fica travado e a API recusa).
   Apagar o cliente apaga as unidades e as obras delas junto.
 - O Excel de clientes traz uma linha por unidade, com a coluna "Unidade de".
+- Com **mais de uma unidade**, o cliente vira so a vitrine delas: o CEP, o
+  endereco, o estado e a cidade dele somem do cadastro e do card, e o endereco
+  passa a ser o de cada unidade (a tarja do card diz onde elas estao). No banco
+  (atualizacao 35) o endereco dele fica vazio; sem a 35, ele guarda a cidade e
+  o estado da primeira unidade, so para o banco aceitar. Com uma unidade so, o
+  cliente continua com o endereco dele (`enderecoNasUnidades`, em
+  `src/domain/clientes.js`).
 
 ### O servico da unidade e o "Unidade de"
 

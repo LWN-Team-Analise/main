@@ -7,7 +7,7 @@ import { CampoSelecao, CampoTexto } from '@/components/Campo/Campo'
 import { CampoData } from '@/components/CampoData/CampoData'
 import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
-import { SERVICO_MAXIMO, UNIDADE_MAXIMA, chaveDaUnidade, nomeDaUnidade } from '@/domain/clientes'
+import { SERVICO_MAXIMO, UNIDADE_MAXIMA, chaveDaUnidade, enderecoNasUnidades, nomeDaUnidade } from '@/domain/clientes'
 import { valorCurto } from '@/domain/comercial'
 import { carregarImagemDoCliente } from '@/services/dadosService'
 import { buscarCEP, listarCidades, listarEstados } from '@/services/enderecoService'
@@ -78,6 +78,11 @@ function lugarSegueCidade(atual, mudanca) {
  * ("Faturamento"), o lugar ("Anapolis", que segue a cidade) e o endereco.
  * A logo, a capa e o setor sao os do cliente. A unidade aberta pelo card
  * do cliente cai no mesmo formulario, para editar.
+ *
+ * Com MAIS DE UMA unidade, o cliente vira a vitrine delas: o CEP, o
+ * endereco, o estado e a cidade dele somem do formulario (e do banco), e
+ * o endereco passa a ser o de cada unidade. Voltando a uma so, os campos
+ * voltam.
  */
 export default function ModalCliente({ aberto, cliente = null, resumo = null, nota = null, aoFechar, aoSalvar }) {
   const { setores, equipe, clientes, obras } = useDados()
@@ -171,6 +176,8 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
   /* ---------------- A unidade sozinha ---------------- */
 
   const modoUnidade = Boolean(form.matrizId)
+  /* o cliente de varias unidades nao tem endereco proprio (enderecoNasUnidades) */
+  const vitrine = !modoUnidade && enderecoNasUnidades(form.unidades.length)
   const matriz = modoUnidade ? clientes.find((c) => String(c.id) === String(form.matrizId)) ?? null : null
   /* so o cliente "de cima" pode ter unidade */
   const principais = clientes
@@ -361,8 +368,10 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
         if (repetida) novosErros.unidade = 'Este cliente já tem uma unidade com esse nome e esse serviço.'
       }
     } else if (!form.nome.trim()) novosErros.nome = 'Informe o nome da empresa.'
-    if (!form.cidade.trim()) novosErros.cidade = 'Informe a cidade.'
-    if (!form.estado) novosErros.estado = 'Escolha o estado.'
+    if (!vitrine) {
+      if (!form.cidade.trim()) novosErros.cidade = 'Informe a cidade.'
+      if (!form.estado) novosErros.estado = 'Escolha o estado.'
+    }
     form.pessoas.forEach((p, i) => {
       const algum = p.nome.trim() || p.email.trim() || p.telefone.trim() || p.cargo.trim()
       if (!algum) return
@@ -417,6 +426,8 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
     }
 
     const { logo, logoOriginal, recorteLogo, capa, recorteCapa, matrizId, unidade, servico, ...campos } = form
+    /* a vitrine vai sem endereco: o dele sai do banco, e fica o das unidades */
+    if (vitrine) Object.assign(campos, { cep: '', endereco: '', bairro: '', estado: '', cidade: '' })
     campos.pessoas = pessoas
     campos.unidades = form.unidades.map((u) => ({
       id: u.id,
@@ -597,56 +608,62 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
           </>
         )}
 
-        <CampoTexto
-          rotulo="CEP"
-          inputMode="numeric"
-          placeholder="00000-000"
-          value={form.cep}
-          onChange={mudarCEP}
-          dica={buscandoCEP ? 'Consultando...' : avisoCEP || undefined}
-        />
+        {/* o endereco do cliente; com mais de uma unidade ele some, e
+            cada unidade tem o seu (la embaixo) */}
+        {!vitrine && (
+          <>
+            <CampoTexto
+              rotulo="CEP"
+              inputMode="numeric"
+              placeholder="00000-000"
+              value={form.cep}
+              onChange={mudarCEP}
+              dica={buscandoCEP ? 'Consultando...' : avisoCEP || undefined}
+            />
 
-        <CampoTexto
-          rotulo="Endereço"
-          placeholder="Rua e número"
-          value={form.endereco}
-          onChange={mudar('endereco')}
-        />
+            <CampoTexto
+              rotulo="Endereço"
+              placeholder="Rua e número"
+              value={form.endereco}
+              onChange={mudar('endereco')}
+            />
 
-        <CampoTexto
-          rotulo="Bairro"
-          placeholder="Bairro"
-          value={form.bairro}
-          onChange={mudar('bairro')}
-        />
+            <CampoTexto
+              rotulo="Bairro"
+              placeholder="Bairro"
+              value={form.bairro}
+              onChange={mudar('bairro')}
+            />
 
-        <CampoSelecao
-          rotulo="Estado"
-          value={form.estado}
-          onChange={mudarEstado}
-          erro={erros.estado}
-          vazio={estados.length === 0 ? 'Carregando...' : 'Escolha o estado...'}
-          opcoes={estados.map((e) => ({ valor: e.sigla, rotulo: `${e.sigla} — ${e.nome}` }))}
-        />
+            <CampoSelecao
+              rotulo="Estado"
+              value={form.estado}
+              onChange={mudarEstado}
+              erro={erros.estado}
+              vazio={estados.length === 0 ? 'Carregando...' : 'Escolha o estado...'}
+              opcoes={estados.map((e) => ({ valor: e.sigla, rotulo: `${e.sigla} — ${e.nome}` }))}
+            />
 
-        {/* sem lista do IBGE (offline ou API fora), vira campo livre */}
-        {cidades.length > 0 ? (
-          <CampoSelecao
-            rotulo="Cidade"
-            value={form.cidade}
-            onChange={mudar('cidade')}
-            erro={erros.cidade}
-            vazio="Escolha a cidade..."
-            opcoes={cidades.map((c) => ({ valor: c, rotulo: c }))}
-          />
-        ) : (
-          <CampoTexto
-            rotulo="Cidade"
-            placeholder={form.estado ? 'Carregando cidades...' : 'Escolha o estado antes'}
-            value={form.cidade}
-            onChange={mudar('cidade')}
-            erro={erros.cidade}
-          />
+            {/* sem lista do IBGE (offline ou API fora), vira campo livre */}
+            {cidades.length > 0 ? (
+              <CampoSelecao
+                rotulo="Cidade"
+                value={form.cidade}
+                onChange={mudar('cidade')}
+                erro={erros.cidade}
+                vazio="Escolha a cidade..."
+                opcoes={cidades.map((c) => ({ valor: c, rotulo: c }))}
+              />
+            ) : (
+              <CampoTexto
+                rotulo="Cidade"
+                placeholder={form.estado ? 'Carregando cidades...' : 'Escolha o estado antes'}
+                value={form.cidade}
+                onChange={mudar('cidade')}
+                erro={erros.cidade}
+              />
+            )}
+          </>
         )}
 
         {/* ---------------- Unidades ----------------

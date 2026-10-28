@@ -17,7 +17,7 @@ import {
 } from '@/components/CutoutCard/CutoutCard'
 import { useDados } from '@/context/DadosContext'
 import { ordemDosClientes } from '@/domain/obras'
-import { raizDoCliente, rotuloDaUnidade } from '@/domain/clientes'
+import { enderecoNasUnidades, locaisDasUnidades, raizDoCliente, rotuloDaUnidade } from '@/domain/clientes'
 import Estrelas from '@/components/Estrelas/Estrelas'
 import { dataBR, dataHora, formatarCEP, hojeISO } from '@/utils/formato'
 import useCorDaLogo from '@/hooks/useCorDaLogo'
@@ -252,6 +252,9 @@ export default function Clientes() {
         .join(' — ')
     const ordenados = [...clientes].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
     const nomeDoCliente = (id) => clientes.find((x) => String(x.id) === String(id))?.nome ?? ''
+    /* o cliente de varias unidades sai sem endereco: o de cada unidade
+       esta na linha dela */
+    const vitrine = (c) => !c.matrizId && enderecoNasUnidades((unidadesDe.get(String(c.id)) ?? []).length)
     baixarPlanilha(
       [
         {
@@ -275,9 +278,9 @@ export default function Clientes() {
           linhas: ordenados.map((c) => [
             c.nome,
             c.matrizId ? nomeDoCliente(c.matrizId) : '',
-            enderecoDe(c),
-            c.cidade,
-            c.estado,
+            vitrine(c) ? '' : enderecoDe(c),
+            vitrine(c) ? '' : c.cidade,
+            vitrine(c) ? '' : c.estado,
             setorPorId(c.setorId)?.nome ?? '',
             (c.pessoas ?? []).map((p) => (p.email ? `${p.nome} <${p.email}>` : p.nome)).join('; '),
             resumo[c.id]?.ganhos ?? 0,
@@ -523,6 +526,12 @@ function CardCliente({ cliente, unidades = [], numeros, nota, setor, podeMexer, 
   const { isDark } = useTheme()
   const cor = useCorDaLogo(cliente.logo, cliente.nome)
   const [aberto, setAberto] = useState(false)
+  /* com mais de uma unidade o card e a vitrine delas: o endereco e o de
+     cada unidade, e a tarja de baixo da foto diz onde elas estao */
+  const vitrine = enderecoNasUnidades(unidades.length)
+  const proprio = [cliente.cidade, cliente.estado].filter(Boolean).join('/')
+  const locais = vitrine || !proprio ? locaisDasUnidades(unidades) : [proprio]
+  const onde = locais.length > 2 ? `${locais.slice(0, 2).join(' · ')} +${locais.length - 2}` : locais.join(' · ')
   /* a lista das obras avaliadas fica fechada ate alguem pedir: o card ja
      mostra a media, e a media e o que responde "esse cliente foi bem?" */
   const [verNotas, setVerNotas] = useState(false)
@@ -649,11 +658,12 @@ function CardCliente({ cliente, unidades = [], numeros, nota, setor, podeMexer, 
                 )}
               </CutoutCardPin>
 
-              <CutoutCardInsetLabel>
-                <Icone.pino />
-                {cliente.cidade}
-                {cliente.estado ? `/${cliente.estado}` : ''}
-              </CutoutCardInsetLabel>
+              {onde && (
+                <CutoutCardInsetLabel title={locais.join(', ')}>
+                  <Icone.pino />
+                  {onde}
+                </CutoutCardInsetLabel>
+              )}
 
               <CutoutCardAction>
                 <button type="button" className="cliente__fechar" onClick={fechar}>
@@ -672,18 +682,22 @@ function CardCliente({ cliente, unidades = [], numeros, nota, setor, podeMexer, 
           <div className="cliente__dobra-int">
         <CutoutCardContent>
           <dl className="cliente__dados">
-            <div>
-              <dt>Endereço</dt>
-              <dd>{cliente.endereco || '—'}</dd>
-            </div>
-            <div>
-              <dt>Bairro</dt>
-              <dd>{cliente.bairro || '—'}</dd>
-            </div>
-            <div>
-              <dt>CEP</dt>
-              <dd>{cliente.cep ? formatarCEP(cliente.cep) : '—'}</dd>
-            </div>
+            {!vitrine && (
+              <>
+                <div>
+                  <dt>Endereço</dt>
+                  <dd>{cliente.endereco || '—'}</dd>
+                </div>
+                <div>
+                  <dt>Bairro</dt>
+                  <dd>{cliente.bairro || '—'}</dd>
+                </div>
+                <div>
+                  <dt>CEP</dt>
+                  <dd>{cliente.cep ? formatarCEP(cliente.cep) : '—'}</dd>
+                </div>
+              </>
+            )}
             <div>
               <dt>Setor</dt>
               <dd>

@@ -1,0 +1,48 @@
+-- ============================================================
+--  ATUALIZACAO 35 — O CLIENTE DE VARIAS UNIDADES E SO A VITRINE
+--
+--  Com MAIS DE UMA unidade (atualizacoes 33 e 34), o endereco e o
+--  de cada unidade: o cliente vira a vitrine delas — logo, nome,
+--  setor, pessoas —, e o estado, a cidade e o resto do endereco
+--  dele somem. Com uma unidade so, ele continua com o endereco dele.
+--
+--    cliente.cidade e cliente.estado passam a aceitar NULL: o
+--    cliente de varias unidades fica sem eles (a API grava assim).
+--
+--  E o cliente que JA tem mais de uma unidade perde o endereco dele
+--  aqui, de uma vez, para nenhuma tela mostrar a cidade antiga.
+--
+--  Sem esta atualizacao a API continua funcionando: o cliente de
+--  varias unidades fica com a cidade e o estado da primeira delas,
+--  so para o banco aceitar (a tela nao le o endereco dele).
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao duplica nada.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.cliente ALTER COLUMN cidade DROP NOT NULL;
+ALTER TABLE public.cliente ALTER COLUMN estado DROP NOT NULL;
+
+COMMENT ON COLUMN public.cliente.cidade IS
+    'NULL no cliente com mais de uma unidade: o endereco e o de cada unidade.';
+COMMENT ON COLUMN public.cliente.estado IS
+    'UF. NULL no cliente com mais de uma unidade: o endereco e o de cada unidade.';
+
+UPDATE public.cliente c
+   SET endereco = NULL, bairro = NULL, cep = NULL, cidade = NULL, estado = NULL
+ WHERE c.matriz_id IS NULL
+   AND (SELECT count(*) FROM public.cliente u WHERE u.matriz_id = c.id) > 1;
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t"
+-- ============================================================
+
+SELECT 'cliente.cidade aceita NULL' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'cliente' AND column_name = 'cidade' AND is_nullable = 'YES') AS ok;

@@ -75,6 +75,23 @@ export const chaveDaUnidade = (nomeDoCliente, unidade, servico = '') =>
 export const rotuloDaUnidade = (unidade) =>
   [limpo(unidade?.unidade), limpo(unidade?.servico)].filter(Boolean).join(' - ') || limpo(unidade?.nome)
 
+/**
+ * Com MAIS DE UMA unidade, o endereco e o de cada unidade: o cliente
+ * vira so a vitrine delas (logo, nome, setor, pessoas), e o estado, a
+ * cidade e o resto do endereco dele somem — no banco ficam vazios
+ * (atualizacao 35). Com uma unidade so, ele continua com o endereco
+ * dele, ao lado do da unidade.
+ */
+export const enderecoNasUnidades = (quantasUnidades) => quantasUnidades > 1
+
+/** Onde as unidades estao, sem repetir: ['Anápolis/GO', 'Barueri/SP']. */
+export function locaisDasUnidades(unidades = []) {
+  const locais = unidades
+    .map((u) => [limpo(u?.cidade), limpo(u?.estado)].filter(Boolean).join('/'))
+    .filter(Boolean)
+  return [...new Set(locais)]
+}
+
 /** true para a linha que e unidade de outro cliente. */
 export const ehUnidade = (cliente) => Boolean(cliente?.matrizId)
 

@@ -12,6 +12,7 @@ import {
   UNIDADES_MAXIMO,
   UNIDADE_MAXIMA,
   chaveDaUnidade,
+  enderecoNasUnidades,
   nomeCurtoDaUnidade,
   nomeDaUnidade,
   rotuloDaUnidade,
@@ -787,30 +788,79 @@ router.patch('/termos', exigeSessao, exige('editar_etapa'), async (req, res) => 
    CLIENTES
    ============================================================ */
 
-/** Campos do cliente vindos da tela, ja no formato do banco. */
-function camposCliente(corpo) {
+/**
+ * Campos do cliente vindos da tela, ja no formato do banco: { coluna: valor }.
+ *
+ * O cliente com mais de uma unidade (`vitrine`) nao tem endereco: o que
+ * vier nem e lido, e quem grava tira o que havia (enderecoSaiDoCliente).
+ */
+function camposCliente(corpo, { vitrine = false } = {}) {
   const nome = texto(corpo?.nome)
+  if (!nome) return { erro: 'Informe o nome da empresa.' }
+  /* setor vazio vira NULL, e nao a string "": a coluna e uma chave
+     estrangeira e so aceita id de verdade ou nada */
+  const setor = texto(corpo?.setorId) || null
+  if (vitrine) return { campos: { nome, setor_id: setor } }
+
   const cidade = texto(corpo?.cidade)
   const estado = texto(corpo?.estado).toUpperCase()
   const cep = soDigitos(corpo?.cep)
-
-  if (!nome) return { erro: 'Informe o nome da empresa.' }
   if (!cidade) return { erro: 'Informe a cidade.' }
   if (!/^[A-Z]{2}$/.test(estado)) return { erro: 'Informe a UF com duas letras.' }
   if (cep && cep.length !== 8) return { erro: 'O CEP precisa ter 8 dígitos.' }
 
   return {
-    valores: [
+    campos: {
       nome,
-      texto(corpo?.endereco) || null,
-      texto(corpo?.bairro) || null,
+      endereco: texto(corpo?.endereco) || null,
+      bairro: texto(corpo?.bairro) || null,
       cidade,
       estado,
-      cep || null,
-      /* setor vazio vira NULL, e nao a string "": a coluna e uma chave
-         estrangeira e so aceita id de verdade ou nada */
-      texto(corpo?.setorId) || null,
-    ],
+      cep: cep || null,
+      setor_id: setor,
+    },
+  }
+}
+
+/** Quantas unidades o cliente tem no banco (0 no banco sem a atualizacao 33). */
+async function contarUnidades(clienteId) {
+  try {
+    const { rows } = await query('SELECT count(*)::int AS n FROM cliente WHERE matriz_id = $1', [clienteId])
+    return rows[0]?.n ?? 0
+  } catch (erro) {
+    if (erro.code === '42703') return 0
+    throw erro
+  }
+}
+
+/**
+ * O cliente com MAIS DE UMA unidade fica sem endereco proprio: ele e a
+ * vitrine, e o endereco e o de cada unidade (src/domain/clientes.js).
+ * Roda depois de toda gravacao que pode ter dado a ele a segunda
+ * unidade; com uma so, nao mexe em nada.
+ *
+ * O banco sem a atualizacao 35 ainda pede cidade e estado no cliente:
+ * ali ele fica com os da primeira unidade, so para o banco aceitar — a
+ * tela nao le o endereco dele.
+ */
+async function enderecoSaiDoCliente(clienteId) {
+  const vitrine = '(SELECT count(*) FROM cliente u WHERE u.matriz_id = c.id) > 1'
+  try {
+    await query(
+      `UPDATE cliente c SET endereco = NULL, bairro = NULL, cep = NULL, cidade = NULL, estado = NULL
+        WHERE c.id = $1 AND ${vitrine}`,
+      [clienteId],
+    )
+  } catch (erro) {
+    /* banco sem as unidades: ninguem e vitrine */
+    if (erro.code === '42703') return
+    if (erro.code !== '23502') throw erro
+    await query(
+      `UPDATE cliente c SET endereco = NULL, bairro = NULL, cep = NULL, cidade = p.cidade, estado = p.estado
+         FROM (SELECT cidade, estado FROM cliente WHERE matriz_id = $1 ORDER BY lower(nome), id LIMIT 1) p
+        WHERE c.id = $1 AND ${vitrine}`,
+      [clienteId],
+    )
   }
 }
 
@@ -1260,6 +1310,8 @@ async function criarUnidade(req, res) {
       detalhes: { cliente: rows[0].nome, 'unidade de': matriz.nome, cidade: `${rows[0].cidade}/${rows[0].estado}` },
     })
     await gravarExtrasDoCliente(rows[0].id, extras, { novo: true, usuarioId: req.dono.sub })
+    /* a segunda unidade faz do cliente a vitrine: o endereco e o delas */
+    await enderecoSaiDoCliente(matriz.id)
     return res.status(201).json({ cliente: await lerClienteCompleto(rows[0].id) })
   } catch (e) {
     if (e.status === 400) return res.status(400).json({ erro: e.message })
@@ -1324,34 +1376,42 @@ router.post('/clientes', exigeSessao, exige('editar_clientes'), async (req, res)
   /* "Unidade de" escolhido no Novo cliente: e uma unidade, nao um cliente */
   if (req.body?.matrizId) return criarUnidade(req, res)
 
-  const { erro, valores } = camposCliente(req.body)
+  const lidas = lerUnidades(req.body, texto(req.body?.nome))
+  if (lidas.erro) return res.status(400).json({ erro: lidas.erro })
+  /* com mais de uma unidade, o endereco e o delas (enderecoNasUnidades) */
+  const vitrine = enderecoNasUnidades(lidas.unidades?.length ?? 0)
+  const { erro, campos } = camposCliente(req.body, { vitrine })
   if (erro) return res.status(400).json({ erro })
   const extras = lerExtrasDoCliente(req.body)
   if (extras.erro) return res.status(400).json({ erro: extras.erro })
-  const lidas = lerUnidades(req.body, valores[0])
-  if (lidas.erro) return res.status(400).json({ erro: lidas.erro })
 
   const imagem = camposImagem(req.body) ?? {}
   if (!imagemDoClienteValida(imagem)) return res.status(400).json({ erro: IMAGEM_INVALIDA })
-  const colunas = Object.keys(imagem)
+  /* a vitrine nasce com a cidade da primeira unidade, que o banco sem a
+     atualizacao 35 ainda pede; enderecoSaiDoCliente tira logo depois */
+  const primeira = vitrine ? { cidade: lidas.unidades[0].cidade, estado: lidas.unidades[0].estado } : {}
+  const linha = { ...campos, ...primeira, ...imagem }
+  const colunas = Object.keys(linha)
 
   try {
-    const todos = [...valores, ...Object.values(imagem)]
     const { rows } = await query(
-      `INSERT INTO cliente (nome, endereco, bairro, cidade, estado, cep, setor_id
-                            ${colunas.map((c) => `, ${c}`).join('')})
-       VALUES (${todos.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING *`,
-      todos,
+      `INSERT INTO cliente (${colunas.join(', ')})
+       VALUES (${colunas.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING *`,
+      Object.values(linha),
     )
     await registrarAtividade(req, {
       acao: 'cliente.criado',
       categoria: 'cliente',
       entidade: ['cliente', rows[0].id],
       descricao: 'Novo cliente cadastrado',
-      detalhes: { cliente: rows[0].nome, cidade: `${rows[0].cidade}/${rows[0].estado}` },
+      detalhes: {
+        cliente: rows[0].nome,
+        cidade: vitrine ? `${lidas.unidades.length} unidades` : `${rows[0].cidade}/${rows[0].estado}`,
+      },
     })
     await gravarExtrasDoCliente(rows[0].id, extras, { novo: true, usuarioId: req.dono.sub })
     if (lidas.unidades?.length) await gravarUnidades(rows[0].id, rows[0].nome, lidas.unidades)
+    if (vitrine) await enderecoSaiDoCliente(rows[0].id)
     return res.status(201).json({ cliente: (await lerClienteCompleto(rows[0].id)) ?? paraCliente(rows[0]) })
   } catch (e) {
     if (e.status === 400) return res.status(400).json({ erro: e.message })
@@ -1371,32 +1431,33 @@ router.patch('/clientes/:id', exigeSessao, exige('editar_clientes'), async (req,
     return tratar(e, res, 'dados/unidade-editar')
   }
 
-  const { erro, valores } = camposCliente(req.body)
-  if (erro) return res.status(400).json({ erro })
+  const lidas = lerUnidades(req.body, texto(req.body?.nome))
+  if (lidas.erro) return res.status(400).json({ erro: lidas.erro })
   const extras = lerExtrasDoCliente(req.body)
   if (extras.erro) return res.status(400).json({ erro: extras.erro })
-  const lidas = lerUnidades(req.body, valores[0])
-  if (lidas.erro) return res.status(400).json({ erro: lidas.erro })
 
   /* a imagem so entra no UPDATE quando a tela mexeu nela; sem isso,
      salvar um endereco novo apagaria a logo do cliente */
   const imagem = camposImagem(req.body) ?? {}
   if (!imagemDoClienteValida(imagem)) return res.status(400).json({ erro: IMAGEM_INVALIDA })
-  const todos = [...valores, ...Object.values(imagem)]
-  const colunasDaImagem = Object.keys(imagem)
-    .map((coluna, i) => `, ${coluna} = ${valores.length + i + 1}`)
-    .join('')
 
   try {
+    /* com mais de uma unidade, o endereco e o delas: o UPDATE nao mexe
+       nele, e enderecoSaiDoCliente tira o que havia */
+    const vitrine = enderecoNasUnidades(lidas.unidades ? lidas.unidades.length : await contarUnidades(req.params.id))
+    const { erro, campos } = camposCliente(req.body, { vitrine })
+    if (erro) return res.status(400).json({ erro })
+    const linha = { ...campos, ...imagem }
+    const colunas = Object.keys(linha)
+
     if (lidas.unidades) {
       const barrada = await unidadeQueNaoPodeSair(req.params.id, lidas.unidades)
       if (barrada) return res.status(400).json({ erro: barrada })
     }
     const { rows } = await query(
-      `UPDATE cliente SET nome = $1, endereco = $2, bairro = $3,
-                          cidade = $4, estado = $5, cep = $6, setor_id = $7${colunasDaImagem}
-        WHERE id = $${todos.length + 1} RETURNING *`,
-      [...todos, req.params.id],
+      `UPDATE cliente SET ${colunas.map((coluna, i) => `${coluna} = $${i + 1}`).join(', ')}
+        WHERE id = $${colunas.length + 1} RETURNING *`,
+      [...Object.values(linha), req.params.id],
     )
     if (!rows[0]) return res.status(404).json({ erro: 'Cliente não encontrado.' })
     await registrarAtividade(req, {
@@ -1404,11 +1465,12 @@ router.patch('/clientes/:id', exigeSessao, exige('editar_clientes'), async (req,
       categoria: 'cliente',
       entidade: ['cliente', rows[0].id],
       descricao: 'Cliente editado',
-      detalhes: { cliente: rows[0].nome, imagem: colunasDaImagem ? 'imagem alterada' : null },
+      detalhes: { cliente: rows[0].nome, imagem: Object.keys(imagem).length ? 'imagem alterada' : null },
     })
     await gravarExtrasDoCliente(rows[0].id, extras, { novo: false, usuarioId: req.dono.sub })
     /* as unidades (e o nome inteiro delas, se o do cliente mudou) */
     if (!rows[0].matriz_id) await gravarUnidades(rows[0].id, rows[0].nome, lidas.unidades)
+    if (vitrine) await enderecoSaiDoCliente(rows[0].id)
     return res.json({ cliente: (await lerClienteCompleto(rows[0].id)) ?? paraCliente(rows[0]) })
   } catch (e) {
     if (e.status === 400) return res.status(400).json({ erro: e.message })
