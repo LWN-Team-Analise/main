@@ -8,6 +8,7 @@ import { anotar, chaveDaConta, esquecer, estourou, ipDe } from '../limite.js'
 import { enviarCodigo, temEmail } from '../email.js'
 import { configurado as temOutlook, perfilDoCodigo, urlDeEntrada } from '../outlook.js'
 import { normalizar } from '../../src/domain/permissoes.js'
+import { regraDoUsuario } from '../../src/domain/regrasCheck.js'
 import { logger } from '../logger.js'
 import { validarForcaSenha } from '../utils/senha.js'
 import { registrarAtividade } from '../atividade.js'
@@ -66,6 +67,13 @@ function paraUsuario(linha) {
     cargoCor: linha.cargo_cor ?? null,
     // "Analista de Qualidade" — texto livre, nao decide permissao nenhuma
     cargoTitulo: linha.cargo_titulo ?? '',
+    cargoTituloId: linha.cargo_titulo_id ? String(linha.cargo_titulo_id) : null,
+    // o que o cargo (ou a propria pessoa) marca dentro do setor: a partir de
+    // que etapa e quais checks ficam de fora (atualizacao 37). null = todos
+    regraCheck: regraDoUsuario(linha.cargo_regras_check, linha.id, linha.cargo_titulo_id),
+    // com a atualizacao 37, o check e so de quem esta na obra (ou do setor
+    // com check_todas_obras); sem ela, vale so o setor, como antes
+    checkSoNaObra: linha.cargo_regras_check !== null && linha.cargo_regras_check !== undefined,
     acessoTotal: linha.acesso_total ?? false,
     // o que o cargo pode fazer; e por esta lista que o menu e os botoes
     // se escondem (db/atualizacao.sql.txt cria a coluna)
@@ -88,6 +96,8 @@ const CAMPOS_CARGO = `, u.foto, u.cargo_id, u.cargo_titulo, u.outlook_email,
                       c.chave AS cargo_chave, c.nome AS cargo_nome,
                       c.cor AS cargo_cor, c.acesso_total,
                       c.permissoes AS cargo_permissoes,
+                      (to_jsonb(u) ->> 'cargo_titulo_id') AS cargo_titulo_id,
+                      (to_jsonb(c) -> 'regras_check') AS cargo_regras_check,
                       (to_jsonb(c) ->> 'painel_tv')::boolean AS painel_tv`
 
 /**

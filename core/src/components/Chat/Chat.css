@@ -23,6 +23,38 @@
   overflow-y: auto;
 }
 
+/* o chat da obra: mais alto, para a conversa ter espaco sem rolar tanto */
+.chat--grande {
+  min-height: 440px;
+}
+
+.chat--grande .chat__lista {
+  max-height: min(62dvh, 640px);
+}
+
+/* a foto ampliada: inteira, sem cortar, do tamanho que a tela deixa */
+.chat__ampliada {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+}
+
+.chat__ampliada img {
+  display: block;
+  max-width: 100%;
+  max-height: 72dvh;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+}
+
+.chat__baixar {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
 .chat__vazio {
   margin: auto;
   padding: 30px 16px;
@@ -122,8 +154,22 @@
 .fala__imagem {
   display: block;
   margin-bottom: 6px;
+  padding: 0;
+  border: 0;
   border-radius: var(--radius-sm);
+  background: none;
   overflow: hidden;
+  /* o clique amplia a foto ali mesmo */
+  cursor: zoom-in;
+}
+
+.fala__imagem:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.fala__imagem img {
+  display: block;
 }
 
 .fala__imagem img {

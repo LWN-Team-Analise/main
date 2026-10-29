@@ -604,9 +604,9 @@ export default function Home() {
   )
 }
 
-/** O nome curto da obra no card e na linha: proposta ou empresa. */
+/** O nome curto da obra no card e na linha: a empresa e a proposta. */
 const daObra = (t) =>
-  [t.obra.proposta, t.cliente?.nome].filter(Boolean).join(' — ') || 'Obra sem nome'
+  [t.cliente?.nome, t.obra.proposta].filter(Boolean).join(' — ') || 'Obra sem nome'
 
 /** Etiquetas dos setores donos da tarefa. */
 function Setores({ cargos, nomeDoCargo, corDoCargo }) {

@@ -62,7 +62,7 @@ function textoDoMotivo(m, nomeDoCargo, comSelo = false) {
  * Quando a cor nao e a de sempre, uma linha diz o PORQUE (o motivo mais
  * urgente; os outros ficam na dica dele).
  *
- *   foto da empresa · proposta - nome · etapa atual   fotos de quem mexeu
+ *   foto da empresa · empresa - proposta · etapa atual  fotos de quem mexeu
  *   [téc] [gq]
  *   motivo da cor
  *   descricao · execucao dos ensaios

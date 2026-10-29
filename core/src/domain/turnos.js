@@ -36,7 +36,9 @@ export const CORES = [
 export const COR_DA_OBRA = 'azul'
 
 export const TITULO_MAXIMO = 60
-export const SUBTITULO_MAXIMO = 120
+/* a observacao do turno: 500, como no Teams (os turnos importados de la trazem a
+   lista de equipamentos inteira, e precisam continuar editaveis) */
+export const SUBTITULO_MAXIMO = 500
 export const ANOTACAO_MAXIMA = 500
 /** Um turno cobre no maximo um ano de dias (a folga longa cabe). */
 export const DIAS_MAXIMOS = 366

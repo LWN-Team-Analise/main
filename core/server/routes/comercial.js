@@ -162,9 +162,13 @@ function paraNegocio(l) {
     motivoPerda: l.motivo_perda ?? '',
     fechadoEm: l.fechado_em,
     observacao: l.observacao ?? '',
-    /* a obra criada junto (funil Novos negocios); null = sem obra */
+    /* a obra do negocio de Novos negocios; null = sem obra. Ela so nasce
+       quando o negocio e COMPARTILHADO com a equipe (atualizacao 37) — ate
+       la o negocio fica pendente e guarda o n. da proposta em `proposta` */
     obraId: l.obra_id === null || l.obra_id === undefined ? null : String(l.obra_id),
     obraProposta: l.obra_proposta ?? null,
+    proposta: l.obra_proposta ?? l.proposta ?? '',
+    compartilhadoEm: l.compartilhado_em ?? null,
     email: {
       aguardando: Boolean(l.email_aguardando),
       assunto: l.email_assunto ?? '',
@@ -320,11 +324,18 @@ const hojeNoBrasil = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America
  */
 router.get('/proxima-proposta', exigeSessao, exige(EDITAR), async (_req, res) => {
   try {
-    const [ultima, todas] = await Promise.all([
+    const [ultima, todas, pendentes] = await Promise.all([
       query("SELECT proposta FROM obra WHERE proposta ~ '[0-9]' ORDER BY criado_em DESC, id DESC LIMIT 1"),
       query('SELECT lower(proposta) AS p FROM obra'),
+      /* o negocio pendente ja reservou o n. dele (atualizacao 37) */
+      query('SELECT lower(proposta) AS p FROM negocio WHERE obra_id IS NULL AND proposta IS NOT NULL').catch(
+        (erro) => {
+          if (erro.code !== '42703') throw erro
+          return { rows: [] }
+        },
+      ),
     ])
-    const ocupadas = new Set(todas.rows.map((l) => l.p))
+    const ocupadas = new Set([...todas.rows, ...pendentes.rows].map((l) => l.p))
     return res.json({ proposta: proximaProposta(ultima.rows[0]?.proposta, ocupadas) })
   } catch (erro) {
     return falhou(erro, res, 'comercial/proxima-proposta')
@@ -337,9 +348,11 @@ router.post('/negocios', exigeSessao, exige(EDITAR), async (req, res) => {
     if (lido.erro) return res.status(400).json(lido)
     const c = { ...lido.campos, criado_por: req.dono.sub }
 
-    /* Novos negocios: a obra nasce junto. Ela precisa de um cliente
+    /* Novos negocios vira obra — mas so quando for COMPARTILHADO com a
+       equipe (POST /negocios/:id/compartilhar). Ate la ele fica pendente e
+       guarda o n° da proposta. A obra vai precisar de um cliente
        CADASTRADO (a empresa so escrita nao tem cidade nem estado para
-       virar cliente) e do n° da proposta. */
+       virar cliente) e do n° da proposta: os dois ja sao pedidos aqui. */
     const comObra = c.funil === FUNIL_DA_OBRA
     const proposta = texto(req.body?.proposta).slice(0, 80)
     if (comObra && !c.cliente_id) {
@@ -352,38 +365,24 @@ router.post('/negocios', exigeSessao, exige(EDITAR), async (req, res) => {
       return res.status(400).json({ erro: 'Informe o n° da proposta da obra.', campo: 'proposta' })
     }
 
-    const { negocioId, obraId } = await emTransacao(async (db) => {
-      let obra = null
-      if (comObra) {
-        const { rows } = await db.query(
-          `INSERT INTO obra (cliente_id, proposta, descricao, tipo, prioridade, data_inicio,
-                             criado_por, atualizado_por)
-           VALUES ($1, $2, $3, 'padrao', 'media', $4, $5, $5)
-           RETURNING id`,
-          [c.cliente_id, proposta, c.titulo, hojeNoBrasil(), req.dono.sub],
-        )
-        obra = rows[0].id
-      }
-      const linha = { ...c, obra_id: obra }
-      const colunas = Object.keys(linha)
-      const { rows } = await db.query(
+    const linha = comObra ? { ...c, proposta } : c
+    const colunas = Object.keys(linha)
+    let negocioId
+    try {
+      const { rows } = await query(
         `INSERT INTO negocio (${colunas.join(', ')})
          VALUES (${colunas.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING id`,
         Object.values(linha),
       )
-      return { negocioId: rows[0].id, obraId: obra }
-    })
+      negocioId = rows[0].id
+    } catch (erro) {
+      /* sem a atualizacao 37 nao ha onde guardar o n° da proposta ate o
+         compartilhamento */
+      if (erro.code === '42703' && comObra) return res.status(503).json({ erro: SEM_37 })
+      throw erro
+    }
 
     const negocio = await lerUm(negocioId)
-    if (obraId) {
-      await registrarAtividade(req, {
-        acao: 'obra.criada',
-        categoria: 'obra',
-        entidade: ['obra', obraId],
-        descricao: 'Nova obra criada pelo Comercial',
-        detalhes: { ...(await descreverObra(obraId)), negocio: negocio.titulo },
-      })
-    }
     await registrarAtividade(req, {
       acao: 'negocio.criado',
       categoria: 'comercial',
@@ -408,6 +407,15 @@ router.put('/negocios/:id', exigeSessao, exige(EDITAR), async (req, res) => {
     const lido = await lerNegocio(req.body, req.dono.sub)
     if (lido.erro) return res.status(400).json(lido)
     const c = lido.campos
+    /* o n° da proposta so muda enquanto o negocio nao virou obra: depois,
+       ele e o da obra, e muda la */
+    if (req.body?.proposta !== undefined) {
+      const antes = await query('SELECT obra_id, proposta FROM negocio WHERE id = $1', [req.params.id]).catch((erro) => {
+        if (erro.code !== '42703') throw erro
+        return { rows: [] }
+      })
+      if (antes.rows[0] && !antes.rows[0].obra_id) c.proposta = texto(req.body.proposta).slice(0, 80) || null
+    }
     const colunas = Object.keys(c)
     const { rowCount } = await query(
       `UPDATE negocio SET ${colunas.map((col, i) => `${col} = $${i + 1}`).join(', ')}, atualizado_em = now()
@@ -426,6 +434,72 @@ router.put('/negocios/:id', exigeSessao, exige(EDITAR), async (req, res) => {
     return res.json({ negocio })
   } catch (erro) {
     return falhou(erro, res, 'comercial/editar')
+  }
+})
+
+const SEM_37 = 'O banco ainda não está pronto para o negócio pendente. Rode npm run db:atualizar (atualização 37).'
+
+/**
+ * Compartilha com a equipe o negocio de Novos negocios: e AGORA que a
+ * obra nasce em Obras (e na pagina inicial), para todo mundo — com o
+ * cliente, o n° da proposta e, como descricao, o titulo do negocio. Antes
+ * disso o negocio fica pendente, so no Comercial.
+ */
+router.post('/negocios/:id/compartilhar', exigeSessao, exige(EDITAR), async (req, res) => {
+  if (!idOuNulo(req.params.id)) return res.status(400).json({ erro: 'Negócio inválido.' })
+  try {
+    const resultado = await emTransacao(async (db) => {
+      const { rows } = await db.query('SELECT * FROM negocio WHERE id = $1 FOR UPDATE', [req.params.id])
+      const n = rows[0]
+      if (!n) return { status: 404, erro: 'Negócio não encontrado.' }
+      if (!('compartilhado_em' in n)) return { status: 503, erro: SEM_37 }
+      if (n.obra_id) return { status: 409, erro: 'Este negócio já foi compartilhado: a obra dele já está em Obras.' }
+      if (n.funil !== FUNIL_DA_OBRA) {
+        return { status: 400, erro: `Só os negócios de ${funilPorId(FUNIL_DA_OBRA)?.rotulo} viram obra.` }
+      }
+      if (n.status !== 'aberto') return { status: 400, erro: 'Este negócio já foi encerrado.' }
+      if (!n.cliente_id) {
+        return { status: 400, erro: 'Escolha um cliente cadastrado no negócio: a obra nasce com ele.', campo: 'clienteId' }
+      }
+      const proposta = texto(n.proposta)
+      if (!proposta) return { status: 400, erro: 'Informe o n° da proposta da obra no negócio.', campo: 'proposta' }
+
+      const obra = await db.query(
+        `INSERT INTO obra (cliente_id, proposta, descricao, tipo, prioridade, data_inicio,
+                           criado_por, atualizado_por)
+         VALUES ($1, $2, $3, 'padrao', 'media', $4, $5, $5)
+         RETURNING id`,
+        [n.cliente_id, proposta, n.titulo, hojeNoBrasil(), req.dono.sub],
+      )
+      await db.query(
+        `UPDATE negocio SET obra_id = $1, compartilhado_em = now(), compartilhado_por = $2, atualizado_em = now()
+          WHERE id = $3`,
+        [obra.rows[0].id, req.dono.sub, req.params.id],
+      )
+      return { obraId: obra.rows[0].id }
+    })
+    if (resultado.erro) {
+      return res.status(resultado.status).json({ erro: resultado.erro, ...(resultado.campo ? { campo: resultado.campo } : {}) })
+    }
+
+    const negocio = await lerUm(req.params.id)
+    await registrarAtividade(req, {
+      acao: 'obra.criada',
+      categoria: 'obra',
+      entidade: ['obra', resultado.obraId],
+      descricao: 'Nova obra criada pelo Comercial',
+      detalhes: { ...(await descreverObra(resultado.obraId)), negocio: negocio.titulo },
+    })
+    await registrarAtividade(req, {
+      acao: 'negocio.compartilhado',
+      categoria: 'comercial',
+      entidade: ['negocio', negocio.id],
+      descricao: 'Negócio compartilhado com a equipe (virou obra)',
+      detalhes: { negocio: negocio.titulo, cliente: negocio.organizacao, proposta: negocio.obraProposta },
+    })
+    return res.json({ negocio })
+  } catch (erro) {
+    return falhou(erro, res, 'comercial/compartilhar')
   }
 })
 

@@ -17,6 +17,7 @@
 
 import { podeFazer } from './permissoes'
 import { resumoDasLinhas } from './itensEnsaio'
+import { MOTIVO_DA_TRAVA, lerRegrasCheck, regraDoUsuario, regraLibera } from './regrasCheck'
 
 export const PRIORIDADES = [
   { id: 'baixa', rotulo: 'Baixa' },
@@ -99,11 +100,11 @@ export function rotuloDaEtapa(numero) {
 /* ------------------------------------------------------------
    O nome da obra na tela
 
-   Uma obra se chama "1042/2026 - Acme": primeiro o n. da
-   proposta, depois o cliente. E nessa ordem porque e assim que
-   ela e procurada — quem liga perguntando de uma obra tem o
-   numero da proposta na mao, nao o nome da empresa (que costuma
-   ter cinco obras abertas ao mesmo tempo).
+   Uma obra se chama "Agener Uniao - LWN-888-01 - SMOKE": primeiro
+   a empresa, depois o n. da proposta (como foi digitado). Era o
+   contrario ate 29/10; a empresa veio para a frente para as obras
+   de um mesmo cliente ficarem juntas e serem achadas de relance.
+   A busca continua achando pelo numero da proposta.
 
    Vive aqui, e nao em cada tela, porque o card do quadro, a
    capa da obra, a lista de Concluidas, o chat e o sininho
@@ -114,7 +115,7 @@ export function rotuloDaEtapa(numero) {
 export function tituloDaObra(obra, cliente) {
   const nome = cliente?.nome ?? 'Cliente removido'
   const proposta = String(obra?.proposta ?? '').trim()
-  return proposta ? `${proposta} - ${nome}` : nome
+  return proposta ? `${nome} - ${proposta}` : nome
 }
 
 /* ------------------------------------------------------------
@@ -803,6 +804,8 @@ export function temAcessoTotal(usuario) {
 /* reexportado porque quase toda tela ja importa deste arquivo; a
    lista de permissoes em si mora em src/domain/permissoes.js */
 export { podeFazer }
+/* as regras de check por cargo moram em regrasCheck.js (o servidor le de la) */
+export { MOTIVO_DA_TRAVA, lerRegrasCheck, regraDoUsuario, regraLibera }
 
 /**
  * Quem mexe no CPF dos OUTROS: quem tem a permissao "Incluir / editar /
@@ -846,25 +849,109 @@ export function checkTemDonoProprio(check) {
   return (check?.cargos ?? []).length > 0
 }
 
+/* ------------------------------------------------------------
+   Membro da obra e regra do cargo (atualizacao 37)
+   ------------------------------------------------------------ */
+
 /**
- * Quem marca ESTE check.
- *
- * A regra e "so o seu setor", com tres portas de saida:
- *   - acesso total (diretoria);
- *   - a permissao "check em todas as etapas";
- *   - a obra e de EMERGENCIA (obra.tipo === 'emergencia'): ali ninguem
- *     espera o setor certo, e QUALQUER setor marca qualquer check.
- *
- * Na obra padrao a trava por setor continua igual. O servidor
- * (podeMarcar, em server/routes/dados.js) responde a MESMA coisa — se
- * os dois divergirem, o check pisca: a tela libera e a API recusa.
+ * A pessoa esta NA OBRA? E quem ja marcou check nela, ou quem foi
+ * incluido em Membros e ACEITOU — a inclusao pendente ainda nao vale:
+ * a pessoa so marca depois de aceitar participar. `obra.membros` ja vem
+ * do servidor com os dois (o check e o parcial aceito).
  */
+export function ehMembroDaObra(usuario, obra) {
+  const eu = String(usuario?.id ?? '')
+  if (!eu || !obra) return false
+  return (obra.membros ?? []).map(String).includes(eu)
+}
+
+/**
+ * Por que a pessoa NAO marca este check — ou null quando marca.
+ *
+ *   'membro'  ela nao esta na obra (e o setor nao tem "Marcar check em
+ *             obra sem ser membro");
+ *   'cargo'   a regra do cargo dela no setor deixa este check de fora
+ *             (a etapa vem antes da que ela marca, ou o check foi tirado);
+ *   'setor'   o check e de outro setor.
+ *
+ * As portas de saida: acesso total passa por tudo; "check em todas as
+ * etapas" passa pela trava do setor; a obra de EMERGENCIA passa pela do
+ * setor e pela do cargo — mas quem marca continua tendo de estar na obra.
+ *
+ * O servidor (podeMarcar, em server/routes/dados.js) responde a MESMA
+ * coisa — se os dois divergirem, o check pisca: a tela libera e a API
+ * recusa.
+ */
+export function travaDoCheck(usuario, check, card, obra) {
+  if (!usuario) return 'setor'
+  if (temAcessoTotal(usuario)) return null
+  if (usuario.checkSoNaObra !== false && !podeFazer(usuario, 'check_todas_obras') && !ehMembroDaObra(usuario, obra)) {
+    return 'membro'
+  }
+  const emergencia = obra?.tipo === 'emergencia'
+  /* o setor antes do cargo: o check de OUTRO setor e "de outro setor",
+     mesmo que a etapa dele tambem fique fora do cargo da pessoa */
+  const doSetor =
+    emergencia || podeFazer(usuario, 'check_todas_etapas') || cargosDoCheck(check, card).includes(chaveDoCargo(usuario))
+  if (!doSetor) return 'setor'
+  if (!emergencia && !regraLibera(usuario.regraCheck, check?.etapaOrdem ?? card?.etapaOrdem, check)) return 'cargo'
+  return null
+}
+
+/** Quem marca ESTE check: ninguem trava (`travaDoCheck`). */
 export function podeEditarCheck(usuario, check, card, obra) {
-  if (!usuario) return false
-  if (temAcessoTotal(usuario)) return true
-  if (podeFazer(usuario, 'check_todas_etapas')) return true
-  if (obra?.tipo === 'emergencia') return true
-  return cargosDoCheck(check, card).includes(chaveDoCargo(usuario))
+  return travaDoCheck(usuario, check, card, obra) === null
+}
+
+/* ------------------------------------------------------------
+   Concluir SEM a informacao (atualizacao 36)
+
+   Alguns checks nao fecham no clique: pedem uma informacao antes
+   (a resposta Sim/Nao, o horario, os ensaios, o documento...). O setor
+   com a permissao `check_sem_informacao` pode concluir esses checks
+   sem preencher — e o check fica marcado como "sem informacao" ate
+   alguem preencher pelo caminho de sempre.
+   ------------------------------------------------------------ */
+
+/**
+ * A informacao que ESTE check ainda pede nesta obra, para a tela dizer
+ * ("a resposta Sim ou Não") — ou null quando o clique ja marca.
+ *
+ * A ordem e a de ObraDetalhe (clicarCheck): e o mesmo pop-up que o
+ * "Preencher agora" abre. O servidor confere igual (faltaNoCheck, em
+ * server/routes/dados.js).
+ */
+export function oQueOCheckPede(etapa, check, obra) {
+  if (!check || !obra) return null
+  if (check.tipo === CHECK_RESERVA) return obra.reserva ? null : 'a reserva do carro'
+  if (check.tipo === CHECK_RETIRADA) return obra.reserva?.retirada ? null : 'o registro da retirada do carro'
+  if (check.tipo === CHECK_PRAZO_EXECUCAO) return obra.execucaoPrazo ? null : 'o prazo da execução'
+  if (check.tipo === CHECK_PLANEJAMENTO) {
+    return (obra.ensaios ?? []).length > 0 ? null : 'os ensaios do Planejamento de ensaios'
+  }
+  if (check.tipo === CHECK_EXECUCAO) {
+    return progressoExecucao(obra)?.completo ? null : 'a execução de todos os ensaios em 100%'
+  }
+  if (ehPropostaTecnica(etapa, check)) return anexoDaProposta(obra) ? null : 'o documento da proposta técnica'
+  if (check.horario) return (obra.horarios?.[check.id] ?? []).length > 0 ? null : 'o horário das datas'
+  if (etapa?.papel === 'execucao' && !obra.execucaoPrazo) return 'o prazo da execução (a etapa de execução só anda com ele)'
+  if (check.simNao) return 'a resposta Sim ou Não'
+  return null
+}
+
+/**
+ * true quando o clique no check abre um pop-up proprio — e e por la que
+ * a informacao de um check concluido sem ela e preenchida depois. Na
+ * etapa de execucao, o check comum so pedia o prazo da etapa: nao tem
+ * pop-up dele.
+ */
+export function checkAbrePopup(etapa, check) {
+  return (
+    [CHECK_RESERVA, CHECK_RETIRADA, CHECK_PRAZO_EXECUCAO, CHECK_PLANEJAMENTO, CHECK_EXECUCAO].includes(check?.tipo) ||
+    ehPropostaTecnica(etapa, check) ||
+    Boolean(check?.horario) ||
+    Boolean(check?.simNao)
+  )
 }
 
 /* ------------------------------------------------------------

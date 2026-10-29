@@ -19,13 +19,12 @@ const SITUACAO = {
 /**
  * Os membros de UMA obra — abre ao clicar em "Membros" na tela dela.
  *
- *   Pelo check  quem marcou algum check na obra: entra e sai sozinho,
- *               pelo proprio check.
- *   Incluidos   os MEMBROS PARCIAIS (atualizacao 30): quem foi a obra
- *               sem marcar check — nem todo mundo marca, nem ha check
- *               para todos — e foi incluido a mao. Cada um com a
- *               situacao: aguardando a resposta, aceitou, ou recusou
- *               (com o motivo que a pessoa deu).
+ * So a lista dos INCLUIDOS (os membros parciais, atualizacao 30): quem
+ * foi incluido a mao, cada um com a situacao — aguardando a resposta,
+ * aceitou, ou recusou (com o motivo que a pessoa deu). Desde a
+ * atualizacao 37 e a inclusao que libera os checks do setor da pessoa
+ * na obra. A lista "Pelo check" (quem entrou marcando check) saiu da
+ * tela: essas pessoas continuam nos rostos do botao Membros.
  *
  * Embaixo, o "Incluir membro": escolhe a pessoa e ela recebe a
  * solicitacao (sino e celular) para aceitar ou recusar. Quem inclui a
@@ -56,16 +55,6 @@ export default function ModalMembrosObra({ aberto, aoFechar, obra, titulo }) {
   const eu = String(user?.id ?? '')
   const parciais = obra?.parciais ?? []
   const podeTirar = pode('excluir_membro_parcial')
-
-  /* quem esta em obra.membros e NAO entrou como parcial aceito: o check */
-  const pelosChecks = useMemo(() => {
-    const aceitos = new Set(parciais.filter((p) => p.status === 'aceito').map((p) => p.usuarioId))
-    return (obra?.membros ?? [])
-      .map(String)
-      .filter((id) => !aceitos.has(id))
-      .map(pessoaPorId)
-      .filter(Boolean)
-  }, [obra?.membros, parciais, pessoaPorId])
 
   /* quem ainda pode ser incluido: ativo, fora da obra, e nao a conta da
      TV. Quem recusou volta a aparecer — incluir de novo pergunta de novo */
@@ -144,23 +133,6 @@ export default function ModalMembrosObra({ aberto, aoFechar, obra, titulo }) {
             <PedidoInclusao pedido={{ ...meuPedido, obraId: obra.id }} />
           </section>
         )}
-
-        <section className="mobra__bloco" aria-labelledby="mobra-checks">
-          <h3 className="mobra__titulo" id="mobra-checks">
-            Pelo check <span>{pelosChecks.length}</span>
-          </h3>
-          {pelosChecks.length === 0 ? (
-            <p className="mobra__vazio">Ninguém marcou check nesta obra ainda.</p>
-          ) : (
-            <ul className="mobra__lista">
-              {pelosChecks.map((p) => (
-                <li key={p.id} className="mobra__pessoa">
-                  {linhaDaPessoa(p)}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
 
         <section className="mobra__bloco" aria-labelledby="mobra-parciais">
           <h3 className="mobra__titulo" id="mobra-parciais">

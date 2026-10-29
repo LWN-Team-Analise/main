@@ -167,11 +167,14 @@ export default function Rastreabilidade({ obra, roteiro }) {
             quando: marca.feitoEm,
             quem: pessoa?.nome ?? 'Usuário removido',
             foto: pessoa?.foto,
-            /* check de pergunta: a resposta vai junto ("Hospedagem — Não") */
+            /* check de pergunta: a resposta vai junto ("Hospedagem — Não");
+               o concluido sem a informacao (atualizacao 36) diz isso */
             titulo:
               check.simNao && typeof marca.resposta === 'boolean'
                 ? `${check.titulo} — ${marca.resposta ? 'Sim' : 'Não'}`
-                : check.titulo,
+                : marca.semInformacao
+                  ? `${check.titulo} — sem informação`
+                  : check.titulo,
             corpo: `${rotuloEtapa(etapa.numero)} · ${
               card.titulo || card.cargos?.map((c) => nomeDoCargo(c)).join(', ') || 'card'
             }`,

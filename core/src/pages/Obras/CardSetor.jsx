@@ -16,7 +16,7 @@ import {
   estadoDoPrazo,
   nomeDaProposta,
   nomeDoCard,
-  podeEditarCheck,
+  travaDoCheck,
 } from '@/domain/obras'
 import { dataBR } from '@/utils/formato'
 import { Icone } from './IconesObra'
@@ -37,6 +37,9 @@ import { Icone } from './IconesObra'
  *    proprio pop-up e mostram quantos ensaios / quanto ja foi executado;
  *  - a "Proposta tecnica" da 1a etapa abre o pop-up do documento e
  *    mostra o arquivo anexado;
+ *  - o check concluido SEM a informacao que pede (atualizacao 36) mostra
+ *    "sem informação" no lugar do que ele mostraria (o "escolher", o
+ *    "reservar", o "definir horário"...);
  *  - as informacoes do check aparecem ao passar o mouse nele.
  *
  * As informacoes do card (card.informacoes) aparecem ao passar o mouse
@@ -74,8 +77,12 @@ export default function CardSetor({
   const exigidos = checksExigidos(card)
   const feitas = exigidos.filter((c) => obra.checks[c.id]).length
   const pronto = exigidos.length > 0 && feitas === exigidos.length
-  /* "de outro" e quando NENHUM check do card e do seu setor */
-  const semPermissao = !card.checks.some((c) => podeEditarCheck(usuario, c, card, obra))
+  /* "de outro" e quando NENHUM check do card abre para a pessoa: o card
+     e de outro setor, ela nao esta na obra, ou o cargo dela nao marca
+     estes (atualizacao 37). O cadeado diz qual dos tres */
+  const travas = card.checks.map((c) => travaDoCheck(usuario, c, card, obra))
+  const semPermissao = travas.length > 0 && travas.every(Boolean)
+  const motivoDoCard = travas.includes('membro') ? 'membro' : travas.includes('setor') ? 'setor' : 'cargo'
   const cor = corDoSetorDoCard(card, corSuaveDoCargo)
   const titulo = nomeDoCard(card, nomeDoCargo)
 
@@ -134,7 +141,16 @@ export default function CardSetor({
           </span>
         )}
         {semPermissao && !travado && !modelo && (
-          <span className="setorcard__cadeado" title={`Só ${donos} marca estes checks`}>
+          <span
+            className="setorcard__cadeado"
+            title={
+              motivoDoCard === 'membro'
+                ? 'Você não participa desta obra: só marca quem foi incluído em Membros e aceitou'
+                : motivoDoCard === 'cargo'
+                  ? 'O seu cargo não marca estes checks'
+                  : `Só ${donos} marca estes checks`
+            }
+          >
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <rect x="5" y="10.5" width="14" height="9.5" rx="2" />
               <path d="M8.4 10.5V7.8a3.6 3.6 0 0 1 7.2 0v2.7" />
@@ -199,11 +215,15 @@ export default function CardSetor({
         {card.checks.map((check) => {
           const marca = obra.checks[check.id]
           const feito = Boolean(marca)
+          /* concluido sem a informacao que pede (atualizacao 36): o selo
+             toma o lugar do convite ("escolher", "reservar"...) */
+          const semInformacao = feito && marca.semInformacao === true
           /* so em check de pergunta: true = sim, false = nao. Check
              marcado antes de virar pergunta fica sem resposta, e
              aparece como um check comum feito. */
           const resposta = check.simNao && feito ? (marca.resposta ?? null) : null
-          const meu = podeEditarCheck(usuario, check, card, obra)
+          const trava = travaDoCheck(usuario, check, card, obra)
+          const meu = trava === null
           const proprio = checkTemDonoProprio(check)
           const donosDoCheck = proprio
             ? check.cargos.map((c) => cargoPorChave(c)?.nome ?? c).join(', ')
@@ -290,7 +310,11 @@ export default function CardSetor({
                           ? check.simNao
                             ? 'Responder Sim ou Não'
                             : undefined
-                          : `Somente ${donosDoCheck} marca este check`
+                          : trava === 'membro'
+                            ? 'Você não participa desta obra: só marca quem foi incluído em Membros e aceitou'
+                            : trava === 'cargo'
+                              ? 'O seu cargo não marca este check'
+                              : `Somente ${donosDoCheck} marca este check`
                 }
                 aria-pressed={feito}
               >
@@ -307,6 +331,14 @@ export default function CardSetor({
                     ))}
                 </span>
                 <span className="tarefa__texto">{check.titulo}</span>
+                {semInformacao && (
+                  <span
+                    className="tarefa__seminfo"
+                    title="Concluído sem a informação que este check pede. Clique para preencher ou desmarcar."
+                  >
+                    sem informação
+                  </span>
+                )}
                 {/* a resposta escrita do lado: "Hospedagem  Não" */}
                 {resposta !== null && (
                   <span className="tarefa__resposta" data-resposta={resposta ? 'sim' : 'nao'}>
@@ -316,7 +348,7 @@ export default function CardSetor({
                 {/* o check que ainda pede resposta: o selo avisa antes do clique */}
                 {check.simNao && !feito && <span className="tarefa__pergunta">Sim/Não</span>}
                 {/* o check com horario: o horario (um so), quantas datas, ou o convite */}
-                {comHorario && (
+                {comHorario && !semInformacao && (
                   <span className="tarefa__ensaios">
                     {modelo
                       ? 'horário'
@@ -328,7 +360,7 @@ export default function CardSetor({
                   </span>
                 )}
                 {/* os do sistema dizem em que pe estao */}
-                {planejamento && !modelo && (
+                {planejamento && !modelo && !semInformacao && (
                   <span className="tarefa__ensaios">
                     {(obra.itens ?? []).length > 0
                       ? `${obra.itens.length} ${obra.itens.length > 1 ? 'itens' : 'item'}`
@@ -337,11 +369,11 @@ export default function CardSetor({
                         : `${obra.ensaios.length} ensaio${obra.ensaios.length > 1 ? 's' : ''}`}
                   </span>
                 )}
-                {execucaoDosEnsaios && !modelo && (
+                {execucaoDosEnsaios && !modelo && !semInformacao && (
                   <span className="tarefa__ensaios">{execucao ? `${execucao.geral}%` : 'sem ensaios'}</span>
                 )}
                 {/* a proposta tecnica: o documento anexado, ou o convite a anexar */}
-                {proposta && (
+                {proposta && !semInformacao && (
                   <span className="tarefa__ensaios tarefa__anexo">
                     {documento ? (
                       <>
@@ -356,7 +388,7 @@ export default function CardSetor({
                   </span>
                 )}
                 {/* o carro da obra: o reservado, ou o convite a reservar / retirar */}
-                {reservaCarro && (
+                {reservaCarro && !semInformacao && (
                   <span className="tarefa__ensaios tarefa__anexo">
                     <span>
                       {obra.reserva?.veiculoId
@@ -369,13 +401,13 @@ export default function CardSetor({
                     </span>
                   </span>
                 )}
-                {retiradaCarro && (
+                {retiradaCarro && !semInformacao && (
                   <span className="tarefa__ensaios tarefa__anexo">
                     <span>{obra.reserva?.retirada ? 'retirado' : `retirar ${obra.reserva?.veiculoNome ?? ''}`.trim()}</span>
                   </span>
                 )}
                 {/* o prazo da execucao, que vale para a etapa de execucao */}
-                {prazoDaExecucao && !modelo && (
+                {prazoDaExecucao && !modelo && !semInformacao && (
                   <span className="tarefa__ensaios">
                     {obra.execucaoPrazo ? `até ${dataBR(obra.execucaoPrazo)}` : 'definir'}
                   </span>

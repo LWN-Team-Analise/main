@@ -20,12 +20,15 @@ import {
   CHECK_PRAZO_EXECUCAO,
   CHECK_RESERVA,
   CHECK_RETIRADA,
+  checkAbrePopup,
   checkDoPrazoDaExecucao,
   corDoSetorDoCard,
   diasAte,
   diasDaExecucao,
+  ehMembroDaObra,
   ehPropostaTecnica,
   nomeDoCard,
+  oQueOCheckPede,
   podeEditarCheck,
   podeReservarCarro,
   prazoFinalDaObra,
@@ -101,6 +104,7 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
     nomeDoCargo,
     alternarCheck,
     responderCheck,
+    concluirCheck,
     adicionarAnexo,
     baixarAnexo,
     definirPrazo,
@@ -147,6 +151,9 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   const [menuFlutuante, setMenuFlutuante] = useState(false)
   /* a pergunta Sim/Nao de um check de card de pergunta: {card, check} */
   const [respondendo, setRespondendo] = useState(null)
+  /* o check que pede informacao, para quem pode concluir sem ela
+     (atualizacao 36): {etapa, card, check, pede, marcado} */
+  const [semInfo, setSemInfo] = useState(null)
   /* a "Proposta tecnica" da 1a etapa, que pede o documento: {card, check} */
   const [propondo, setPropondo] = useState(null)
   /* o prazo sendo definido: {tipo: 'check', id, nome, prazo} —
@@ -263,7 +270,7 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
     }
   }
 
-  const clicarCheck = (etapa, card, check) => {
+  const abrirCheck = (etapa, card, check) => {
     if (check.tipo === CHECK_RESERVA) {
       /* a reserva e por periodo: sem o prazo da execucao nao ha dias
          para saber quais carros estao livres (a reserva que ja existe
@@ -312,6 +319,45 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
     marcarCheck(check.id)
   }
 
+  /**
+   * O clique num check passa antes pelo "sem informacao" (atualizacao 36):
+   *
+   *   - check em aberto que PEDE informacao, e o setor de quem clica tem
+   *     `check_sem_informacao`: a pessoa escolhe entre preencher agora
+   *     (o caminho de sempre, `abrirCheck`) e concluir sem a informacao;
+   *   - check concluido sem a informacao: preencher agora ou desmarcar
+   *     — o prazo, a reserva e a retirada nao desmarcam pelo pop-up
+   *     deles, e sem isto ficariam marcados para sempre.
+   *
+   * Fora disso, o clique segue direto para `abrirCheck`.
+   */
+  const clicarCheck = (etapa, card, check) => {
+    const marca = obra.checks?.[check.id]
+    const meu = !soLeitura && podeEditarCheck(user, check, card, obra)
+    if (meu && marca?.semInformacao) {
+      setSemInfo({ etapa, card, check, pede: oQueOCheckPede(etapa, check, obra), marcado: true })
+      return
+    }
+    if (meu && !marca && pode('check_sem_informacao')) {
+      const pede = oQueOCheckPede(etapa, check, obra)
+      if (pede) {
+        setSemInfo({ etapa, card, check, pede, marcado: false })
+        return
+      }
+    }
+    abrirCheck(etapa, card, check)
+  }
+
+  /* concluir sem a informacao tambem pode fechar a sua parte da etapa: o
+     anuncio e o mesmo da marcacao comum */
+  const concluirSemInformacao = (checkId) => {
+    if (!obra.checks?.[checkId]) {
+      const novo = avisoDeEtapa(roteiro, obra.checks, checkId, chaveDoCargo(user))
+      if (novo) setAvisoEtapa(novo)
+    }
+    concluirCheck(obra.id, checkId, { semInformacao: true })
+  }
+
   /* A proposta tecnica: o documento entra nos Anexos da obra (com o
      prefixo pelo qual o check o acha) e, so depois de gravado, o check
      e marcado — se o envio falha, nada fica marcado sem documento.
@@ -332,6 +378,8 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
           },
     )
     if (!obra.checks?.[check.id]) marcarCheck(check.id)
+    /* concluida antes sem o documento (atualizacao 36): agora ele existe */
+    else if (obra.checks[check.id].semInformacao) concluirCheck(obra.id, check.id)
   }
 
   const baixarProposta = async (anexo) => {
@@ -365,6 +413,17 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
     (p) => p.usuarioId === String(user?.id) && p.status === 'pendente',
   )
   const marcas = etiquetasDaObra(obra)
+  /* o check e de quem esta NA OBRA (atualizacao 37): sem estar nela (e sem
+     a permissao de marcar em qualquer obra), os checks do setor ficam
+     travados — e o bloco de Membros diz por que. Incluido e ainda sem
+     aceitar tambem trava: o aviso pede para aceitar */
+  const foraDaObra =
+    !soLeitura &&
+    user?.checkSoNaObra !== false &&
+    !user?.acessoTotal &&
+    !pode('check_todas_obras') &&
+    !ehMembroDaObra(user, obra)
+  const mensagensNoChat = obra.chatQtd ?? 0
 
 
   /* No modo leitura TODA permissao cai junto, num lugar so. Espalhar o
@@ -703,7 +762,13 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
               type="button"
               className="info info--membros info--botao"
               onClick={() => setVerMembros(true)}
-              title="Ver os membros e incluir quem foi à obra sem marcar check"
+              title={
+                foraDaObra
+                  ? meuPedido
+                    ? 'Aceite a inclusão nesta obra para marcar os checks do seu setor'
+                    : 'Você não participa desta obra: só marca os checks quem foi incluído e aceitou'
+                  : 'Ver os membros e incluir quem marca os checks da obra'
+              }
             >
               <span className="info__nome">Membros</span>
               <span className="info__linha">
@@ -717,12 +782,26 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                   </span>
                 )}
                 {aguardando > 0 && <span className="info__aguardando">{aguardando} aguardando</span>}
+                {foraDaObra && (
+                  <span className="info__fora">{meuPedido ? 'aceite a inclusão para marcar' : 'você não está na obra'}</span>
+                )}
               </span>
             </button>
 
-            <button type="button" className="abrirchat" onClick={() => setChat(true)}>
+            <button
+              type="button"
+              className="abrirchat"
+              onClick={() => setChat(true)}
+              aria-label={mensagensNoChat > 0 ? `Abrir chat (${mensagensNoChat} mensagens)` : 'Abrir chat'}
+            >
               <Icone.chat tamanho={17} />
               Abrir chat
+              {/* a bolinha: quantas mensagens o chat desta obra ja tem */}
+              {mensagensNoChat > 0 && (
+                <span className="abrirchat__qtd" aria-hidden="true">
+                  {mensagensNoChat > 99 ? '99+' : mensagensNoChat}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -1297,11 +1376,86 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
         </div>
       </Modal>
 
+      {/* o check que pede informacao (atualizacao 36): preencher agora ou
+          concluir sem ela — e, ja concluido sem ela, preencher ou desmarcar */}
+      <Modal
+        aberto={Boolean(semInfo)}
+        aoFechar={() => setSemInfo(null)}
+        titulo={semInfo?.check.titulo ?? ''}
+        subtitulo={semInfo?.card ? nomeDoCard(semInfo.card, nomeDoCargo) : ''}
+        largura={460}
+      >
+        {semInfo && (
+          <div className="formrot">
+            {semInfo.marcado ? (
+              <p className="formrot__sistema" role="note">
+                Este check foi concluído sem a informação
+                {semInfo.pede ? ` que ele pede (${semInfo.pede})` : ''}
+                {pessoaPorId(obra.checks[semInfo.check.id]?.feitoPor)
+                  ? `, por ${pessoaPorId(obra.checks[semInfo.check.id].feitoPor).nome}`
+                  : ''}
+                {obra.checks[semInfo.check.id]?.feitoEm ? `, em ${dataHora(obra.checks[semInfo.check.id].feitoEm)}` : ''}.{' '}
+                {checkAbrePopup(semInfo.etapa, semInfo.check)
+                  ? 'Preencha agora pelo caminho de sempre ou desmarque o check.'
+                  : 'Para desfazer, desmarque o check.'}
+              </p>
+            ) : (
+              <p className="formrot__sistema" role="note">
+                Este check pede {semInfo.pede}. Seu setor pode concluí-lo sem preencher: ele fica marcado como “sem
+                informação” até alguém preencher pelo caminho de sempre.
+              </p>
+            )}
+            <footer className="formobra__acoes seminfo__acoes">
+              <button type="button" className="formobra__cancelar" onClick={() => setSemInfo(null)}>
+                Cancelar
+              </button>
+              {semInfo.marcado && (
+                <button
+                  type="button"
+                  className="formobra__cancelar"
+                  onClick={() => {
+                    alternarCheck(obra.id, semInfo.check.id)
+                    setSemInfo(null)
+                  }}
+                >
+                  Desmarcar
+                </button>
+              )}
+              {(!semInfo.marcado || checkAbrePopup(semInfo.etapa, semInfo.check)) && (
+                <Button
+                  type="button"
+                  variant={semInfo.marcado ? 'primary' : 'ghost'}
+                  onClick={() => {
+                    const { etapa, card, check } = semInfo
+                    setSemInfo(null)
+                    abrirCheck(etapa, card, check)
+                  }}
+                >
+                  Preencher agora
+                </Button>
+              )}
+              {!semInfo.marcado && (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    concluirSemInformacao(semInfo.check.id)
+                    setSemInfo(null)
+                  }}
+                >
+                  Concluir sem informação
+                </Button>
+              )}
+            </footer>
+          </div>
+        )}
+      </Modal>
+
       <ModalResposta
         aberto={Boolean(respondendo)}
         check={respondendo?.check}
         nomeCard={respondendo?.card ? nomeDoCard(respondendo.card, nomeDoCargo) : ''}
         marcado={Boolean(respondendo && obra.checks[respondendo.check.id])}
+        semInformacao={Boolean(respondendo && obra.checks[respondendo.check.id]?.semInformacao)}
         resposta={respondendo ? (obra.checks[respondendo.check.id]?.resposta ?? null) : null}
         aoResponder={(valor) => responder(respondendo.check.id, valor)}
         aoDesmarcar={() => alternarCheck(obra.id, respondendo.check.id)}

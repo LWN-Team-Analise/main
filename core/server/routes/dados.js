@@ -4,6 +4,7 @@ import { cargoPode, exige, exigeSessao, meuCargo, tratar } from '../sessao.js'
 import { enviarAviso, temEmail } from '../email.js'
 import { logger } from '../logger.js'
 import { descreverObra, registrarAtividade } from '../atividade.js'
+import { concluidoSemInformacao, informacaoChegou, temSemInformacao } from '../semInformacao.js'
 import { notificar, pessoasDosSetores, todosAtivos } from '../push.js'
 import { IMAGEM_INVALIDA, imagemValida } from '../utils/imagem.js'
 import { proximaProposta } from '../../src/domain/proposta.js'
@@ -30,6 +31,7 @@ import {
   rotuloDaCondicao,
   rotuloDoServico,
 } from '../../src/domain/itensEnsaio.js'
+import { MOTIVO_DA_TRAVA, regraDoUsuario, regraLibera } from '../../src/domain/regrasCheck.js'
 
 const router = Router()
 
@@ -351,6 +353,7 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     parciais,
     horarios,
     horarioMembros,
+    chats,
   ] = await Promise.all([
     lerClientes(imagens),
     /* os setores vem junto: sao poucos e a tela de Clientes precisa
@@ -368,11 +371,14 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
              LEFT JOIN usuario editor   ON editor.id = o.atualizado_por
              LEFT JOIN usuario fim      ON fim.id    = o.concluida_por
             ORDER BY o.criado_em`),
-    /* a resposta Sim/Nao vem da atualizacao 13; sem ela, os checks vem
-       como sempre vieram (todos comuns) */
-    query('SELECT obra_id, check_id, feito_por, feito_em, resposta FROM obra_check').catch((erro) => {
+    /* a resposta Sim/Nao vem da atualizacao 13 e o "concluido sem
+       informacao" da 36; sem elas, os checks vem como sempre vieram */
+    query('SELECT obra_id, check_id, feito_por, feito_em, resposta, sem_informacao FROM obra_check').catch((erro) => {
       if (erro.code !== '42703') throw erro
-      return query('SELECT obra_id, check_id, feito_por, feito_em FROM obra_check')
+      return query('SELECT obra_id, check_id, feito_por, feito_em, resposta FROM obra_check').catch((e) => {
+        if (e.code !== '42703') throw e
+        return query('SELECT obra_id, check_id, feito_por, feito_em FROM obra_check')
+      })
     }),
     query('SELECT obra_id, usuario_id FROM obra_membro'),
     query('SELECT * FROM obra_observacao ORDER BY enviada_em DESC'),
@@ -437,6 +443,10 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
              FROM obra_horario ORDER BY dia`).catch(semTabelaVazia),
     query(`SELECT obra_id, check_id, to_char(dia, 'YYYY-MM-DD') AS dia, usuario_id
              FROM obra_horario_membro`).catch(semTabelaVazia),
+    /* quantas mensagens o chat de cada obra tem (as apagadas para todos
+       nao contam): a bolinha do botao "Abrir chat" */
+    query(`SELECT obra_id, count(*)::int AS n FROM obra_chat
+            WHERE apagada_em IS NULL GROUP BY obra_id`).catch(semTabelaVazia),
   ])
 
   const junta = (linhas, chave, monta) => {
@@ -457,6 +467,9 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
       feitoEm: l.feito_em,
       /* so em card de pergunta: true = sim, false = nao */
       resposta: l.resposta ?? null,
+      /* concluido sem a informacao que pede (atualizacao 36). So vai
+         quando e verdade: a carga tem um destes por check marcado */
+      ...(l.sem_informacao === true ? { semInformacao: true } : {}),
     }
     checksDaObra[l.obra_id] = mapa
   })
@@ -513,6 +526,8 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
       membros: quemVai[`${l.obra_id}|${l.check_id}|${l.dia}`] ?? [],
     })
   })
+
+  const qtdDoChat = Object.fromEntries(chats.rows.map((l) => [l.obra_id, l.n]))
 
   const parciaisDaObra = junta(parciais.rows, 'obra_id', (l) => ({
     usuarioId: String(l.usuario_id),
@@ -687,6 +702,7 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
       membros: membrosDaObra[o.id] ?? [],
       /* os incluidos a mao: pendente, aceito ou recusado (com o motivo) */
       parciais: parciaisDaObra[o.id] ?? [],
+      chatQtd: qtdDoChat[o.id] ?? 0,
       /* check com horario -> [{ dia, hora, membros }] (atualizacao 31) */
       horarios: horariosDaObra[o.id] ?? {},
       observacoes: obsDaObra[o.id] ?? [],
@@ -2016,7 +2032,7 @@ const ROTULO_CAMPO_OBRA = {
  * cadastrada (concluida ou nao), mais um — 8234 vira 8235. Ele continua
  * editavel na tela; aqui so se pula o numero que ja existir.
  */
-router.get('/obras/proxima-proposta', exigeSessao, exige('editar_obras'), async (_req, res) => {
+router.get('/obras/proxima-proposta', exigeSessao, exige('criar_obras'), async (_req, res) => {
   try {
     const [ultima, todas] = await Promise.all([
       query("SELECT proposta FROM obra WHERE proposta ~ '[0-9]' ORDER BY criado_em DESC, id DESC LIMIT 1"),
@@ -2029,7 +2045,7 @@ router.get('/obras/proxima-proposta', exigeSessao, exige('editar_obras'), async 
   }
 })
 
-router.post('/obras', exigeSessao, exige('editar_obras'), async (req, res) => {
+router.post('/obras', exigeSessao, exige('criar_obras'), async (req, res) => {
   const clienteId = texto(req.body?.clienteId)
   const proposta = texto(req.body?.proposta)
   /* a descricao virou opcional: quem identifica a obra e a dupla
@@ -2343,6 +2359,13 @@ router.post('/obras/:id/concluir', exigeSessao, exige('editar_obras'), async (re
      - acesso total, ou a permissao "check em todas as etapas";
      - a obra e de EMERGENCIA (obra.tipo = 'emergencia'): ali ninguem
        espera por setor, e qualquer setor marca qualquer check.
+
+   Mais duas travas (atualizacao 37). Antes de tudo, a pessoa precisa
+   estar NA OBRA (membro pelo check, ou incluida em Membros e que ja
+   ACEITOU — a inclusao pendente nao vale) — a nao ser que o setor tenha
+   `check_todas_obras`. Depois da
+   trava do setor, a regra do CARGO dela no setor (cargo.regras_check: a
+   partir de que etapa, e os checks de fora) tem de deixar.
    ------------------------------------------------------------ */
 
 /** O nome do check e da etapa dele, para o historico. */
@@ -2362,14 +2385,52 @@ async function descreverCheck(checkId) {
   }
 }
 
-async function podeMarcar(usuarioId, checkId, obraId) {
+/**
+ * Por que a pessoa NAO marca o check — 'membro', 'cargo' ou 'setor' — ou
+ * null quando marca. A mesma resposta de travaDoCheck (src/domain/obras.js).
+ */
+async function travaDoMarcar(usuarioId, checkId, obraId) {
   const meu = await meuCargo(usuarioId)
-  if (cargoPode(meu, 'check_todas_etapas')) return true
+  if (meu.acessoTotal) return null
 
-  /* obra de emergencia: a trava por setor nao vale */
-  const obra = await query('SELECT tipo FROM obra WHERE id = $1', [obraId])
-  if (obra.rows[0]?.tipo === 'emergencia') return true
+  const [obra, quem, etapa] = await Promise.all([
+    query('SELECT tipo FROM obra WHERE id = $1', [obraId]),
+    /* sem a atualizacao 37 nao ha regra nem trava de membro: o check
+       segue so a regra do setor, como antes */
+    query(
+      `SELECT (to_jsonb(c) ? 'regras_check') AS tem37, to_jsonb(c) -> 'regras_check' AS regras,
+              (to_jsonb(u) ->> 'cargo_titulo_id') AS cargo_titulo_id
+         FROM usuario u LEFT JOIN cargo c ON c.id = u.cargo_id
+        WHERE u.id = $1`,
+      [usuarioId],
+    ),
+    query(
+      `SELECT et.ordem, ck.origem_id
+         FROM etapa_check ck
+         JOIN etapa_card kd ON kd.id = ck.card_id
+         JOIN etapa et      ON et.id = kd.etapa_id
+        WHERE ck.id = $1`,
+      [checkId],
+    ),
+  ])
+  const emergencia = obra.rows[0]?.tipo === 'emergencia'
 
+  const tem37 = quem.rows[0]?.tem37 === true
+  if (tem37 && !cargoPode(meu, 'check_todas_obras') && !(await estaNaObra(obraId, usuarioId))) return 'membro'
+
+  /* o setor antes do cargo: o check de OUTRO setor e "de outro setor" */
+  if (!(cargoPode(meu, 'check_todas_etapas') || emergencia || (await doMeuSetor(meu.chave, checkId)))) return 'setor'
+
+  if (tem37 && !emergencia) {
+    const regra = regraDoUsuario(quem.rows[0].regras, usuarioId, quem.rows[0].cargo_titulo_id)
+    const check = { id: String(checkId), origemId: etapa.rows[0]?.origem_id ? String(etapa.rows[0].origem_id) : null }
+    if (!regraLibera(regra, etapa.rows[0]?.ordem ?? null, check)) return 'cargo'
+  }
+  return null
+}
+
+/** O check e do setor: o dono proprio dele, ou (sem dono proprio) o do card. */
+async function doMeuSetor(chave, checkId) {
   /* o check pode ter dono proprio; se tiver, e ele quem decide, e o
      cargo do card nao entra na conta */
   const proprio = await query(
@@ -2378,7 +2439,7 @@ async function podeMarcar(usuarioId, checkId, obraId) {
       WHERE kc.check_id = $1`,
     [checkId],
   )
-  if (proprio.rows.length > 0) return proprio.rows.some((l) => l.chave === meu.chave)
+  if (proprio.rows.length > 0) return proprio.rows.some((l) => l.chave === chave)
 
   const { rows } = await query(
     `SELECT c.chave
@@ -2388,7 +2449,34 @@ async function podeMarcar(usuarioId, checkId, obraId) {
       WHERE ck.id = $1`,
     [checkId],
   )
-  return rows.some((l) => l.chave === meu.chave)
+  return rows.some((l) => l.chave === chave)
+}
+
+/** A pessoa esta na obra: marcou check nela, ou foi incluida e ACEITOU (a pendente nao vale). */
+async function estaNaObra(obraId, usuarioId) {
+  const { rows } = await query(
+    `SELECT EXISTS (SELECT 1 FROM obra_membro WHERE obra_id = $1 AND usuario_id = $2)
+         OR EXISTS (SELECT 1 FROM obra_membro_parcial
+                     WHERE obra_id = $1 AND usuario_id = $2 AND status = 'aceito') AS ok`,
+    [obraId, usuarioId],
+  )
+  return rows[0]?.ok === true
+}
+
+async function podeMarcar(usuarioId, checkId, obraId) {
+  return (await travaDoMarcar(usuarioId, checkId, obraId)) === null
+}
+
+/**
+ * Confere quem marca e, quando nao pode, ja responde o 403 com o motivo.
+ * `deOutro` e o recado de quando o check e de outro setor (cada rota tem
+ * o seu). Devolve true quando recusou.
+ */
+async function recusouMarcar(res, usuarioId, checkId, obraId, deOutro) {
+  const trava = await travaDoMarcar(usuarioId, checkId, obraId)
+  if (!trava) return false
+  res.status(403).json({ erro: trava === 'setor' ? deOutro : MOTIVO_DA_TRAVA[trava] })
+  return true
 }
 
 /**
@@ -2497,9 +2585,14 @@ async function checkDoSistema(obraId, tipo) {
  *     volta a ficar em aberto.
  *
  * O que for desmarcado assim entra no historico com o motivo.
+ *
+ * O check concluido SEM a informacao (atualizacao 36) foi fechado de
+ * proposito sem o que a regra pede: ele nao reabre. E quando a regra
+ * passa a valer, a informacao chegou — a marca de "sem informacao" sai.
  */
 async function conferirEnsaios(req, obraId) {
   const ensaios = await andamentoDosEnsaios(obraId)
+  const comMarca = await temSemInformacao()
   const regras = [
     ['planejamento_ensaios', ensaios.length > 0, 'nenhum ensaio planejado'],
     [
@@ -2509,11 +2602,22 @@ async function conferirEnsaios(req, obraId) {
     ],
   ]
   for (const [tipo, valendo, motivo] of regras) {
-    if (valendo) continue
+    if (valendo) {
+      if (comMarca) {
+        await query(
+          `UPDATE obra_check SET sem_informacao = false
+            WHERE obra_id = $1 AND sem_informacao
+              AND check_id IN (SELECT id FROM etapa_check WHERE tipo = $2)`,
+          [obraId, tipo],
+        ).catch((erro) => (erro.code === '42703' ? null : Promise.reject(erro)))
+      }
+      continue
+    }
     const { rows } = await query(
       `DELETE FROM obra_check
         WHERE obra_id = $1
           AND check_id IN (SELECT id FROM etapa_check WHERE tipo = $2)
+          ${comMarca ? 'AND NOT sem_informacao' : ''}
        RETURNING check_id`,
       [obraId, tipo],
     ).catch((erro) => (erro.code === '42703' ? { rows: [] } : Promise.reject(erro)))
@@ -2539,6 +2643,106 @@ const dataLida = (iso) => (iso ? String(iso).slice(0, 10).split('-').reverse().j
 const rotuloResposta = (resposta) => (resposta === true ? 'Sim' : resposta === false ? 'Não' : null)
 
 /**
+ * O que falta para ESTE check fechar nesta obra: a primeira exigencia
+ * dele que ainda nao foi cumprida, como a resposta que a API devolve
+ * ({ status, erro }) e, em `falta`, o nome curto dela para o historico
+ * ("a resposta Sim ou Não") — ou null, quando nada falta e o clique
+ * marca.
+ *
+ * E a mesma pergunta que a tela faz antes do clique (oQueOCheckPede, em
+ * src/domain/obras.js), na mesma ordem.
+ */
+async function faltaNoCheck(obraId, checkId, regra, resposta) {
+  /* o check com horario (atualizacao 31) marca no pop-up dele, com as
+     datas e os horarios; sem horario nenhum definido, nao fecha */
+  const { rows: comHorario } = await query(
+    `SELECT ck.horario,
+            EXISTS (SELECT 1 FROM obra_horario h WHERE h.obra_id = $2 AND h.check_id = ck.id) AS definido
+       FROM etapa_check ck WHERE ck.id = $1`,
+    [checkId, obraId],
+  ).catch((erro) => {
+    if (erro.code === '42703' || erro.code === '42P01') return { rows: [] }
+    throw erro
+  })
+  if (comHorario[0]?.horario && !comHorario[0].definido) {
+    return { status: 409, erro: 'Defina o horário das datas no próprio check antes de marcar.', falta: 'o horário das datas' }
+  }
+  if (regra.simNao && typeof resposta !== 'boolean') {
+    return { status: 400, erro: 'Este check pede uma resposta: Sim ou Não.', falta: 'a resposta Sim ou Não' }
+  }
+
+  /* A etapa de EXECUCAO nao anda sem o PRAZO DA EXECUCAO: e ele que
+     diz ate quando a 3a etapa tem de fechar, e e dele que sai a
+     urgencia do card no quadro enquanto ela esta aberta. (O prazo
+     final da obra e outro — vale para a obra inteira.) */
+  if (regra.papel === 'execucao') {
+    const datas = await datasDaObra(obraId)
+    if (!datas?.execucaoPrazo) {
+      return {
+        status: 409,
+        erro: 'A etapa de execução exige o prazo da execução. Defina o período de execução antes de marcar os checks dela.',
+        falta: 'o prazo da execução',
+      }
+    }
+  }
+
+  /* A reserva e a retirada do carro (atualizacao 23) nao se marcam no
+     clique: a reserva marca quando o supervisor escolhe o carro, e a
+     retirada quando a saida do carro e registrada (ver
+     server/routes/frotas.js). */
+  if (regra.tipo === 'reserva_carro' || regra.tipo === 'retirada_carro') {
+    return {
+      status: 409,
+      erro:
+        regra.tipo === 'reserva_carro'
+          ? 'Este check marca quando o supervisor reserva o carro da obra.'
+          : 'Este check marca quando a retirada do carro é registrada.',
+      falta: regra.tipo === 'reserva_carro' ? 'a reserva do carro' : 'o registro da retirada do carro',
+    }
+  }
+
+  /* O "Prazo da execucao" (1a etapa, atualizacao 19) nao se marca no
+     clique: ele marca sozinho quando o prazo e definido (PUT
+     /obras/:id/execucao). Sem o prazo, recusa com o motivo. */
+  if (regra.tipo === 'prazo_execucao') {
+    const datas = await datasDaObra(obraId)
+    if (!datas?.execucaoPrazo) {
+      return {
+        status: 409,
+        erro: 'Este check fecha quando o prazo da execução é definido. Abra o período de execução e escolha a data.',
+        falta: 'o prazo da execução',
+      }
+    }
+  }
+
+  /* os dois checks dos ensaios so fecham com o que eles pedem */
+  if (regra.tipo === 'planejamento_ensaios' || regra.tipo === 'execucao_ensaios') {
+    const ensaios = await andamentoDosEnsaios(obraId)
+    if (ensaios.length === 0) {
+      return {
+        status: 409,
+        erro:
+          regra.tipo === 'planejamento_ensaios'
+            ? 'Escolha ao menos um ensaio no Planejamento de ensaios antes de marcar este check.'
+            : 'Nenhum ensaio foi planejado para esta obra. Faça o Planejamento de ensaios primeiro.',
+        falta: 'os ensaios do Planejamento de ensaios',
+      }
+    }
+    const faltam = ensaios.filter((e) => e.percentual < 100)
+    if (regra.tipo === 'execucao_ensaios' && faltam.length > 0) {
+      return {
+        status: 409,
+        erro: `A execução só fecha com todos os ensaios em 100%. Faltam: ${faltam
+          .map((e) => `${e.nome} (${e.percentual}%)`)
+          .join(', ')}.`,
+        falta: 'a execução de todos os ensaios em 100%',
+      }
+    }
+  }
+  return null
+}
+
+/**
  * PUT marca o check.
  *
  * No card de PERGUNTA o corpo traz `resposta` (true = sim, false = nao)
@@ -2546,92 +2750,59 @@ const rotuloResposta = (resposta) => (resposta === true ? 'Sim' : resposta === f
  * nao uma pendencia. Mandar de novo com a outra resposta TROCA a
  * resposta e mantem quem marcou primeiro. Nos cards comuns a resposta
  * e ignorada.
+ *
+ * `semInformacao: true` (atualizacao 36) conclui o check SEM o que ele
+ * pede — a resposta, o horario, os ensaios, o prazo, a reserva... So
+ * para o setor com a permissao `check_sem_informacao`, e so no check que
+ * ele ja pode marcar (podeMarcar). A linha fica com sem_informacao =
+ * true. Check que nao pede nada marca como sempre, sem a marca.
  */
 router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, res) => {
   try {
-    if (!(await podeMarcar(req.dono.sub, req.params.checkId, req.params.id))) {
-      return res.status(403).json({ erro: 'Este check é de outro setor.' })
-    }
+    if (await recusouMarcar(res, req.dono.sub, req.params.checkId, req.params.id, 'Este check é de outro setor.')) return
 
     const regra = await regraDoCheck(req.params.checkId)
     const pergunta = regra.simNao
     const resposta = req.body?.resposta
+    const semInformacao = req.body?.semInformacao === true
 
-    /* o check com horario (atualizacao 31) marca no pop-up dele, com as
-       datas e os horarios; sem horario nenhum definido, nao fecha */
-    const { rows: comHorario } = await query(
-      `SELECT ck.horario,
-              EXISTS (SELECT 1 FROM obra_horario h WHERE h.obra_id = $2 AND h.check_id = ck.id) AS definido
-         FROM etapa_check ck WHERE ck.id = $1`,
-      [req.params.checkId, req.params.id],
-    ).catch((erro) => {
-      if (erro.code === '42703' || erro.code === '42P01') return { rows: [] }
-      throw erro
-    })
-    if (comHorario[0]?.horario && !comHorario[0].definido) {
-      return res.status(409).json({ erro: 'Defina o horário das datas no próprio check antes de marcar.' })
-    }
-    if (pergunta && typeof resposta !== 'boolean') {
-      return res.status(400).json({ erro: 'Este check pede uma resposta: Sim ou Não.' })
+    if (semInformacao && !cargoPode(await meuCargo(req.dono.sub), 'check_sem_informacao')) {
+      return res.status(403).json({ erro: 'Seu setor não tem permissão para concluir check sem a informação.' })
     }
 
-    /* A etapa de EXECUCAO nao anda sem o PRAZO DA EXECUCAO: e ele que
-       diz ate quando a 3a etapa tem de fechar, e e dele que sai a
-       urgencia do card no quadro enquanto ela esta aberta. (O prazo
-       final da obra e outro — vale para a obra inteira.) */
-    if (regra.papel === 'execucao') {
-      const datas = await datasDaObra(req.params.id)
-      if (!datas?.execucaoPrazo) {
-        return res.status(409).json({
-          erro: 'A etapa de execução exige o prazo da execução. Defina o período de execução antes de marcar os checks dela.',
+    const falta = await faltaNoCheck(req.params.id, req.params.checkId, regra, resposta)
+    if (falta && !semInformacao) return res.status(falta.status).json({ erro: falta.erro })
+
+    /* concluido SEM a informacao: so marca. Ja marcado, fica como esta */
+    if (falta) {
+      if (!(await temSemInformacao())) {
+        return res.status(503).json({
+          erro: 'Concluir check sem a informação precisa da atualização 36 do banco. Rode npm run db:atualizar.',
         })
       }
-    }
-
-    /* A reserva e a retirada do carro (atualizacao 23) nao se marcam no
-       clique: a reserva marca quando o supervisor escolhe o carro, e a
-       retirada quando a saida do carro e registrada (ver
-       server/routes/frotas.js). */
-    if (regra.tipo === 'reserva_carro' || regra.tipo === 'retirada_carro') {
-      return res.status(409).json({
-        erro:
-          regra.tipo === 'reserva_carro'
-            ? 'Este check marca quando o supervisor reserva o carro da obra.'
-            : 'Este check marca quando a retirada do carro é registrada.',
-      })
-    }
-
-    /* O "Prazo da execucao" (1a etapa, atualizacao 19) nao se marca no
-       clique: ele marca sozinho quando o prazo e definido (PUT
-       /obras/:id/execucao). Sem o prazo, recusa com o motivo. */
-    if (regra.tipo === 'prazo_execucao') {
-      const datas = await datasDaObra(req.params.id)
-      if (!datas?.execucaoPrazo) {
-        return res.status(409).json({
-          erro: 'Este check fecha quando o prazo da execução é definido. Abra o período de execução e escolha a data.',
+      const comResposta = pergunta && typeof resposta === 'boolean'
+      const marcado = await query(
+        `INSERT INTO obra_check (obra_id, check_id, feito_por, ${comResposta ? 'resposta, ' : ''}sem_informacao)
+         VALUES ($1, $2, $3, ${comResposta ? '$4, ' : ''}true)
+         ON CONFLICT (obra_id, check_id) DO NOTHING
+         RETURNING check_id`,
+        [req.params.id, req.params.checkId, req.dono.sub, ...(comResposta ? [resposta] : [])],
+      )
+      if (marcado.rowCount > 0) {
+        await registrarAtividade(req, {
+          acao: 'check.marcado',
+          categoria: 'check',
+          entidade: ['obra', req.params.id],
+          descricao: 'Check concluído sem a informação',
+          detalhes: {
+            ...(await descreverObra(req.params.id)),
+            ...(await descreverCheck(req.params.checkId)),
+            ...(comResposta ? { resposta: rotuloResposta(resposta) } : {}),
+            sem_informacao: falta.falta,
+          },
         })
       }
-    }
-
-    /* os dois checks dos ensaios so fecham com o que eles pedem */
-    if (regra.tipo === 'planejamento_ensaios' || regra.tipo === 'execucao_ensaios') {
-      const ensaios = await andamentoDosEnsaios(req.params.id)
-      if (ensaios.length === 0) {
-        return res.status(409).json({
-          erro:
-            regra.tipo === 'planejamento_ensaios'
-              ? 'Escolha ao menos um ensaio no Planejamento de ensaios antes de marcar este check.'
-              : 'Nenhum ensaio foi planejado para esta obra. Faça o Planejamento de ensaios primeiro.',
-        })
-      }
-      const faltam = ensaios.filter((e) => e.percentual < 100)
-      if (regra.tipo === 'execucao_ensaios' && faltam.length > 0) {
-        return res.status(409).json({
-          erro: `A execução só fecha com todos os ensaios em 100%. Faltam: ${faltam
-            .map((e) => `${e.nome} (${e.percentual}%)`)
-            .join(', ')}.`,
-        })
-      }
+      return res.json({ ok: true })
     }
 
     /* `inserido` separa "marcou agora" de "trocou a resposta": e o
@@ -2653,6 +2824,10 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
              RETURNING (xmax = 0) AS inserido`,
             [req.params.id, req.params.checkId, req.dono.sub, pergunta ? resposta : null],
           )
+
+    /* passou por tudo o que o check pede: se ele tinha sido concluido sem
+       a informacao, agora ela chegou (a resposta, o documento...) */
+    await informacaoChegou(req.params.id, req.params.checkId)
 
     /* ja estava marcado (e com a mesma resposta): nada aconteceu, nada
        entra no historico */
@@ -2679,18 +2854,19 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
 
 router.delete('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, res) => {
   try {
-    if (!(await podeMarcar(req.dono.sub, req.params.checkId, req.params.id))) {
-      return res.status(403).json({ erro: 'Este check é de outro setor.' })
-    }
-    /* o do prazo acompanha o prazo: com a data definida, ele fica marcado */
+    if (await recusouMarcar(res, req.dono.sub, req.params.checkId, req.params.id, 'Este check é de outro setor.')) return
+    /* o do prazo acompanha o prazo: com a data definida, ele fica marcado.
+       O concluido SEM a informacao (atualizacao 36) nao acompanha nada —
+       nem o prazo, nem a reserva, nem a saida —, e desmarca como os outros */
     const { tipo } = await regraDoCheck(req.params.checkId)
-    if (tipo === 'prazo_execucao') {
+    const semInformacao = await concluidoSemInformacao(req.params.id, req.params.checkId)
+    if (tipo === 'prazo_execucao' && !semInformacao) {
       return res.status(409).json({
         erro: 'Este check acompanha o prazo da execução. Para mudar, altere a data no período de execução.',
       })
     }
     /* os do carro acompanham a reserva e a saida (atualizacao 23) */
-    if (tipo === 'reserva_carro' || tipo === 'retirada_carro') {
+    if ((tipo === 'reserva_carro' || tipo === 'retirada_carro') && !semInformacao) {
       return res.status(409).json({
         erro:
           tipo === 'reserva_carro'
@@ -2918,7 +3094,8 @@ router.put('/obras/:id/execucao', exigeSessao, obraAberta, async (req, res) => {
       },
     })
 
-    /* o prazo definido fecha o check da 1a etapa */
+    /* o prazo definido fecha o check da 1a etapa — e, se ele tinha sido
+       concluido sem o prazo (atualizacao 36), a informacao chegou */
     if (checkPrazo) {
       const marcou = await query(
         `INSERT INTO obra_check (obra_id, check_id, feito_por)
@@ -2926,6 +3103,7 @@ router.put('/obras/:id/execucao', exigeSessao, obraAberta, async (req, res) => {
          ON CONFLICT (obra_id, check_id) DO NOTHING`,
         [req.params.id, checkPrazo, req.dono.sub],
       )
+      await informacaoChegou(req.params.id, checkPrazo)
       if (marcou.rowCount > 0) {
         await registrarAtividade(req, {
           acao: 'check.marcado',
@@ -2971,9 +3149,7 @@ router.put('/obras/:id/ensaios', exigeSessao, obraAberta, async (req, res) => {
     if (!checkId) {
       return res.status(501).json({ erro: 'O roteiro não tem o check "Planejamento de ensaios" (atualização 14).' })
     }
-    if (!(await podeMarcar(req.dono.sub, checkId, req.params.id))) {
-      return res.status(403).json({ erro: 'O Planejamento de ensaios é de outro setor.' })
-    }
+    if (await recusouMarcar(res, req.dono.sub, checkId, req.params.id, 'O Planejamento de ensaios é de outro setor.')) return
     /* a lista daqui sai das linhas na obra que planeja por item */
     if (await usaItens(req.params.id)) {
       return res.status(409).json({ erro: 'Esta obra planeja os ensaios por item: a lista sai dos itens.' })
@@ -3087,9 +3263,7 @@ router.put('/obras/:id/execucao/dia', exigeSessao, obraAberta, async (req, res) 
     if (!checkId) {
       return res.status(501).json({ erro: 'O roteiro não tem o check "Execução dos ensaios" (atualização 14).' })
     }
-    if (!(await podeMarcar(req.dono.sub, checkId, req.params.id))) {
-      return res.status(403).json({ erro: 'A Execução dos ensaios é de outro setor.' })
-    }
+    if (await recusouMarcar(res, req.dono.sub, checkId, req.params.id, 'A Execução dos ensaios é de outro setor.')) return
     /* na obra que planeja por item o % sai das linhas feitas */
     if (await usaItens(req.params.id)) {
       return res.status(409).json({
@@ -3375,9 +3549,7 @@ router.put('/obras/:id/planejamento-itens', exigeSessao, obraAberta, async (req,
     if (!checkId) {
       return res.status(501).json({ erro: 'O roteiro não tem o check "Planejamento de ensaios" (atualização 14).' })
     }
-    if (!(await podeMarcar(req.dono.sub, checkId, obraId))) {
-      return res.status(403).json({ erro: 'O Planejamento de ensaios é de outro setor.' })
-    }
+    if (await recusouMarcar(res, req.dono.sub, checkId, obraId, 'O Planejamento de ensaios é de outro setor.')) return
 
     /* a lista solta com execucao registrada nao passa para itens */
     const jaPorItem = await usaItens(obraId)
@@ -3584,8 +3756,10 @@ router.put('/obras/:id/execucao-itens', exigeSessao, obraAberta, async (req, res
     }
     const data = texto(l.data)
     if (!dataValida(data)) return res.status(400).json({ erro: 'Escolha a data em que o ensaio foi feito.' })
+    /* o valor medido saiu da tela: a linha feita e a data + o conforme. O
+       banco pede o resultado junto com a data (atualizacao 25), entao ele
+       vai vazio quando nao vem */
     const resultado = texto(l.resultado)
-    if (!resultado) return res.status(400).json({ erro: 'Informe o resultado medido.' })
     if (resultado.length > LIMITES_ITEM.resultado) {
       return res.status(400).json({ erro: `O resultado passa de ${LIMITES_ITEM.resultado} caracteres.` })
     }
@@ -3604,9 +3778,7 @@ router.put('/obras/:id/execucao-itens', exigeSessao, obraAberta, async (req, res
     if (!checkId) {
       return res.status(501).json({ erro: 'O roteiro não tem o check "Execução dos ensaios" (atualização 14).' })
     }
-    if (!(await podeMarcar(req.dono.sub, checkId, obraId))) {
-      return res.status(403).json({ erro: 'A Execução dos ensaios é de outro setor.' })
-    }
+    if (await recusouMarcar(res, req.dono.sub, checkId, obraId, 'A Execução dos ensaios é de outro setor.')) return
 
     const comData = linhas.filter((l) => !l.apagar)
     if (comData.length > 0) {
@@ -3677,7 +3849,7 @@ router.put('/obras/:id/execucao-itens', exigeSessao, obraAberta, async (req, res
             const nome = `${s.item} · ${s.ensaio} · ${rotuloDaCondicao(s.condicao)}`
             return l.apagar
               ? `${nome}: resultado apagado`
-              : `${nome}: ${l.resultado} (${l.conforme ? 'conforme' : 'não conforme'}, ${dataLida(l.data)})`
+              : `${nome}: ${l.resultado ? `${l.resultado} ` : ''}(${l.conforme ? 'conforme' : 'não conforme'}, ${dataLida(l.data)})`
           })
           .join('; '),
       },
@@ -4723,7 +4895,7 @@ router.post('/obras/:id/chat', exigeSessao, obraAberta, async (req, res) => {
       destinos: membros,
       mencoes,
       linha: rows[0],
-      onde: `Chat da obra ${[proposta, cliente].filter(Boolean).join(' - ')}`.trim(),
+      onde: `Chat da obra ${[cliente, proposta].filter(Boolean).join(' - ')}`.trim(),
       url: `/core/app/obras/${req.params.id}`,
       tag: `chat-obra-${req.params.id}`,
     })
@@ -5046,9 +5218,7 @@ router.put('/obras/:id/horarios/:checkId', exigeSessao, obraAberta, async (req, 
   const marcar = typeof req.body?.marcar === 'boolean' ? req.body.marcar : undefined
 
   try {
-    if (!(await podeMarcar(req.dono.sub, checkId, obraId))) {
-      return res.status(403).json({ erro: 'Este check é de outro setor.' })
-    }
+    if (await recusouMarcar(res, req.dono.sub, checkId, obraId, 'Este check é de outro setor.')) return
     const { rows: ck } = await query('SELECT horario FROM etapa_check WHERE id = $1', [checkId]).catch((erro) => {
       if (erro.code === '42703') return { rows: [] }
       throw erro
@@ -5104,6 +5274,9 @@ router.put('/obras/:id/horarios/:checkId', exigeSessao, obraAberta, async (req, 
           )
         }
       }
+      /* o check concluido sem o horario (atualizacao 36): com ao menos
+         uma data com horario, a informacao chegou */
+      if (dias.length > 0) await informacaoChegou(obraId, checkId, db)
       if (marcar === true) {
         const { rowCount } = await db.query(
           `INSERT INTO obra_check (obra_id, check_id, feito_por) VALUES ($1, $2, $3)

@@ -10,6 +10,10 @@ import './ModalResposta.css'
  *
  * Check ja respondido abre aqui de novo para TROCAR a resposta ou
  * desmarcar; trocar mantem quem marcou primeiro.
+ *
+ * Check concluido SEM a resposta (`semInformacao`, atualizacao 36) abre
+ * aqui para responder agora — a resposta tira a marca de "sem
+ * informacao" — ou desmarcar.
  */
 export default function ModalResposta({
   aberto,
@@ -17,6 +21,7 @@ export default function ModalResposta({
   nomeCard,
   resposta = null,
   marcado = false,
+  semInformacao = false,
   aoResponder,
   aoDesmarcar,
   aoFechar,
@@ -32,15 +37,19 @@ export default function ModalResposta({
     <Modal aberto={aberto} aoFechar={aoFechar} titulo={check.titulo} subtitulo={nomeCard} largura={420}>
       <div className="resposta">
         <p className="resposta__pergunta">
-          {marcado
-            ? `Respondido: ${resposta === false ? 'Não' : 'Sim'}. Quer trocar a resposta?`
-            : 'Responda para marcar este check:'}
+          {marcado && semInformacao && resposta === null
+            ? 'Concluído sem a resposta. Responda agora:'
+            : marcado
+              ? `Respondido: ${resposta === false ? 'Não' : 'Sim'}. Quer trocar a resposta?`
+              : 'Responda para marcar este check:'}
         </p>
 
         <div className="resposta__opcoes">
           <button
             type="button"
-            className={`resposta__opcao resposta__opcao--sim ${marcado && resposta !== false ? 'is-atual' : ''}`.trim()}
+            className={`resposta__opcao resposta__opcao--sim ${
+              marcado && resposta !== false && !(semInformacao && resposta === null) ? 'is-atual' : ''
+            }`.trim()}
             onClick={() => escolher(true)}
           >
             <span className="resposta__glifo" aria-hidden="true">

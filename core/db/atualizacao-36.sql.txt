@@ -1,0 +1,70 @@
+-- ============================================================
+--  ATUALIZACAO 36 — CONCLUIR CHECK SEM A INFORMACAO
+--
+--  Alguns checks nao fecham no clique: pedem uma informacao antes —
+--  a resposta Sim/Nao, o horario das datas, os ensaios (planejamento
+--  e execucao), o prazo da execucao, o documento da proposta tecnica,
+--  a reserva e a retirada do carro. E, na etapa de execucao, todo
+--  check pede o prazo da execucao.
+--
+--  1. obra_check.sem_informacao — a marca do check concluido SEM a
+--     informacao que ele pede. Com ela:
+--       - a tela mostra "sem informação" no check;
+--       - o sistema nao reabre sozinho os checks dos ensaios
+--         concluidos assim;
+--       - os checks do sistema que so acompanham outra coisa (o prazo
+--         da execucao, a reserva e a retirada do carro) podem ser
+--         desmarcados.
+--     A marca sai quando a informacao chega pelo caminho de sempre
+--     (a resposta, o horario, o prazo, os ensaios, a reserva...).
+--
+--  2. A permissao nova `check_sem_informacao` ("Concluir check sem
+--     preencher a informação", embaixo de Obras): o setor que a tem
+--     conclui esses checks SEM preencher a informacao. Ela nao abre o
+--     check de outro setor — quem marca o que continua igual.
+--     Entra no setor de acesso total (que ja passa por tudo; e so para
+--     a tela de Setores mostrar marcada). Nos outros, quem administra
+--     marca na tela de Setores. Isso roda UMA vez so (marca
+--     'marco_atualizacao_36' em configuracao): rodar de novo nao
+--     devolve a permissao a quem ela foi tirada depois.
+--
+--  Sem esta atualizacao o sistema continua de pe: so o "Concluir sem
+--  informação" e recusado, com o recado de rodar `npm run db:atualizar`.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao duplica nada.
+-- ============================================================
+
+BEGIN;
+
+-- ---- 1. a marca do check concluido sem a informacao ----
+ALTER TABLE public.obra_check
+    ADD COLUMN IF NOT EXISTS sem_informacao boolean NOT NULL DEFAULT false;
+
+COMMENT ON COLUMN public.obra_check.sem_informacao IS
+    'true = concluido SEM a informacao que o check pede (permissao check_sem_informacao). Volta a false quando a informacao chega.';
+
+-- ---- 2. a permissao nova, uma vez so ----
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['check_sem_informacao']
+ WHERE acesso_total
+   AND NOT ('check_sem_informacao' = ANY (permissoes))
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_36');
+
+INSERT INTO public.configuracao (chave, valor)
+VALUES ('marco_atualizacao_36', 'permissao da atualizacao 36 distribuida')
+ON CONFLICT (chave) DO NOTHING;
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" nas duas linhas
+-- ============================================================
+
+SELECT 'obra_check.sem_informacao' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'obra_check' AND column_name = 'sem_informacao') AS ok
+UNION ALL SELECT 'check_sem_informacao no acesso total',
+       NOT EXISTS (SELECT 1 FROM public.cargo WHERE acesso_total AND NOT ('check_sem_informacao' = ANY (permissoes)));

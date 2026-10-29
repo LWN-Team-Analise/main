@@ -91,6 +91,13 @@ export default function CartaoNegocio({
           </span>
         )}
 
+        {/* Novos negocios: ainda nao foi para Obras (atualizacao 37) */}
+        {negocio.status === 'aberto' && negocio.funil === 'novos' && !negocio.obraId && (
+          <span className="cartaoneg__pendente" title="Abra o negócio e compartilhe com a equipe para a obra ir para Obras">
+            Pendente
+          </span>
+        )}
+
         {negocio.status === 'aberto' && (
           <span className="cartaoneg__atividade" title={dicaAtividade} role="img" aria-label={dicaAtividade}>
             {situacao === 'sem' ? <IconeSemAtividade /> : <IconeAtividade situacao={situacao} />}

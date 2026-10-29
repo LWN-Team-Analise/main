@@ -805,13 +805,19 @@ export default function Comercial() {
         podeExcluir={podeExcluir}
         podeEmail={podeResponder && email.envio && Boolean(editando?.negocio?.contatoEmail)}
         aoFechar={() => setEditando(null)}
-        aoSalvo={(n, novo) => {
+        aoSalvo={(n, novo, compartilhado) => {
           if (n.funil === funilId || visao === 'arquivo') trocarUm(n)
           else setNegocios((lista) => lista.filter((x) => x.id !== n.id))
+          /* o de Novos negocios nasce pendente: so vai para Obras depois do
+             "Compartilhar com a equipe" (atualizacao 37) */
           avisar(
-            novo
-              ? `Negócio “${n.titulo}” adicionado${n.obraId ? ' e a obra criada em Obras' : ''}.`
-              : `Negócio “${n.titulo}” salvo.`,
+            compartilhado
+              ? `“${n.titulo}” compartilhado com a equipe: a obra já está em Obras.`
+              : novo
+                ? `Negócio “${n.titulo}” adicionado${
+                    n.funil === 'novos' && !n.obraId ? '. Compartilhe com a equipe para a obra ir para Obras' : ''
+                  }.`
+                : `Negócio “${n.titulo}” salvo.`,
           )
         }}
         aoGanhar={(n) => mudarStatus(n, 'ganho')}

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
-import { CampoArea, CampoPastilhas, CampoTexto } from '@/components/Campo/Campo'
+import { CampoPastilhas } from '@/components/Campo/Campo'
 import { CampoData } from '@/components/CampoData/CampoData'
 import { useDados } from '@/context/DadosContext'
 import { diasAte, diasDaExecucao, resumoDosDias } from '@/domain/obras'
-import { LIMITES_ITEM, linhaFeita, nomeDoItem, resumoDasLinhas, rotuloDaCondicao } from '@/domain/itensEnsaio'
+import { linhaFeita, nomeDoItem, resumoDasLinhas, rotuloDaCondicao } from '@/domain/itensEnsaio'
 import { dataBR, hojeISO } from '@/utils/formato'
 import './ModalEnsaios.css'
 import './ModalItens.css'
@@ -50,7 +50,8 @@ const quando = (iso) => {
  * etapa, na obra que planeja por item.
  *
  * Cada LINHA (item + ensaio + condicao) recebe o resultado: a data em
- * que foi feita, o valor medido, se ficou conforme e uma observacao.
+ * que foi feita e se ficou conforme. So isso — o valor medido e a
+ * observacao sairam da tela (o resultado antigo que tinha ficou no banco).
  * Como encontrado e Como certificado sao linhas separadas — da para comparar
  * o antes e o depois dos ajustes.
  *
@@ -121,9 +122,7 @@ export default function ModalExecucaoItens({
       item,
       linha,
       data: linha.data ?? dataSugerida ?? (hoje >= (inicio ?? hoje) ? hoje : ''),
-      resultado: linha.resultado ?? '',
       conforme: linha.conforme === true ? 'sim' : linha.conforme === false ? 'nao' : '',
-      observacao: linha.observacao ?? '',
     })
     setErros({})
     setErro('')
@@ -148,7 +147,6 @@ export default function ModalExecucaoItens({
     if (!form.data) e.data = 'Escolha a data em que o ensaio foi feito.'
     else if (inicio && form.data < inicio) e.data = `O período de execução começa em ${dataBR(inicio)}.`
     else if (form.data > hoje) e.data = 'A data ainda não chegou.'
-    if (!form.resultado.trim()) e.resultado = 'Informe o resultado medido.'
     if (!form.conforme) e.conforme = 'Diga se ficou conforme.'
     setErros(e)
     if (Object.keys(e).length > 0) return
@@ -162,9 +160,7 @@ export default function ModalExecucaoItens({
         {
           id: form.linhaId,
           data,
-          resultado: form.resultado.trim(),
           conforme: form.conforme === 'sim',
-          observacao: form.observacao.trim(),
         },
       ])
       /* "Salvar e próxima": a mesma data, que costuma ser o mesmo dia de campo */
@@ -260,21 +256,6 @@ export default function ModalExecucaoItens({
                   erro={erros.conforme}
                 />
               </div>
-              <CampoTexto
-                rotulo="Resultado"
-                maxLength={LIMITES_ITEM.resultado}
-                placeholder="O valor medido, com a unidade. Ex.: 0,45 m/s"
-                value={form.resultado}
-                onChange={mudar('resultado')}
-                erro={erros.resultado}
-              />
-              <CampoArea
-                rotulo="Observação (opcional)"
-                linhas={2}
-                maxLength={LIMITES_ITEM.observacao}
-                value={form.observacao}
-                onChange={mudar('observacao')}
-              />
             </>
           ) : (
             <dl className="linha__lida">
@@ -290,16 +271,6 @@ export default function ModalExecucaoItens({
                     <dt>Data</dt>
                     <dd>{dataBR(form.linha.data)}</dd>
                   </div>
-                  <div>
-                    <dt>Resultado</dt>
-                    <dd>{form.linha.resultado}</dd>
-                  </div>
-                  {form.linha.observacao && (
-                    <div>
-                      <dt>Observação</dt>
-                      <dd>{form.linha.observacao}</dd>
-                    </div>
-                  )}
                 </>
               )}
             </dl>
@@ -467,7 +438,7 @@ export default function ModalExecucaoItens({
                                       registra ? 'Registrar' : 'Pendente'
                                     ) : (
                                       <>
-                                        <b>{l.conforme ? '✓' : '✗'}</b> {l.resultado}
+                                        <b>{l.conforme ? '✓' : '✗'}</b> {l.conforme ? 'Conforme' : 'Não conforme'}
                                         <small> · {dataBR(l.data).slice(0, 5)}</small>
                                       </>
                                     )}

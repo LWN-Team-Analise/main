@@ -256,7 +256,7 @@ const linha = (rotulo, valor) =>
  */
 export async function enviarAviso({ para, obra, cliente, etapa, mensagem, remetente }) {
   const tom = TOM[obra?.tipo === 'emergencia' ? 'emergencia' : obra?.prioridade] ?? TOM.media
-  const titulo = [obra?.proposta, cliente?.nome].filter(Boolean).join(' — ') || 'Obra'
+  const titulo = [cliente?.nome, obra?.proposta].filter(Boolean).join(' — ') || 'Obra'
   const link = `${SITE}/app/obras/${obra?.id}`
 
   const logo = imagemEmbutida('logo-cliente', cliente?.logo)

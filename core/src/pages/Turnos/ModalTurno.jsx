@@ -120,7 +120,7 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
     [cronograma, pessoaPorId],
   )
 
-  const nomeDaObra = (o) => [o.proposta, clientePorId(o.clienteId)?.nome].filter(Boolean).join(' - ') || 'Obra'
+  const nomeDaObra = (o) => [clientePorId(o.clienteId)?.nome, o.proposta].filter(Boolean).join(' - ') || 'Obra'
   const opcoesObra = useMemo(
     () => [
       { valor: '', rotulo: 'Nenhuma' },

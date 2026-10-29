@@ -193,7 +193,7 @@ export default function Obras() {
   const [recado, setRecado] = useState('')
 
   /* sem a permissao, o botao nem aparece — e a API recusa igual */
-  const podeCriarObra = pode('editar_obras')
+  const podeCriarObra = pode('criar_obras')
   const podeModelo = pode('editar_etapa') || pode('editar_cards') || pode('editar_checks')
 
   const [prioridade, setPrioridade] = useState(null)

@@ -85,7 +85,8 @@ export default function ModalChat({ aberto, obra, somenteLeitura = false, aoFech
       aberto={aberto}
       aoFechar={aoFechar}
       titulo={`Chat — ${tituloDaObra(obra, cliente)}`}
-      largura={640}
+      largura={860}
+      ajustavel="lwn.chat-obra-tamanho"
     >
       <Conversa
         aberto={aberto}
@@ -102,6 +103,7 @@ export default function ModalChat({ aberto, obra, somenteLeitura = false, aoFech
         }
         aoEnviar={enviar}
         aoApagar={apagar}
+        grande
       />
     </Modal>
   )

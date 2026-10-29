@@ -8,6 +8,8 @@ import Seletor from '@/components/Seletor/Seletor'
 import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
 import { ALTERACAO, CHAVES, GRUPOS, VISUALIZACAO, dependentes, normalizar, travada } from '@/domain/permissoes'
+import { lerRegrasCheck } from '@/domain/obras'
+import RegrasCheck from './RegrasCheck'
 import { CORES_SETOR } from './ModalCargos'
 import './ModalCargos.css'
 import './SetorPagina.css'
@@ -65,6 +67,8 @@ export default function SetorPagina() {
       acessoTotal: Boolean(cargo.acessoTotal),
       painelTv: Boolean(cargo.painelTv),
       permissoes: normalizar(cargo.permissoes ?? []),
+      /* null = o banco ainda nao tem a atualizacao 37: a parte some */
+      regrasCheck: cargo.regrasCheck ? lerRegrasCheck(cargo.regrasCheck) : null,
     })
   }, [cargo, form])
 
@@ -155,7 +159,13 @@ export default function SetorPagina() {
   const gravar = async () => {
     setSalvando(true)
     try {
-      await atualizarCargo(cargo.id, { ...form, nome: form.nome.trim(), permissoes: normalizar(form.permissoes) })
+      const { regrasCheck, ...resto } = form
+      await atualizarCargo(cargo.id, {
+        ...resto,
+        nome: form.nome.trim(),
+        permissoes: normalizar(form.permissoes),
+        ...(regrasCheck ? { regrasCheck: lerRegrasCheck(regrasCheck) } : {}),
+      })
       setConferindo(false)
       setRecado('Setor salvo. As permissões já valem para quem está nele.')
     } catch (e) {
@@ -383,6 +393,13 @@ export default function SetorPagina() {
               </div>
             </div>
           </section>
+
+          {/* ---------------- quem do setor marca qual check ---------------- */}
+          {form.regrasCheck && (
+            <div inert={listaTravada ? '' : undefined} className={listaTravada ? 'is-travada' : undefined}>
+              <RegrasCheck setor={cargo} regras={form.regrasCheck} aoMudar={mudar('regrasCheck')} />
+            </div>
+          )}
         </div>
 
         {/* ---------------- a barra de baixo, sempre a vista ---------------- */}
@@ -448,6 +465,13 @@ export default function SetorPagina() {
               </>
             )}
 
+            {form.regrasCheck && (
+              <>
+                <dt>Checks por cargo</dt>
+                <dd>{resumoDasRegras(form.regrasCheck)}</dd>
+              </>
+            )}
+
             <dt>Permissões</dt>
             <dd>
               {form.permissoes.length === 0 ? (
@@ -484,6 +508,18 @@ function BotaoVoltar({ aoClicar }) {
       Voltar
     </button>
   )
+}
+
+/** "2 cargos e 1 pessoa com regra" — o resumo da confirmacao. */
+function resumoDasRegras(regras) {
+  const limpas = lerRegrasCheck(regras)
+  const cargos = Object.keys(limpas.cargos).length
+  const pessoas = Object.keys(limpas.pessoas).length
+  if (cargos + pessoas === 0) return 'Todos do setor marcam todos os checks dele'
+  const partes = []
+  if (cargos) partes.push(cargos === 1 ? '1 cargo' : `${cargos} cargos`)
+  if (pessoas) partes.push(pessoas === 1 ? '1 pessoa' : `${pessoas} pessoas`)
+  return `${partes.join(' e ')} com regra`
 }
 
 /** O nome que a permissao tem na tela — a chave crua nao diz nada. */

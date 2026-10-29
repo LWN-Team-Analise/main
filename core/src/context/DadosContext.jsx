@@ -9,6 +9,7 @@ import { corAdaptada, corSuave, textoSobre } from '@/utils/cor'
 import { hojeISO } from '@/utils/formato'
 import { podeFazer } from '@/domain/permissoes'
 import {
+  MOTIVO_DA_TRAVA,
   aplicarRegraDosGases,
   aplicarRegraDaReserva,
   chaveDoCargo,
@@ -16,12 +17,12 @@ import {
   estadoDaEtapa,
   etapaAtual,
   obraFechada,
-  podeEditarCheck,
   progressoDaObra,
   progressoExecucao,
   prontaParaConcluir as roteiroCompleto,
   roteiroVigente,
   setoresPendentes,
+  travaDoCheck,
 } from '@/domain/obras'
 
 /**
@@ -427,8 +428,10 @@ export function DadosProvider({ children }) {
         .find((c) => c.checks.some((k) => String(k.id) === String(checkId)))
       const check = card?.checks.find((k) => String(k.id) === String(checkId))
 
-      if (check && !podeEditarCheck(user, check, card, obra)) {
-        setErro('Este check é de outro setor.')
+      /* de outro setor, fora da obra ou fora do que o cargo marca */
+      const trava = check ? travaDoCheck(user, check, card, obra) : null
+      if (trava) {
+        setErro(MOTIVO_DA_TRAVA[trava])
         return
       }
 
@@ -499,6 +502,62 @@ export function DadosProvider({ children }) {
 
       try {
         const { carga: veio } = await comCarga(() => dados.marcarCheck(obraId, checkId, resposta))
+        if (veio) aplicarCarga(veio)
+        else await recarregar()
+      } catch (e) {
+        setErro(e.message)
+        await recarregar()
+      }
+    },
+    [estado.obras, user, recarregar, aplicarCarga],
+  )
+
+  /**
+   * Marca o check SEM alternar — o "Concluir sem informação" e o
+   * "a informação chegou" (atualizacao 36). Desmarcar continua sendo
+   * `alternarCheck`.
+   *
+   *   semInformacao: true   conclui sem a informacao que o check pede
+   *                         (so com a permissao `check_sem_informacao`);
+   *   semInformacao: false  a informacao chegou por fora do check (o
+   *                         documento da proposta): o servidor confere o
+   *                         que o check pede e tira a marca.
+   *
+   * Mesma ida otimista do alternarCheck: a tela muda na hora e o
+   * recarregar corrige se o servidor recusar.
+   */
+  const concluirCheck = useCallback(
+    async (obraId, checkId, { semInformacao = false } = {}) => {
+      const obra = estado.obras.find((o) => o.id === obraId)
+      if (!obra) return
+      if (obraFechada(obra)) {
+        setErro('Esta obra foi concluída. O conteúdo dela fica só para consulta.')
+        return
+      }
+
+      setEstado((atual) => ({
+        ...atual,
+        obras: atual.obras.map((o) => {
+          if (o.id !== obraId) return o
+          const antes = o.checks[checkId]
+          /* ja marcado: o "sem informacao" nao muda nada; a informacao
+             que chega tira a marca */
+          const marca = antes
+            ? { ...antes, semInformacao: semInformacao && antes.semInformacao === true }
+            : {
+                feitoPor: String(user?.id ?? ''),
+                feitoEm: new Date().toISOString(),
+                resposta: null,
+                semInformacao,
+              }
+          return { ...o, checks: { ...o.checks, [checkId]: marca } }
+        }),
+      }))
+
+      try {
+        const { carga: veio } = await comCarga(() =>
+          semInformacao ? dados.marcarCheckSemInformacao(obraId, checkId) : dados.marcarCheck(obraId, checkId),
+        )
         if (veio) aplicarCarga(veio)
         else await recarregar()
       } catch (e) {
@@ -831,13 +890,30 @@ export function DadosProvider({ children }) {
 
   const carregarChat = useCallback((obraId) => dados.carregarChat(obraId), [])
 
+  /* a bolinha do "Abrir chat" conta as mensagens da obra: quem envia ou
+     apaga para todos ve o numero mudar na hora, sem esperar a carga */
+  const contarNoChat = useCallback((obraId, delta) => {
+    setEstado((atual) => ({
+      ...atual,
+      obras: atual.obras.map((o) =>
+        o.id === obraId ? { ...o, chatQtd: Math.max(0, (o.chatQtd ?? 0) + delta) } : o,
+      ),
+    }))
+  }, [])
+
   const enviarMensagem = useCallback(
     (obraId, campos) =>
-      dados.enviarMensagem(obraId, { ...campos, autorNome: user?.name }).catch((e) => {
-        setErro(e.message)
-        throw e
-      }),
-    [user?.name],
+      dados
+        .enviarMensagem(obraId, { ...campos, autorNome: user?.name })
+        .then((nova) => {
+          contarNoChat(obraId, 1)
+          return nova
+        })
+        .catch((e) => {
+          setErro(e.message)
+          throw e
+        }),
+    [user?.name, contarNoChat],
   )
 
   /**
@@ -849,11 +925,17 @@ export function DadosProvider({ children }) {
    */
   const apagarMensagem = useCallback(
     (obraId, mensagemId, escopo = 'mim') =>
-      dados.apagarMensagem(obraId, mensagemId, escopo).catch((e) => {
-        setErro(e.message)
-        throw e
-      }),
-    [],
+      dados
+        .apagarMensagem(obraId, mensagemId, escopo)
+        .then((r) => {
+          if (escopo === 'todos') contarNoChat(obraId, -1)
+          return r
+        })
+        .catch((e) => {
+          setErro(e.message)
+          throw e
+        }),
+    [contarNoChat],
   )
 
   /* ============================================================
@@ -1217,6 +1299,7 @@ export function DadosProvider({ children }) {
       concluirObra,
       alternarCheck,
       responderCheck,
+      concluirCheck,
       definirPrazo,
       definirExecucao,
       planejarEnsaios,
@@ -1343,6 +1426,7 @@ export function DadosProvider({ children }) {
       concluirObra,
       alternarCheck,
       responderCheck,
+      concluirCheck,
       definirPrazo,
       definirExecucao,
       planejarEnsaios,

@@ -142,7 +142,7 @@ export default function Painel({ mes, passo = 'mes', secao = 'todos' }) {
       fechadas
         .map((o) => ({
           obra: o,
-          nome: [o.proposta, clientePorId(o.clienteId)?.nome].filter(Boolean).join(' — ') || 'Obra',
+          nome: [clientePorId(o.clienteId)?.nome, o.proposta].filter(Boolean).join(' — ') || 'Obra',
           dias: diasEntre(o.dataInicio ?? o.criadoEm, o.concluidaEm),
           fim: o.concluidaEm,
         }))
@@ -314,7 +314,7 @@ export default function Painel({ mes, passo = 'mes', secao = 'todos' }) {
           return {
             chave: o.id,
             rotulo:
-              [o.proposta, clientePorId(o.clienteId)?.nome].filter(Boolean).join(' — ') || 'Obra',
+              [clientePorId(o.clienteId)?.nome, o.proposta].filter(Boolean).join(' — ') || 'Obra',
             /* o eixo da linha e curto por obrigacao — cabe a proposta e
                mais nada. O nome inteiro fica para a dica. */
             curto: o.proposta || 'obra',
@@ -390,7 +390,7 @@ export default function Painel({ mes, passo = 'mes', secao = 'todos' }) {
       const situacao = situacaoDaObra(roteiroObra, obra, hoje)
       const item = {
         obra,
-        nome: [obra.proposta, clientePorId(obra.clienteId)?.nome].filter(Boolean).join(' — ') || 'Obra',
+        nome: [clientePorId(obra.clienteId)?.nome, obra.proposta].filter(Boolean).join(' — ') || 'Obra',
       }
       const vencido = situacao.motivos.find((m) => m.venceu)
       if (vencido) {
