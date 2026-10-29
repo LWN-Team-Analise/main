@@ -16,7 +16,7 @@ import {
   estadoDoPrazo,
   nomeDaProposta,
   nomeDoCard,
-  podeEditarCheck,
+  travaDoCheck,
 } from '@/domain/obras'
 import { dataBR } from '@/utils/formato'
 import { Icone } from './IconesObra'
@@ -77,8 +77,12 @@ export default function CardSetor({
   const exigidos = checksExigidos(card)
   const feitas = exigidos.filter((c) => obra.checks[c.id]).length
   const pronto = exigidos.length > 0 && feitas === exigidos.length
-  /* "de outro" e quando NENHUM check do card e do seu setor */
-  const semPermissao = !card.checks.some((c) => podeEditarCheck(usuario, c, card, obra))
+  /* "de outro" e quando NENHUM check do card abre para a pessoa: o card
+     e de outro setor, ela nao esta na obra, ou o cargo dela nao marca
+     estes (atualizacao 37). O cadeado diz qual dos tres */
+  const travas = card.checks.map((c) => travaDoCheck(usuario, c, card, obra))
+  const semPermissao = travas.length > 0 && travas.every(Boolean)
+  const motivoDoCard = travas.includes('membro') ? 'membro' : travas.includes('setor') ? 'setor' : 'cargo'
   const cor = corDoSetorDoCard(card, corSuaveDoCargo)
   const titulo = nomeDoCard(card, nomeDoCargo)
 
@@ -137,7 +141,16 @@ export default function CardSetor({
           </span>
         )}
         {semPermissao && !travado && !modelo && (
-          <span className="setorcard__cadeado" title={`Só ${donos} marca estes checks`}>
+          <span
+            className="setorcard__cadeado"
+            title={
+              motivoDoCard === 'membro'
+                ? 'Você não está incluído nesta obra: entre em Membros para marcar os checks'
+                : motivoDoCard === 'cargo'
+                  ? 'O seu cargo não marca estes checks'
+                  : `Só ${donos} marca estes checks`
+            }
+          >
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <rect x="5" y="10.5" width="14" height="9.5" rx="2" />
               <path d="M8.4 10.5V7.8a3.6 3.6 0 0 1 7.2 0v2.7" />
@@ -209,7 +222,8 @@ export default function CardSetor({
              marcado antes de virar pergunta fica sem resposta, e
              aparece como um check comum feito. */
           const resposta = check.simNao && feito ? (marca.resposta ?? null) : null
-          const meu = podeEditarCheck(usuario, check, card, obra)
+          const trava = travaDoCheck(usuario, check, card, obra)
+          const meu = trava === null
           const proprio = checkTemDonoProprio(check)
           const donosDoCheck = proprio
             ? check.cargos.map((c) => cargoPorChave(c)?.nome ?? c).join(', ')
@@ -296,7 +310,11 @@ export default function CardSetor({
                           ? check.simNao
                             ? 'Responder Sim ou Não'
                             : undefined
-                          : `Somente ${donosDoCheck} marca este check`
+                          : trava === 'membro'
+                            ? 'Você não está incluído nesta obra: entre em Membros para marcar'
+                            : trava === 'cargo'
+                              ? 'O seu cargo não marca este check'
+                              : `Somente ${donosDoCheck} marca este check`
                 }
                 aria-pressed={feito}
               >

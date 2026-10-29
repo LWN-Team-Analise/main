@@ -532,7 +532,9 @@
    puxa os vizinhos junto e os corpos comecam todos na mesma altura */
 .funil__colunas {
   display: grid;
-  grid-template-columns: repeat(var(--etapas), minmax(150px, 1fr));
+  /* colunas mais largas: o card do negocio respira, e o quadro rola de
+     lado quando as etapas nao cabem */
+  grid-template-columns: repeat(var(--etapas), minmax(230px, 1fr));
   grid-template-rows: auto 1fr;
   gap: 0 5px;
   overflow-x: auto;
@@ -1303,6 +1305,25 @@
   text-decoration: none;
 }
 
+/* Novos negocios ainda sem obra: falta compartilhar com a equipe */
+.negform__pendente,
+.cartaoneg__pendente {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--pri-media-suave);
+  color: var(--pri-media);
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cartaoneg__pendente {
+  padding: 2px 8px;
+  font-size: 0.66rem;
+}
+
 a.negform__obralink:hover {
   background: color-mix(in srgb, var(--com-azul, var(--accent)) 20%, transparent);
 }
@@ -1442,6 +1463,7 @@ a.negform__obralink:hover {
 .negform__perdido,
 .negform__reabrir,
 .negform__email,
+.negform__compartilhar,
 .negform__excluir {
   display: inline-flex;
   align-items: center;
@@ -1462,6 +1484,18 @@ a.negform__obralink:hover {
   border-color: transparent;
   background: var(--com-verde, #2c8f4f);
   color: #fff;
+}
+
+/* o negocio pendente vai para Obras: o azul do Comercial */
+.negform__compartilhar {
+  border-color: transparent;
+  background: var(--com-azul, var(--accent));
+  color: #fff;
+}
+
+.negform__compartilhar:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .negform__perdido {

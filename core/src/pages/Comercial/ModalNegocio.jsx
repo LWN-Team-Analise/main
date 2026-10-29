@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
+import Confirma from '@/components/Confirma/Confirma'
 import { CampoArea, CampoDinheiro, CampoSelecao, CampoTexto } from '@/components/Campo/Campo'
 import { CampoData } from '@/components/CampoData/CampoData'
 import { useAuth } from '@/context/AuthContext'
@@ -92,11 +93,13 @@ const NOVO_CONTATO = { nome: '', email: '', telefone: '' }
  * Novo, o rodape tem o Importar no canto esquerdo; editando, ganha
  * Ganho, Perdido (ou Reabrir) e Excluir.
  *
- * NOVOS NEGOCIOS VIRAM OBRA: o negocio novo nesse funil ja cria a obra
- * em Obras. Por isso, ali, a empresa tem de ser um cliente cadastrado
- * (a obra precisa dele) e aparece o "N° da proposta" da obra, que vem
- * sugerido como no "Nova obra" (o da ultima, mais um). O titulo do
- * negocio vira a descricao da obra. Depois, o negocio mostra o atalho
+ * NOVOS NEGOCIOS VIRAM OBRA — quando forem COMPARTILHADOS com a equipe
+ * (atualizacao 37). Adicionado, o negocio fica pendente, so no Comercial;
+ * o "Compartilhar com a equipe" do rodape e que faz a obra nascer em Obras,
+ * para todo mundo. Por isso, ali, a empresa tem de ser um cliente
+ * cadastrado (a obra precisa dele) e aparece o "N° da proposta" da obra,
+ * que vem sugerido como no "Nova obra" (o da ultima, mais um). O titulo
+ * do negocio vira a descricao da obra. Depois, o negocio mostra o atalho
  * para a obra dele.
  */
 export default function ModalNegocio({
@@ -126,6 +129,9 @@ export default function ModalNegocio({
   const [novo, setNovo] = useState(null)
   const [errosNovo, setErrosNovo] = useState({})
   const [criandoContato, setCriandoContato] = useState(false)
+  /* o "Compartilhar com a equipe": a confirmacao aberta e o envio */
+  const [compartilhando, setCompartilhando] = useState(false)
+  const [conferindoPartilha, setConferindoPartilha] = useState(false)
 
   useEffect(() => {
     if (!aberto) return undefined
@@ -155,6 +161,7 @@ export default function ModalNegocio({
         atividadeDescricao: negocio.atividadeDescricao ?? '',
         previsaoFechamento: negocio.previsaoFechamento ?? '',
         observacao: negocio.observacao ?? '',
+        proposta: negocio.proposta ?? '',
       })
     } else {
       const funil = funilPorId(inicial?.funil) ?? FUNIS[0]
@@ -173,9 +180,9 @@ export default function ModalNegocio({
       .carregarContatos()
       .then((lista) => vivo && setContatos(lista))
       .catch(() => vivo && setContatos([]))
-    /* negocio novo: o n° da proposta da obra ja vem sugerido. Se a
-       pessoa ja comecou a digitar, o que ela digitou fica */
-    if (!negocio) {
+    /* negocio novo (ou pendente sem numero): o n° da proposta da obra ja
+       vem sugerido. Se a pessoa ja comecou a digitar, o que ela digitou fica */
+    if (!negocio || (negocio.funil === FUNIL_DA_OBRA && !negocio.obraId && !negocio.proposta)) {
       comercial
         .proximaProposta()
         .then((numero) => {
@@ -191,8 +198,13 @@ export default function ModalNegocio({
   const funil = funilPorId(form.funil) ?? FUNIS[0]
   const comCliente = Boolean(form.clienteId) && form.clienteId !== OUTRA
   const somenteLeitura = !podeEditar
-  /* este negocio, ao ser salvo, cria a obra em Obras */
-  const criaObra = !negocio && form.funil === FUNIL_DA_OBRA
+  /* o negocio de Novos negocios que ainda nao virou obra: PENDENTE ate
+     ser compartilhado com a equipe. O novo ja pede o cliente cadastrado e o
+     n° da proposta; o que ja existe so pede os dois na hora de compartilhar */
+  const pendente = form.funil === FUNIL_DA_OBRA && !negocio?.obraId
+  const criaObra = !negocio && pendente
+  const podeCompartilhar =
+    Boolean(negocio) && podeEditar && negocio.funil === FUNIL_DA_OBRA && !negocio.obraId && negocio.status === 'aberto'
 
   const pessoasDaEquipe = useMemo(
     () =>
@@ -305,9 +317,7 @@ export default function ModalNegocio({
     return Object.keys(novos).length === 0
   }
 
-  const enviar = async (evento) => {
-    evento.preventDefault()
-    if (somenteLeitura || !conferir()) return
+  const montarCampos = () => {
     const pessoaEscolhida = form.pessoaId && form.pessoaId !== DO_NEGOCIO
     const doNegocio = form.pessoaId === DO_NEGOCIO
     const prob = String(form.probabilidade).trim()
@@ -331,15 +341,19 @@ export default function ModalNegocio({
       atividadeDescricao: form.atividadeDescricao.trim(),
       previsaoFechamento: form.previsaoFechamento || null,
       observacao: form.observacao.trim(),
-      ...(criaObra ? { proposta: form.proposta.trim() } : {}),
+      ...(pendente ? { proposta: form.proposta.trim() } : {}),
     }
+  }
+
+  const enviar = async (evento) => {
+    evento.preventDefault()
+    if (somenteLeitura || !conferir()) return
+    const campos = montarCampos()
     setSalvando(true)
     try {
       const { negocio: salvo } = negocio
         ? await comercial.editarNegocio(negocio.id, campos)
         : await comercial.criarNegocio(campos)
-      /* a obra nova entra em Obras (e na pagina inicial) sem recarregar */
-      if (salvo.obraId && !negocio) recarregar()
       aoSalvo(salvo, !negocio)
       aoFechar()
     } catch (e) {
@@ -347,6 +361,40 @@ export default function ModalNegocio({
       else setErro(e.message)
     } finally {
       setSalvando(false)
+    }
+  }
+
+  /* antes de abrir a confirmacao, o que a obra precisa: cliente e n° */
+  const pedirPartilha = () => {
+    if (!conferir()) return
+    const faltam = {}
+    if (!comCliente) faltam.clienteId = 'Escolha o cliente cadastrado: a obra nasce com ele.'
+    if (!form.proposta.trim()) faltam.proposta = 'Informe o n° da proposta da obra.'
+    if (Object.keys(faltam).length > 0) {
+      setErros((atual) => ({ ...atual, ...faltam }))
+      return
+    }
+    setConferindoPartilha(true)
+  }
+
+  const compartilhar = async () => {
+    setCompartilhando(true)
+    setErro('')
+    try {
+      /* o que mudou na tela vai junto: o n° e o cliente que a obra usa */
+      await comercial.editarNegocio(negocio.id, montarCampos())
+      const { negocio: salvo } = await comercial.compartilharNegocio(negocio.id)
+      /* a obra nova entra em Obras (e na pagina inicial) sem recarregar */
+      recarregar()
+      setConferindoPartilha(false)
+      aoSalvo(salvo, false, true)
+      aoFechar()
+    } catch (e) {
+      setConferindoPartilha(false)
+      if (e.campo) setErros((atual) => ({ ...atual, [e.campo]: e.message }))
+      else setErro(e.message)
+    } finally {
+      setCompartilhando(false)
     }
   }
 
@@ -364,7 +412,7 @@ export default function ModalNegocio({
             }`
           : funil.rotulo
       }
-      largura={760}
+      largura={880}
     >
       <form className="negform" onSubmit={enviar} noValidate>
         {/* a etapa: as setas do Pipedrive */}
@@ -389,6 +437,10 @@ export default function ModalNegocio({
           <span>
             Etapa: <strong>{funil.etapas[indiceEtapa]?.rotulo ?? '—'}</strong>
           </span>
+          {/* ainda nao foi para Obras: falta compartilhar com a equipe */}
+          {negocio && pendente && negocio.status === 'aberto' && (
+            <span className="negform__pendente">Pendente: compartilhar com a equipe</span>
+          )}
           {/* o negocio que virou obra leva a ela */}
           {negocio?.obraId &&
             (pode('ver_obras') ? (
@@ -442,14 +494,14 @@ export default function ModalNegocio({
             />
           )}
 
-          {/* Novos negocios: a obra que nasce junto com o negocio */}
-          {criaObra && (
+          {/* Novos negocios: a obra que nasce quando o negocio for compartilhado */}
+          {pendente && (
             <div className="negform__obra campo--largo">
               <p className="negform__obra-nota">
                 <IconeObra />
                 <span>
-                  A criação desse trabalho está integrada com Obras e o restante do site. O título desse Novo Negócio
-                  servirá como descrição da obra.
+                  A obra vai para Obras quando este negócio for compartilhado com a equipe. O título dele servirá como
+                  descrição da obra.
                 </span>
               </p>
               <CampoTexto
@@ -672,6 +724,17 @@ export default function ModalNegocio({
                   </button>
                 </>
               )}
+              {podeCompartilhar && (
+                <button
+                  type="button"
+                  className="negform__compartilhar"
+                  onClick={pedirPartilha}
+                  disabled={salvando || compartilhando}
+                >
+                  <IconeObra />
+                  Compartilhar com a equipe
+                </button>
+              )}
               {podeEditar && negocio.status !== 'aberto' && (
                 <button type="button" className="negform__reabrir" onClick={() => aoReabrir(negocio)}>
                   Reabrir negócio
@@ -706,6 +769,29 @@ export default function ModalNegocio({
           )}
         </footer>
       </form>
+
+      <Confirma
+        aberto={conferindoPartilha}
+        tom="acao"
+        nivel={1}
+        titulo="Compartilhar com a equipe?"
+        mensagem="A obra deste negócio passa a aparecer em Obras, para todo mundo."
+        detalhes={
+          <dl>
+            <dt>Obra</dt>
+            <dd>
+              {[clientes.find((c) => String(c.id) === String(form.clienteId))?.nome, form.proposta.trim()]
+                .filter(Boolean)
+                .join(' - ')}
+            </dd>
+            <dt>Descrição</dt>
+            <dd>{form.titulo.trim() || '—'}</dd>
+          </dl>
+        }
+        rotuloConfirmar="Compartilhar"
+        aoConfirmar={compartilhar}
+        aoFechar={() => setConferindoPartilha(false)}
+      />
     </Modal>
   )
 }

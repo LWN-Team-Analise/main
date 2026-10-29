@@ -77,9 +77,17 @@ export const ALTERACAO = [
   { chave: 'editar_clientes', rotulo: 'Adicionar / editar clientes', dependeDe: 'ver_clientes' },
   /* a planilha do Excel com o cadastro inteiro (Clientes > Exportar) */
   { chave: 'exportar_clientes', rotulo: 'Exportar clientes (Excel)', dependeDe: 'ver_clientes' },
-  { chave: 'editar_obras', rotulo: 'Adicionar / editar obras', dependeDe: 'ver_obras' },
+  /* criar a obra (o card em Obras) e permissao propria (atualizacao 37):
+     so o Comercial e o acesso total criam. A `editar_obras` continua
+     mexendo na obra que ja existe (anexos, etiquetas, concluir) */
+  { chave: 'criar_obras', rotulo: 'Criar obra', dependeDe: 'ver_obras' },
+  { chave: 'editar_obras', rotulo: 'Editar obras', dependeDe: 'ver_obras' },
   { chave: 'excluir_concluidas', rotulo: 'Excluir obra concluída', dependeDe: 'ver_concluidas' },
   { chave: 'check_todas_etapas', rotulo: 'Check em todas as etapas', dependeDe: 'ver_obras' },
+  /* o check e de quem esta NA OBRA (Membros > Incluir membro; quem ja
+     marcou check nela tambem conta). Com esta, o setor marca os checks
+     dele em qualquer obra, sem ser incluido (atualizacao 37) */
+  { chave: 'check_todas_obras', rotulo: 'Marcar check em obra sem ser membro', dependeDe: 'ver_obras' },
   /* concluir o check que PEDE informacao (a resposta Sim/Nao, o horario,
      os ensaios, o prazo da execucao, o documento da proposta, a reserva
      e a retirada do carro) sem preencher a informacao (atualizacao 36).

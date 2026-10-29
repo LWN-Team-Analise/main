@@ -282,6 +282,7 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-35.sql.txt` | cliente com unidade sem endereco proprio (o dele vira a unidade 1; cliente.cidade e cliente.estado aceitam NULL) e o pais do endereco: cliente.pais ('BR' por padrao), estado e CEP em text para os de fora |
 | `db/atualizacao-32.sql.txt` | turno.compartilhado (+ compartilhado_em/por): o turno novo, colado ou copiado da agenda nasce sem compartilhar com a equipe |
 | `db/atualizacao-36.sql.txt` | concluir check sem a informacao: obra_check.sem_informacao e a permissao `check_sem_informacao` (no acesso total) |
+| `db/atualizacao-37.sql.txt` | quem marca check: cargo.regras_check (regra por cargo e por pessoa), as permissoes `check_todas_obras` e `criar_obras`, e o negocio pendente (negocio.proposta, compartilhado_em/por) |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
 Rode o primeiro na ordem indicada dentro dele; depois rode os outros
@@ -429,6 +430,14 @@ esse casamento antes de gravar.
   valvula de escape para virar no banco se alguem reclamar de excesso.
 
 ### O que `db/atualizacao-6.sql.txt` acrescenta
+
+A **foto** mandada no chat (da obra ou da equipe) amplia no proprio site: o
+clique abre a imagem inteira num pop-up, com "Baixar imagem". Antes ela abria
+numa aba nova — e o navegador bloqueia abrir o arquivo guardado na pagina
+(`data:`), entao a aba ficava em branco. O pop-up do chat da obra ficou maior
+(e com a alca de redimensionar), e o botao **Abrir chat** mostra no canto a
+quantidade de mensagens da obra (`obra.chatQtd` na carga; as apagadas para
+todos nao contam).
 
 O **chat da equipe** (`chat_site`) ganha o que o chat da obra ja tinha:
 `responde_a`, `arquivo_nome/tipo/conteudo`, `apagada_em/apagada_por`, e as
@@ -590,7 +599,7 @@ esconde o botao e a API recusa a chamada usando exatamente as mesmas chaves.
 | Grupo        | Chaves                                                              |
 | ------------ | ------------------------------------------------------------------- |
 | Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_turnos`, `ver_avaliacoes`, `ver_usuarios`, `ver_avisos` |
-| Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `check_sem_informacao`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
+| Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `criar_obras`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `check_todas_obras`, `check_sem_informacao`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
 
 Alteracao **sempre** depende da visualizacao correspondente: desmarcar "Obras"
 apaga junto tudo o que so faz sentido dentro de Obras, e essas linhas ficam
@@ -655,6 +664,44 @@ Tres chaves valem uma nota:
   `PUT /api/dados/obras/:id/checks/:checkId` com `{ semInformacao: true }`.
   Precisa de `db/atualizacao-36.sql.txt` (sem ela, so o "Concluir sem
   informação" e recusado, com o recado de rodar `npm run db:atualizar`).
+- **`criar_obras`** ("Criar obra") separou CRIAR a obra de editar: so o
+  Comercial e o acesso total criam (o "Nova obra" de Obras e o
+  `POST /api/dados/obras`). A `editar_obras` ("Editar obras") continua
+  mexendo na obra que existe — editar, anexos, etiquetas, concluir.
+- **`check_todas_obras`** ("Marcar check em obra sem ser membro"): ver
+  "Quem marca o check" logo abaixo.
+
+### Quem marca o check (atualizacao 37)
+
+Sao tres travas, nesta ordem (`travaDoCheck` em `src/domain/obras.js`; a
+API repete em `travaDoMarcar`, `server/routes/dados.js`, e responde o 403
+com o motivo):
+
+1. **Membro da obra.** So marca quem esta NA OBRA: quem ja marcou check nela,
+   ou quem foi incluido em **Membros** e nao recusou (a inclusao pendente ja
+   vale). O setor com `check_todas_obras` marca em qualquer obra — a
+   atualizacao 37 deu essa ao Comercial, ao Administrativo, a Qualidade e ao
+   Almoxarife; o time tecnico (e Anapolis) marca so onde foi incluido. Na
+   tela, quem nao esta na obra ve "você não está na obra" ao lado de Membros
+   e o cadeado dos cards diz por que.
+2. **Setor**, como sempre: o card (ou o dono proprio do check) e do setor da
+   pessoa. `check_todas_etapas` e a obra de emergencia passam por esta.
+3. **Cargo.** Na tela do setor, o bloco **Checks por cargo** aperta o que
+   cada cargo (cargo_titulo) marca: **a partir de que etapa** e os checks
+   **de fora** ("menos Determinar Focal Point"). Em **Exceção por pessoa** a
+   regra e de uma pessoa so e toma o lugar da do cargo — inclusive para
+   liberar tudo a alguem de um cargo restrito. Fica em `cargo.regras_check`:
+   `{ "cargos": { "<cargo_titulo.id>": { "etapa": 3, "exceto": ["51"] } },
+   "pessoas": { "<usuario.id>": { "etapa": 2, "exceto": [] } } }`. A obra de
+   emergencia passa por esta tambem.
+
+Acesso total passa pelas tres. As funcoes que leem a regra
+(`lerRegrasCheck`, `regraDoUsuario`, `regraLibera`) moram em
+`src/domain/regrasCheck.js`, sem import nenhum, porque o servidor importa
+dali; a sessao (`/api/auth/me`) ja manda a regra da pessoa em
+`user.regraCheck`, e o roteiro manda a posicao da etapa em cada card e check
+(`etapaOrdem`). Sem a atualizacao 37 vale so o setor, como antes
+(`user.checkSoNaObra` vem false).
 
 ### E-mail (esqueci minha senha)
 
@@ -1081,11 +1128,16 @@ O cadastro do cliente ganhou (atualizacao 27):
 fechados, Negócios em aberto, Ticket médio, Próximo contato, Proprietário,
 Nota de satisfação média) e **Pessoas** (uma por linha).
 
-### O negocio de Novos negocios vira obra (atualizacao 30)
+### O negocio de Novos negocios vira obra (atualizacoes 30 e 37)
 
-Negocio **criado** no funil **Novos negocios** ja nasce com a obra dele em
-**Obras** — o Comercial cadastra a obra por la. O cadastro manual em Obras
-continua do mesmo jeito.
+Negocio **criado** no funil **Novos negocios** nasce **pendente** (etiqueta
+"Pendente" no card): a obra so aparece em **Obras**, para todo mundo, quando
+alguem clica em **Compartilhar com a equipe** no rodape do negocio
+(`POST /api/comercial/negocios/:id/compartilhar`, com confirmacao). Ate la o
+negocio guarda o n° da proposta em `negocio.proposta` (o n° sugerido pula os
+reservados pelos pendentes) e da para corrigir o n° e o cliente; o
+compartilhamento fica carimbado em `negocio.compartilhado_em` e
+`compartilhado_por`. O cadastro manual em Obras continua do mesmo jeito.
 
 - No formulario aparece o bloco da obra com o **N° da proposta**, ja sugerido
   como no "Nova obra" (o da ultima, mais um; `GET /api/comercial/proxima-proposta`,
@@ -1093,12 +1145,15 @@ continua do mesmo jeito.
 - A empresa tem de ser um **cliente cadastrado** (a obra precisa dele): nesse
   funil some o "Empresa nao cadastrada".
 - A obra nasce padrao, prioridade media, inicio hoje, com o **titulo do
-  negocio como descricao**. Negocio e obra sao gravados juntos (uma transacao).
+  negocio como descricao**. A obra e o carimbo do negocio sao gravados juntos
+  (uma transacao).
 - O negocio guarda a obra (`negocio.obra_id`) e mostra o atalho **Obra 1234**
   na linha da etapa. Apagar a obra solta o negocio; apagar o negocio nao mexe
   na obra.
-- So na criacao: importar planilha, editar ou trocar de funil depois nao cria
-  obra.
+- So o negocio aberto de Novos negocios se compartilha: importar planilha ou
+  trocar de funil nao cria obra.
+- O quadro dos funis tem colunas mais largas (no minimo 230 px, rolando de
+  lado quando nao cabem), e o pop-up do negocio tambem ficou mais largo.
 
 ## O check com horario (ponto de encontro)
 
@@ -2453,6 +2508,10 @@ primeiros da equipe como se fossem os participantes — gente que nunca tinha
 encostado naquela obra aparecendo como responsavel por ela.
 
 #### Membro parcial (atualizacao 30)
+
+Com a atualizacao 37, estar na obra virou a condicao para marcar check (ver
+"Quem marca o check"): incluir alguem em Membros e o que libera os checks do
+setor dela naquela obra.
 
 Nem todo mundo que vai a obra marca check — nem ha check para todos. Por isso
 da para **incluir a pessoa na mao**: clicar em **Membros** na tela da obra abre

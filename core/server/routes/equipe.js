@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import { query } from '../db.js'
 import { cargoPode, exige, exigeSessao, meuCargo, tratar } from '../sessao.js'
 import { normalizar } from '../../src/domain/permissoes.js'
+import { lerRegrasCheck } from '../../src/domain/regrasCheck.js'
 import { IMAGEM_INVALIDA, imagemValida } from '../utils/imagem.js'
 import { registrarAtividade } from '../atividade.js'
 
@@ -90,6 +91,10 @@ const paraCargo = (linha) => ({
   ordem: linha.ordem,
   // cargo novo nasce sem nenhuma; quem administra marca uma a uma
   permissoes: normalizar(linha.permissoes ?? []),
+  /* quem do setor marca qual check (atualizacao 37): por cargo e por
+     pessoa, a partir de que etapa e os checks de fora. null = o banco
+     ainda nao tem a coluna, e a tela de Setores esconde a parte */
+  regrasCheck: linha.regras_check === undefined ? null : lerRegrasCheck(linha.regras_check),
 })
 
 /* ------------------------------------------------------------
@@ -179,7 +184,8 @@ router.patch('/cargos/:id', exigeSessao, exige('editar_cargo'), async (req, res)
     campos.length === 0 &&
     req.body?.acessoTotal === undefined &&
     req.body?.painelTv === undefined &&
-    req.body?.permissoes === undefined
+    req.body?.permissoes === undefined &&
+    req.body?.regrasCheck === undefined
   ) {
     return res.status(400).json({ erro: 'Nada para alterar.' })
   }
@@ -206,7 +212,7 @@ router.patch('/cargos/:id', exigeSessao, exige('editar_cargo'), async (req, res)
       if (novo !== (alvo.rows[0].painel_tv === true)) {
         if (!req.cargo?.acessoTotal) return res.status(403).json({ erro: SO_ACESSO_TOTAL })
         valores.push(novo)
-        campos.push(`painel_tv = ${valores.length}`)
+        campos.push(`painel_tv = $${valores.length}`)
       }
     }
 
@@ -230,6 +236,23 @@ router.patch('/cargos/:id', exigeSessao, exige('editar_cargo'), async (req, res)
       }
     }
 
+    /* as regras de check por cargo e por pessoa (atualizacao 37) seguem a
+       mesma trava das permissoes: as do proprio setor so com acesso total */
+    if (req.body?.regrasCheck !== undefined) {
+      if (alvo.rows[0].regras_check === undefined) {
+        return res.status(503).json({ erro: 'O banco ainda não tem as regras de check por cargo. Rode npm run db:atualizar (atualização 37).' })
+      }
+      const regras = lerRegrasCheck(req.body.regrasCheck)
+      if (JSON.stringify(regras) !== JSON.stringify(lerRegrasCheck(alvo.rows[0].regras_check))) {
+        const meuSetor = await query('SELECT cargo_id FROM usuario WHERE id = $1', [req.dono.sub])
+        if (String(meuSetor.rows[0]?.cargo_id) === String(req.params.id) && !req.cargo?.acessoTotal) {
+          return res.status(403).json({ erro: 'Você não pode mudar as regras de check do seu próprio setor.' })
+        }
+        valores.push(JSON.stringify(regras))
+        campos.push(`regras_check = $${valores.length}::jsonb`)
+      }
+    }
+
     if (campos.length === 0) {
       const igual = await query('SELECT * FROM cargo WHERE id = $1', [req.params.id])
       return res.json({ cargo: paraCargo(igual.rows[0]) })
@@ -246,7 +269,7 @@ router.patch('/cargos/:id', exigeSessao, exige('editar_cargo'), async (req, res)
       acao: 'setor.editado',
       categoria: 'equipe',
       entidade: ['cargo', rows[0].id],
-      descricao: campos.some((c) => /^(permissoes|acesso_total|painel_tv)/.test(c))
+      descricao: campos.some((c) => /^(permissoes|acesso_total|painel_tv|regras_check)/.test(c))
         ? 'Permissões do setor alteradas'
         : 'Setor editado',
       detalhes: { setor: rows[0].nome },

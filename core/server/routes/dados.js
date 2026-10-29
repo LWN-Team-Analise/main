@@ -31,6 +31,7 @@ import {
   rotuloDaCondicao,
   rotuloDoServico,
 } from '../../src/domain/itensEnsaio.js'
+import { MOTIVO_DA_TRAVA, regraDoUsuario, regraLibera } from '../../src/domain/regrasCheck.js'
 
 const router = Router()
 
@@ -352,6 +353,7 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     parciais,
     horarios,
     horarioMembros,
+    chats,
   ] = await Promise.all([
     lerClientes(imagens),
     /* os setores vem junto: sao poucos e a tela de Clientes precisa
@@ -441,6 +443,10 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
              FROM obra_horario ORDER BY dia`).catch(semTabelaVazia),
     query(`SELECT obra_id, check_id, to_char(dia, 'YYYY-MM-DD') AS dia, usuario_id
              FROM obra_horario_membro`).catch(semTabelaVazia),
+    /* quantas mensagens o chat de cada obra tem (as apagadas para todos
+       nao contam): a bolinha do botao "Abrir chat" */
+    query(`SELECT obra_id, count(*)::int AS n FROM obra_chat
+            WHERE apagada_em IS NULL GROUP BY obra_id`).catch(semTabelaVazia),
   ])
 
   const junta = (linhas, chave, monta) => {
@@ -520,6 +526,8 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
       membros: quemVai[`${l.obra_id}|${l.check_id}|${l.dia}`] ?? [],
     })
   })
+
+  const qtdDoChat = Object.fromEntries(chats.rows.map((l) => [l.obra_id, l.n]))
 
   const parciaisDaObra = junta(parciais.rows, 'obra_id', (l) => ({
     usuarioId: String(l.usuario_id),
@@ -694,6 +702,7 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
       membros: membrosDaObra[o.id] ?? [],
       /* os incluidos a mao: pendente, aceito ou recusado (com o motivo) */
       parciais: parciaisDaObra[o.id] ?? [],
+      chatQtd: qtdDoChat[o.id] ?? 0,
       /* check com horario -> [{ dia, hora, membros }] (atualizacao 31) */
       horarios: horariosDaObra[o.id] ?? {},
       observacoes: obsDaObra[o.id] ?? [],
@@ -2023,7 +2032,7 @@ const ROTULO_CAMPO_OBRA = {
  * cadastrada (concluida ou nao), mais um — 8234 vira 8235. Ele continua
  * editavel na tela; aqui so se pula o numero que ja existir.
  */
-router.get('/obras/proxima-proposta', exigeSessao, exige('editar_obras'), async (_req, res) => {
+router.get('/obras/proxima-proposta', exigeSessao, exige('criar_obras'), async (_req, res) => {
   try {
     const [ultima, todas] = await Promise.all([
       query("SELECT proposta FROM obra WHERE proposta ~ '[0-9]' ORDER BY criado_em DESC, id DESC LIMIT 1"),
@@ -2036,7 +2045,7 @@ router.get('/obras/proxima-proposta', exigeSessao, exige('editar_obras'), async 
   }
 })
 
-router.post('/obras', exigeSessao, exige('editar_obras'), async (req, res) => {
+router.post('/obras', exigeSessao, exige('criar_obras'), async (req, res) => {
   const clienteId = texto(req.body?.clienteId)
   const proposta = texto(req.body?.proposta)
   /* a descricao virou opcional: quem identifica a obra e a dupla
@@ -2350,6 +2359,12 @@ router.post('/obras/:id/concluir', exigeSessao, exige('editar_obras'), async (re
      - acesso total, ou a permissao "check em todas as etapas";
      - a obra e de EMERGENCIA (obra.tipo = 'emergencia'): ali ninguem
        espera por setor, e qualquer setor marca qualquer check.
+
+   Mais duas travas (atualizacao 37). Antes de tudo, a pessoa precisa
+   estar NA OBRA (membro pelo check ou incluida em Membros, sem ter
+   recusado) — a nao ser que o setor tenha `check_todas_obras`. Depois da
+   trava do setor, a regra do CARGO dela no setor (cargo.regras_check: a
+   partir de que etapa, e os checks de fora) tem de deixar.
    ------------------------------------------------------------ */
 
 /** O nome do check e da etapa dele, para o historico. */
@@ -2369,14 +2384,52 @@ async function descreverCheck(checkId) {
   }
 }
 
-async function podeMarcar(usuarioId, checkId, obraId) {
+/**
+ * Por que a pessoa NAO marca o check — 'membro', 'cargo' ou 'setor' — ou
+ * null quando marca. A mesma resposta de travaDoCheck (src/domain/obras.js).
+ */
+async function travaDoMarcar(usuarioId, checkId, obraId) {
   const meu = await meuCargo(usuarioId)
-  if (cargoPode(meu, 'check_todas_etapas')) return true
+  if (meu.acessoTotal) return null
 
-  /* obra de emergencia: a trava por setor nao vale */
-  const obra = await query('SELECT tipo FROM obra WHERE id = $1', [obraId])
-  if (obra.rows[0]?.tipo === 'emergencia') return true
+  const [obra, quem, etapa] = await Promise.all([
+    query('SELECT tipo FROM obra WHERE id = $1', [obraId]),
+    /* sem a atualizacao 37 nao ha regra nem trava de membro: o check
+       segue so a regra do setor, como antes */
+    query(
+      `SELECT (to_jsonb(c) ? 'regras_check') AS tem37, to_jsonb(c) -> 'regras_check' AS regras,
+              (to_jsonb(u) ->> 'cargo_titulo_id') AS cargo_titulo_id
+         FROM usuario u LEFT JOIN cargo c ON c.id = u.cargo_id
+        WHERE u.id = $1`,
+      [usuarioId],
+    ),
+    query(
+      `SELECT et.ordem, ck.origem_id
+         FROM etapa_check ck
+         JOIN etapa_card kd ON kd.id = ck.card_id
+         JOIN etapa et      ON et.id = kd.etapa_id
+        WHERE ck.id = $1`,
+      [checkId],
+    ),
+  ])
+  const emergencia = obra.rows[0]?.tipo === 'emergencia'
 
+  const tem37 = quem.rows[0]?.tem37 === true
+  if (tem37 && !cargoPode(meu, 'check_todas_obras') && !(await estaNaObra(obraId, usuarioId))) return 'membro'
+
+  /* o setor antes do cargo: o check de OUTRO setor e "de outro setor" */
+  if (!(cargoPode(meu, 'check_todas_etapas') || emergencia || (await doMeuSetor(meu.chave, checkId)))) return 'setor'
+
+  if (tem37 && !emergencia) {
+    const regra = regraDoUsuario(quem.rows[0].regras, usuarioId, quem.rows[0].cargo_titulo_id)
+    const check = { id: String(checkId), origemId: etapa.rows[0]?.origem_id ? String(etapa.rows[0].origem_id) : null }
+    if (!regraLibera(regra, etapa.rows[0]?.ordem ?? null, check)) return 'cargo'
+  }
+  return null
+}
+
+/** O check e do setor: o dono proprio dele, ou (sem dono proprio) o do card. */
+async function doMeuSetor(chave, checkId) {
   /* o check pode ter dono proprio; se tiver, e ele quem decide, e o
      cargo do card nao entra na conta */
   const proprio = await query(
@@ -2385,7 +2438,7 @@ async function podeMarcar(usuarioId, checkId, obraId) {
       WHERE kc.check_id = $1`,
     [checkId],
   )
-  if (proprio.rows.length > 0) return proprio.rows.some((l) => l.chave === meu.chave)
+  if (proprio.rows.length > 0) return proprio.rows.some((l) => l.chave === chave)
 
   const { rows } = await query(
     `SELECT c.chave
@@ -2395,7 +2448,34 @@ async function podeMarcar(usuarioId, checkId, obraId) {
       WHERE ck.id = $1`,
     [checkId],
   )
-  return rows.some((l) => l.chave === meu.chave)
+  return rows.some((l) => l.chave === chave)
+}
+
+/** A pessoa esta na obra: marcou check nela, ou foi incluida e nao recusou. */
+async function estaNaObra(obraId, usuarioId) {
+  const { rows } = await query(
+    `SELECT EXISTS (SELECT 1 FROM obra_membro WHERE obra_id = $1 AND usuario_id = $2)
+         OR EXISTS (SELECT 1 FROM obra_membro_parcial
+                     WHERE obra_id = $1 AND usuario_id = $2 AND status <> 'recusado') AS ok`,
+    [obraId, usuarioId],
+  )
+  return rows[0]?.ok === true
+}
+
+async function podeMarcar(usuarioId, checkId, obraId) {
+  return (await travaDoMarcar(usuarioId, checkId, obraId)) === null
+}
+
+/**
+ * Confere quem marca e, quando nao pode, ja responde o 403 com o motivo.
+ * `deOutro` e o recado de quando o check e de outro setor (cada rota tem
+ * o seu). Devolve true quando recusou.
+ */
+async function recusouMarcar(res, usuarioId, checkId, obraId, deOutro) {
+  const trava = await travaDoMarcar(usuarioId, checkId, obraId)
+  if (!trava) return false
+  res.status(403).json({ erro: trava === 'setor' ? deOutro : MOTIVO_DA_TRAVA[trava] })
+  return true
 }
 
 /**
@@ -2678,9 +2758,7 @@ async function faltaNoCheck(obraId, checkId, regra, resposta) {
  */
 router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, res) => {
   try {
-    if (!(await podeMarcar(req.dono.sub, req.params.checkId, req.params.id))) {
-      return res.status(403).json({ erro: 'Este check é de outro setor.' })
-    }
+    if (await recusouMarcar(res, req.dono.sub, req.params.checkId, req.params.id, 'Este check é de outro setor.')) return
 
     const regra = await regraDoCheck(req.params.checkId)
     const pergunta = regra.simNao
@@ -2775,9 +2853,7 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
 
 router.delete('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, res) => {
   try {
-    if (!(await podeMarcar(req.dono.sub, req.params.checkId, req.params.id))) {
-      return res.status(403).json({ erro: 'Este check é de outro setor.' })
-    }
+    if (await recusouMarcar(res, req.dono.sub, req.params.checkId, req.params.id, 'Este check é de outro setor.')) return
     /* o do prazo acompanha o prazo: com a data definida, ele fica marcado.
        O concluido SEM a informacao (atualizacao 36) nao acompanha nada —
        nem o prazo, nem a reserva, nem a saida —, e desmarca como os outros */
@@ -3072,9 +3148,7 @@ router.put('/obras/:id/ensaios', exigeSessao, obraAberta, async (req, res) => {
     if (!checkId) {
       return res.status(501).json({ erro: 'O roteiro não tem o check "Planejamento de ensaios" (atualização 14).' })
     }
-    if (!(await podeMarcar(req.dono.sub, checkId, req.params.id))) {
-      return res.status(403).json({ erro: 'O Planejamento de ensaios é de outro setor.' })
-    }
+    if (await recusouMarcar(res, req.dono.sub, checkId, req.params.id, 'O Planejamento de ensaios é de outro setor.')) return
     /* a lista daqui sai das linhas na obra que planeja por item */
     if (await usaItens(req.params.id)) {
       return res.status(409).json({ erro: 'Esta obra planeja os ensaios por item: a lista sai dos itens.' })
@@ -3188,9 +3262,7 @@ router.put('/obras/:id/execucao/dia', exigeSessao, obraAberta, async (req, res) 
     if (!checkId) {
       return res.status(501).json({ erro: 'O roteiro não tem o check "Execução dos ensaios" (atualização 14).' })
     }
-    if (!(await podeMarcar(req.dono.sub, checkId, req.params.id))) {
-      return res.status(403).json({ erro: 'A Execução dos ensaios é de outro setor.' })
-    }
+    if (await recusouMarcar(res, req.dono.sub, checkId, req.params.id, 'A Execução dos ensaios é de outro setor.')) return
     /* na obra que planeja por item o % sai das linhas feitas */
     if (await usaItens(req.params.id)) {
       return res.status(409).json({
@@ -3476,9 +3548,7 @@ router.put('/obras/:id/planejamento-itens', exigeSessao, obraAberta, async (req,
     if (!checkId) {
       return res.status(501).json({ erro: 'O roteiro não tem o check "Planejamento de ensaios" (atualização 14).' })
     }
-    if (!(await podeMarcar(req.dono.sub, checkId, obraId))) {
-      return res.status(403).json({ erro: 'O Planejamento de ensaios é de outro setor.' })
-    }
+    if (await recusouMarcar(res, req.dono.sub, checkId, obraId, 'O Planejamento de ensaios é de outro setor.')) return
 
     /* a lista solta com execucao registrada nao passa para itens */
     const jaPorItem = await usaItens(obraId)
@@ -3707,9 +3777,7 @@ router.put('/obras/:id/execucao-itens', exigeSessao, obraAberta, async (req, res
     if (!checkId) {
       return res.status(501).json({ erro: 'O roteiro não tem o check "Execução dos ensaios" (atualização 14).' })
     }
-    if (!(await podeMarcar(req.dono.sub, checkId, obraId))) {
-      return res.status(403).json({ erro: 'A Execução dos ensaios é de outro setor.' })
-    }
+    if (await recusouMarcar(res, req.dono.sub, checkId, obraId, 'A Execução dos ensaios é de outro setor.')) return
 
     const comData = linhas.filter((l) => !l.apagar)
     if (comData.length > 0) {
@@ -5149,9 +5217,7 @@ router.put('/obras/:id/horarios/:checkId', exigeSessao, obraAberta, async (req, 
   const marcar = typeof req.body?.marcar === 'boolean' ? req.body.marcar : undefined
 
   try {
-    if (!(await podeMarcar(req.dono.sub, checkId, obraId))) {
-      return res.status(403).json({ erro: 'Este check é de outro setor.' })
-    }
+    if (await recusouMarcar(res, req.dono.sub, checkId, obraId, 'Este check é de outro setor.')) return
     const { rows: ck } = await query('SELECT horario FROM etapa_check WHERE id = $1', [checkId]).catch((erro) => {
       if (erro.code === '42703') return { rows: [] }
       throw erro

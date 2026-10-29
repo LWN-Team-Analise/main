@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Avatar from '@/components/Avatar/Avatar'
+import Modal from '@/components/Modal/Modal'
 import useAlturaAuto from '@/hooks/useAlturaAuto'
 import { prepararImagem } from '@/utils/imagem'
 import { dataHora } from '@/utils/formato'
@@ -116,12 +117,16 @@ export default function Conversa({
   aoEnviar,
   /** aoApagar(mensagem, escopo) */
   aoApagar,
+  /** grande = a lista de mensagens mais alta (o chat da obra) */
+  grande = false,
 }) {
   const [texto, setTexto] = useState('')
   const [anexo, setAnexo] = useState(null)
   const [respondendo, setRespondendo] = useState(null)
   const [mencoes, setMencoes] = useState([])
   const [erro, setErro] = useState('')
+  /* a foto aberta em tamanho grande, por cima do chat */
+  const [ampliada, setAmpliada] = useState(null)
   const [enviando, setEnviando] = useState(false)
   const [camera, setCamera] = useState(false)
   const [apagandoMsg, setApagandoMsg] = useState(null)
@@ -286,7 +291,7 @@ export default function Conversa({
   const porId = useCallback((id) => mensagens.find((m) => m.id === id) ?? null, [mensagens])
 
   return (
-    <div className="chat">
+    <div className={`chat ${grande ? 'chat--grande' : ''}`.trim()}>
       {/* ---------------- conversa ---------------- */}
       <div className="chat__lista">
         {carregando && <p className="chat__vazio">Carregando a conversa...</p>}
@@ -322,7 +327,7 @@ export default function Conversa({
                   <p className="fala__citada fala__citada--sumiu">mensagem apagada</p>
                 )}
 
-                {m.arquivo && <Anexo arquivo={m.arquivo} />}
+                {m.arquivo && <Anexo arquivo={m.arquivo} aoAmpliar={setAmpliada} />}
 
                 {/* apagada para todos: o conteúdo já veio vazio do
                     servidor, e o que fica no lugar é o rastro */}
@@ -583,17 +588,45 @@ export default function Conversa({
           />
         </form>
       )}
+
+      {/* A foto inteira, aqui mesmo. Antes o clique abria a imagem numa aba
+          nova — e o navegador bloqueia abrir um arquivo guardado na propria
+          pagina (data:), entao a aba ficava em branco. */}
+      <Modal
+        aberto={Boolean(ampliada)}
+        aoFechar={() => setAmpliada(null)}
+        titulo={ampliada?.nome || 'Imagem'}
+        largura={1100}
+        nivel={1}
+      >
+        {ampliada && (
+          <figure className="chat__ampliada">
+            <img src={ampliada.conteudo} alt={ampliada.nome || 'Imagem enviada no chat'} />
+            <figcaption>
+              <a className="chat__baixar" href={ampliada.conteudo} download={ampliada.nome || 'imagem'}>
+                Baixar imagem
+              </a>
+            </figcaption>
+          </figure>
+        )}
+      </Modal>
     </div>
   )
 }
 
-/** O anexo de uma mensagem: imagem aparece; o resto vira link. */
-function Anexo({ arquivo }) {
+/** O anexo de uma mensagem: a imagem aparece (e o clique amplia); o resto vira link. */
+function Anexo({ arquivo, aoAmpliar }) {
   if (arquivo.tipo?.startsWith('image/')) {
     return (
-      <a className="fala__imagem" href={arquivo.conteudo} target="_blank" rel="noreferrer">
+      <button
+        type="button"
+        className="fala__imagem"
+        onClick={() => aoAmpliar(arquivo)}
+        aria-label={`Ampliar a imagem ${arquivo.nome ?? ''}`.trim()}
+        title="Ampliar"
+      >
         <img src={arquivo.conteudo} alt={arquivo.nome} />
-      </a>
+      </button>
     )
   }
   return (

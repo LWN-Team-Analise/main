@@ -63,6 +63,7 @@ const ARQUIVOS = [
   'db/atualizacao-34.sql.txt',
   'db/atualizacao-35.sql.txt',
   'db/atualizacao-36.sql.txt',
+  'db/atualizacao-37.sql.txt',
 ]
 
 /**
@@ -188,6 +189,11 @@ const CONFERENCIA = [
   ['cliente.pais', col('cliente', 'pais')],
   ['obra_check.sem_informacao', col('obra_check', 'sem_informacao')],
   ['check_sem_informacao no acesso total', permissaoNoAcessoTotal('check_sem_informacao')],
+  ['cargo.regras_check', col('cargo', 'regras_check')],
+  ['negocio.proposta', col('negocio', 'proposta')],
+  ['negocio.compartilhado_em', col('negocio', 'compartilhado_em')],
+  ['check_todas_obras no acesso total', permissaoNoAcessoTotal('check_todas_obras')],
+  ['criar_obras no acesso total', permissaoNoAcessoTotal('criar_obras')],
 ]
 
 function col(tabela, coluna) {

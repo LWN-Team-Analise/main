@@ -232,7 +232,14 @@ export async function lerRoteiro() {
     /* 'planejamento' | 'intermediaria' | 'execucao' nas tres primeiras
        fixas; null nas outras */
     papel: e.papel ?? null,
-    cards: cardsDaEtapa[e.id] ?? [],
+    /* a posicao da etapa vai em cada card e check: e por ela que a
+       regra do cargo ("marca da 3a etapa em diante") decide, sem cada
+       tela ter de procurar a etapa do check (atualizacao 37) */
+    cards: (cardsDaEtapa[e.id] ?? []).map((card) => ({
+      ...card,
+      etapaOrdem: e.ordem,
+      checks: card.checks.map((check) => ({ ...check, etapaOrdem: e.ordem })),
+    })),
     vigenteDe: e.vigente_de,
     vigenteAte: e.vigente_ate,
   }))

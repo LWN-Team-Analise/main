@@ -25,6 +25,7 @@ import {
   corDoSetorDoCard,
   diasAte,
   diasDaExecucao,
+  ehMembroDaObra,
   ehPropostaTecnica,
   nomeDoCard,
   oQueOCheckPede,
@@ -412,6 +413,16 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
     (p) => p.usuarioId === String(user?.id) && p.status === 'pendente',
   )
   const marcas = etiquetasDaObra(obra)
+  /* o check e de quem esta NA OBRA (atualizacao 37): sem estar nela (e sem
+     a permissao de marcar em qualquer obra), os checks do setor ficam
+     travados — e o bloco de Membros diz por que */
+  const foraDaObra =
+    !soLeitura &&
+    user?.checkSoNaObra !== false &&
+    !user?.acessoTotal &&
+    !pode('check_todas_obras') &&
+    !ehMembroDaObra(user, obra)
+  const mensagensNoChat = obra.chatQtd ?? 0
 
 
   /* No modo leitura TODA permissao cai junto, num lugar so. Espalhar o
@@ -750,7 +761,11 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
               type="button"
               className="info info--membros info--botao"
               onClick={() => setVerMembros(true)}
-              title="Ver os membros e incluir quem foi à obra sem marcar check"
+              title={
+                foraDaObra
+                  ? 'Você não está incluído nesta obra: entre aqui para marcar os checks do seu setor'
+                  : 'Ver os membros e incluir quem marca os checks da obra'
+              }
             >
               <span className="info__nome">Membros</span>
               <span className="info__linha">
@@ -764,12 +779,24 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                   </span>
                 )}
                 {aguardando > 0 && <span className="info__aguardando">{aguardando} aguardando</span>}
+                {foraDaObra && <span className="info__fora">você não está na obra</span>}
               </span>
             </button>
 
-            <button type="button" className="abrirchat" onClick={() => setChat(true)}>
+            <button
+              type="button"
+              className="abrirchat"
+              onClick={() => setChat(true)}
+              aria-label={mensagensNoChat > 0 ? `Abrir chat (${mensagensNoChat} mensagens)` : 'Abrir chat'}
+            >
               <Icone.chat tamanho={17} />
               Abrir chat
+              {/* a bolinha: quantas mensagens o chat desta obra ja tem */}
+              {mensagensNoChat > 0 && (
+                <span className="abrirchat__qtd" aria-hidden="true">
+                  {mensagensNoChat > 99 ? '99+' : mensagensNoChat}
+                </span>
+              )}
             </button>
           </div>
         </div>

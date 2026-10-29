@@ -363,6 +363,18 @@
 }
 
 /* incluidos que ainda nao responderam */
+/* a pessoa nao esta na obra (atualizacao 37): os checks do setor dela
+   ficam travados ate ela entrar em Membros */
+.info__fora {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--pri-alta-suave);
+  color: var(--pri-alta);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .info__aguardando {
   padding: 2px 9px;
   border-radius: var(--radius-pill);
@@ -1375,6 +1387,8 @@ body.arrastando-check * {
 }
 
 .abrirchat {
+  /* ancora da bolinha com a quantidade de mensagens */
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1397,6 +1411,26 @@ body.arrastando-check * {
 
 .abrirchat:active {
   transform: scale(0.97);
+}
+
+/* quantas mensagens o chat da obra tem: o mesmo selo do sininho, no canto
+   de cima a direita do botao — mostra de longe que houve conversa ali */
+.abrirchat__qtd {
+  position: absolute;
+  top: -7px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--page-bg);
+  background: var(--pri-alta);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 

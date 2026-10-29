@@ -22,12 +22,14 @@ export function carregarNegocios(funil) {
  *           responsavelId, etiqueta, proximaAtividade, atividadeDescricao,
  *           previsaoFechamento, observacao, proposta }
  *
- * No funil "Novos negocios" o negocio novo cria a obra junto: vai o
- * `proposta` (o n° da obra) e o cliente tem de ser cadastrado. A
- * resposta traz `negocio.obraId`.
+ * No funil "Novos negocios" vai o `proposta` (o n° da obra) e o cliente
+ * tem de ser cadastrado. O negocio nasce PENDENTE: a obra so aparece em
+ * Obras quando ele e compartilhado com a equipe (`compartilharNegocio`).
  */
 export const criarNegocio = (campos) => post('/comercial/negocios', campos)
 export const editarNegocio = (id, campos) => put(`/comercial/negocios/${encodeURIComponent(id)}`, campos)
+/** Compartilha com a equipe: a obra do negocio nasce em Obras. Devolve { negocio }. */
+export const compartilharNegocio = (id) => post(`/comercial/negocios/${encodeURIComponent(id)}/compartilhar`, {})
 export const moverNegocio = (id, etapa, funil) =>
   patch(`/comercial/negocios/${encodeURIComponent(id)}/etapa`, { etapa, funil })
 /** status: 'ganho' | 'perdido' | 'aberto' (reabrir) */

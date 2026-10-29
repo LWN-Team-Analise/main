@@ -1,0 +1,105 @@
+-- ============================================================
+--  ATUALIZACAO 37 — QUEM MARCA CHECK E O NEGOCIO COMPARTILHADO
+--
+--  1. Check so de quem esta NA OBRA. Alem de o check ser do setor da
+--     pessoa, ela precisa estar incluida na obra (Membros > Incluir
+--     membro; quem ja marcou check nela tambem conta). A permissao nova
+--     `check_todas_obras` ("Marcar check em obra sem ser membro") deixa
+--     o setor marcar em qualquer obra sem ser incluido.
+--     Distribuida UMA vez (marca 'marco_atualizacao_37'): o acesso
+--     total (so para a tela de Setores mostrar marcada) e os setores
+--     que cuidam de todas as obras do escritorio — Comercial,
+--     Administrativo, Qualidade e Almoxarife. O time tecnico (e
+--     Anapolis) marca so nas obras em que foi incluido.
+--
+--  2. A regra do CARGO dentro do setor: cargo.regras_check. Para cada
+--     cargo (cargo_titulo) — ou para uma pessoa —, a partir de que
+--     etapa ela marca check e quais checks ficam de fora:
+--       { "cargos":  { "<cargo_titulo.id>": { "etapa": 3, "exceto": ["51"] } },
+--         "pessoas": { "<usuario.id>":      { "etapa": 2, "exceto": [] } } }
+--     A regra da pessoa toma o lugar da do cargo. Sem regra, vale o
+--     setor inteiro, como sempre. Quem edita e a tela do setor.
+--
+--  3. Criar obra virou permissao propria: `criar_obras` ("Criar
+--     obra"). A `editar_obras` continua editando a obra (anexos,
+--     etiquetas, concluir). Distribuida UMA vez para o Comercial e o
+--     acesso total.
+--
+--  4. O negocio novo de "Novos negocios" nao vira obra na hora: fica
+--     PENDENTE ate alguem compartilhar com a equipe — e so ai a obra
+--     nasce em Obras, para todo mundo. Ate la, o n. da proposta fica no
+--     proprio negocio (negocio.proposta), e o compartilhamento fica
+--     carimbado (negocio.compartilhado_em / compartilhado_por).
+--
+--  Sem esta atualizacao o sistema continua de pe: o check segue a regra
+--  antiga do setor (sem membro e sem cargo), ninguem fora do acesso
+--  total cria obra, e o negocio novo e recusado com o recado de rodar
+--  `npm run db:atualizar`.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao duplica nada.
+-- ============================================================
+
+BEGIN;
+
+-- ---- 2. a regra do cargo dentro do setor ----
+ALTER TABLE public.cargo
+    ADD COLUMN IF NOT EXISTS regras_check jsonb NOT NULL DEFAULT '{}'::jsonb;
+
+COMMENT ON COLUMN public.cargo.regras_check IS
+    'Quem do setor marca qual check: {"cargos": {"<cargo_titulo.id>": {"etapa": N, "exceto": ["<check.id>"]}}, "pessoas": {"<usuario.id>": {...}}}. Vazio = o setor inteiro marca os checks dele.';
+
+-- ---- 4. o negocio pendente ----
+ALTER TABLE public.negocio
+    ADD COLUMN IF NOT EXISTS proposta text,
+    ADD COLUMN IF NOT EXISTS compartilhado_em timestamptz,
+    ADD COLUMN IF NOT EXISTS compartilhado_por bigint REFERENCES public.usuario(id) ON DELETE SET NULL;
+
+COMMENT ON COLUMN public.negocio.proposta IS
+    'O n. da proposta da obra que nasce quando o negocio de Novos negocios e compartilhado com a equipe.';
+
+-- o negocio que ja tinha virado obra conta como compartilhado
+UPDATE public.negocio
+   SET compartilhado_em = coalesce(compartilhado_em, criado_em)
+ WHERE obra_id IS NOT NULL AND compartilhado_em IS NULL;
+
+-- ---- 1 e 3. as permissoes novas, uma vez so ----
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['check_todas_obras']
+ WHERE (acesso_total OR chave IN ('comercial', 'adm', 'gq', 'almoxarife'))
+   AND 'ver_obras' = ANY (permissoes)
+   AND NOT ('check_todas_obras' = ANY (permissoes))
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_37');
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['criar_obras']
+ WHERE (acesso_total OR chave = 'comercial')
+   AND 'ver_obras' = ANY (permissoes)
+   AND NOT ('criar_obras' = ANY (permissoes))
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_37');
+
+INSERT INTO public.configuracao (chave, valor)
+VALUES ('marco_atualizacao_37', 'permissoes da atualizacao 37 distribuidas')
+ON CONFLICT (chave) DO NOTHING;
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'cargo.regras_check' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'cargo' AND column_name = 'regras_check') AS ok
+UNION ALL SELECT 'negocio.proposta',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'negocio' AND column_name = 'proposta')
+UNION ALL SELECT 'negocio.compartilhado_em',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'negocio' AND column_name = 'compartilhado_em')
+UNION ALL SELECT 'check_todas_obras no acesso total',
+       NOT EXISTS (SELECT 1 FROM public.cargo WHERE acesso_total AND NOT ('check_todas_obras' = ANY (permissoes)))
+UNION ALL SELECT 'criar_obras no acesso total',
+       NOT EXISTS (SELECT 1 FROM public.cargo WHERE acesso_total AND NOT ('criar_obras' = ANY (permissoes)));

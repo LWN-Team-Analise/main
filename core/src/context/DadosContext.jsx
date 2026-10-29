@@ -9,6 +9,7 @@ import { corAdaptada, corSuave, textoSobre } from '@/utils/cor'
 import { hojeISO } from '@/utils/formato'
 import { podeFazer } from '@/domain/permissoes'
 import {
+  MOTIVO_DA_TRAVA,
   aplicarRegraDosGases,
   aplicarRegraDaReserva,
   chaveDoCargo,
@@ -16,12 +17,12 @@ import {
   estadoDaEtapa,
   etapaAtual,
   obraFechada,
-  podeEditarCheck,
   progressoDaObra,
   progressoExecucao,
   prontaParaConcluir as roteiroCompleto,
   roteiroVigente,
   setoresPendentes,
+  travaDoCheck,
 } from '@/domain/obras'
 
 /**
@@ -427,8 +428,10 @@ export function DadosProvider({ children }) {
         .find((c) => c.checks.some((k) => String(k.id) === String(checkId)))
       const check = card?.checks.find((k) => String(k.id) === String(checkId))
 
-      if (check && !podeEditarCheck(user, check, card, obra)) {
-        setErro('Este check é de outro setor.')
+      /* de outro setor, fora da obra ou fora do que o cargo marca */
+      const trava = check ? travaDoCheck(user, check, card, obra) : null
+      if (trava) {
+        setErro(MOTIVO_DA_TRAVA[trava])
         return
       }
 
@@ -887,13 +890,30 @@ export function DadosProvider({ children }) {
 
   const carregarChat = useCallback((obraId) => dados.carregarChat(obraId), [])
 
+  /* a bolinha do "Abrir chat" conta as mensagens da obra: quem envia ou
+     apaga para todos ve o numero mudar na hora, sem esperar a carga */
+  const contarNoChat = useCallback((obraId, delta) => {
+    setEstado((atual) => ({
+      ...atual,
+      obras: atual.obras.map((o) =>
+        o.id === obraId ? { ...o, chatQtd: Math.max(0, (o.chatQtd ?? 0) + delta) } : o,
+      ),
+    }))
+  }, [])
+
   const enviarMensagem = useCallback(
     (obraId, campos) =>
-      dados.enviarMensagem(obraId, { ...campos, autorNome: user?.name }).catch((e) => {
-        setErro(e.message)
-        throw e
-      }),
-    [user?.name],
+      dados
+        .enviarMensagem(obraId, { ...campos, autorNome: user?.name })
+        .then((nova) => {
+          contarNoChat(obraId, 1)
+          return nova
+        })
+        .catch((e) => {
+          setErro(e.message)
+          throw e
+        }),
+    [user?.name, contarNoChat],
   )
 
   /**
@@ -905,11 +925,17 @@ export function DadosProvider({ children }) {
    */
   const apagarMensagem = useCallback(
     (obraId, mensagemId, escopo = 'mim') =>
-      dados.apagarMensagem(obraId, mensagemId, escopo).catch((e) => {
-        setErro(e.message)
-        throw e
-      }),
-    [],
+      dados
+        .apagarMensagem(obraId, mensagemId, escopo)
+        .then((r) => {
+          if (escopo === 'todos') contarNoChat(obraId, -1)
+          return r
+        })
+        .catch((e) => {
+          setErro(e.message)
+          throw e
+        }),
+    [contarNoChat],
   )
 
   /* ============================================================
