@@ -71,6 +71,19 @@ export const ASSUNTOS = [
       'justamente a de outro setor — ela aparece para você saber quem está segurando a fila.',
   },
   {
+    id: 'check-sem-informacao',
+    titulo: 'Concluir um check sem preencher a informação',
+    peso: 1.2,
+    gatilhos: ['informacao', 'sem', 'preencher', 'pular', 'concluir', 'resposta', 'horario', 'ensaios', 'reserva', 'obrigatorio'],
+    resposta:
+      'Alguns checks pedem uma informação antes de fechar: a resposta Sim ou Não, o horário das datas, os ensaios, ' +
+      'o prazo da execução, o documento da proposta técnica, a reserva ou a retirada do carro. O setor que tem a ' +
+      'permissão "Concluir check sem preencher a informação" (na tela do setor, aba Usuários, embaixo de Obras) ' +
+      'conclui esses checks sem a informação: ao clicar no check aparece a escolha entre "Preencher agora" e ' +
+      '"Concluir sem informação". O check fica com o selo "sem informação" até alguém preencher pelo caminho de ' +
+      'sempre; para desfazer, é só clicar nele e escolher "Desmarcar". A permissão não libera check de outro setor.',
+  },
+  {
     id: 'colunas',
     titulo: 'As colunas da página inicial',
     gatilhos: ['coluna', 'quadro', 'andamento', 'iniciado', 'concluida', 'grade', 'aba'],

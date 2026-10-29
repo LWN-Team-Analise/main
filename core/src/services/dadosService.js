@@ -162,6 +162,11 @@ export const marcarCheck = (obraId, checkId, resposta) =>
   )
 export const desmarcarCheck = (obraId, checkId) => del(`/dados/obras/${obraId}/checks/${checkId}`)
 
+/* conclui o check SEM a informacao que ele pede (a resposta, o horario,
+   os ensaios...) — so com a permissao `check_sem_informacao` (atualizacao 36) */
+export const marcarCheckSemInformacao = (obraId, checkId) =>
+  put(`/dados/obras/${obraId}/checks/${checkId}`, { semInformacao: true })
+
 /* ---------------- Prazos ----------------
    { etapaId } ou { checkId }, e o prazo 'AAAA-MM-DD' — vazio tira. */
 

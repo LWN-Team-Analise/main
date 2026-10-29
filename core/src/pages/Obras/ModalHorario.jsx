@@ -91,12 +91,16 @@ export default function ModalHorario({ aberto, obra, check, somenteLeitura = fal
     }
     setSalvando(true)
     try {
-      /* com horario, o check fica marcado; sem nenhum, desmarca */
-      const jaEstava = Boolean(obra.checks?.[check.id])
+      /* com horario, o check fica marcado; sem nenhum, desmarca. O
+         concluido SEM o horario (atualizacao 36) ja esta marcado de
+         proposito: continua marcado, e o horario que vier tira a marca
+         de "sem informacao" no servidor */
+      const marca = obra.checks?.[check.id]
+      const jaEstava = Boolean(marca)
       const marcar = comHorario.length > 0
       await definirHorarios(obra.id, check.id, {
         dias: comHorario.map(({ dia, hora, membros }) => ({ dia, hora, membros })),
-        marcar: marcar !== jaEstava ? marcar : undefined,
+        marcar: marca?.semInformacao ? undefined : marcar !== jaEstava ? marcar : undefined,
       })
       aoFechar()
     } catch (e) {

@@ -80,6 +80,12 @@ export const ALTERACAO = [
   { chave: 'editar_obras', rotulo: 'Adicionar / editar obras', dependeDe: 'ver_obras' },
   { chave: 'excluir_concluidas', rotulo: 'Excluir obra concluída', dependeDe: 'ver_concluidas' },
   { chave: 'check_todas_etapas', rotulo: 'Check em todas as etapas', dependeDe: 'ver_obras' },
+  /* concluir o check que PEDE informacao (a resposta Sim/Nao, o horario,
+     os ensaios, o prazo da execucao, o documento da proposta, a reserva
+     e a retirada do carro) sem preencher a informacao (atualizacao 36).
+     Nao abre o check de outro setor: quem marca o que continua sendo a
+     regra de sempre (podeEditarCheck) */
+  { chave: 'check_sem_informacao', rotulo: 'Concluir check sem preencher a informação', dependeDe: 'ver_obras' },
   { chave: 'editar_etapa', rotulo: 'Adicionar / alterar etapa', dependeDe: 'ver_obras' },
   { chave: 'editar_cards', rotulo: 'Adicionar / alterar cards', dependeDe: 'ver_obras' },
   { chave: 'editar_cargos_card', rotulo: 'Adicionar / alterar setores no card', dependeDe: 'ver_obras' },

@@ -69,6 +69,8 @@ const ROTULOS = {
   linhas: 'Linhas',
   itens_removidos: 'Itens removidos',
   resultados_apagados: 'Resultados apagados',
+  /* o check concluido sem a informacao (atualizacao 36): o que faltou */
+  sem_informacao: 'Sem a informação',
 }
 
 function horaDe(iso) {

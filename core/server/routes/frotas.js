@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { emTransacao, query } from '../db.js'
 import { exige, exigeSessao, tratar } from '../sessao.js'
 import { registrarAtividade } from '../atividade.js'
+import { informacaoChegou } from '../semInformacao.js'
 import { logger } from '../logger.js'
 /* as perguntas, as posicoes das fotos e os limites sao os MESMOS da
    tela: um arquivo so, sem React dentro, importado pelos dois lados */
@@ -783,6 +784,8 @@ async function ligarRetirada(cliente, obraId, veiculoId, registroId, usuarioId) 
        ON CONFLICT (obra_id, check_id) DO NOTHING`,
       [obraId, checkId, usuarioId],
     )
+    /* concluido antes sem a retirada (atualizacao 36): agora ela existe */
+    await informacaoChegou(obraId, checkId, cliente)
   }
   return true
 }
@@ -1048,6 +1051,8 @@ router.put('/reservas/:obraId', exigeSessao, exigeReservador, async (req, res) =
          ON CONFLICT (obra_id, check_id) DO UPDATE SET feito_por = EXCLUDED.feito_por, feito_em = now()`,
         [obraId, checkId, req.dono.sub],
       )
+      /* concluido antes sem a reserva (atualizacao 36): agora ela existe */
+      await informacaoChegou(obraId, checkId, cliente)
       return { veiculoNome: nome, obraNome: o[0].nome }
     })
 

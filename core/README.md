@@ -281,6 +281,7 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-34.sql.txt` | servico da unidade: cliente.servico ("Albert Einstein Anapolis - Faturamento") |
 | `db/atualizacao-35.sql.txt` | cliente com unidade sem endereco proprio (o dele vira a unidade 1; cliente.cidade e cliente.estado aceitam NULL) e o pais do endereco: cliente.pais ('BR' por padrao), estado e CEP em text para os de fora |
 | `db/atualizacao-32.sql.txt` | turno.compartilhado (+ compartilhado_em/por): o turno novo, colado ou copiado da agenda nasce sem compartilhar com a equipe |
+| `db/atualizacao-36.sql.txt` | concluir check sem a informacao: obra_check.sem_informacao e a permissao `check_sem_informacao` (no acesso total) |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
 Rode o primeiro na ordem indicada dentro dele; depois rode os outros
@@ -589,7 +590,7 @@ esconde o botao e a API recusa a chamada usando exatamente as mesmas chaves.
 | Grupo        | Chaves                                                              |
 | ------------ | ------------------------------------------------------------------- |
 | Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_turnos`, `ver_avaliacoes`, `ver_usuarios`, `ver_avisos` |
-| Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
+| Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `check_sem_informacao`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
 
 Alteracao **sempre** depende da visualizacao correspondente: desmarcar "Obras"
 apaga junto tudo o que so faz sentido dentro de Obras, e essas linhas ficam
@@ -638,6 +639,22 @@ Tres chaves valem uma nota:
   diretoria; a diretoria continua podendo (`podeEditarCpf`, em
   `src/domain/obras.js`, e o PATCH de `server/routes/equipe.js`). O proprio CPF
   cada um mexe em Configuracoes. Sem atualizacao no banco.
+- **`check_sem_informacao`** ("Concluir check sem preencher a informação",
+  embaixo de Obras) deixa o setor concluir o check que PEDE informacao — a
+  resposta Sim/Nao, o horario das datas, os ensaios (planejamento e execucao),
+  o prazo da execucao, o documento da proposta tecnica, a reserva e a retirada
+  do carro, e os checks da etapa de execucao sem o prazo dela — sem preenche-la.
+  O clique no check abre a escolha "Preencher agora" / "Concluir sem
+  informação" (`oQueOCheckPede`, em `src/domain/obras.js`); o check fica com
+  `obra_check.sem_informacao = true` e o selo "sem informação" ate a informacao
+  chegar pelo caminho de sempre, e ai a marca sai sozinha
+  (`server/semInformacao.js`). Concluido assim, o clique oferece preencher ou
+  desmarcar — inclusive o prazo, a reserva e a retirada, que normalmente nao
+  se desmarcam. NAO abre check de outro setor: `podeMarcar` e
+  `podeEditarCheck` continuam valendo. A API confere em
+  `PUT /api/dados/obras/:id/checks/:checkId` com `{ semInformacao: true }`.
+  Precisa de `db/atualizacao-36.sql.txt` (sem ela, so o "Concluir sem
+  informação" e recusado, com o recado de rodar `npm run db:atualizar`).
 
 ### E-mail (esqueci minha senha)
 

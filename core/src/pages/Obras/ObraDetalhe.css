@@ -1719,6 +1719,26 @@ body.arrastando-check * {
   white-space: nowrap;
 }
 
+/* o check concluido SEM a informacao que pede (atualizacao 36): feito,
+   mas faltando alguma coisa — tracejado e no tom de alerta */
+.tarefa__seminfo {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0 7px;
+  border: 1px dashed color-mix(in srgb, var(--prazo-perto) 70%, transparent);
+  border-radius: var(--radius-pill);
+  color: var(--prazo-perto);
+  font-size: 0.6rem;
+  font-weight: 800;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+/* o rodape do "sem informacao" tem ate tres botoes: no celular, quebra */
+.seminfo__acoes {
+  flex-wrap: wrap;
+}
+
 /* os dois do sistema: quantos ensaios / quanto ja foi executado */
 .tarefa__ensaios {
   flex-shrink: 0;

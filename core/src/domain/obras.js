@@ -868,6 +868,57 @@ export function podeEditarCheck(usuario, check, card, obra) {
 }
 
 /* ------------------------------------------------------------
+   Concluir SEM a informacao (atualizacao 36)
+
+   Alguns checks nao fecham no clique: pedem uma informacao antes
+   (a resposta Sim/Nao, o horario, os ensaios, o documento...). O setor
+   com a permissao `check_sem_informacao` pode concluir esses checks
+   sem preencher — e o check fica marcado como "sem informacao" ate
+   alguem preencher pelo caminho de sempre.
+   ------------------------------------------------------------ */
+
+/**
+ * A informacao que ESTE check ainda pede nesta obra, para a tela dizer
+ * ("a resposta Sim ou Não") — ou null quando o clique ja marca.
+ *
+ * A ordem e a de ObraDetalhe (clicarCheck): e o mesmo pop-up que o
+ * "Preencher agora" abre. O servidor confere igual (faltaNoCheck, em
+ * server/routes/dados.js).
+ */
+export function oQueOCheckPede(etapa, check, obra) {
+  if (!check || !obra) return null
+  if (check.tipo === CHECK_RESERVA) return obra.reserva ? null : 'a reserva do carro'
+  if (check.tipo === CHECK_RETIRADA) return obra.reserva?.retirada ? null : 'o registro da retirada do carro'
+  if (check.tipo === CHECK_PRAZO_EXECUCAO) return obra.execucaoPrazo ? null : 'o prazo da execução'
+  if (check.tipo === CHECK_PLANEJAMENTO) {
+    return (obra.ensaios ?? []).length > 0 ? null : 'os ensaios do Planejamento de ensaios'
+  }
+  if (check.tipo === CHECK_EXECUCAO) {
+    return progressoExecucao(obra)?.completo ? null : 'a execução de todos os ensaios em 100%'
+  }
+  if (ehPropostaTecnica(etapa, check)) return anexoDaProposta(obra) ? null : 'o documento da proposta técnica'
+  if (check.horario) return (obra.horarios?.[check.id] ?? []).length > 0 ? null : 'o horário das datas'
+  if (etapa?.papel === 'execucao' && !obra.execucaoPrazo) return 'o prazo da execução (a etapa de execução só anda com ele)'
+  if (check.simNao) return 'a resposta Sim ou Não'
+  return null
+}
+
+/**
+ * true quando o clique no check abre um pop-up proprio — e e por la que
+ * a informacao de um check concluido sem ela e preenchida depois. Na
+ * etapa de execucao, o check comum so pedia o prazo da etapa: nao tem
+ * pop-up dele.
+ */
+export function checkAbrePopup(etapa, check) {
+  return (
+    [CHECK_RESERVA, CHECK_RETIRADA, CHECK_PRAZO_EXECUCAO, CHECK_PLANEJAMENTO, CHECK_EXECUCAO].includes(check?.tipo) ||
+    ehPropostaTecnica(etapa, check) ||
+    Boolean(check?.horario) ||
+    Boolean(check?.simNao)
+  )
+}
+
+/* ------------------------------------------------------------
    Aparencia do card de setor: a cor do setor dono do card
    ------------------------------------------------------------ */
 
