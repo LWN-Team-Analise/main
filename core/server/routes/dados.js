@@ -2361,8 +2361,9 @@ router.post('/obras/:id/concluir', exigeSessao, exige('editar_obras'), async (re
        espera por setor, e qualquer setor marca qualquer check.
 
    Mais duas travas (atualizacao 37). Antes de tudo, a pessoa precisa
-   estar NA OBRA (membro pelo check ou incluida em Membros, sem ter
-   recusado) — a nao ser que o setor tenha `check_todas_obras`. Depois da
+   estar NA OBRA (membro pelo check, ou incluida em Membros e que ja
+   ACEITOU — a inclusao pendente nao vale) — a nao ser que o setor tenha
+   `check_todas_obras`. Depois da
    trava do setor, a regra do CARGO dela no setor (cargo.regras_check: a
    partir de que etapa, e os checks de fora) tem de deixar.
    ------------------------------------------------------------ */
@@ -2451,12 +2452,12 @@ async function doMeuSetor(chave, checkId) {
   return rows.some((l) => l.chave === chave)
 }
 
-/** A pessoa esta na obra: marcou check nela, ou foi incluida e nao recusou. */
+/** A pessoa esta na obra: marcou check nela, ou foi incluida e ACEITOU (a pendente nao vale). */
 async function estaNaObra(obraId, usuarioId) {
   const { rows } = await query(
     `SELECT EXISTS (SELECT 1 FROM obra_membro WHERE obra_id = $1 AND usuario_id = $2)
          OR EXISTS (SELECT 1 FROM obra_membro_parcial
-                     WHERE obra_id = $1 AND usuario_id = $2 AND status <> 'recusado') AS ok`,
+                     WHERE obra_id = $1 AND usuario_id = $2 AND status = 'aceito') AS ok`,
     [obraId, usuarioId],
   )
   return rows[0]?.ok === true

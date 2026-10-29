@@ -415,7 +415,8 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   const marcas = etiquetasDaObra(obra)
   /* o check e de quem esta NA OBRA (atualizacao 37): sem estar nela (e sem
      a permissao de marcar em qualquer obra), os checks do setor ficam
-     travados — e o bloco de Membros diz por que */
+     travados — e o bloco de Membros diz por que. Incluido e ainda sem
+     aceitar tambem trava: o aviso pede para aceitar */
   const foraDaObra =
     !soLeitura &&
     user?.checkSoNaObra !== false &&
@@ -763,7 +764,9 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
               onClick={() => setVerMembros(true)}
               title={
                 foraDaObra
-                  ? 'Você não está incluído nesta obra: entre aqui para marcar os checks do seu setor'
+                  ? meuPedido
+                    ? 'Aceite a inclusão nesta obra para marcar os checks do seu setor'
+                    : 'Você não participa desta obra: só marca os checks quem foi incluído e aceitou'
                   : 'Ver os membros e incluir quem marca os checks da obra'
               }
             >
@@ -779,7 +782,9 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                   </span>
                 )}
                 {aguardando > 0 && <span className="info__aguardando">{aguardando} aguardando</span>}
-                {foraDaObra && <span className="info__fora">você não está na obra</span>}
+                {foraDaObra && (
+                  <span className="info__fora">{meuPedido ? 'aceite a inclusão para marcar' : 'você não está na obra'}</span>
+                )}
               </span>
             </button>
 

@@ -321,7 +321,7 @@ export default function ModalNegocio({
     const pessoaEscolhida = form.pessoaId && form.pessoaId !== DO_NEGOCIO
     const doNegocio = form.pessoaId === DO_NEGOCIO
     const prob = String(form.probabilidade).trim()
-    const campos = {
+    return {
       funil: form.funil,
       etapa: form.etapa,
       titulo: form.titulo.trim(),

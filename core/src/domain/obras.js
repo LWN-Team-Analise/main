@@ -855,14 +855,14 @@ export function checkTemDonoProprio(check) {
 
 /**
  * A pessoa esta NA OBRA? E quem ja marcou check nela, ou quem foi
- * incluido em Membros e nao recusou (pendente tambem conta: a inclusao
- * e o clique em "Incluir"; recusar desfaz).
+ * incluido em Membros e ACEITOU — a inclusao pendente ainda nao vale:
+ * a pessoa so marca depois de aceitar participar. `obra.membros` ja vem
+ * do servidor com os dois (o check e o parcial aceito).
  */
 export function ehMembroDaObra(usuario, obra) {
   const eu = String(usuario?.id ?? '')
   if (!eu || !obra) return false
-  if ((obra.membros ?? []).map(String).includes(eu)) return true
-  return (obra.parciais ?? []).some((p) => String(p.usuarioId) === eu && p.status !== 'recusado')
+  return (obra.membros ?? []).map(String).includes(eu)
 }
 
 /**

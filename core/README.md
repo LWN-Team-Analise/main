@@ -678,8 +678,8 @@ API repete em `travaDoMarcar`, `server/routes/dados.js`, e responde o 403
 com o motivo):
 
 1. **Membro da obra.** So marca quem esta NA OBRA: quem ja marcou check nela,
-   ou quem foi incluido em **Membros** e nao recusou (a inclusao pendente ja
-   vale). O setor com `check_todas_obras` marca em qualquer obra — a
+   ou quem foi incluido em **Membros** e **aceitou** — a inclusao pendente
+   ainda nao vale (quem esta pendente ve "aceite a inclusão para marcar"). O setor com `check_todas_obras` marca em qualquer obra — a
    atualizacao 37 deu essa ao Comercial, ao Administrativo, a Qualidade e ao
    Almoxarife; o time tecnico (e Anapolis) marca so onde foi incluido. Na
    tela, quem nao esta na obra ve "você não está na obra" ao lado de Membros
@@ -2510,13 +2510,13 @@ encostado naquela obra aparecendo como responsavel por ela.
 #### Membro parcial (atualizacao 30)
 
 Com a atualizacao 37, estar na obra virou a condicao para marcar check (ver
-"Quem marca o check"): incluir alguem em Membros e o que libera os checks do
-setor dela naquela obra.
+"Quem marca o check"): incluir alguem em Membros — e a pessoa ACEITAR — e o que
+libera os checks do setor dela naquela obra.
 
 Nem todo mundo que vai a obra marca check — nem ha check para todos. Por isso
 da para **incluir a pessoa na mao**: clicar em **Membros** na tela da obra abre
-a lista (`ModalMembrosObra`), com quem entrou pelo check, os incluidos e o
-**Incluir membro**.
+a lista (`ModalMembrosObra`) dos **Incluídos** e o **Incluir membro** (quem
+entrou so pelo check nao aparece ali; continua nos rostos do botao Membros).
 
 - Incluir: qualquer um que ve Obras. A pessoa recebe a **solicitacao** — no
   alto do sino, numa faixa na tela da obra e no celular — e **aceita** ou

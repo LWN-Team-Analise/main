@@ -62,7 +62,7 @@ export function regraLibera(regra, etapaOrdem, check) {
 
 /** O que dizer quando o check nao abre — a chave vem de `travaDoCheck`. */
 export const MOTIVO_DA_TRAVA = {
-  membro: 'Você não está incluído nesta obra. Peça para entrar em Membros para marcar os checks dela.',
+  membro: 'Você não participa desta obra. Para marcar os checks dela, é preciso ser incluído em Membros e aceitar.',
   cargo: 'O seu cargo não marca este check.',
   setor: 'Este check é de outro setor.',
 }

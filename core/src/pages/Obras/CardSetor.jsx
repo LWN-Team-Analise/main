@@ -145,7 +145,7 @@ export default function CardSetor({
             className="setorcard__cadeado"
             title={
               motivoDoCard === 'membro'
-                ? 'Você não está incluído nesta obra: entre em Membros para marcar os checks'
+                ? 'Você não participa desta obra: só marca quem foi incluído em Membros e aceitou'
                 : motivoDoCard === 'cargo'
                   ? 'O seu cargo não marca estes checks'
                   : `Só ${donos} marca estes checks`
@@ -311,7 +311,7 @@ export default function CardSetor({
                             ? 'Responder Sim ou Não'
                             : undefined
                           : trava === 'membro'
-                            ? 'Você não está incluído nesta obra: entre em Membros para marcar'
+                            ? 'Você não participa desta obra: só marca quem foi incluído em Membros e aceitou'
                             : trava === 'cargo'
                               ? 'O seu cargo não marca este check'
                               : `Somente ${donosDoCheck} marca este check`
