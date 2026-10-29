@@ -139,11 +139,19 @@
   align-items: center;
   gap: 6px 12px;
   min-width: 0;
+  /* o selo de unidades se ajusta a largura DESTE bloco (ver o @container
+     do .cliente__qtdunid), e nao a da tela: com quatro colunas o card e
+     estreito mesmo num monitor grande */
+  container-type: inline-size;
 }
 
+/* os selos numa linha so, como o nome: quebrando, "Setor de Engenharia" e
+   "3 unidades" faziam uma terceira linha e o card crescia. Sem espaco, e
+   o SETOR que encolhe com "..." (o nome inteiro fica no title); a nota e
+   as unidades ficam inteiras. */
 .cliente__selos {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 6px 10px;
   min-width: 0;
@@ -663,7 +671,8 @@
        0.74rem — em 0.68rem, com a fonte do celular ja reduzida, o nome
        do setor tinha menos de 10px. */
 .cliente__setor {
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -714,6 +723,9 @@
 
 /* o selo no cabecalho: quantas unidades o cliente tem */
 .cliente__qtdunid {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   flex-shrink: 0;
   padding: 3px 10px;
   border: 1px solid var(--control-border);
@@ -897,4 +909,22 @@
 .cliente__unideditar:hover,
 .cliente__unideditar:focus-visible {
   background: var(--control-bg-hover);
+}
+
+/* o selo de unidades: por extenso ("3 unidades"); no card estreito, so o
+   icone e o numero — sobra espaco para o nome do setor, que e o selo que
+   encolhe com "..." (o "3 unidades" fica no title) */
+.cliente__qtdicone {
+  display: none;
+  flex-shrink: 0;
+}
+
+@container (max-width: 239px) {
+  .cliente__qtdicone {
+    display: block;
+  }
+
+  .cliente__qtdpalavra {
+    display: none;
+  }
 }

@@ -642,14 +642,23 @@ function CardCliente({
             )}
 
             {setor && (
-              <span className="cliente__setor" style={{ '--setor-cor': corAdaptada(setor.cor, isDark) }}>
+              <span className="cliente__setor" style={{ '--setor-cor': corAdaptada(setor.cor, isDark) }} title={setor.nome}>
                 {setor.nome}
               </span>
             )}
 
             {unidades.length > 0 && (
-              <span className="cliente__qtdunid" title={unidades.map((u) => u.nome).join(', ')}>
-                {unidades.length} unidade{unidades.length === 1 ? '' : 's'}
+              <span
+                className="cliente__qtdunid"
+                title={`${unidades.length} unidade${unidades.length === 1 ? '' : 's'}: ${unidades.map((u) => u.nome).join(', ')}`}
+              >
+                {/* card estreito: so o icone e o numero (ver o @container no CSS) */}
+                <svg className="cliente__qtdicone" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M4 21V9l8-5 8 5v12" />
+                  <path d="M9.5 21v-5.5h5V21" />
+                </svg>
+                {unidades.length}
+                <span className="cliente__qtdpalavra"> unidade{unidades.length === 1 ? '' : 's'}</span>
               </span>
             )}
           </span>
