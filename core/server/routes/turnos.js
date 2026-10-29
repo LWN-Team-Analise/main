@@ -213,7 +213,7 @@ router.get('/', exigeSessao, exige(VER), async (req, res) => {
         const total = comeco > l.prazo ? 0 : Math.min(diasEntre(comeco, l.prazo), DIAS_CORRIDOS_MAXIMOS)
         dias = Array.from({ length: total + 1 }, (_, i) => somarDias(comeco > l.prazo ? l.prazo : comeco, i))
       }
-      const nome = [l.proposta, l.cliente].filter(Boolean).join(' - ') || 'Obra'
+      const nome = [l.cliente, l.proposta].filter(Boolean).join(' - ') || 'Obra'
       return trechos(dias.filter((d) => d >= de && d <= ate)).map(([ini, fim]) => ({
         id: `exec-${l.id}-${ini}`,
         origem: 'execucao',
@@ -246,12 +246,12 @@ router.get('/', exigeSessao, exige(VER), async (req, res) => {
       horaInicio: null,
       horaFim: null,
       titulo: l.titulo,
-      subtitulo: [l.proposta, l.cliente].filter(Boolean).join(' - '),
+      subtitulo: [l.cliente, l.proposta].filter(Boolean).join(' - '),
       /* vencido em vermelho; o que ainda vem, em laranja */
       cor: l.prazo < hoje ? 'vermelho' : 'laranja',
       obraId: String(l.obra_id),
       checkId: String(l.check_id),
-      obraNome: [l.proposta, l.cliente].filter(Boolean).join(' - ') || 'Obra',
+      obraNome: [l.cliente, l.proposta].filter(Boolean).join(' - ') || 'Obra',
     }))
 
     const pessoasDo = {}

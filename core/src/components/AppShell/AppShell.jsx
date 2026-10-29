@@ -466,7 +466,7 @@ function Notificacoes() {
             <ul className="sininho__lista sininho__pedidos" aria-label="Solicitações">
               {pedidos.map((pedido) => {
                 const cliente = clientePorId(pedido.clienteId)
-                const obra = [pedido.proposta, cliente?.nome].filter(Boolean).join(' - ') || 'Obra'
+                const obra = [cliente?.nome, pedido.proposta].filter(Boolean).join(' - ') || 'Obra'
                 return (
                   <li key={`${pedido.obraId}-${pedido.usuarioId}`} className="sininho__pedido">
                     <span className="sininho__marca" data-tipo={pedido.obraTipo} aria-hidden="true" />

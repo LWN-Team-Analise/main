@@ -4723,7 +4723,7 @@ router.post('/obras/:id/chat', exigeSessao, obraAberta, async (req, res) => {
       destinos: membros,
       mencoes,
       linha: rows[0],
-      onde: `Chat da obra ${[proposta, cliente].filter(Boolean).join(' - ')}`.trim(),
+      onde: `Chat da obra ${[cliente, proposta].filter(Boolean).join(' - ')}`.trim(),
       url: `/core/app/obras/${req.params.id}`,
       tag: `chat-obra-${req.params.id}`,
     })

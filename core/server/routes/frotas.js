@@ -998,7 +998,7 @@ router.put('/reservas/:obraId', exigeSessao, exigeReservador, async (req, res) =
   try {
     const { veiculoNome, obraNome } = await emTransacao(async (cliente) => {
       const { rows: o } = await cliente.query(
-        `SELECT o.id, o.concluida_em, coalesce(nullif(btrim(o.proposta), ''), cl.nome) AS nome
+        `SELECT o.id, o.concluida_em, concat_ws(' - ', cl.nome, nullif(btrim(o.proposta), '')) AS nome
            FROM obra o JOIN cliente cl ON cl.id = o.cliente_id
           WHERE o.id = $1 FOR UPDATE OF o`,
         [obraId],

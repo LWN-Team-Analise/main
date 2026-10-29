@@ -2105,13 +2105,15 @@ amarelo media, vermelho alta, azul no "Urgente" da emergencia. A palavra em
 "Prioridade: Alta" sai na mesma cor. O fundo do card continua contando o
 prazo final (verde, amarelo, laranja, vermelho).
 
-O titulo e `"1042/2026 - Acme"`: **o n. da proposta na frente**, porque e por
-ele que a obra e procurada no resto da empresa — quem liga perguntando de uma
-obra tem o numero da proposta na mao, e nao o nome da empresa (que costuma ter
-cinco obras abertas ao mesmo tempo). Obra antiga, sem proposta cadastrada,
-mostra so o nome do cliente. Quem monta e o `tituloDaObra()` de
+O titulo e `"Agener Uniao - LWN-888-01 - SMOKE"`: **a empresa na frente**,
+depois o n. da proposta como foi digitado (ate 29/10 era o contrario). A busca
+continua achando a obra pelo numero da proposta. Obra antiga, sem proposta
+cadastrada, mostra so o nome do cliente. Quem monta e o `tituloDaObra()` de
 `src/domain/obras.js`, para o card, a capa da obra, a lista de Concluidas e o
-titulo do chat escreverem o MESMO nome.
+titulo do chat escreverem o MESMO nome; a mesma ordem vale no sininho, no
+Painel, nos Turnos (`server/routes/turnos.js`), no aviso do chat, no e-mail de
+pendencia e na reserva de carro. O nome e montado na hora, nada fica gravado
+com ele: as obras que ja existiam mudam junto, sem atualizacao no banco.
 
 **No cadastro da obra:** o n. da proposta e **obrigatorio** e a **descricao
 virou opcional**. A obra ja e identificada pela dupla proposta + cliente, e

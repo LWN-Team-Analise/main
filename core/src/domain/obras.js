@@ -99,11 +99,11 @@ export function rotuloDaEtapa(numero) {
 /* ------------------------------------------------------------
    O nome da obra na tela
 
-   Uma obra se chama "1042/2026 - Acme": primeiro o n. da
-   proposta, depois o cliente. E nessa ordem porque e assim que
-   ela e procurada — quem liga perguntando de uma obra tem o
-   numero da proposta na mao, nao o nome da empresa (que costuma
-   ter cinco obras abertas ao mesmo tempo).
+   Uma obra se chama "Agener Uniao - LWN-888-01 - SMOKE": primeiro
+   a empresa, depois o n. da proposta (como foi digitado). Era o
+   contrario ate 29/10; a empresa veio para a frente para as obras
+   de um mesmo cliente ficarem juntas e serem achadas de relance.
+   A busca continua achando pelo numero da proposta.
 
    Vive aqui, e nao em cada tela, porque o card do quadro, a
    capa da obra, a lista de Concluidas, o chat e o sininho
@@ -114,7 +114,7 @@ export function rotuloDaEtapa(numero) {
 export function tituloDaObra(obra, cliente) {
   const nome = cliente?.nome ?? 'Cliente removido'
   const proposta = String(obra?.proposta ?? '').trim()
-  return proposta ? `${proposta} - ${nome}` : nome
+  return proposta ? `${nome} - ${proposta}` : nome
 }
 
 /* ------------------------------------------------------------
