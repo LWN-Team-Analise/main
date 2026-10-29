@@ -29,8 +29,9 @@ import './Turnos.css'
      1a   o titulo, "Copiar agenda", "Compartilhar com a equipe" e o
           "+ Turno";
      2a   Hoje, as setas e o periodo ("25 de outubro – 7 de novembro de
-          2026"); a direita os Conflitos, a visao (uma ou duas
-          semanas), Imprimir, Filtrar, Exibir e "Adicionar cronograma".
+          2026"); a direita os Conflitos, a visao (dia, uma ou duas
+          semanas, ou o mes), Imprimir, Filtrar, Exibir e "Adicionar
+          cronograma".
 
    Embaixo, a grade:
 
@@ -78,10 +79,41 @@ const MESES = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
   'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
 ]
+
+/* as visoes do periodo, como no Teams. Dia e Mes nao tem tamanho fixo: o
+   dia e um so, e o mes tem de 28 a 31 */
 const VISOES = [
+  { valor: 'dia', rotulo: 'Dia' },
   { valor: 'semana', rotulo: 'Semana', dias: 7 },
   { valor: 'duas', rotulo: 'Duas semanas', dias: 14 },
+  { valor: 'mes', rotulo: 'Mês' },
 ]
+
+/* quantos dias o mes do dia tem (o dia 0 do mes seguinte e o ultimo deste) */
+function diasDoMes(iso) {
+  const [a, m] = iso.split('-').map(Number)
+  return new Date(Date.UTC(a, m, 0)).getUTCDate()
+}
+
+/* o dia 1 do mes que fica `n` meses depois do mes do dia */
+function somarMeses(iso, n) {
+  const [a, m] = iso.split('-').map(Number)
+  return new Date(Date.UTC(a, m - 1 + n, 1)).toISOString().slice(0, 10)
+}
+
+/** O primeiro dia do periodo que mostra `dia` nesta visao. */
+function inicioDaVisao(visao, dia) {
+  if (visao === 'dia') return dia
+  if (visao === 'mes') return `${dia.slice(0, 8)}01`
+  return domingoDe(dia)
+}
+
+/** Quantos dias a visao mostra a partir do `inicio` dela. */
+function diasDaVisao(visao, inicio) {
+  if (visao === 'dia') return 1
+  if (visao === 'mes') return diasDoMes(inicio)
+  return VISOES.find((v) => v.valor === visao)?.dias ?? 14
+}
 /* o "Exibir": o que aparece na grade */
 const PARTES = [
   { id: 'notas', rotulo: 'Anotações do dia' },
@@ -115,10 +147,13 @@ const partes = (iso) => {
   return { a, m, d }
 }
 
-/** "25 de outubro – 7 de novembro de 2026" (o mes e o ano so aparecem quando mudam). */
+/** "25 de outubro – 7 de novembro de 2026" (o mes e o ano so aparecem quando mudam).
+    Um dia so: "29 de outubro de 2026"; o mes inteiro: "outubro de 2026". */
 function rotuloDoPeriodo(de, ate) {
   const x = partes(de)
   const y = partes(ate)
+  if (de === ate) return `${x.d} de ${MESES[x.m - 1]} de ${x.a}`
+  if (x.a === y.a && x.m === y.m && x.d === 1 && y.d === diasDoMes(ate)) return `${MESES[x.m - 1]} de ${x.a}`
   if (x.a !== y.a) return `${x.d} de ${MESES[x.m - 1]} de ${x.a} – ${y.d} de ${MESES[y.m - 1]} de ${y.a}`
   if (x.m !== y.m) return `${x.d} de ${MESES[x.m - 1]} – ${y.d} de ${MESES[y.m - 1]} de ${y.a}`
   return `${x.d} – ${y.d} de ${MESES[y.m - 1]} de ${y.a}`
@@ -425,9 +460,12 @@ export default function Turnos() {
   const edita = pode('editar_turnos')
   const hoje = hojeISO()
 
-  const [visao, setVisao] = useState(() => (ler(CHAVE_VISAO, 'duas') === 'semana' ? 'semana' : 'duas'))
-  const [inicio, setInicio] = useState(() => domingoDe(hoje))
-  const nDias = VISOES.find((v) => v.valor === visao)?.dias ?? 14
+  const [visao, setVisao] = useState(() => {
+    const guardada = ler(CHAVE_VISAO, 'duas')
+    return VISOES.some((v) => v.valor === guardada) ? guardada : 'duas'
+  })
+  const [inicio, setInicio] = useState(() => inicioDaVisao(visao, hoje))
+  const nDias = diasDaVisao(visao, inicio)
   const dias = useMemo(() => Array.from({ length: nDias }, (_, i) => somarDias(inicio, i)), [inicio, nDias])
 
   const [dados, setDados] = useState(null)
@@ -494,10 +532,21 @@ export default function Turnos() {
   const refConflitos = useFechaFora(menu === 'conflitos', fecharMenu)
   const refExibir = useFechaFora(menu === 'exibir', fecharMenu)
 
+  /* trocar de visao fica no mesmo lugar: em hoje, se ele esta na tela; senao
+     no primeiro dia que estava aparecendo */
   const mudarVisao = (valor) => {
+    const ancora = de <= hoje && hoje <= ate ? hoje : de
+    setInicio(inicioDaVisao(valor, ancora))
     setVisao(valor)
     guardar(CHAVE_VISAO, valor)
   }
+
+  /* as setas: um dia, uma ou duas semanas, ou um mes inteiro */
+  const andar = (n) => setInicio(visao === 'mes' ? somarMeses(inicio, n) : somarDias(inicio, n * nDias))
+
+  /* copiar a agenda traz o periodo anterior nos mesmos dias da semana: so
+     serve para as visoes de semana inteira */
+  const copiaPorSemana = visao === 'semana' || visao === 'duas'
 
   const alternar = (id) => {
     setFechados((atual) => {
@@ -804,8 +853,12 @@ export default function Turnos() {
                 type="button"
                 className="turnos__ferramenta"
                 onClick={() => setConfirmando('agenda')}
-                disabled={ocupado || !dados}
-                title="Trazer os turnos do período anterior para este"
+                disabled={ocupado || !dados || !copiaPorSemana}
+                title={
+                  copiaPorSemana
+                    ? 'Trazer os turnos do período anterior para este'
+                    : 'Na visão Semana ou Duas semanas: a agenda vem nos mesmos dias da semana'
+                }
               >
                 <IconeCopiar />
                 Copiar agenda
@@ -848,13 +901,13 @@ export default function Turnos() {
 
         {/* 2a barra: o periodo e as ferramentas da grade */}
         <div className="turnos__barra">
-          <button type="button" className="turnos__hoje" onClick={() => setInicio(domingoDe(hoje))}>
+          <button type="button" className="turnos__hoje" onClick={() => setInicio(inicioDaVisao(visao, hoje))}>
             Hoje
           </button>
           <button
             type="button"
             className="turnos__passo"
-            onClick={() => setInicio(somarDias(inicio, -nDias))}
+            onClick={() => andar(-1)}
             aria-label="Período anterior"
             title="Período anterior"
           >
@@ -863,7 +916,7 @@ export default function Turnos() {
           <button
             type="button"
             className="turnos__passo"
-            onClick={() => setInicio(somarDias(inicio, nDias))}
+            onClick={() => andar(1)}
             aria-label="Próximo período"
             title="Próximo período"
           >
@@ -1000,7 +1053,7 @@ export default function Turnos() {
         {!contas ? (
           !erro && <p className="turnos__vazio">Carregando os turnos...</p>
         ) : (
-          <div className="turnos__quadro" style={{ '--dias': nDias }}>
+          <div className="turnos__quadro" style={{ '--dias': nDias }} data-visao={visao}>
             <div className="turnos__grade">
               {/* os dias: o numero, o dia da semana, quantas pessoas e quantas horas */}
               <div className="turnos__linha turnos__linha--dias">

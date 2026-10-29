@@ -1175,8 +1175,9 @@ Sim/Nao.
 ## Turnos (a escala da equipe)
 
 A aba **Turnos** (abaixo de Comercial) copia os Turnos do Teams: o periodo
-(Hoje, setas, uma ou duas semanas), a linha dos dias (pessoas e horas de cada
-dia), as **Anotacoes do dia** e os **cronogramas** — Cronograma LWN e
+(Hoje, setas e a visao: **Dia**, Semana, Duas semanas ou **Mês** — o mes inteiro,
+com as colunas mais estreitas; o "Copiar agenda" so vale nas de semana), a
+linha dos dias (pessoas e horas de cada dia), as **Anotacoes do dia** e os **cronogramas** — Cronograma LWN e
 Cronograma Anapolis, e os que forem criados no "Adicionar cronograma". Cada cronograma
 abre e fecha e tem os "Turnos abertos" (sem pessoa) e uma linha por pessoa.
 

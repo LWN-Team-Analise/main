@@ -335,6 +335,12 @@
   min-width: calc(var(--col-quem) + var(--dias) * var(--col-dia));
 }
 
+/* o mes inteiro (28 a 31 dias): colunas mais estreitas, para caber mais
+   dias na tela sem rolar tanto de lado */
+.turnos__quadro[data-visao='mes'] {
+  --col-dia: 78px;
+}
+
 .turnos__linha {
   display: grid;
   grid-template-columns: var(--col-quem) minmax(0, 1fr);
