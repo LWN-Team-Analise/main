@@ -10,6 +10,7 @@ import {
   CampoTexto,
 } from '@/components/Campo/Campo'
 import { useDados } from '@/context/DadosContext'
+import { clientesParaEscolher } from '@/domain/clientes'
 import {
   ANEXO_ACEITA,
   ANEXO_BYTES_MAXIMOS,
@@ -147,10 +148,11 @@ export default function ModalEnvio({ categoria, valores = VALORES_FIXOS, aoFecha
 
   /* ---- cliente ----
      Obrigatorio. As unidades da LWN (prioritarias) vem primeiro: a
-     ordem e a do servidor. */
+     ordem e a do servidor. O cliente com unidades e so a vitrine delas
+     e sai da lista: escolhe-se a unidade. */
   const opcoesCliente = useMemo(
-    () => clientes.map((c) => ({ valor: String(c.id), rotulo: c.nome })),
-    [clientes],
+    () => clientesParaEscolher(clientes, form.clienteId).map((c) => ({ valor: String(c.id), rotulo: c.nome })),
+    [clientes, form.clienteId],
   )
 
   const mudar = (campo) => (evento) => {

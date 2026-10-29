@@ -520,7 +520,9 @@ const paraUsuario = (l) => ({
    A lista da equipe vai para TODA tela (nome, foto, setor, cargo:
    e o que pinta cards, mencoes e avatares). Os dados pessoais nao:
 
-     CPF e nascimento   so para quem edita usuario;
+     CPF                para quem edita usuario ou tem a permissao
+                        do CPF (`editar_cpf`);
+     nascimento         so para quem edita usuario;
      telefone           para quem abre a tela de Usuarios (`ver_usuarios`);
 
    e cada um sempre ve os proprios. Antes a lista inteira, com CPF,
@@ -530,9 +532,10 @@ function recortarPessoal(usuario, meu, meuId) {
   if (String(usuario.id) === String(meuId)) return usuario
   const gestor = cargoPode(meu, 'editar_usuario')
   const abreUsuarios = gestor || cargoPode(meu, 'ver_usuarios')
+  const veCpf = gestor || cargoPode(meu, 'editar_cpf')
   return {
     ...usuario,
-    cpf: gestor ? usuario.cpf : null,
+    cpf: veCpf ? usuario.cpf : null,
     nascimento: gestor ? usuario.nascimento : null,
     telefone: abreUsuarios ? usuario.telefone : null,
   }
@@ -709,10 +712,10 @@ router.post('/usuarios', exigeSessao, async (req, res) => {
  * PATCH /api/equipe/usuarios/:id — edita o cadastro.
  *
  * Cada um edita o proprio; quem tem `editar_usuario` edita qualquer um.
- * O CPF dos OUTROS so a diretoria mexe — trava de cargo, nao permissao
- * configuravel. O proprio CPF cada um preenche e corrige em
- * Configuracoes: e assim que quem foi cadastrado so pelo e-mail
- * completa o cadastro.
+ * O CPF dos OUTROS pede a permissao "Incluir / editar / excluir CPF"
+ * (`editar_cpf`) — a diretoria continua podendo, como antes dela. O
+ * proprio CPF cada um preenche e corrige em Configuracoes: e assim que
+ * quem foi cadastrado so pelo e-mail completa o cadastro.
  */
 router.patch('/usuarios/:id', exigeSessao, async (req, res) => {
   const alvo = String(req.params.id)
@@ -818,12 +821,22 @@ router.patch('/usuarios/:id', exigeSessao, async (req, res) => {
     }
 
     if (req.body?.cpf !== undefined) {
-      if (!souEu && meu.chave !== 'diretor') {
-        return res.status(403).json({ erro: 'Somente a diretoria pode alterar o CPF de outra pessoa.' })
+      if (!souEu && !cargoPode(meu, 'editar_cpf') && meu.chave !== 'diretor') {
+        return res.status(403).json({ erro: 'Seu setor não pode mexer no CPF de outra pessoa.' })
       }
       const cpf = soDigitos(req.body.cpf)
-      if (cpf.length !== 11) return res.status(400).json({ erro: 'O CPF precisa ter 11 dígitos.' })
-      por('cpf', cpf)
+      if (!cpf && !souEu) {
+        /* tirar o CPF de alguem: so de quem tem e-mail — sem os dois, a
+           pessoa nao tem por onde entrar. O proprio nao se tira. */
+        const { rows: dono } = await query('SELECT email FROM usuario WHERE id = $1', [alvo])
+        if (!texto(dono[0]?.email)) {
+          return res.status(400).json({ erro: 'Sem e-mail, o CPF não pode ficar vazio — é por ele que a pessoa entra.' })
+        }
+        por('cpf', null)
+      } else {
+        if (cpf.length !== 11) return res.status(400).json({ erro: 'O CPF precisa ter 11 dígitos.' })
+        por('cpf', cpf)
+      }
     }
 
     if (campos.length === 0) return res.status(400).json({ erro: 'Nada para alterar.' })

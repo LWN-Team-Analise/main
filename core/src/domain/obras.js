@@ -804,9 +804,14 @@ export function temAcessoTotal(usuario) {
    lista de permissoes em si mora em src/domain/permissoes.js */
 export { podeFazer }
 
-/** Somente a diretoria mexe no CPF — trava de setor, nao de permissao. */
-export function podeEditarCpf(usuario) {
-  return chaveDoCargo(usuario) === 'diretor'
+/**
+ * Quem mexe no CPF dos OUTROS: quem tem a permissao "Incluir / editar /
+ * excluir CPF" (`editar_cpf`; o acesso total passa por ela) e a
+ * diretoria, que ja podia antes de a permissao existir. `pode` e o do
+ * useDados, de quem esta logado.
+ */
+export function podeEditarCpf(usuario, pode) {
+  return Boolean(pode?.('editar_cpf')) || chaveDoCargo(usuario) === 'diretor'
 }
 
 /**

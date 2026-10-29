@@ -69,6 +69,10 @@ export const ALTERACAO = [
   { chave: 'editar_usuario', rotulo: 'Adicionar / editar usuário', dependeDe: 'ver_usuarios' },
   { chave: 'editar_cargo', rotulo: 'Adicionar / editar setor', dependeDe: 'ver_usuarios' },
   { chave: 'editar_cargo_titulo', rotulo: 'Adicionar / editar cargo', dependeDe: 'ver_usuarios' },
+  /* o CPF dos colegas: incluir, corrigir e tirar, no editar usuario. Antes
+     era trava de setor (so a diretoria); o proprio CPF cada um mexe em
+     Configuracoes */
+  { chave: 'editar_cpf', rotulo: 'Incluir / editar / excluir CPF', dependeDe: 'ver_usuarios' },
   { chave: 'editar_avaliacoes', rotulo: 'Adicionar / editar avaliações', dependeDe: 'ver_avaliacoes' },
   { chave: 'editar_clientes', rotulo: 'Adicionar / editar clientes', dependeDe: 'ver_clientes' },
   /* a planilha do Excel com o cadastro inteiro (Clientes > Exportar) */

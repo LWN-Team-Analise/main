@@ -249,7 +249,11 @@
 }
 
 .formcli__unidabrir > strong {
-  flex: none;
+  flex: 0 1 auto;
+  max-width: 55%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: 0.8rem;
   color: var(--text-strong);
 }

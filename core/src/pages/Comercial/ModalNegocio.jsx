@@ -15,6 +15,7 @@ import {
   emailValido,
   funilPorId,
 } from '@/domain/comercial'
+import { clientesParaEscolher } from '@/domain/clientes'
 import { dataHora } from '@/utils/formato'
 import * as comercial from '@/services/comercialService'
 import { IconeEmail, IconeImportar, IconeLixo, IconeMais, IconeObra, IconeTrofeu } from './icones'
@@ -425,7 +426,8 @@ export default function ModalNegocio({
               /* a obra precisa de cliente cadastrado: em Novos negocios
                  a empresa so escrita nao existe */
               ...(criaObra ? [] : [{ valor: OUTRA, rotulo: 'Empresa não cadastrada…' }]),
-              ...clientes.map((c) => ({ valor: String(c.id), rotulo: c.nome })),
+              /* o cliente com unidades e so a vitrine: escolhe-se a unidade */
+              ...clientesParaEscolher(clientes, form.clienteId).map((c) => ({ valor: String(c.id), rotulo: c.nome })),
             ]}
           />
 

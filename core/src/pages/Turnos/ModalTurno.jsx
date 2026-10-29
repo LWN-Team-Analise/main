@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
@@ -47,10 +47,35 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
   const [erros, setErros] = useState({})
   const [salvando, setSalvando] = useState(false)
   const [apagando, setApagando] = useState(false)
+  /* o apagar() da vez, para o Enter da confirmacao (ver o efeito das teclas) */
+  const apagarRef = useRef(null)
 
   /* ponto de encontro, execucao ou prazo: vem da obra e muda por la */
   const daObra = ['obra', 'execucao', 'prazo'].includes(turno?.origem)
   const somenteLeitura = !edita || daObra
+
+  /* com o turno aberto, o Delete (ou Backspace) fora dos campos de texto
+     pede a exclusao, como na grade; com a confirmacao aberta, o Enter
+     exclui (nos botoes dela o Enter ja aperta o botao do foco) */
+  useEffect(() => {
+    if (!aberto || !turno || somenteLeitura) return undefined
+    const tecla = (evento) => {
+      if (salvando) return
+      if (apagando) {
+        if (evento.key === 'Enter' && !evento.target?.closest?.('button')) {
+          evento.preventDefault()
+          apagarRef.current?.()
+        }
+        return
+      }
+      if (evento.key !== 'Delete' && evento.key !== 'Backspace') return
+      if (evento.target?.closest?.('input, textarea, select, [contenteditable="true"]')) return
+      evento.preventDefault()
+      setApagando(true)
+    }
+    document.addEventListener('keydown', tecla)
+    return () => document.removeEventListener('keydown', tecla)
+  }, [aberto, turno, somenteLeitura, salvando, apagando])
 
   useEffect(() => {
     if (!aberto) return
@@ -214,6 +239,7 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
       setSalvando(false)
     }
   }
+  apagarRef.current = apagar
 
   /* o que vem das obras (o ponto de encontro, a execucao e os prazos):
      so a leitura e o caminho ate a obra, que e onde ele muda */

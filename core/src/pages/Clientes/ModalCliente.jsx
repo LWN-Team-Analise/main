@@ -17,7 +17,6 @@ import {
   nomeDaUnidade,
   ordemDasUnidades,
   primeiraUnidade,
-  rotuloDaUnidade,
 } from '@/domain/clientes'
 import { valorCurto } from '@/domain/comercial'
 import { PAIS_PADRAO, ehBrasil, opcoesDePaises } from '@/domain/paises'
@@ -959,17 +958,18 @@ function CampoUnidade({ ordem, unidade, nomeDoCliente, erro, obras, aberta, aoAl
 
   const curto = unidade.unidade.trim()
   const servico = unidade.servico.trim()
-  const rotulo = rotuloDaUnidade({ unidade: curto, servico })
   const onde = localDoEndereco(unidade)
   const id = `formcli-unidade-${unidade.chave}`
   return (
     <div className={`formcli__unidade ${erro ? 'has-erro' : ''}`.trim()} data-aberta={aberta}>
       <div className="formcli__unidtopo">
         <button type="button" className="formcli__unidabrir" onClick={aoAlternar} aria-expanded={aberta} aria-controls={id}>
-          <strong>Unidade {ordem}</strong>
+          {/* o titulo e o servico que a unidade presta ("Faturamento");
+              sem servico, o numero dela */}
+          <strong>{servico || `Unidade ${ordem}`}</strong>
           <span className="formcli__unidnome">
-            {rotulo ? <b>{rotulo}</b> : 'Dê um nome ou um serviço à unidade'}
-            {onde && onde !== rotulo && <span className="formcli__unidonde">{onde}</span>}
+            {curto ? <b>{curto}</b> : !servico && 'Dê um nome ou um serviço à unidade'}
+            {onde && onde !== curto && <span className="formcli__unidonde">{onde}</span>}
           </span>
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="m6 9 6 6 6-6" />

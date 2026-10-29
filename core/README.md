@@ -519,7 +519,7 @@ Senha padrao do sistema: `123456`.
 | `POST /api/auth/outlook/vincular` | vincula a conta Microsoft ao usuario logado |
 | `GET /api/equipe/usuarios`      | equipe com cargo, cor e media das avaliacoes |
 | `POST /api/equipe/usuarios`     | cadastra colaborador (basta e-mail + setor) com senha temporaria |
-| `PATCH /api/equipe/usuarios/:id` | edita o cadastro (CPF dos outros so pela diretoria; o proprio, cada um) |
+| `PATCH /api/equipe/usuarios/:id` | edita o cadastro (CPF dos outros com `editar_cpf`; o proprio, cada um) |
 | `DELETE /api/equipe/usuarios/:id` | desativa o acesso (o historico fica)       |
 | `GET /api/dados`                | clientes, obras, checks, observacoes, avisos |
 | `GET /api/dados/vitrine`        | so as logos dos clientes — **sem sessao**, para a esfera do login |
@@ -589,7 +589,7 @@ esconde o botao e a API recusa a chamada usando exatamente as mesmas chaves.
 | Grupo        | Chaves                                                              |
 | ------------ | ------------------------------------------------------------------- |
 | Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_turnos`, `ver_avaliacoes`, `ver_usuarios`, `ver_avisos` |
-| Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
+| Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
 
 Alteracao **sempre** depende da visualizacao correspondente: desmarcar "Obras"
 apaga junto tudo o que so faz sentido dentro de Obras, e essas linhas ficam
@@ -631,6 +631,13 @@ Tres chaves valem uma nota:
   `editar_cargo_titulo` dependem dela. O setor gravado antes dela, com alguma
   dessas tres, continua vendo a aba: `normalizar()` acrescenta a `ver_usuarios`
   na leitura (sem atualizacao no banco) e ela entra na lista no proximo salvar.
+- **`editar_cpf`** ("Incluir / editar / excluir CPF", embaixo de Usuarios)
+  libera o campo CPF no editar usuario: incluir, corrigir e tirar o CPF dos
+  outros — e ver o CPF dos colegas na carga. Tirar so de quem tem e-mail (sem os
+  dois a pessoa nao entra; a API recusa). Antes era trava de setor, so a
+  diretoria; a diretoria continua podendo (`podeEditarCpf`, em
+  `src/domain/obras.js`, e o PATCH de `server/routes/equipe.js`). O proprio CPF
+  cada um mexe em Configuracoes. Sem atualizacao no banco.
 
 ### E-mail (esqueci minha senha)
 
@@ -1122,8 +1129,11 @@ so os turnos com inicio e fim.
   **Exibir** (anotacoes, Obras e turnos abertos, guardado no navegador).
 - **Copiar e colar** (quem tem `editar_turnos`): clicar num card escolhe
   (Ctrl/Shift junta mais; clicar de novo abre); clicar num dia escolhe a celula
-  (de novo, cria o turno ali). Copiar/Ctrl+C, Colar/Ctrl+V, Delete exclui, Esc
-  desfaz — tambem pela barra que flutua embaixo. O Ctrl+V cola no dia escolhido
+  (de novo, cria o turno ali). Copiar/Ctrl+C, Colar/Ctrl+V, Delete (ou
+  Backspace) exclui, Esc desfaz — tambem pela barra que flutua embaixo. Na
+  confirmacao da exclusao o Enter confirma; com o turno aberto, o Delete fora
+  dos campos de texto pede a exclusao dele. O card que vem da obra nao se exclui
+  aqui (o Delete avisa). O Ctrl+V cola no dia escolhido
   ou, sem ele, no dia do card escolhido (na linha dele). `POST /api/turnos/colar`
   mantem dias, horario, titulo e cor; o primeiro copiado cai no dia escolhido.
 - As **tarefas das obras** (ponto de encontro, execucao, prazo de tarefa) tambem
@@ -1172,6 +1182,13 @@ inteiro: "Einstein Anapolis", "Einstein Alphaville".
 - No banco (atualizacao 35) o endereco do cliente com unidade fica vazio; a 35
   faz a unidade 1 de quem ja tinha unidade. Sem a 35, a API recusa cadastrar
   unidade, com o recado para rodar `npm run db:atualizar`.
+- Nas listas de **escolher cliente** (a empresa da obra, a organizacao do
+  negocio, o cliente do reembolso) a vitrine nao aparece: so as unidades dela
+  (`clientesParaEscolher`, em `src/domain/clientes.js`). Fica so o que ja estava
+  escolhido — a obra antiga ligada ao cliente de cima continua mostrando ele. O
+  "Unidade de" do Novo cliente lista justamente as vitrines.
+- No editar cliente, cada unidade tem como titulo o **servico** dela
+  ("Faturamento"); sem servico, o numero ("Unidade 1").
 
 ### O servico da unidade e o "Unidade de"
 
