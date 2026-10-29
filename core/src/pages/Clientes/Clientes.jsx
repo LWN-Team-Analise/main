@@ -616,7 +616,9 @@ function CardCliente({
           sobrar uma letra por linha. Agora os selos descem para baixo
           do nome quando nao cabem ao lado. */}
       <span className="cliente__titulo">
-        <h2 className="cliente__nome">{cliente.nome}</h2>
+        <h2 className="cliente__nome" title={cliente.nome}>
+          {cliente.nome}
+        </h2>
 
         {/* ---- a nota, na linha do nome ----
             Antes ela só existia dentro do card aberto, no pino sobre a

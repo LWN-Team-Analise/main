@@ -150,16 +150,29 @@
   max-width: 100%;
 }
 
+/* o nome numa linha so, cortado com "..." como o da aba Usuarios: um nome
+   comprido quebrava em duas ou tres linhas e o card ficava mais alto que
+   os vizinhos. Ele divide a linha com os selos quando cabe inteiro; se
+   nao cabe, fica com a linha toda e os selos descem. O nome inteiro esta
+   no title (passar o mouse) e no card aberto. */
 .cliente__nome {
-  flex: 1 1 9rem;
+  flex: 1 1 auto;
   margin: 0;
   min-width: 0;
+  max-width: 100%;
   font-size: 1rem;
   font-weight: 700;
   line-height: 1.25;
   color: var(--text-strong);
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: color var(--dur-fast) var(--ease-out);
+}
+
+.cliente--aberto .cliente__nome {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .cliente__botoes {
