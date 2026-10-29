@@ -86,15 +86,22 @@ function useListaFlutuante(aberto, fechar) {
       if (e.key === 'Escape') fechar()
     }
 
+    // rolar a pagina (ou o pop-up) move o botao: a lista acompanha. A
+    // rolagem da PROPRIA lista (a rodinha do mouse nela) nao move nada —
+    // medir ali refazia a posicao a cada passo da rodinha
+    const rolou = (e) => {
+      if (e.target?.closest?.('.sel__lista')) return
+      medir()
+    }
+
     document.addEventListener('mousedown', fora)
     document.addEventListener('keydown', tecla)
-    // rolar ou redimensionar move o botao: a lista acompanha
-    window.addEventListener('scroll', medir, true)
+    window.addEventListener('scroll', rolou, true)
     window.addEventListener('resize', medir)
     return () => {
       document.removeEventListener('mousedown', fora)
       document.removeEventListener('keydown', tecla)
-      window.removeEventListener('scroll', medir, true)
+      window.removeEventListener('scroll', rolou, true)
       window.removeEventListener('resize', medir)
     }
   }, [aberto, fechar, medir])
@@ -155,12 +162,24 @@ export default function Seletor({
   }
 
   /* com a lista aberta, a escolhida fica a vista: digitar "Pa" numa lista
-     de 250 paises tem de mostrar o Paraguai, e nao so marca-lo */
+     de 250 paises tem de mostrar o Paraguai, e nao so marca-lo.
+
+     So ao ABRIR e quando o valor muda (setas, letras) — e nao a cada
+     posicao nova da lista. Antes dependia da posicao, que muda quando a
+     pagina rola: a rodinha do mouse descia a lista e ela voltava para a
+     escolhida, e so dava para andar pelas setas. A conta e na mao, no
+     scrollTop da lista: scrollIntoView rolaria a pagina junto. */
+  const listaAberta = Boolean(posicao)
   useLayoutEffect(() => {
-    if (!aberto || !posicao) return
+    if (!aberto || !listaAberta) return
     const lista = document.querySelector(`[aria-labelledby="${CSS.escape(id)}"]`)
-    lista?.querySelector('.is-atual')?.scrollIntoView({ block: 'nearest' })
-  }, [aberto, posicao, valor, id])
+    const item = lista?.querySelector('.is-atual')
+    if (!lista || !item) return
+    const topo = item.getBoundingClientRect().top - lista.getBoundingClientRect().top + lista.scrollTop
+    const fim = topo + item.offsetHeight
+    if (topo < lista.scrollTop) lista.scrollTop = topo
+    else if (fim > lista.scrollTop + lista.clientHeight) lista.scrollTop = fim - lista.clientHeight
+  }, [aberto, listaAberta, valor, id])
 
   /* letras pulam para a opcao que comeca com elas, como no <select>: as
      digitadas em seguida se juntam ("par" acha o Paraguai) */

@@ -728,10 +728,17 @@ export default function Turnos() {
     })
   }
 
-  /* as teclas do Teams: Ctrl+C, Ctrl+V, Delete e Esc. Fora dos campos
-     de texto e com nenhum pop-up aberto. */
+  /* as teclas do Teams: Ctrl+C, Ctrl+V, Delete (ou Backspace) e Esc. Fora
+     dos campos de texto e com nenhum pop-up aberto. */
   const teclas = useRef(null)
   teclas.current = (evento) => {
+    /* Delete e depois Enter: a confirmacao da exclusao aceita o Enter. Nos
+       botoes dela, nao — o Enter ja aperta o botao que esta com o foco */
+    if (confirmando === 'excluir' && evento.key === 'Enter' && !evento.target?.closest?.('button')) {
+      evento.preventDefault()
+      excluir()
+      return
+    }
     if (!edita || editando || anotando || cronograma || confirmando) return
     const alvo = evento.target
     if (alvo?.closest?.('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return
@@ -749,9 +756,12 @@ export default function Turnos() {
     } else if (ctrl && eV && destino && copiados.length > 0) {
       evento.preventDefault()
       colar()
-    } else if ((evento.key === 'Delete' || evento.key === 'Backspace') && manuaisEscolhidos.length > 0) {
+    } else if ((evento.key === 'Delete' || evento.key === 'Backspace') && escolhidos.length > 0) {
       evento.preventDefault()
-      setConfirmando('excluir')
+      /* o card da obra (execucao, prazo, ponto de encontro) vem da obra:
+         some de la, e nao daqui */
+      if (manuaisEscolhidos.length > 0) setConfirmando('excluir')
+      else setAviso('Os cards das obras vêm da própria obra: eles não se excluem nos Turnos.')
     } else if (evento.key === 'Escape' && (selecao.size > 0 || celula)) {
       limparEscolha()
     }

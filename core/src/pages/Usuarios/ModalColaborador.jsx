@@ -56,10 +56,10 @@ const VAZIO = {
  * Quem nao tem e-mail corporativo entra pelo CPF: sem e-mail, nome e CPF
  * voltam a ser obrigatorios.
  *
- * Na EDICAO, o CPF dos outros e travado para todo mundo, com UMA
- * excecao: a diretoria. E trava de setor, nao permissao configuravel —
- * a API recusa do mesmo jeito, e por isso nao adianta so liberar o
- * campo aqui. (O proprio CPF cada um preenche em Configuracoes.)
+ * Na EDICAO, o CPF dos outros so muda com a permissao "Incluir / editar /
+ * excluir CPF" (e para a diretoria, que ja podia). Quem tem pode tirar o
+ * CPF de quem tem e-mail; sem e-mail, e por ele que a pessoa entra. A
+ * API confere o mesmo. (O proprio CPF cada um preenche em Configuracoes.)
  *
  * `usuarioLogado` e quem esta mexendo — e dele que sai a permissao.
  */
@@ -84,7 +84,7 @@ export default function ModalColaborador({
   const [salvando, setSalvando] = useState(false)
 
   const editando = Boolean(colaborador)
-  const cpfLiberado = podeEditarCpf(usuarioLogado)
+  const cpfLiberado = podeEditarCpf(usuarioLogado, pode)
   const podeCargo = pode('editar_cargo_titulo')
   /* cadastro novo abre so com e-mail, setor e cargo; o resto e opcional */
   const [maisDados, setMaisDados] = useState(false)
@@ -163,7 +163,7 @@ export default function ModalColaborador({
     const temEmail = Boolean(form.email.trim())
     const cpf = soDigitos(form.cpf)
     /* o CPF so conta aqui quando pode mudar: no cadastro, sempre; na
-       edicao, so para a diretoria (o campo dos outros fica travado) */
+       edicao, so com a permissao do CPF (sem ela o campo fica travado) */
     const mexeCpf = !editando || cpfLiberado
 
     if (!form.cargo) novos.cargo = 'Escolha o setor.'
@@ -178,8 +178,10 @@ export default function ModalColaborador({
       }
     } else {
       if (!form.nome.trim()) novos.nome = 'Informe o nome completo.'
-      // quem ja tinha CPF nao fica sem: a API recusa CPF vazio
-      if (mexeCpf && !cpf && colaborador?.cpf) novos.cpf = 'Informe o CPF.'
+      // tirar o CPF so de quem tem e-mail: sem os dois, a pessoa nao entra
+      if (mexeCpf && !cpf && colaborador?.cpf && !temEmail) {
+        novos.cpf = 'Sem e-mail, o CPF não pode ficar vazio — é por ele que a pessoa entra.'
+      }
     }
     if (mexeCpf && cpf && !validateCPF(form.cpf)) novos.cpf = 'CPF inválido.'
 
@@ -212,10 +214,10 @@ export default function ModalColaborador({
     /* o cargo so viaja para quem pode defini-lo: mandar o campo sem a
        permissao faria a API recusar a gravacao inteira */
     if (podeCargo) campos.cargoTituloId = form.cargoTituloId || ''
-    /* o CPF so viaja quando foi preenchido e pode mudar: na edicao por
-       quem nao e da diretoria, mandar o campo faria a API recusar a
-       gravacao inteira. Vazio no cadastro = a pessoa preenche depois. */
-    if (cpf && mexeCpf && cpf !== soDigitos(colaborador?.cpf)) campos.cpf = cpf
+    /* o CPF so viaja quando mudou e pode mudar: sem a permissao, mandar
+       o campo faria a API recusar a gravacao inteira. Vazio no cadastro =
+       a pessoa preenche depois; vazio na edicao de quem tinha = tirar. */
+    if (mexeCpf && cpf !== soDigitos(colaborador?.cpf ?? '') && (cpf || editando)) campos.cpf = cpf
 
     setConferindo(campos)
   }
@@ -471,6 +473,14 @@ function ResumoDoCargo({ campos, cargos, titulos = [] }) {
 
       <dt>E-mail</dt>
       <dd>{campos.email || <em>sem e-mail — entra pelo CPF</em>}</dd>
+
+      {/* so quando o CPF muda (ou sai) nesta gravacao */}
+      {campos.cpf !== undefined && (
+        <>
+          <dt>CPF</dt>
+          <dd>{campos.cpf ? formatarCPF(campos.cpf) : <em>removido do cadastro</em>}</dd>
+        </>
+      )}
 
       <dt>Setor</dt>
       <dd>{cargo?.nome ?? campos.cargo}</dd>

@@ -25,7 +25,6 @@ import {
   locaisDasUnidades,
   ordemDasUnidades,
   raizDoCliente,
-  rotuloDaUnidade,
 } from '@/domain/clientes'
 import { ehBrasil, nomeDoPais } from '@/domain/paises'
 import Estrelas from '@/components/Estrelas/Estrelas'
@@ -617,7 +616,9 @@ function CardCliente({
           sobrar uma letra por linha. Agora os selos descem para baixo
           do nome quando nao cabem ao lado. */}
       <span className="cliente__titulo">
-        <h2 className="cliente__nome">{cliente.nome}</h2>
+        <h2 className="cliente__nome" title={cliente.nome}>
+          {cliente.nome}
+        </h2>
 
         {/* ---- a nota, na linha do nome ----
             Antes ela só existia dentro do card aberto, no pino sobre a
@@ -641,14 +642,23 @@ function CardCliente({
             )}
 
             {setor && (
-              <span className="cliente__setor" style={{ '--setor-cor': corAdaptada(setor.cor, isDark) }}>
+              <span className="cliente__setor" style={{ '--setor-cor': corAdaptada(setor.cor, isDark) }} title={setor.nome}>
                 {setor.nome}
               </span>
             )}
 
             {unidades.length > 0 && (
-              <span className="cliente__qtdunid" title={unidades.map((u) => u.nome).join(', ')}>
-                {unidades.length} unidade{unidades.length === 1 ? '' : 's'}
+              <span
+                className="cliente__qtdunid"
+                title={`${unidades.length} unidade${unidades.length === 1 ? '' : 's'}: ${unidades.map((u) => u.nome).join(', ')}`}
+              >
+                {/* card estreito: so o icone e o numero (ver o @container no CSS) */}
+                <svg className="cliente__qtdicone" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M4 21V9l8-5 8 5v12" />
+                  <path d="M9.5 21v-5.5h5V21" />
+                </svg>
+                {unidades.length}
+                <span className="cliente__qtdpalavra"> unidade{unidades.length === 1 ? '' : 's'}</span>
               </span>
             )}
           </span>
@@ -764,9 +774,10 @@ function CardCliente({
             <div className="cliente__unidades">
               <p className="cliente__unidtitulo">Unidades</p>
               <ul>
-                {unidades.map((u) => (
+                {unidades.map((u, i) => (
                   <CardUnidade
                     key={u.id}
+                    ordem={i + 1}
                     unidade={u}
                     aberta={String(unidadeAberta) === String(u.id)}
                     obras={obrasDaUnidade[u.id] ?? { total: 0, abertas: 0 }}
@@ -898,15 +909,15 @@ function CardCliente({
 }
 
 /**
- * Uma unidade dentro do card do cliente. Fechada, so o nome dela
- * ("Anápolis - Faturamento"); o clique abre o resto — o servico, o
- * endereco, as obras e as pessoas de contato dela — e, para quem pode
- * mexer, o "Editar unidade". Abre e fecha como o card do cliente.
+ * Uma unidade dentro do card do cliente. Fechada, "Unidade 1" e o nome
+ * dela ("Anápolis"), na mesma ordem do editar cliente; o clique abre o
+ * resto — o endereco, as obras e as pessoas de contato dela — e, para
+ * quem pode mexer, o "Editar unidade". Abre e fecha como o card do cliente.
  */
-function CardUnidade({ unidade: u, aberta, obras, podeMexer, aoAlternar, aoEditar }) {
+function CardUnidade({ ordem, unidade: u, aberta, obras, podeMexer, aoAlternar, aoEditar }) {
   const id = `unidade-${u.id}`
+  const lugar = u.unidade || localDoEndereco(u)
   const linhas = [
-    ['Serviço', u.servico],
     ['Endereço', u.endereco],
     ['Bairro', u.bairro],
     ['Cidade', localDoEndereco(u)],
@@ -917,7 +928,8 @@ function CardUnidade({ unidade: u, aberta, obras, podeMexer, aoAlternar, aoEdita
   return (
     <li className="cliente__unidade" data-aberta={aberta}>
       <button type="button" className="cliente__unidtopo" onClick={aoAlternar} aria-expanded={aberta} aria-controls={id}>
-        <strong>{rotuloDaUnidade(u)}</strong>
+        <strong>Unidade {ordem}</strong>
+        {lugar && <span className="cliente__unidlugar">{lugar}</span>}
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="m6 9 6 6 6-6" />
         </svg>

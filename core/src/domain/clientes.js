@@ -150,5 +150,20 @@ export function locaisDasUnidades(unidades = []) {
 /** true para a linha que e unidade de outro cliente. */
 export const ehUnidade = (cliente) => Boolean(cliente?.matrizId)
 
+/**
+ * Os clientes que se ESCOLHEM numa lista (a empresa da obra, a do
+ * negocio, a do reembolso): o cliente com unidades e so a vitrine delas
+ * e sai — escolhe-se a unidade ("Ache Sao Paulo", "Ache Guarulhos").
+ * Continua na lista o que ja estava escolhido: a obra antiga ligada ao
+ * cliente "de cima" segue mostrando quem ela e.
+ *
+ * O "Unidade de" do Novo cliente NAO usa esta lista: ali e justamente o
+ * cliente de cima que se escolhe.
+ */
+export function clientesParaEscolher(clientes = [], escolhido = null) {
+  const comUnidade = new Set(clientes.filter((c) => c.matrizId).map((c) => String(c.matrizId)))
+  return clientes.filter((c) => !comUnidade.has(String(c.id)) || String(c.id) === String(escolhido ?? ''))
+}
+
 /** O id do cliente "de cima": o da matriz para a unidade, o proprio para o resto. */
 export const raizDoCliente = (cliente) => (cliente?.matrizId ? String(cliente.matrizId) : String(cliente?.id ?? ''))

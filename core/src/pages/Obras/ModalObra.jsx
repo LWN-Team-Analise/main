@@ -10,6 +10,7 @@ import {
   prioridadeTravada,
   rotuloDaPrioridade,
 } from '@/domain/obras'
+import { clientesParaEscolher } from '@/domain/clientes'
 import { proximaProposta } from '@/services/dadosService'
 import { hojeISO } from '@/utils/formato'
 import './ModalObra.css'
@@ -182,7 +183,8 @@ export default function ModalObra({
             onChange={mudar('clienteId')}
             erro={erros.clienteId}
             vazio="Escolha o cliente..."
-            opcoes={clientes.map((c) => ({ valor: c.id, rotulo: c.nome }))}
+            /* o cliente com unidades e so a vitrine: escolhe-se a unidade */
+            opcoes={clientesParaEscolher(clientes, form.clienteId).map((c) => ({ valor: c.id, rotulo: c.nome }))}
           />
         )}
 

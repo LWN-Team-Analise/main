@@ -249,7 +249,11 @@
 }
 
 .formcli__unidabrir > strong {
-  flex: none;
+  flex: 0 1 auto;
+  max-width: 55%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: 0.8rem;
   color: var(--text-strong);
 }
@@ -405,4 +409,25 @@
 .formcli__nalista b {
   font-weight: 600;
   color: var(--text-strong);
+}
+
+/* "Fixar no topo das listas": ao lado do Setor, na altura do campo dele */
+.formcli__fixar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  align-self: end;
+  min-height: 46px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.formcli__fixar input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
