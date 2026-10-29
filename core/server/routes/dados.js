@@ -3685,8 +3685,10 @@ router.put('/obras/:id/execucao-itens', exigeSessao, obraAberta, async (req, res
     }
     const data = texto(l.data)
     if (!dataValida(data)) return res.status(400).json({ erro: 'Escolha a data em que o ensaio foi feito.' })
+    /* o valor medido saiu da tela: a linha feita e a data + o conforme. O
+       banco pede o resultado junto com a data (atualizacao 25), entao ele
+       vai vazio quando nao vem */
     const resultado = texto(l.resultado)
-    if (!resultado) return res.status(400).json({ erro: 'Informe o resultado medido.' })
     if (resultado.length > LIMITES_ITEM.resultado) {
       return res.status(400).json({ erro: `O resultado passa de ${LIMITES_ITEM.resultado} caracteres.` })
     }
@@ -3778,7 +3780,7 @@ router.put('/obras/:id/execucao-itens', exigeSessao, obraAberta, async (req, res
             const nome = `${s.item} · ${s.ensaio} · ${rotuloDaCondicao(s.condicao)}`
             return l.apagar
               ? `${nome}: resultado apagado`
-              : `${nome}: ${l.resultado} (${l.conforme ? 'conforme' : 'não conforme'}, ${dataLida(l.data)})`
+              : `${nome}: ${l.resultado ? `${l.resultado} ` : ''}(${l.conforme ? 'conforme' : 'não conforme'}, ${dataLida(l.data)})`
           })
           .join('; '),
       },

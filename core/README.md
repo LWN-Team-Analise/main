@@ -2318,8 +2318,10 @@ banco; "Concluir planejamento" pede o servico, ao menos um item e todo item
 com ensaio. "Duplicar" abre a copia de um item no editor, para trocar so o
 nome (Sala 101 -> Sala 102).
 
-Na **Execucao**, cada linha recebe o resultado: data, valor medido, conforme
-ou nao conforme e observacao. "Nao conforme" e resultado, nao pendencia: a
+Na **Execucao**, cada linha recebe o resultado: a data e se ficou conforme
+ou nao conforme — so isso (o valor medido e a observacao sairam da tela;
+`obra_item_ensaio.resultado` vai vazio, porque a atualizacao 25 pede o
+resultado junto com a data, e o que ja tinha sido gravado fica no banco). "Nao conforme" e resultado, nao pendencia: a
 linha conta como feita. O % da execucao e a parte das linhas feitas, e o
 check so fecha com todas. "Salvar e proxima" pula para a proxima pendente
 com a mesma data.
