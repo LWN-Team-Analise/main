@@ -1187,10 +1187,21 @@ inteiro: "Einstein Anapolis", "Einstein Alphaville".
   (`clientesParaEscolher`, em `src/domain/clientes.js`). Fica so o que ja estava
   escolhido — a obra antiga ligada ao cliente de cima continua mostrando ele. O
   "Unidade de" do Novo cliente lista justamente as vitrines.
-- No editar cliente, cada unidade tem como titulo o **servico** dela
-  ("Faturamento"); sem servico, o numero ("Unidade 1").
+- As unidades se chamam **Unidade 1, Unidade 2...** (na ordem do cadastro), no
+  editar cliente e no card, com o nome dela ao lado ("Anapolis").
+- **Fixar no topo das listas** (o check ao lado do Setor): o cliente vem antes
+  dos outros em todo select de cliente e na aba Clientes, e as unidades dele vem
+  junto. E a `ordem_prioridade` da atualizacao 23 — a mesma das unidades da
+  LWN: marcado, o cliente ganha a proxima posicao depois dos ja fixados (quem
+  ja estava fica onde estava); desmarcado, volta para a ordem alfabetica
+  (`fixarNoTopo`, em `server/routes/dados.js`). Sem atualizacao no banco.
 
 ### O servico da unidade e o "Unidade de"
+
+> Desde 29/10 o **servico saiu da tela**: a unidade e so "Unidade 1",
+> "Unidade 2"... e o nome dela (o lugar). A coluna `cliente.servico` e a API
+> continuam (a tela nao manda mais o campo, entao gravar a unidade limpa o
+> servico que ela tinha). O texto abaixo e de quando ele aparecia.
 
 A unidade tem dois nomes, e precisa de um deles pelo menos (atualizacao 34):
 

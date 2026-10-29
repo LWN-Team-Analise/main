@@ -1255,6 +1255,31 @@ async function gravarExtrasDoCliente(clienteId, extras, { novo, usuarioId }) {
   }
 }
 
+/**
+ * O "Fixar no topo das listas" do cadastro: a ordem_prioridade (atualizacao
+ * 23), a mesma que poe as unidades da LWN na frente de toda lista de
+ * cliente. Marcado, o cliente ganha a proxima posicao depois dos que ja
+ * estao fixados — quem ja tinha posicao fica com a dele; desmarcado, volta
+ * para a ordem alfabetica. Sem o campo no corpo, nada muda.
+ */
+async function fixarNoTopo(clienteId, fixado) {
+  if (typeof fixado !== 'boolean') return
+  try {
+    if (fixado) {
+      await query(
+        `UPDATE cliente SET ordem_prioridade = (SELECT coalesce(max(ordem_prioridade), 0) + 1 FROM cliente)
+          WHERE id = $1 AND ordem_prioridade IS NULL`,
+        [clienteId],
+      )
+    } else {
+      await query('UPDATE cliente SET ordem_prioridade = NULL WHERE id = $1', [clienteId])
+    }
+  } catch (erro) {
+    /* banco sem a atualizacao 23: o resto do cadastro ja foi gravado */
+    if (erro.code !== '42703') throw erro
+  }
+}
+
 /** O cliente como a tela le, ja com as pessoas. */
 async function lerClienteCompleto(id) {
   const todos = await lerClientes(false)
@@ -1510,6 +1535,7 @@ router.post('/clientes', exigeSessao, exige('editar_clientes'), async (req, res)
       },
     })
     await gravarExtrasDoCliente(rows[0].id, extras, { novo: true, usuarioId: req.dono.sub })
+    await fixarNoTopo(rows[0].id, req.body?.fixado)
     if (unidades?.length) await gravarUnidades(rows[0].id, rows[0].nome, unidades, comPais)
     return res.status(201).json({ cliente: (await lerClienteCompleto(rows[0].id)) ?? paraCliente(rows[0]) })
   } catch (e) {
@@ -1570,6 +1596,7 @@ router.patch('/clientes/:id', exigeSessao, exige('editar_clientes'), async (req,
       detalhes: { cliente: rows[0].nome, imagem: Object.keys(imagem).length ? 'imagem alterada' : null },
     })
     await gravarExtrasDoCliente(rows[0].id, extras, { novo: false, usuarioId: req.dono.sub })
+    await fixarNoTopo(rows[0].id, req.body?.fixado)
     /* as unidades (e o nome inteiro delas, se o do cliente mudou) */
     if (!rows[0].matriz_id) await gravarUnidades(rows[0].id, rows[0].nome, unidades, comPais)
     /* a lista veio da tela: o endereco do cliente ja esta na unidade 1.

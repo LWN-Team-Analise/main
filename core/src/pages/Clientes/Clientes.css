@@ -761,9 +761,16 @@
 }
 
 .cliente__unidtopo strong {
+  flex: none;
+  font-size: 0.82rem;
+}
+
+/* o nome da unidade ("Anápolis"), ao lado do "Unidade 1" */
+.cliente__unidlugar {
   flex: 1;
   min-width: 0;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

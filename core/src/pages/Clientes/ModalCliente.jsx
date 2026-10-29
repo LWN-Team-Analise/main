@@ -8,7 +8,6 @@ import { CampoData } from '@/components/CampoData/CampoData'
 import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
 import {
-  SERVICO_MAXIMO,
   UNIDADE_MAXIMA,
   chaveDaUnidade,
   codigoPostal,
@@ -51,17 +50,21 @@ const VAZIO = {
   proprietarioId: '',
   proximoContato: '',
   pessoas: [],
+  /* "Fixar no topo das listas": o cliente vem antes dos outros em todo
+     select de cliente e na aba Clientes (a ordem_prioridade da atualizacao
+     23, a mesma das unidades da LWN) */
+  fixado: false,
   /* as unidades (atualizacao 33): Einstein Anapolis, Einstein Alphaville... */
   unidades: [],
   /* a UNIDADE cadastrada ou editada sozinha: o cliente dela (o "Unidade
-     de"), o lugar ("Anapolis") e o servico ("Faturamento", atualizacao 34) */
+     de") e o lugar ("Anapolis"). O servico (atualizacao 34) saiu da tela:
+     a unidade e so "Unidade 1", "Unidade 2"... e o nome dela */
   matrizId: '',
   unidade: '',
-  servico: '',
 }
 
 const PESSOA_VAZIA = { id: null, nome: '', cargo: '', email: '', telefone: '' }
-const UNIDADE_VAZIA = { id: null, unidade: '', servico: '', pais: PAIS_PADRAO, cep: '', endereco: '', bairro: '', estado: '', cidade: '' }
+const UNIDADE_VAZIA = { id: null, unidade: '', pais: PAIS_PADRAO, cep: '', endereco: '', bairro: '', estado: '', cidade: '' }
 /* a chave da unidade na tela: a nova ainda nao tem id */
 let proximaChave = 0
 const novaChave = () => `u${(proximaChave += 1)}`
@@ -105,8 +108,8 @@ function lugarSegueCidade(atual, mudanca) {
  *
  * No Novo cliente, o "Unidade de" troca o cadastro por uma UNIDADE de um
  * cliente que ja existe: o formulario vem com os dados dele (endereco,
- * pessoas, proprietario) e so se mexe no que e da unidade — o servico
- * ("Faturamento"), o lugar ("Anapolis", que segue a cidade) e o endereco.
+ * pessoas, proprietario) e so se mexe no que e da unidade — o nome (o
+ * lugar, "Anapolis", que segue a cidade) e o endereco.
  * A logo, a capa e o setor sao os do cliente. A unidade aberta pelo card
  * do cliente cai no mesmo formulario, para editar.
  *
@@ -146,12 +149,12 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
               ...cliente,
               ...enderecoDoBanco(cliente),
               setorId: cliente.setorId ?? '',
+              fixado: cliente.ordemPrioridade !== null && cliente.ordemPrioridade !== undefined,
               proprietarioId: cliente.proprietarioId ?? '',
               proximoContato: cliente.proximoContato ?? '',
               pessoas: (cliente.pessoas ?? []).map((p) => ({ ...PESSOA_VAZIA, ...p })),
               matrizId: cliente.matrizId ?? '',
               unidade: cliente.unidade ?? '',
-              servico: cliente.servico ?? '',
               unidades: clientes
                 .filter((c) => String(c.matrizId) === String(cliente.id))
                 .sort(ordemDasUnidades)
@@ -160,7 +163,6 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
                   chave: `id${c.id}`,
                   id: c.id,
                   unidade: c.unidade ?? '',
-                  servico: c.servico ?? '',
                   ...enderecoDoBanco(c),
                 })),
             }
@@ -358,18 +360,18 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
 
     const novosErros = {}
     if (modoUnidade) {
-      if (!form.unidade.trim() && !form.servico.trim()) {
-        novosErros.unidade = 'Dê um nome ou um serviço à unidade (ex.: Anápolis, Faturamento).'
+      if (!form.unidade.trim()) {
+        novosErros.unidade = 'Dê um nome à unidade (ex.: Anápolis).'
       } else {
-        /* a irma com o mesmo lugar e o mesmo servico nao se distinguiria na lista */
-        const chave = chaveDaUnidade(matriz?.nome, form.unidade, form.servico)
+        /* a irma com o mesmo nome nao se distinguiria na lista */
+        const chave = chaveDaUnidade(matriz?.nome, form.unidade)
         const repetida = clientes.some(
           (c) =>
             String(c.matrizId) === String(form.matrizId) &&
             String(c.id) !== String(cliente?.id) &&
-            chaveDaUnidade(matriz?.nome, c.unidade, c.servico) === chave,
+            chaveDaUnidade(matriz?.nome, c.unidade) === chave,
         )
-        if (repetida) novosErros.unidade = 'Este cliente já tem uma unidade com esse nome e esse serviço.'
+        if (repetida) novosErros.unidade = 'Este cliente já tem uma unidade com esse nome.'
       }
     } else if (!form.nome.trim()) novosErros.nome = 'Informe o nome da empresa.'
     if (!vitrine) {
@@ -384,10 +386,10 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
     })
     const nomesDasUnidades = new Set()
     form.unidades.forEach((u) => {
-      const qual = chaveDaUnidade(form.nome, u.unidade, u.servico)
+      const qual = chaveDaUnidade(form.nome, u.unidade)
       const chave = `unidade-${u.chave}`
-      if (qual === '|') novosErros[chave] = 'Dê um nome ou um serviço à unidade (ex.: Anápolis, Faturamento).'
-      else if (nomesDasUnidades.has(qual)) novosErros[chave] = 'Já há uma unidade com esse nome e esse serviço.'
+      if (qual === '|') novosErros[chave] = 'Dê um nome à unidade (ex.: Anápolis).'
+      else if (nomesDasUnidades.has(qual)) novosErros[chave] = 'Já há uma unidade com esse nome.'
       else if (!u.estado.trim() && pedeEstado(u.pais)) novosErros[chave] = 'Escolha o estado da unidade.'
       else if (!u.cidade.trim()) novosErros[chave] = 'Informe a cidade da unidade.'
       nomesDasUnidades.add(qual)
@@ -418,7 +420,6 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
       aoSalvar({
         matrizId: form.matrizId,
         unidade: form.unidade.trim(),
-        servico: form.servico.trim(),
         pais: form.pais,
         cep: form.cep,
         endereco: form.endereco.trim(),
@@ -440,7 +441,6 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
     campos.unidades = form.unidades.map((u) => ({
       id: u.id,
       unidade: u.unidade.trim(),
-      servico: u.servico.trim(),
       /* a Unidade 1 nova leva a data de cadastro do cliente, para vir antes */
       doCliente: Boolean(u.doCliente && !u.id),
       pais: u.pais,
@@ -450,6 +450,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
       estado: u.estado,
       cidade: u.cidade.trim(),
     }))
+    campos.fixado = Boolean(form.fixado)
     campos.proprietarioId = form.proprietarioId || null
     campos.proximoContato = form.proximoContato || null
     /* a imagem viaja em bloco, e SO quando alguem mexeu nela: os dois
@@ -498,14 +499,8 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
             </div>
 
             <CampoTexto
-              rotulo="Serviço"
-              placeholder="Ex.: Faturamento, Obra, Administração"
-              value={form.servico}
-              onChange={mudar('servico')}
-              maxLength={SERVICO_MAXIMO}
-            />
-            <CampoTexto
               rotulo="Nome da unidade"
+              largo
               placeholder="Ex.: Anápolis"
               value={form.unidade}
               onChange={mudar('unidade')}
@@ -513,12 +508,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
               erro={erros.unidade}
             />
             <p className="formcli__nalista">
-              Nas listas:{' '}
-              <b>
-                {form.unidade.trim() || form.servico.trim()
-                  ? nomeDaUnidade(matriz?.nome ?? 'Cliente', form.unidade, form.servico)
-                  : '—'}
-              </b>
+              Nas listas: <b>{form.unidade.trim() ? nomeDaUnidade(matriz?.nome ?? 'Cliente', form.unidade) : '—'}</b>
             </p>
           </>
         ) : (
@@ -616,6 +606,17 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
               }
               opcoes={setores.map((s) => ({ valor: String(s.id), rotulo: s.nome, cor: s.cor }))}
             />
+
+            {/* o cliente em primeiro em todo select de cliente e na aba
+                Clientes; as unidades dele vem junto */}
+            <label className="formcli__fixar">
+              <input
+                type="checkbox"
+                checked={Boolean(form.fixado)}
+                onChange={(e) => setForm((atual) => ({ ...atual, fixado: e.target.checked }))}
+              />
+              <span>Fixar no topo das listas</span>
+            </label>
           </>
         )}
 
@@ -948,27 +949,24 @@ function CamposEndereco({ valor, aoMudar, erros = {} }) {
 }
 
 /**
- * Uma unidade no cadastro. Fechada, so o nome dela ("Anápolis -
- * Faturamento") e onde fica; aberta, o serviço, o nome (o lugar, que
- * acompanha a cidade) e o endereço (CamposEndereco). O erro fica a vista
- * mesmo com ela fechada.
+ * Uma unidade no cadastro. Fechada, "Unidade 1", o nome dela
+ * ("Anápolis") e onde fica; aberta, o nome (o lugar, que acompanha a
+ * cidade) e o endereço (CamposEndereco). O erro fica a vista mesmo com
+ * ela fechada.
  */
 function CampoUnidade({ ordem, unidade, nomeDoCliente, erro, obras, aberta, aoAlternar, aoMudar, aoTirar }) {
   const mudar = (campo) => (evento) => aoMudar({ [campo]: evento?.target ? evento.target.value : evento })
 
   const curto = unidade.unidade.trim()
-  const servico = unidade.servico.trim()
   const onde = localDoEndereco(unidade)
   const id = `formcli-unidade-${unidade.chave}`
   return (
     <div className={`formcli__unidade ${erro ? 'has-erro' : ''}`.trim()} data-aberta={aberta}>
       <div className="formcli__unidtopo">
         <button type="button" className="formcli__unidabrir" onClick={aoAlternar} aria-expanded={aberta} aria-controls={id}>
-          {/* o titulo e o servico que a unidade presta ("Faturamento");
-              sem servico, o numero dela */}
-          <strong>{servico || `Unidade ${ordem}`}</strong>
+          <strong>Unidade {ordem}</strong>
           <span className="formcli__unidnome">
-            {curto ? <b>{curto}</b> : !servico && 'Dê um nome ou um serviço à unidade'}
+            {curto ? <b>{curto}</b> : 'Dê um nome à unidade'}
             {onde && onde !== curto && <span className="formcli__unidonde">{onde}</span>}
           </span>
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -980,7 +978,7 @@ function CampoUnidade({ ordem, unidade, nomeDoCliente, erro, obras, aberta, aoAl
           className="formcli__tirar"
           onClick={aoTirar}
           disabled={obras > 0}
-          aria-label={`Tirar a unidade ${[curto, servico].filter(Boolean).join(' - ') || ordem}`}
+          aria-label={`Tirar a unidade ${curto || ordem}`}
           title={
             obras > 0
               ? `Tem ${obras} obra${obras === 1 ? '' : 's'}: troque o cliente delas antes de tirar a unidade`
@@ -993,16 +991,9 @@ function CampoUnidade({ ordem, unidade, nomeDoCliente, erro, obras, aberta, aoAl
       <div className="formcli__unidcorpo" id={id}>
         <div className="formcli__unidcorpo-int">
           <p className="formcli__unidlista">
-            Nas listas: <b>{curto || servico ? nomeDaUnidade(nomeDoCliente || 'Cliente', curto, servico) : '—'}</b>
+            Nas listas: <b>{curto ? nomeDaUnidade(nomeDoCliente || 'Cliente', curto) : '—'}</b>
           </p>
           <div className="formcli__unidcampos">
-            <CampoTexto
-              rotulo="Serviço"
-              placeholder="Ex.: Faturamento, Obra"
-              value={unidade.servico}
-              onChange={mudar('servico')}
-              maxLength={SERVICO_MAXIMO}
-            />
             <CampoTexto
               rotulo="Nome da unidade"
               placeholder="Ex.: Anápolis"
