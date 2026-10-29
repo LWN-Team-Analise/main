@@ -15,38 +15,47 @@
 
 import { del, get, post, put } from './api'
 
-function consulta(base, { usuarios, categoria } = {}) {
-  const partes = []
+/** '/despesas/envios' + ['mes=2026-10'] + os filtros -> '/despesas/envios?mes=2026-10&categoria=bonus' */
+function consulta(base, { usuarios, categoria } = {}, partes = []) {
   if (usuarios === 'todos') partes.push('usuarios=todos')
   else if (Array.isArray(usuarios) && usuarios.length > 0) {
     partes.push(`usuarios=${encodeURIComponent(usuarios.join(','))}`)
   }
   if (categoria) partes.push(`categoria=${encodeURIComponent(categoria)}`)
-  return partes.length ? `${base}&${partes.join('&')}` : base
+  return partes.length ? `${base}?${partes.join('&')}` : base
 }
 
-/** A tabela dos valores pre-definidos: { tipo: valor }. Tipo fora dela e digitado. */
+/**
+ * As tabelas do "Valores pré-definidos":
+ *
+ *   valores   { tipo: valor } — tipo fora dela e digitado;
+ *   periodos  { categoria: dia } — o dia em que o periodo dela comeca.
+ */
 export async function carregarValores() {
-  const { valores } = await get('/despesas/valores')
-  return valores ?? {}
+  const { valores, periodos } = await get('/despesas/valores')
+  return { valores: valores ?? {}, periodos: periodos ?? {} }
 }
 
-/** Grava a tabela inteira (definir_valores_reembolso). Devolve a que ficou gravada. */
-export async function salvarValores(valores) {
-  const resposta = await put('/despesas/valores', { valores })
-  return resposta.valores ?? {}
+/** Grava as duas tabelas inteiras (definir_valores_reembolso). Devolve as que ficaram gravadas. */
+export async function salvarValores(valores, periodos) {
+  const resposta = await put('/despesas/valores', { valores, periodos })
+  return { valores: resposta.valores ?? {}, periodos: resposta.periodos ?? {} }
 }
 
 /** campos: { categoria, tipo, data, clienteId, obraId?, valor?, justificativa?, observacao?, anexo? } */
 export const enviar = (campos) => post('/despesas/envios', campos)
 
-/** Os envios de um mes ('AAAA-MM'), com os totais do dia, do mes e por pessoa. */
+/**
+ * Os envios de um mes ('AAAA-MM'), com os totais do dia, do mes e por
+ * pessoa — cada categoria no periodo dela. Sem mes, a API escolhe o de
+ * hoje (e devolve qual foi em `mes`).
+ */
 export const carregarMes = (mes, filtros) =>
-  get(consulta(`/despesas/envios?mes=${encodeURIComponent(mes)}`, filtros))
+  get(consulta('/despesas/envios', filtros, mes ? [`mes=${encodeURIComponent(mes)}`] : []))
 
 /** O ano mes a mes, com o total anual. */
 export const carregarAno = (ano, filtros) =>
-  get(consulta(`/despesas/resumo?ano=${encodeURIComponent(ano)}`, filtros))
+  get(consulta('/despesas/resumo', filtros, [`ano=${encodeURIComponent(ano)}`]))
 
 /** Quem ja enviou alguma coisa — a lista de Envios gerais (so revisor). */
 export async function carregarPessoas() {
@@ -67,12 +76,12 @@ export const excluir = (id) => del(`/despesas/envios/${encodeURIComponent(id)}`)
  *   filtros  os mesmos de carregarMes: { usuarios, categoria }
  */
 export async function carregarParaExportar(periodo = {}, filtros) {
-  const base = periodo.mes
-    ? `/despesas/exportar?mes=${encodeURIComponent(periodo.mes)}`
+  const recorte = periodo.mes
+    ? `mes=${encodeURIComponent(periodo.mes)}`
     : periodo.ano
-      ? `/despesas/exportar?ano=${encodeURIComponent(periodo.ano)}`
-      : '/despesas/exportar?periodo=tudo'
-  const { envios } = await get(consulta(base, filtros))
+      ? `ano=${encodeURIComponent(periodo.ano)}`
+      : 'periodo=tudo'
+  const { envios } = await get(consulta('/despesas/exportar', filtros, [recorte]))
   return envios ?? []
 }
 

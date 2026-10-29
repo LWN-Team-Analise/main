@@ -2,7 +2,16 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AppShell from '@/components/AppShell/AppShell'
 import { useDados } from '@/context/DadosContext'
-import { CATEGORIAS, CHAVES_CATEGORIA, VALORES_FIXOS, rotuloDoTipo, valorFixo } from '@/domain/despesas'
+import {
+  CATEGORIAS,
+  CHAVES_CATEGORIA,
+  PERIODOS_PADRAO,
+  VALORES_FIXOS,
+  inicioDoPeriodo,
+  mesDoPeriodo,
+  rotuloDoTipo,
+  valorFixo,
+} from '@/domain/despesas'
 import * as despesasApi from '@/services/despesasService'
 import { dataBR, reais } from '@/utils/formato'
 import ModalEnvio from './ModalEnvio'
@@ -32,7 +41,8 @@ const ENVIADO = {
  * botoes lado a lado, um por categoria, e "Meus envios" centralizado
  * embaixo deles. Para quem tem `definir_valores_reembolso`, o
  * "Valores pré-definidos" no canto de cima, a direita: almoco, janta,
- * bonus apartamento e qualquer outro tipo que passe a ter valor fixo.
+ * bonus apartamento e qualquer outro tipo que passe a ter valor fixo,
+ * e o periodo de cada categoria (a refeicao do dia 26 ao dia 25).
  *
  * Os formularios abrem em pop-up, por cima desta tela — enviar e um
  * gesto rapido, e voltar para ca depois dele e voltar para os tres
@@ -46,16 +56,22 @@ export default function Despesas() {
   /* ver a aba e uma permissao; ENVIAR e outra (alterar_despesas). Sem
      ela os tres botoes nao aparecem — e a API recusa o envio igual */
   const envia = pode('alterar_despesas')
-  /* a tabela dos valores pre-definidos (o banco manda; o padrao vale
-     ate ela chegar) */
+  /* as tabelas dos valores pre-definidos e dos periodos (o banco manda;
+     o padrao vale ate elas chegarem) */
   const [valores, setValores] = useState(VALORES_FIXOS)
+  const [periodos, setPeriodos] = useState(PERIODOS_PADRAO)
   const [editandoValores, setEditandoValores] = useState(false)
+
+  const guardarTabelas = (tabelas) => {
+    setValores(tabelas.valores)
+    setPeriodos(tabelas.periodos)
+  }
 
   useEffect(() => {
     let vivo = true
     despesasApi
       .carregarValores()
-      .then((tabela) => vivo && setValores(tabela))
+      .then((tabelas) => vivo && guardarTabelas(tabelas))
       .catch(() => {})
     return () => {
       vivo = false
@@ -91,7 +107,16 @@ export default function Despesas() {
               <span>
                 <strong>{ENVIADO[enviado.categoria]}</strong>: {rotuloDoTipo(enviado.tipo)} de{' '}
                 {dataBR(enviado.data)}, {reais(enviado.valor)}.{' '}
-                <Link to="/app/despesas/envios">Ver em Meus envios</Link>
+                {/* abre no mes do periodo do envio: a refeicao de 28/10, com
+                    o periodo comecando no dia 26, esta em novembro */}
+                <Link
+                  to={`/app/despesas/envios?mes=${mesDoPeriodo(
+                    enviado.data,
+                    inicioDoPeriodo(enviado.categoria, periodos),
+                  )}`}
+                >
+                  Ver em Meus envios
+                </Link>
               </span>
               <button type="button" onClick={() => setEnviado(null)} aria-label="Fechar aviso">
                 ×
@@ -146,8 +171,9 @@ export default function Despesas() {
       <ModalValores
         aberto={editandoValores}
         valores={valores}
+        periodos={periodos}
         aoFechar={() => setEditandoValores(false)}
-        aoSalvo={setValores}
+        aoSalvo={guardarTabelas}
       />
     </AppShell>
   )

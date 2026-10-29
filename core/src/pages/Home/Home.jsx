@@ -10,6 +10,7 @@ import { useDados } from '@/context/DadosContext'
 import { useTheme } from '@/context/ThemeContext'
 import { rotuloPrioridadeObra, tomPrioridadeObra } from '@/domain/obras'
 import { coordenadaDaUF } from '@/domain/geo'
+import { ehBrasil } from '@/domain/paises'
 import useClima, { familiaDoTempo, nomeDoTempo } from '@/hooks/useClima'
 import { dataBR, dataHora, hojeISO } from '@/utils/formato'
 import useTarefas from './useTarefas'
@@ -1152,6 +1153,8 @@ export function Vazio({ titulo, texto, arte = 'sol' }) {
 
     const porUF = new Map()
     for (const cliente of clientes) {
+      /* o estado de fora do Brasil nao e UF: "AL" no Alabama nao e Alagoas */
+      if (!ehBrasil(cliente?.pais)) continue
       const uf = String(cliente?.estado ?? '').trim().toUpperCase()
       if (porUF.has(uf)) continue
       /* UF em branco ou escrita errada nao tem lugar no mapa: o

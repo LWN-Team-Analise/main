@@ -1,0 +1,120 @@
+-- ============================================================
+--  ATUALIZACAO 35 — O ENDERECO DO CLIENTE: AS UNIDADES E O PAIS
+--
+--  1. O cliente com UNIDADE (atualizacoes 33 e 34) vira so a vitrine
+--     delas — logo, nome, setor, pessoas —, e o endereco e o de cada
+--     unidade. O endereco que ele tinha nao se perde: vira a UNIDADE 1,
+--     com a data de cadastro dele (vem antes das outras), e a unidade
+--     cadastrada fica depois dela.
+--
+--       cliente.cidade e cliente.estado passam a aceitar NULL: a
+--       vitrine fica sem eles.
+--
+--     Aqui isso acontece de uma vez com quem ja tem unidade. O nome da
+--     unidade 1 e a cidade ("Albert Einstein Sao Paulo"); se uma irma
+--     ja se chama assim, ela fica "Sao Paulo - Matriz". A irma que ja e
+--     esse mesmo endereco, com esse mesmo nome, ja e a unidade 1: ai
+--     nao nasce outra.
+--
+--  2. O PAIS do endereco, no cliente e na unidade:
+--
+--       cliente.pais   codigo de duas letras (ISO 3166-1), 'BR' por
+--                      padrao — todo endereco de antes e do Brasil.
+--
+--     No Brasil continua tudo igual: o estado e a UF, o CEP tem 8
+--     digitos. Fora dele o estado e o nome ("Florida") e o codigo
+--     postal e livre — por isso estado e cep viram text.
+--
+--  Sem esta atualizacao a API continua lendo os clientes, mas recusa
+--  cadastrar unidade e endereco fora do Brasil, com o recado de rodar
+--  `npm run db:atualizar`.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao duplica nada.
+-- ============================================================
+
+BEGIN;
+
+-- 2. o pais, e o estado e o CEP de fora do Brasil ------------------
+
+ALTER TABLE public.cliente ADD COLUMN IF NOT EXISTS pais text NOT NULL DEFAULT 'BR';
+
+ALTER TABLE public.cliente ALTER COLUMN estado TYPE text;
+ALTER TABLE public.cliente ALTER COLUMN cep TYPE text;
+
+ALTER TABLE public.cliente DROP CONSTRAINT IF EXISTS cliente_pais_forma;
+ALTER TABLE public.cliente ADD CONSTRAINT cliente_pais_forma CHECK (pais ~ '^[A-Z]{2}$');
+
+/* no Brasil, a UF; fora dele, o nome do estado */
+ALTER TABLE public.cliente DROP CONSTRAINT IF EXISTS cliente_uf_forma;
+ALTER TABLE public.cliente ADD CONSTRAINT cliente_uf_forma
+    CHECK (estado IS NULL OR (pais = 'BR' AND estado ~ '^[A-Z]{2}$') OR (pais <> 'BR' AND length(estado) <= 80));
+
+/* no Brasil, os 8 digitos; fora dele, ate 12 letras e numeros */
+ALTER TABLE public.cliente DROP CONSTRAINT IF EXISTS cliente_cep_digitos;
+ALTER TABLE public.cliente ADD CONSTRAINT cliente_cep_digitos
+    CHECK (cep IS NULL OR (pais = 'BR' AND cep ~ '^[0-9]{8}$') OR (pais <> 'BR' AND cep ~ '^[A-Z0-9 -]{1,12}$'));
+
+COMMENT ON COLUMN public.cliente.pais IS
+    'Pais do endereco, codigo ISO de duas letras. BR = Brasil (estado e a UF, CEP de 8 digitos).';
+COMMENT ON COLUMN public.cliente.estado IS
+    'No Brasil, a UF; fora dele, o nome do estado. NULL no cliente com unidade: o endereco e o de cada unidade.';
+COMMENT ON COLUMN public.cliente.cep IS
+    'No Brasil, so os 8 digitos (a mascara e da interface); fora dele, o codigo postal.';
+
+-- 1. o cliente com unidade e a vitrine; o endereco dele, a unidade 1 -
+
+ALTER TABLE public.cliente ALTER COLUMN cidade DROP NOT NULL;
+ALTER TABLE public.cliente ALTER COLUMN estado DROP NOT NULL;
+
+COMMENT ON COLUMN public.cliente.cidade IS
+    'NULL no cliente com unidade: o endereco e o de cada unidade (o dele virou a unidade 1).';
+
+INSERT INTO public.cliente (nome, unidade, servico, endereco, bairro, cidade, estado, cep, pais, matriz_id, criado_em)
+SELECT btrim(c.nome) || ' ' || btrim(c.cidade) || CASE WHEN x.xara THEN ' - Matriz' ELSE '' END,
+       btrim(c.cidade),
+       CASE WHEN x.xara THEN 'Matriz' END,
+       c.endereco, c.bairro, btrim(c.cidade), c.estado, c.cep, c.pais, c.id, c.criado_em
+  FROM public.cliente c
+ CROSS JOIN LATERAL (
+       /* a irma que ja tem o nome da cidade */
+       SELECT EXISTS (SELECT 1 FROM public.cliente u
+                       WHERE u.matriz_id = c.id
+                         AND lower(btrim(coalesce(u.unidade, ''))) = lower(btrim(c.cidade))
+                         AND coalesce(btrim(u.servico), '') = '') AS xara
+       ) x
+ WHERE c.matriz_id IS NULL
+   AND coalesce(btrim(c.cidade), '') <> ''
+   AND EXISTS (SELECT 1 FROM public.cliente u WHERE u.matriz_id = c.id)
+   /* a irma com o mesmo nome no mesmo endereco ja e a unidade 1 */
+   AND NOT EXISTS (SELECT 1 FROM public.cliente u
+                    WHERE u.matriz_id = c.id
+                      AND lower(btrim(coalesce(u.unidade, ''))) = lower(btrim(c.cidade))
+                      AND coalesce(btrim(u.servico), '') = ''
+                      AND lower(btrim(u.cidade)) = lower(btrim(c.cidade))
+                      AND coalesce(u.estado, '') = coalesce(c.estado, '')
+                      AND lower(btrim(coalesce(u.endereco, ''))) = lower(btrim(coalesce(c.endereco, '')))
+                      AND coalesce(u.cep, '') = coalesce(c.cep, '')
+                      AND u.pais = c.pais);
+
+UPDATE public.cliente c
+   SET endereco = NULL, bairro = NULL, cep = NULL, cidade = NULL, estado = NULL
+ WHERE c.matriz_id IS NULL
+   AND c.cidade IS NOT NULL
+   AND EXISTS (SELECT 1 FROM public.cliente u WHERE u.matriz_id = c.id);
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — as duas devem devolver "t"
+-- ============================================================
+
+SELECT 'cliente.cidade aceita NULL' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'cliente' AND column_name = 'cidade' AND is_nullable = 'YES') AS ok;
+
+SELECT 'cliente.pais' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'cliente' AND column_name = 'pais') AS ok;

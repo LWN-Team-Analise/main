@@ -17,9 +17,19 @@ import {
 } from '@/components/CutoutCard/CutoutCard'
 import { useDados } from '@/context/DadosContext'
 import { ordemDosClientes } from '@/domain/obras'
-import { raizDoCliente, rotuloDaUnidade } from '@/domain/clientes'
+import {
+  codigoPostal,
+  enderecoCompleto,
+  enderecoNasUnidades,
+  localDoEndereco,
+  locaisDasUnidades,
+  ordemDasUnidades,
+  raizDoCliente,
+  rotuloDaUnidade,
+} from '@/domain/clientes'
+import { ehBrasil, nomeDoPais } from '@/domain/paises'
 import Estrelas from '@/components/Estrelas/Estrelas'
-import { dataBR, dataHora, formatarCEP, hojeISO } from '@/utils/formato'
+import { dataBR, dataHora, hojeISO } from '@/utils/formato'
 import useCorDaLogo from '@/hooks/useCorDaLogo'
 import Confirma from '@/components/Confirma/Confirma'
 import { carregarResumoClientes } from '@/services/comercialService'
@@ -108,7 +118,7 @@ export default function Clientes() {
       if (!unidades.has(chave)) unidades.set(chave, [])
       unidades.get(chave).push(c)
     })
-    unidades.forEach((lista) => lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')))
+    unidades.forEach((lista) => lista.sort(ordemDasUnidades))
     return {
       principais: clientes.filter((c) => !c.matrizId),
       unidadesDe: unidades,
@@ -156,8 +166,11 @@ export default function Clientes() {
 
   const lista = useMemo(() => {
     const alvo = busca.trim().toLowerCase()
-    /* a busca acha o cliente tambem pelo nome ou pela cidade de uma unidade */
-    const bate = (c) => `${c.nome} ${c.cidade} ${c.estado}`.toLowerCase().includes(alvo)
+    /* a busca acha o cliente tambem pelo nome, pela cidade ou pelo pais de uma unidade */
+    const bate = (c) =>
+      `${c.nome} ${c.cidade} ${c.estado} ${c.cidade && !ehBrasil(c.pais) ? nomeDoPais(c.pais) : ''}`
+        .toLowerCase()
+        .includes(alvo)
     let filtrados = alvo
       ? principais.filter((c) => bate(c) || (unidadesDe.get(String(c.id)) ?? []).some(bate))
       : principais
@@ -186,6 +199,18 @@ export default function Clientes() {
     })
     return mapa
   }, [obras, concluida, raizDe])
+
+  /* e as de cada unidade sozinha, para o card dela dentro do do cliente */
+  const obrasDaUnidade = useMemo(() => {
+    const mapa = {}
+    obras.forEach((o) => {
+      const atual = mapa[o.clienteId] ?? { total: 0, abertas: 0 }
+      atual.total += 1
+      if (!concluida(o)) atual.abertas += 1
+      mapa[o.clienteId] = atual
+    })
+    return mapa
+  }, [obras, concluida])
 
   /**
    * A avaliacao de cada cliente.
@@ -246,12 +271,11 @@ export default function Clientes() {
    */
   const exportarClientes = () => {
     const nomeDe = (id) => equipe.find((p) => String(p.id) === String(id))?.nome ?? ''
-    const enderecoDe = (c) =>
-      [c.endereco, c.bairro, c.cidade && c.estado ? `${c.cidade}/${c.estado}` : c.cidade, c.cep ? formatarCEP(c.cep) : '']
-        .filter(Boolean)
-        .join(' — ')
     const ordenados = [...clientes].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
     const nomeDoCliente = (id) => clientes.find((x) => String(x.id) === String(id))?.nome ?? ''
+    /* o cliente com unidade sai sem endereco: o de cada unidade esta na
+       linha dela */
+    const vitrine = (c) => !c.matrizId && enderecoNasUnidades((unidadesDe.get(String(c.id)) ?? []).length)
     baixarPlanilha(
       [
         {
@@ -262,7 +286,8 @@ export default function Clientes() {
             { titulo: 'Unidade de', tipo: 'texto', largura: 26 },
             { titulo: 'Endereço', tipo: 'texto', largura: 48 },
             { titulo: 'Cidade', tipo: 'texto', largura: 18 },
-            { titulo: 'UF', tipo: 'texto', largura: 5 },
+            { titulo: 'Estado', tipo: 'texto', largura: 14 },
+            { titulo: 'País', tipo: 'texto', largura: 14 },
             { titulo: 'Setor', tipo: 'texto', largura: 18 },
             { titulo: 'Pessoas', tipo: 'texto', largura: 46 },
             { titulo: 'Negócios fechados', tipo: 'inteiro', largura: 12 },
@@ -275,9 +300,10 @@ export default function Clientes() {
           linhas: ordenados.map((c) => [
             c.nome,
             c.matrizId ? nomeDoCliente(c.matrizId) : '',
-            enderecoDe(c),
-            c.cidade,
-            c.estado,
+            vitrine(c) ? '' : enderecoCompleto(c),
+            vitrine(c) ? '' : c.cidade,
+            vitrine(c) ? '' : c.estado,
+            vitrine(c) || !c.cidade ? '' : nomeDoPais(c.pais),
             setorPorId(c.setorId)?.nome ?? '',
             (c.pessoas ?? []).map((p) => (p.email ? `${p.nome} <${p.email}>` : p.nome)).join('; '),
             resumo[c.id]?.ganhos ?? 0,
@@ -428,6 +454,7 @@ export default function Clientes() {
                 cliente={cliente}
                 unidades={unidadesDe.get(String(cliente.id)) ?? []}
                 numeros={contagem[cliente.id] ?? { total: 0, abertas: 0 }}
+                obrasDaUnidade={obrasDaUnidade}
                 nota={avaliacoes[cliente.id] ?? null}
                 setor={setorPorId(cliente.setorId)}
                 podeMexer={podeMexer}
@@ -519,18 +546,39 @@ function iniciais(nome) {
  * clicou para abrir e o gesto que a mao ja espera — e o resto do
  * cartao, que antes era area morta, agora responde igual.
  */
-function CardCliente({ cliente, unidades = [], numeros, nota, setor, podeMexer, aoEditar, aoEditarUnidade, aoApagar, aoVer }) {
+function CardCliente({
+  cliente,
+  unidades = [],
+  numeros,
+  obrasDaUnidade = {},
+  nota,
+  setor,
+  podeMexer,
+  aoEditar,
+  aoEditarUnidade,
+  aoApagar,
+  aoVer,
+}) {
   const { isDark } = useTheme()
   const cor = useCorDaLogo(cliente.logo, cliente.nome)
   const [aberto, setAberto] = useState(false)
+  /* com unidade o card e a vitrine delas: o endereco e o de cada
+     unidade, e a tarja de baixo da foto diz onde elas estao */
+  const vitrine = enderecoNasUnidades(unidades.length)
+  const proprio = localDoEndereco(cliente)
+  const locais = vitrine || !proprio ? locaisDasUnidades(unidades) : [proprio]
+  const onde = locais.length > 2 ? `${locais.slice(0, 2).join(' · ')} +${locais.length - 2}` : locais.join(' · ')
   /* a lista das obras avaliadas fica fechada ate alguem pedir: o card ja
      mostra a media, e a media e o que responde "esse cliente foi bem?" */
   const [verNotas, setVerNotas] = useState(false)
+  /* a unidade aberta dentro do card, uma por vez; as outras ficam so com o nome */
+  const [unidadeAberta, setUnidadeAberta] = useState(null)
 
   const fechar = () => {
     setAberto(false)
-    /* a lista de notas volta recolhida na próxima abertura */
+    /* a lista de notas e as unidades voltam recolhidas na próxima abertura */
     setVerNotas(false)
+    setUnidadeAberta(null)
   }
 
   const alternar = () => (aberto ? fechar() : setAberto(true))
@@ -546,11 +594,12 @@ function CardCliente({ cliente, unidades = [], numeros, nota, setor, podeMexer, 
    * O que continua clicável é o que tem função própria: os botões
    * (editar, apagar, "Ver no quadro", abrir as notas), os links e os
    * campos. Por isso o clique só fecha quando NÃO saiu de um desses —
-   * senão apagar um cliente fecharia o card no mesmo gesto.
+   * senão apagar um cliente fecharia o card no mesmo gesto. A unidade
+   * aberta também fica: ler o endereço dela não fecha o card.
    */
   const cliqueNoCard = (evento) => {
     if (!aberto) return
-    if (evento.target.closest('button, a, input, textarea, select, [role="button"]')) return
+    if (evento.target.closest('button, a, input, textarea, select, [role="button"], .cliente__unidade')) return
     fechar()
   }
 
@@ -649,11 +698,12 @@ function CardCliente({ cliente, unidades = [], numeros, nota, setor, podeMexer, 
                 )}
               </CutoutCardPin>
 
-              <CutoutCardInsetLabel>
-                <Icone.pino />
-                {cliente.cidade}
-                {cliente.estado ? `/${cliente.estado}` : ''}
-              </CutoutCardInsetLabel>
+              {onde && (
+                <CutoutCardInsetLabel title={locais.join(', ')}>
+                  <Icone.pino />
+                  {onde}
+                </CutoutCardInsetLabel>
+              )}
 
               <CutoutCardAction>
                 <button type="button" className="cliente__fechar" onClick={fechar}>
@@ -672,18 +722,28 @@ function CardCliente({ cliente, unidades = [], numeros, nota, setor, podeMexer, 
           <div className="cliente__dobra-int">
         <CutoutCardContent>
           <dl className="cliente__dados">
-            <div>
-              <dt>Endereço</dt>
-              <dd>{cliente.endereco || '—'}</dd>
-            </div>
-            <div>
-              <dt>Bairro</dt>
-              <dd>{cliente.bairro || '—'}</dd>
-            </div>
-            <div>
-              <dt>CEP</dt>
-              <dd>{cliente.cep ? formatarCEP(cliente.cep) : '—'}</dd>
-            </div>
+            {!vitrine && (
+              <>
+                <div>
+                  <dt>Endereço</dt>
+                  <dd>{cliente.endereco || '—'}</dd>
+                </div>
+                <div>
+                  <dt>Bairro</dt>
+                  <dd>{cliente.bairro || '—'}</dd>
+                </div>
+                <div>
+                  <dt>{ehBrasil(cliente.pais) ? 'CEP' : 'Código postal'}</dt>
+                  <dd>{codigoPostal(cliente.cep, cliente.pais) || '—'}</dd>
+                </div>
+                {!ehBrasil(cliente.pais) && (
+                  <div>
+                    <dt>País</dt>
+                    <dd>{nomeDoPais(cliente.pais)}</dd>
+                  </div>
+                )}
+              </>
+            )}
             <div>
               <dt>Setor</dt>
               <dd>
@@ -698,38 +758,23 @@ function CardCliente({ cliente, unidades = [], numeros, nota, setor, podeMexer, 
             </div>
           </dl>
 
-          {/* as unidades: o lugar, o servico e o endereco de cada uma. Quem
-              pode mexer abre a unidade no clique (o endereco e as pessoas
-              dela se editam ali). */}
+          {/* as unidades, cada uma num card pequeno: fechado, so o nome;
+              o clique abre o resto dela (CardUnidade) */}
           {unidades.length > 0 && (
             <div className="cliente__unidades">
               <p className="cliente__unidtitulo">Unidades</p>
               <ul>
-                {unidades.map((u) => {
-                  const endereco = [u.endereco, u.bairro, u.cidade && u.estado ? `${u.cidade}/${u.estado}` : u.cidade, u.cep ? formatarCEP(u.cep) : '']
-                    .filter(Boolean)
-                    .join(' — ')
-                  return (
-                    <li key={u.id}>
-                      {podeMexer ? (
-                        <button
-                          type="button"
-                          className="cliente__unidade"
-                          onClick={() => aoEditarUnidade(u)}
-                          title={`Editar ${u.nome}`}
-                        >
-                          <strong>{rotuloDaUnidade(u)}</strong>
-                          <span>{endereco}</span>
-                        </button>
-                      ) : (
-                        <>
-                          <strong>{rotuloDaUnidade(u)}</strong>
-                          <span>{endereco}</span>
-                        </>
-                      )}
-                    </li>
-                  )
-                })}
+                {unidades.map((u) => (
+                  <CardUnidade
+                    key={u.id}
+                    unidade={u}
+                    aberta={String(unidadeAberta) === String(u.id)}
+                    obras={obrasDaUnidade[u.id] ?? { total: 0, abertas: 0 }}
+                    podeMexer={podeMexer}
+                    aoAlternar={() => setUnidadeAberta((atual) => (String(atual) === String(u.id) ? null : u.id))}
+                    aoEditar={() => aoEditarUnidade(u)}
+                  />
+                ))}
               </ul>
             </div>
           )}
@@ -848,6 +893,78 @@ function CardCliente({ cliente, unidades = [], numeros, nota, setor, podeMexer, 
           </div>
         </div>
       </CutoutCard>
+    </li>
+  )
+}
+
+/**
+ * Uma unidade dentro do card do cliente. Fechada, so o nome dela
+ * ("Anápolis - Faturamento"); o clique abre o resto — o servico, o
+ * endereco, as obras e as pessoas de contato dela — e, para quem pode
+ * mexer, o "Editar unidade". Abre e fecha como o card do cliente.
+ */
+function CardUnidade({ unidade: u, aberta, obras, podeMexer, aoAlternar, aoEditar }) {
+  const id = `unidade-${u.id}`
+  const linhas = [
+    ['Serviço', u.servico],
+    ['Endereço', u.endereco],
+    ['Bairro', u.bairro],
+    ['Cidade', localDoEndereco(u)],
+    [ehBrasil(u.pais) ? 'CEP' : 'Cód. postal', codigoPostal(u.cep, u.pais)],
+  ].filter(([, valor]) => valor)
+  const pessoas = u.pessoas ?? []
+
+  return (
+    <li className="cliente__unidade" data-aberta={aberta}>
+      <button type="button" className="cliente__unidtopo" onClick={aoAlternar} aria-expanded={aberta} aria-controls={id}>
+        <strong>{rotuloDaUnidade(u)}</strong>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+
+      <div className="cliente__unidcorpo" id={id}>
+        <div className="cliente__unidcorpo-int">
+          <dl className="cliente__uniddados">
+            {linhas.map(([rotulo, valor]) => (
+              <div key={rotulo}>
+                <dt>{rotulo}</dt>
+                <dd>{valor}</dd>
+              </div>
+            ))}
+            <div>
+              <dt>Obras</dt>
+              <dd>
+                {obras.total}
+                {obras.abertas > 0 && ` · ${obras.abertas} em andamento`}
+              </dd>
+            </div>
+            {pessoas.length > 0 && (
+              <div>
+                <dt>Contatos</dt>
+                <dd>
+                  <ul className="cliente__unidpessoas">
+                    {pessoas.map((p) => (
+                      <li key={p.id}>
+                        <strong>{p.nome}</strong>
+                        {p.cargo && ` — ${p.cargo}`}
+                        {(p.email || p.telefone) && (
+                          <span>{[p.email, p.telefone].filter(Boolean).join(' · ')}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </dd>
+              </div>
+            )}
+          </dl>
+          {podeMexer && (
+            <button type="button" className="cliente__unideditar" onClick={aoEditar}>
+              Editar unidade
+            </button>
+          )}
+        </div>
+      </div>
     </li>
   )
 }

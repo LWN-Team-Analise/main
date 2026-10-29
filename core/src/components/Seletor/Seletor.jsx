@@ -102,6 +102,12 @@ function useListaFlutuante(aberto, fechar) {
   return { caixa, posicao, emPopup }
 }
 
+const semAcento = (texto) =>
+  String(texto ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+
 /** A lista aberta, sempre no <body> para nao ser cortada por nada. */
 function Lista({ posicao, emPopup, centralizado = false, children, ...rest }) {
   if (!posicao) return null
@@ -148,8 +154,33 @@ export default function Seletor({
     setAberto(false)
   }
 
+  /* com a lista aberta, a escolhida fica a vista: digitar "Pa" numa lista
+     de 250 paises tem de mostrar o Paraguai, e nao so marca-lo */
+  useLayoutEffect(() => {
+    if (!aberto || !posicao) return
+    const lista = document.querySelector(`[aria-labelledby="${CSS.escape(id)}"]`)
+    lista?.querySelector('.is-atual')?.scrollIntoView({ block: 'nearest' })
+  }, [aberto, posicao, valor, id])
+
+  /* letras pulam para a opcao que comeca com elas, como no <select>: as
+     digitadas em seguida se juntam ("par" acha o Paraguai) */
+  const digitado = useRef({ texto: '', ate: 0 })
+  const pularPara = (e) => {
+    if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return false
+    const agora = Date.now()
+    const antes = agora < digitado.current.ate ? digitado.current.texto : ''
+    if (!antes && e.key === ' ') return false
+    const texto = antes + semAcento(e.key)
+    digitado.current = { texto, ate: agora + 800 }
+    e.preventDefault()
+    const achada = opcoes.find((o) => semAcento(o.rotulo).startsWith(texto))
+    if (achada) aoMudar?.(achada.valor)
+    return true
+  }
+
   /* setas andam na lista mesmo com ela fechada, como no <select> */
   const aoTeclar = (e) => {
+    if (pularPara(e)) return
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault()
       if (!aberto) {

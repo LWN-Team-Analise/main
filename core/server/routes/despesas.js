@@ -10,12 +10,19 @@ import {
   CHAVES_CATEGORIA,
   JUSTIFICATIVA_MAXIMA,
   OBSERVACAO_MAXIMA,
+  PERIODOS_PADRAO,
   VALORES_FIXOS,
   VALOR_MAXIMO,
   anexoAceito,
   comprovanteObrigatorio,
+  descreverPeriodo,
+  inicioDoPeriodo,
+  lerTabelaDePeriodos,
   lerTabelaDeValores,
   lerValor,
+  mesDoPeriodo,
+  periodoDoMes,
+  rotuloDaCategoria,
   rotuloDoTipo,
   tipoValido,
   valorFixo,
@@ -37,8 +44,9 @@ const reais = (valor) => REAIS.format(Number(valor) || 0)
      GET    /painel               os totais por dia, categoria e tipo, sem
                                   ninguem — os graficos do Dashboard
      GET    /anexos/:id           o comprovante (o arquivo em si)
-     GET    /valores              a tabela dos valores pre-definidos
-     PUT    /valores              grava a tabela (definir_valores_reembolso)
+     GET    /valores              os valores pre-definidos e o periodo de
+                                  cada categoria
+     PUT    /valores              grava os dois (definir_valores_reembolso)
 
    /envios, /resumo e /exportar aceitam os mesmos filtros, e eles se somam:
      ?usuarios=   de quem (ver escopoDaConsulta)
@@ -75,6 +83,11 @@ const reais = (valor) => REAIS.format(Number(valor) || 0)
 
    Os TOTAIS (do dia, do mes, do ano, por pessoa) saem do banco,
    com SUM sobre NUMERIC. A tela so escreve o que recebeu.
+
+   O MES de /envios, /resumo e /exportar e o do PERIODO de cada
+   categoria (ver src/domain/despesas.js): com a refeicao comecando
+   no dia 26, as refeicoes de novembro sao as de 26/10 a 25/11, e as
+   despesas de novembro continuam sendo as de 01/11 a 30/11.
    ============================================================ */
 
 const router = Router()
@@ -88,31 +101,49 @@ const PERMISSAO_DASHBOARD = 'ver_dashboard'
 const PERMISSAO_VALORES = 'definir_valores_reembolso'
 
 /* ============================================================
-   VALORES PRE-DEFINIDOS
+   VALORES PRE-DEFINIDOS e PERIODOS
 
-   A tabela mora em configuracao ('valores_reembolso'), como JSON
-   { tipo: valor }. Sem a linha (ninguem salvou ainda), vale o padrao
-   de src/domain/despesas.js (VALORES_FIXOS).
+   As duas tabelas moram em configuracao, como JSON: os valores em
+   'valores_reembolso' ({ tipo: valor }) e o dia em que o periodo de
+   cada categoria comeca em 'periodos_reembolso' ({ categoria: dia }).
+   Sem a linha (ninguem salvou ainda), vale o padrao de
+   src/domain/despesas.js (VALORES_FIXOS e PERIODOS_PADRAO).
    ============================================================ */
 
 const CHAVE_VALORES = 'valores_reembolso'
+const CHAVE_PERIODOS = 'periodos_reembolso'
 
-async function tabelaDeValores() {
+/** A tabela gravada em `chave`, lida por `ler`; o `padrao` quando nao ha. */
+async function tabelaDaConfiguracao(chave, ler, padrao) {
   try {
-    const { rows } = await query('SELECT valor FROM configuracao WHERE chave = $1', [CHAVE_VALORES])
-    if (!rows[0]) return VALORES_FIXOS
-    const lido = lerTabelaDeValores(JSON.parse(rows[0].valor))
-    return lido.tabela ?? VALORES_FIXOS
+    const { rows } = await query('SELECT valor FROM configuracao WHERE chave = $1', [chave])
+    if (!rows[0]) return padrao
+    return ler(JSON.parse(rows[0].valor)) ?? padrao
   } catch (erro) {
     /* banco sem a tabela configuracao, ou JSON estragado: o padrao */
-    if (erro.code === '42P01' || erro instanceof SyntaxError) return VALORES_FIXOS
+    if (erro.code === '42P01' || erro instanceof SyntaxError) return padrao
     throw erro
   }
 }
 
+const tabelaDeValores = () =>
+  tabelaDaConfiguracao(CHAVE_VALORES, (bruto) => lerTabelaDeValores(bruto).tabela, VALORES_FIXOS)
+
+const tabelaDePeriodos = () =>
+  tabelaDaConfiguracao(CHAVE_PERIODOS, (bruto) => lerTabelaDePeriodos(bruto).periodos, PERIODOS_PADRAO)
+
+const gravarConfiguracao = (chave, tabela, usuarioId) =>
+  query(
+    `INSERT INTO configuracao (chave, valor, atualizado_por) VALUES ($1, $2, $3)
+     ON CONFLICT (chave) DO UPDATE
+        SET valor = EXCLUDED.valor, atualizado_em = now(), atualizado_por = EXCLUDED.atualizado_por`,
+    [chave, JSON.stringify(tabela), usuarioId],
+  )
+
 router.get('/valores', exigeSessao, exige(PERMISSAO_VER), async (_req, res) => {
   try {
-    return res.json({ valores: await tabelaDeValores() })
+    const [valores, periodos] = await Promise.all([tabelaDeValores(), tabelaDePeriodos()])
+    return res.json({ valores, periodos })
   } catch (erro) {
     return falhou(erro, res, 'despesas/valores')
   }
@@ -121,15 +152,17 @@ router.get('/valores', exigeSessao, exige(PERMISSAO_VER), async (_req, res) => {
 router.put('/valores', exigeSessao, exige(PERMISSAO_VALORES), async (req, res) => {
   const lido = lerTabelaDeValores(req.body?.valores)
   if (lido.erro) return res.status(400).json({ erro: lido.erro, campo: lido.tipo })
+  /* sem `periodos` no pedido (tela antiga), eles ficam como estao */
+  const temPeriodos = req.body?.periodos !== undefined
+  const lidos = temPeriodos ? lerTabelaDePeriodos(req.body.periodos) : null
+  if (lidos?.erro) return res.status(400).json({ erro: lidos.erro, campo: `periodo-${lidos.categoria}` })
   try {
-    const antes = await tabelaDeValores()
-    await query(
-      `INSERT INTO configuracao (chave, valor, atualizado_por) VALUES ($1, $2, $3)
-       ON CONFLICT (chave) DO UPDATE
-          SET valor = EXCLUDED.valor, atualizado_em = now(), atualizado_por = EXCLUDED.atualizado_por`,
-      [CHAVE_VALORES, JSON.stringify(lido.tabela), req.dono.sub],
-    )
-    /* o historico diz o que mudou: "Almoço: R$ 41,50 -> R$ 45,00" */
+    const [antes, periodosAntes] = await Promise.all([tabelaDeValores(), tabelaDePeriodos()])
+    const periodos = lidos?.periodos ?? periodosAntes
+    await gravarConfiguracao(CHAVE_VALORES, lido.tabela, req.dono.sub)
+    if (temPeriodos) await gravarConfiguracao(CHAVE_PERIODOS, periodos, req.dono.sub)
+    /* o historico diz o que mudou: "Almoço: R$ 41,50 -> R$ 45,00",
+       "Refeição: do dia 1 ao último dia do mês -> do dia 26 ao dia 25..." */
     const mudancas = [...new Set([...Object.keys(antes), ...Object.keys(lido.tabela)])]
       .filter((tipo) => antes[tipo] !== lido.tabela[tipo])
       .map((tipo) => {
@@ -137,6 +170,13 @@ router.put('/valores', exigeSessao, exige(PERMISSAO_VALORES), async (req, res) =
         const para = lido.tabela[tipo] === undefined ? 'digitado' : reais(lido.tabela[tipo])
         return `${rotuloDoTipo(tipo)}: ${de} -> ${para}`
       })
+    CHAVES_CATEGORIA.forEach((categoria) => {
+      const de = inicioDoPeriodo(categoria, periodosAntes)
+      const para = inicioDoPeriodo(categoria, periodos)
+      if (de === para) return
+      const [era, ficou] = [de, para].map((dia) => descreverPeriodo(dia).toLowerCase())
+      mudancas.push(`${rotuloDaCategoria(categoria)}: ${era} -> ${ficou}`)
+    })
     if (mudancas.length) {
       await registrarAtividade(req, {
         acao: 'despesa.valores',
@@ -146,7 +186,7 @@ router.put('/valores', exigeSessao, exige(PERMISSAO_VALORES), async (req, res) =
         detalhes: { mudancas: mudancas.join('; ') },
       })
     }
-    return res.json({ valores: lido.tabela })
+    return res.json({ valores: lido.tabela, periodos })
   } catch (erro) {
     return falhou(erro, res, 'despesas/valores-salvar')
   }
@@ -198,11 +238,19 @@ function dataValida(valor) {
 
 const DATA_MINIMA = '2000-01-01'
 
-/** O primeiro dia do mes e o primeiro do mes seguinte: [inicio, fim). */
-function limitesDoMes(mes) {
-  const [ano, m] = mes.split('-').map(Number)
-  const proximo = m === 12 ? `${ano + 1}-01` : `${ano}-${String(m + 1).padStart(2, '0')}`
-  return [`${mes}-01`, `${proximo}-01`]
+const mesValido = (mes) => /^\d{4}-(0[1-9]|1[0-2])$/.test(mes) && mes >= '2000-01' && mes <= '2100-12'
+
+/**
+ * O mes mais adiante que ja comecou, entre as categorias pedidas: em
+ * 28/10, com a refeicao comecando no dia 26, e novembro — e a tela deixa
+ * andar ate ele.
+ */
+function ultimoMes(periodos, categoria) {
+  const hoje = hojeNoBrasil()
+  return (categoria ? [categoria] : CHAVES_CATEGORIA)
+    .map((c) => mesDoPeriodo(hoje, inicioDoPeriodo(c, periodos)))
+    .sort()
+    .pop()
 }
 
 /* ------------------------------------------------------------
@@ -313,21 +361,57 @@ function categoriaDaConsulta(req, res) {
 }
 
 /**
- * O resto do WHERE: de quem e de que tipo. Os dois primeiros
- * parametros ($1 e $2) sao sempre o periodo; os filtros vem depois.
+ * O WHERE das leituras: de quando, de quem e de que tipo.
+ *
+ *   meses  ['AAAA-MM', 'AAAA-MM'], do primeiro ao ultimo, os dois
+ *          inclusive — cada categoria no periodo DELA (as que comecam
+ *          no mesmo dia dividem o recorte). null = desde sempre.
  */
-function filtros(ids, categoria) {
-  const partes = []
+function recorte({ ids, categoria, periodos, meses }) {
   const params = []
-  if (ids !== null) {
-    params.push(ids)
-    partes.push(`AND e.usuario_id = ANY($${params.length + 2}::bigint[])`)
+  const p = (valor) => {
+    params.push(valor)
+    return `$${params.length}`
   }
-  if (categoria) {
-    params.push(categoria)
-    partes.push(`AND e.categoria = $${params.length + 2}`)
+  const partes = []
+  if (meses) {
+    const porDia = new Map()
+    for (const c of categoria ? [categoria] : CHAVES_CATEGORIA) {
+      const dia = inicioDoPeriodo(c, periodos)
+      porDia.set(dia, [...(porDia.get(dia) ?? []), c])
+    }
+    const pedacos = [...porDia].map(
+      ([dia, categorias]) =>
+        `(e.categoria = ANY(${p(categorias)}::text[]) AND e.data >= ${p(periodoDoMes(meses[0], dia).de)}::date ` +
+        `AND e.data <= ${p(periodoDoMes(meses[1], dia).ate)}::date)`,
+    )
+    partes.push(`(${pedacos.join(' OR ')})`)
+  } else if (categoria) {
+    partes.push(`e.categoria = ${p(categoria)}`)
   }
-  return { sql: partes.join(' '), params }
+  if (ids !== null) partes.push(`e.usuario_id = ANY(${p(ids)}::bigint[])`)
+  return { onde: partes.length ? `WHERE ${partes.join(' AND ')}` : '', params }
+}
+
+/**
+ * O mes (1 a 12) do periodo de cada envio, para a visao anual: com a
+ * refeicao comecando no dia 26, a de 28/12 e de janeiro. Os parametros
+ * dela entram numa COPIA de `params` — as consultas que nao leem o mes
+ * seguem sem eles, porque o Postgres recusa parametro que nao e lido.
+ */
+function mesDoEnvio(periodos, params) {
+  const todos = [...params]
+  const p = (valor) => {
+    todos.push(valor)
+    return `$${todos.length}`
+  }
+  const casos = CHAVES_CATEGORIA.filter((c) => inicioDoPeriodo(c, periodos) > 1).map(
+    (c) =>
+      `WHEN e.categoria = ${p(c)} AND extract(day FROM e.data) >= ${p(inicioDoPeriodo(c, periodos))} ` +
+      `THEN extract(month FROM e.data + interval '1 month')::int`,
+  )
+  const doCalendario = 'extract(month FROM e.data)::int'
+  return { sql: casos.length ? `CASE ${casos.join(' ')} ELSE ${doCalendario} END` : doCalendario, params: todos }
 }
 
 /* ------------------------------------------------------------
@@ -616,8 +700,8 @@ router.delete('/envios/:id', exigeSessao, exige(PERMISSAO_EXCLUIR), async (req, 
    ============================================================ */
 
 router.get('/envios', exigeSessao, exige(PERMISSAO_VER), async (req, res) => {
-  const mes = texto(req.query.mes) || hojeNoBrasil().slice(0, 7)
-  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes) || mes < '2000-01' || mes > '2100-12') {
+  const pedido = texto(req.query.mes)
+  if (pedido && !mesValido(pedido)) {
     return res.status(400).json({ erro: 'Mês inválido. Use AAAA-MM.' })
   }
 
@@ -628,10 +712,13 @@ router.get('/envios', exigeSessao, exige(PERMISSAO_VER), async (req, res) => {
     const escopo = await escopoDaConsulta(req, res)
     if (!escopo) return undefined
 
-    const [inicio, fim] = limitesDoMes(mes)
-    const f = filtros(escopo.ids, categoria)
-    const params = [inicio, fim, ...f.params]
-    const onde = `WHERE e.data >= $1 AND e.data < $2 ${f.sql}`
+    const periodos = await tabelaDePeriodos()
+    /* sem mes no pedido, o de hoje: o do calendario em "todos", e o do
+       periodo quando ha uma categoria so */
+    const mes =
+      pedido ||
+      (categoria ? mesDoPeriodo(hojeNoBrasil(), inicioDoPeriodo(categoria, periodos)) : hojeNoBrasil().slice(0, 7))
+    const { onde, params } = recorte({ ids: escopo.ids, categoria, periodos, meses: [mes, mes] })
 
     const [envios, dias, categorias, pessoas, total] = await Promise.all([
       query(`${CONSULTA_ENVIOS} ${onde} ORDER BY e.data, e.criado_em, e.id`, params),
@@ -662,6 +749,8 @@ router.get('/envios', exigeSessao, exige(PERMISSAO_VER), async (req, res) => {
 
     return res.json({
       mes,
+      ultimoMes: ultimoMes(periodos, categoria),
+      periodos,
       revisor: escopo.revisor,
       envios: envios.rows.map(paraEnvio),
       dias: dias.rows.map((l) => ({ data: String(l.data).slice(0, 10), ...soma(l) })),
@@ -691,23 +780,22 @@ router.get('/resumo', exigeSessao, exige(PERMISSAO_VER), async (req, res) => {
     const escopo = await escopoDaConsulta(req, res)
     if (!escopo) return undefined
 
-    const f = filtros(escopo.ids, categoria)
-    const params = [`${ano}-01-01`, `${ano + 1}-01-01`, ...f.params]
-    const onde = `WHERE e.data >= $1 AND e.data < $2 ${f.sql}`
-    const mesDe = 'extract(month FROM e.data)::int'
+    const periodos = await tabelaDePeriodos()
+    const { onde, params } = recorte({ ids: escopo.ids, categoria, periodos, meses: [`${ano}-01`, `${ano}-12`] })
+    const mesDe = mesDoEnvio(periodos, params)
 
     const [porMes, porMesCategoria, categorias, pessoas, total] = await Promise.all([
       query(
-        `SELECT ${mesDe} AS mes, count(*)::int AS quantidade, sum(e.valor) AS total
+        `SELECT ${mesDe.sql} AS mes, count(*)::int AS quantidade, sum(e.valor) AS total
            FROM despesa_envio e ${onde}
           GROUP BY 1`,
-        params,
+        mesDe.params,
       ),
       query(
-        `SELECT ${mesDe} AS mes, e.categoria, count(*)::int AS quantidade, sum(e.valor) AS total
+        `SELECT ${mesDe.sql} AS mes, e.categoria, count(*)::int AS quantidade, sum(e.valor) AS total
            FROM despesa_envio e ${onde}
           GROUP BY 1, 2`,
-        params,
+        mesDe.params,
       ),
       query(
         `SELECT e.categoria, count(*)::int AS quantidade, sum(e.valor) AS total
@@ -746,6 +834,8 @@ router.get('/resumo', exigeSessao, exige(PERMISSAO_VER), async (req, res) => {
 
     return res.json({
       ano,
+      ultimoMes: ultimoMes(periodos, categoria),
+      periodos,
       revisor: escopo.revisor,
       meses,
       categorias: Object.fromEntries(categorias.rows.map((l) => [l.categoria, soma(l)])),
@@ -760,7 +850,7 @@ router.get('/resumo', exigeSessao, exige(PERMISSAO_VER), async (req, res) => {
 /* ============================================================
    EXPORTAR — a lista que vira planilha do Excel
 
-     ?mes=AAAA-MM   o mes
+     ?mes=AAAA-MM   o mes (o periodo de cada categoria)
      ?ano=AAAA      o ano inteiro
      (nenhum)       tudo o que ja foi enviado
 
@@ -772,17 +862,17 @@ router.get('/resumo', exigeSessao, exige(PERMISSAO_VER), async (req, res) => {
    ve a conta, e nao so o resultado.
    ============================================================ */
 
-/** O periodo do pedido: [inicio, fim) e o nome dele, ou null se ja recusou. */
+/** O periodo do pedido: os meses (null = tudo) e o nome dele, ou null se ja recusou. */
 function periodoDaConsulta(req, res) {
   const mes = texto(req.query.mes)
   const ano = texto(req.query.ano)
 
   if (mes) {
-    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes) || mes < '2000-01' || mes > '2100-12') {
+    if (!mesValido(mes)) {
       res.status(400).json({ erro: 'Mês inválido. Use AAAA-MM.' })
       return null
     }
-    return { tipo: 'mes', valor: mes, limites: limitesDoMes(mes) }
+    return { tipo: 'mes', valor: mes, meses: [mes, mes] }
   }
   if (ano) {
     const n = Number(ano)
@@ -790,9 +880,9 @@ function periodoDaConsulta(req, res) {
       res.status(400).json({ erro: 'Ano inválido.' })
       return null
     }
-    return { tipo: 'ano', valor: ano, limites: [`${n}-01-01`, `${n + 1}-01-01`] }
+    return { tipo: 'ano', valor: ano, meses: [`${ano}-01`, `${ano}-12`] }
   }
-  return { tipo: 'tudo', valor: null, limites: [DATA_MINIMA, '2101-01-01'] }
+  return { tipo: 'tudo', valor: null, meses: null }
 }
 
 router.get('/exportar', exigeSessao, exige(PERMISSAO_VER), async (req, res) => {
@@ -806,11 +896,12 @@ router.get('/exportar', exigeSessao, exige(PERMISSAO_VER), async (req, res) => {
     const escopo = await escopoDaConsulta(req, res)
     if (!escopo) return undefined
 
-    const f = filtros(escopo.ids, categoria)
+    const periodos = await tabelaDePeriodos()
+    const { onde, params } = recorte({ ids: escopo.ids, categoria, periodos, meses: periodo.meses })
     const { rows } = await query(
-      `${CONSULTA_ENVIOS} WHERE e.data >= $1 AND e.data < $2 ${f.sql}
+      `${CONSULTA_ENVIOS} ${onde}
         ORDER BY lower(u.name), e.data, e.criado_em, e.id`,
-      [...periodo.limites, ...f.params],
+      params,
     )
 
     return res.json({

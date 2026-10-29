@@ -1095,6 +1095,34 @@
   color: var(--text-strong);
 }
 
+/* o periodo da categoria, em cima dos tipos dela */
+.valores__periodo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  min-height: 56px;
+  padding: 7px 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-md);
+}
+
+.valores__periodo > strong {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.valores__periodotexto {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
 .valores__nota {
   margin: 0;
   font-size: 0.76rem;

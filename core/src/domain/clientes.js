@@ -29,6 +29,8 @@
    importa o mesmo.
    ============================================================ */
 
+import { codigoDoPais, ehBrasil, nomeDoPais } from './paises.js'
+
 export const UNIDADES_MAXIMO = 50
 export const UNIDADE_MAXIMA = 80
 export const SERVICO_MAXIMO = 80
@@ -74,6 +76,76 @@ export const chaveDaUnidade = (nomeDoCliente, unidade, servico = '') =>
 /** Como a unidade aparece dentro do card do cliente: "Anapolis - Faturamento". */
 export const rotuloDaUnidade = (unidade) =>
   [limpo(unidade?.unidade), limpo(unidade?.servico)].filter(Boolean).join(' - ') || limpo(unidade?.nome)
+
+/**
+ * Com UNIDADE, o endereco e o de cada unidade: o cliente vira so a
+ * vitrine delas (logo, nome, setor, pessoas), e o estado, a cidade e o
+ * resto do endereco dele saem — no banco ficam vazios (atualizacao 35).
+ * O endereco que ele tinha nao se perde: vira a UNIDADE 1 (ver
+ * primeiraUnidade), e a unidade cadastrada vem depois dela.
+ */
+export const enderecoNasUnidades = (quantasUnidades) => quantasUnidades > 0
+
+const campo = (texto) => limpo(texto).toLowerCase()
+const digitos = (texto) => String(texto ?? '').replace(/\D/g, '')
+
+/**
+ * A UNIDADE 1: o endereco que o cliente tinha quando ganhou a primeira
+ * unidade. O lugar dela e a cidade dele; se uma irma ja tem esse nome,
+ * ela vira "Cidade - Matriz". Devolve null quando nao ha endereco, ou
+ * quando uma irma ja e ele (o mesmo nome no mesmo endereco).
+ *
+ * `irmas`: as unidades que ficam ao lado dela.
+ */
+export function primeiraUnidade(cliente, irmas = []) {
+  const cidade = limpo(cliente?.cidade)
+  if (!cidade) return null
+  const chave = chaveDaUnidade(cliente.nome, cidade, '')
+  const xara = irmas.find((u) => chaveDaUnidade(cliente.nome, u?.unidade, u?.servico) === chave)
+  const mesmoEndereco = (u) =>
+    ['cidade', 'estado', 'endereco'].every((k) => campo(u?.[k]) === campo(cliente[k])) &&
+    digitos(u?.cep) === digitos(cliente.cep) &&
+    codigoDoPais(u?.pais) === codigoDoPais(cliente.pais)
+  if (xara && mesmoEndereco(xara)) return null
+  return {
+    unidade: cidade,
+    servico: xara ? 'Matriz' : '',
+    pais: codigoDoPais(cliente.pais),
+    cep: limpo(cliente.cep),
+    endereco: limpo(cliente.endereco),
+    bairro: limpo(cliente.bairro),
+    estado: limpo(cliente.estado),
+    cidade,
+  }
+}
+
+/** O CEP com a mascara do Brasil ("01310-100"); o codigo postal de fora, como veio. */
+export function codigoPostal(cep, pais) {
+  if (!ehBrasil(pais)) return limpo(cep)
+  const d = digitos(cep)
+  return d.length === 8 ? `${d.slice(0, 5)}-${d.slice(5)}` : d
+}
+
+/** "Anápolis/GO"; fora do Brasil, com o pais: "Miami/Florida (Estados Unidos)". */
+export function localDoEndereco(e) {
+  const lugar = [limpo(e?.cidade), limpo(e?.estado)].filter(Boolean).join('/')
+  if (ehBrasil(e?.pais)) return lugar
+  return lugar ? `${lugar} (${nomeDoPais(e.pais)})` : nomeDoPais(e.pais)
+}
+
+/** O endereco inteiro numa linha: rua, bairro, cidade/estado e CEP. */
+export const enderecoCompleto = (e) =>
+  [limpo(e?.endereco), limpo(e?.bairro), localDoEndereco(e), codigoPostal(e?.cep, e?.pais)].filter(Boolean).join(' — ')
+
+/** As unidades na ordem do cadastro: a Unidade 1 (o endereco que o cliente tinha) primeiro. */
+export const ordemDasUnidades = (a, b) =>
+  String(a.criadoEm ?? '').localeCompare(String(b.criadoEm ?? '')) || Number(a.id) - Number(b.id)
+
+/** Onde as unidades estao, sem repetir: ['Anápolis/GO', 'Barueri/SP']. */
+export function locaisDasUnidades(unidades = []) {
+  const locais = unidades.map(localDoEndereco).filter(Boolean)
+  return [...new Set(locais)]
+}
 
 /** true para a linha que e unidade de outro cliente. */
 export const ehUnidade = (cliente) => Boolean(cliente?.matrizId)

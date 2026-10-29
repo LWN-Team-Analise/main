@@ -23,6 +23,8 @@
  * pelo nome, entao a mesma cidade cai sempre no mesmo lugar.
  */
 
+import { ehBrasil } from './paises.js'
+
 /* Centro aproximado de cada estado, em graus. Conferido para cair em
    terra firme — nenhum destes pontos esta sobre agua. */
 const CENTRO_DA_UF = {
@@ -77,6 +79,8 @@ function embaralhar(texto) {
  * quem chamou decidir o que fazer com uma obra sem lugar no mapa.
  */
 export function coordenadaDoCliente(cliente) {
+  /* o mapa e o do Brasil: o estado de fora ("Florida") nao e UF */
+  if (!ehBrasil(cliente?.pais)) return null
   const uf = String(cliente?.estado ?? '').trim().toUpperCase()
   const centro = CENTRO_DA_UF[uf]
   if (!centro) return null

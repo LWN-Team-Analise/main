@@ -8,8 +8,11 @@ import {
   CATEGORIAS,
   CHAVES_CATEGORIA,
   MESES,
+  inicioDoPeriodo,
+  periodoDoMes,
   rotuloDaCategoria,
   rotuloDoTipo,
+  somarMes,
 } from '@/domain/despesas'
 import * as despesasApi from '@/services/despesasService'
 import { dataBR, dataHora, hojeISO, reais } from '@/utils/formato'
@@ -32,6 +35,11 @@ import { IconeBaixar, IconeCategoria, IconeLixo, IconePlanilha, IconeSeta } from
  * `usuarios` diz de quem: nada = os meus; ['7'] = a pessoa 7;
  * 'todos' = a equipe inteira. A API confere a permissao de cada pedido.
  *
+ * O MES e o do periodo de cada categoria (ver src/domain/despesas.js):
+ * com a refeicao do dia 26 ao dia 25, as refeicoes de novembro sao as de
+ * 26/10 a 25/11, e o resumo mostra essas datas. Sem mes no endereco, a
+ * API abre no de hoje — o do periodo, quando ha uma categoria so.
+ *
  * A visao, o mes, o ano e o tipo ficam no endereco
  * (?visao=ano&ano=2026&tipo=bonus): o "voltar" do navegador desfaz o
  * clique num mes da visao anual, e o link copiado abre no mesmo lugar.
@@ -53,13 +61,6 @@ function diaDaSemana(iso) {
   return DIAS_DA_SEMANA[new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay()] ?? ''
 }
 
-/** '2026-09' + 1 -> '2026-10' */
-function somarMes(mes, passo) {
-  const [ano, m] = mes.split('-').map(Number)
-  const total = ano * 12 + (m - 1) + passo
-  return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`
-}
-
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`
 
 const TIPOS = [
@@ -77,8 +78,8 @@ export default function PainelEnvios({ usuarios, mostraPessoa = false, quem }) {
 
   const [busca, setBusca] = useSearchParams()
   const visao = busca.get('visao') === 'ano' ? 'ano' : 'mes'
-  const mes = /^\d{4}-(0[1-9]|1[0-2])$/.test(busca.get('mes') ?? '') ? busca.get('mes') : mesAtual
-  const ano = /^\d{4}$/.test(busca.get('ano') ?? '') ? Number(busca.get('ano')) : Number(mes.slice(0, 4))
+  /* sem mes no endereco, quem escolhe e a API (o de hoje, no periodo) */
+  const mesPedido = /^\d{4}-(0[1-9]|1[0-2])$/.test(busca.get('mes') ?? '') ? busca.get('mes') : null
   const tipo = CHAVES_CATEGORIA.includes(busca.get('tipo')) ? busca.get('tipo') : 'todos'
   const categoria = tipo === 'todos' ? undefined : tipo
 
@@ -94,6 +95,10 @@ export default function PainelEnvios({ usuarios, mostraPessoa = false, quem }) {
 
   /* ---- a carga ---- */
   const [dados, setDados] = useState(null)
+  const mes = mesPedido ?? (dados?.visao === 'mes' && dados.tipo === tipo ? dados.mes : null) ?? mesAtual
+  const ano = /^\d{4}$/.test(busca.get('ano') ?? '') ? Number(busca.get('ano')) : Number(mes.slice(0, 4))
+  /* a visao mensal nao pede o ano: ele so recarrega a anual */
+  const anoPedido = visao === 'ano' ? ano : null
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const carga = useRef(0)
@@ -109,7 +114,7 @@ export default function PainelEnvios({ usuarios, mostraPessoa = false, quem }) {
     setErro('')
     const filtros = { usuarios, categoria }
     const pedido =
-      visao === 'ano' ? despesasApi.carregarAno(ano, filtros) : despesasApi.carregarMes(mes, filtros)
+      visao === 'ano' ? despesasApi.carregarAno(ano, filtros) : despesasApi.carregarMes(mesPedido, filtros)
     pedido
       .then((resposta) => {
         if (minha === carga.current) setDados({ ...resposta, visao, tipo })
@@ -123,7 +128,7 @@ export default function PainelEnvios({ usuarios, mostraPessoa = false, quem }) {
       .finally(() => {
         if (minha === carga.current) setCarregando(false)
       })
-  }, [visao, mes, ano, categoria, chaveUsuarios, versao])
+  }, [visao, mesPedido, anoPedido, categoria, chaveUsuarios, versao])
 
   const [anos] = useState(() => Array.from({ length: 7 }, (_, i) => anoAtual - 6 + i))
   const opcoesAno = (anos.includes(ano) ? anos : [...anos, ano].sort()).map((a) => ({
@@ -178,7 +183,10 @@ export default function PainelEnvios({ usuarios, mostraPessoa = false, quem }) {
 
   const [anoDoMes, numeroDoMes] = mes.split('-').map(Number)
   const periodo = visao === 'ano' ? String(ano) : `${MESES[numeroDoMes - 1]} de ${anoDoMes}`
-  const noFim = visao === 'ano' ? ano >= anoAtual : mes >= mesAtual
+  /* da para andar ate o periodo que ja comecou: em 28/10, com a refeicao
+     comecando no dia 26, ate novembro */
+  const ultimoMes = dados?.ultimoMes ?? mesAtual
+  const noFim = visao === 'ano' ? ano >= Number(ultimoMes.slice(0, 4)) : mes >= ultimoMes
   const valido = dados && dados.visao === visao
 
   return (
@@ -341,9 +349,22 @@ export default function PainelEnvios({ usuarios, mostraPessoa = false, quem }) {
   )
 }
 
+/**
+ * As datas do periodo da categoria, quando ele nao e o mes do calendario:
+ * "26/09 a 25/10" no mes, "26/12/2025 a 25/12/2026" no ano. null no resto.
+ */
+function datasDoPeriodo(dados, categoria) {
+  const dia = inicioDoPeriodo(categoria, dados.periodos)
+  if (dia <= 1) return null
+  const [primeiro, ultimo] = dados.visao === 'ano' ? [`${dados.ano}-01`, `${dados.ano}-12`] : [dados.mes, dados.mes]
+  const datas = [periodoDoMes(primeiro, dia).de, periodoDoMes(ultimo, dia).ate].map(dataBR)
+  return (dados.visao === 'ano' ? datas : datas.map((d) => d.slice(0, 5))).join(' a ')
+}
+
 /** O total do periodo e, sem filtro de tipo, a divisao por categoria. */
 function Resumo({ dados, periodo, visao, tipo }) {
   const filtrado = tipo !== 'todos'
+  const datas = filtrado ? datasDoPeriodo(dados, tipo) : null
   return (
     <div className={`envios__resumo ${filtrado ? 'envios__resumo--so-total' : ''}`.trim()}>
       <div className="envios__total" data-categoria={filtrado ? tipo : undefined}>
@@ -352,11 +373,15 @@ function Resumo({ dados, periodo, visao, tipo }) {
           {filtrado && ` · ${CATEGORIAS[tipo].plural}`}
         </span>
         <strong>{reais(dados.total)}</strong>
-        <em>{plural(dados.quantidade, 'envio', 'envios')}</em>
+        <em>
+          {plural(dados.quantidade, 'envio', 'envios')}
+          {datas && ` · de ${datas}`}
+        </em>
       </div>
       {!filtrado &&
         CHAVES_CATEGORIA.map((categoria) => {
           const parte = dados.categorias?.[categoria]
+          const datasDaCategoria = datasDoPeriodo(dados, categoria)
           return (
             <div key={categoria} className="envios__cat" data-categoria={categoria}>
               <span className="envios__caticone" aria-hidden="true">
@@ -365,6 +390,7 @@ function Resumo({ dados, periodo, visao, tipo }) {
               <span className="envios__catnome">{CATEGORIAS[categoria].plural}</span>
               <strong>{reais(parte?.total ?? 0)}</strong>
               <em>{plural(parte?.quantidade ?? 0, 'envio', 'envios')}</em>
+              {datasDaCategoria && <em>de {datasDaCategoria}</em>}
             </div>
           )
         })}

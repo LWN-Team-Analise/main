@@ -1,3 +1,4 @@
+import { enderecoNasUnidades, localDoEndereco } from './clientes'
 import { tituloDaObra } from './obras'
 
 /* ============================================================
@@ -293,14 +294,20 @@ export function procurar(termo, dados) {
 
   /* ---------------- clientes ---------------- */
   if (pode('ver_clientes')) {
+    /* o cliente com unidade nao tem cidade: o detalhe diz quantas */
+    const unidades = new Map()
+    clientes.forEach((c) => c.matrizId && unidades.set(String(c.matrizId), (unidades.get(String(c.matrizId)) ?? 0) + 1))
     for (const c of clientes) {
       const peso = melhor([c.nome, c.cidade, c.estado, c.cnpj], alvo)
       if (!peso) continue
+      const quantas = unidades.get(String(c.id)) ?? 0
       achados.push({
         grupo: 'Clientes',
         id: `cliente-${c.id}`,
         titulo: c.nome,
-        detalhe: [c.cidade, c.estado].filter(Boolean).join(' — ') || 'Sem cidade cadastrada',
+        detalhe: enderecoNasUnidades(quantas)
+          ? `${quantas} unidade${quantas === 1 ? '' : 's'}`
+          : localDoEndereco(c) || 'Sem cidade cadastrada',
         rota: '/app/clientes',
         destacar: c.nome,
         peso,
