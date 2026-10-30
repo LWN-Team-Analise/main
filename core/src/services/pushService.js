@@ -10,3 +10,15 @@ export const inscrever = (inscricao, aparelho) => post('/push/inscricao', { insc
 export const desligar = (endpoint) => post('/push/desligar', { endpoint })
 
 export const testar = () => post('/push/teste', {})
+
+/* As mensagens automaticas no Teams (server/teams.js): a conta que manda, conectar ela e o teste para mim. */
+export const estadoTeams = () => get('/push/teams')
+
+export const inicioConexaoTeams = (redirecionar) => post('/push/teams/conexao/inicio', { redirecionar })
+
+export const conectarTeams = (codigo, redirecionar) => post('/push/teams/conexao', { codigo, redirecionar })
+
+export const testarTeams = () => post('/push/teams/teste', {})
+
+/* o pedido de troca a quem entra pelo Outlook e ainda tem a senha padrao (acesso total) */
+export const avisarSenhaPadrao = () => post('/push/teams/senha-padrao', {})

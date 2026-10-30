@@ -1,7 +1,10 @@
+import crypto from 'node:crypto'
 import { Router } from 'express'
 import { query } from '../db.js'
-import { exigeSessao, tratar } from '../sessao.js'
+import { exigeSessao, meuCargo, tratar } from '../sessao.js'
 import { chavePublica, notificar, pushConfigurado } from '../push.js'
+import { appConfigurado, conectarRemetente, estadoDoTeams, linkDoSite, mandarNoTeams, urlDeConexao } from '../teams.js'
+import { avisarSenhaPadrao } from '../avisosConta.js'
 
 /* ============================================================
    /api/push — ligar e desligar as notificacoes de um aparelho
@@ -13,6 +16,17 @@ import { chavePublica, notificar, pushConfigurado } from '../push.js'
      POST   /desligar   { endpoint } — desliga neste aparelho
      POST   /teste      manda uma notificacao de teste para os aparelhos
                         de quem pediu
+     GET    /teams      { appConfigurado, remetente, conectado, email,
+                        conectadoEm, erro } — a conta que manda as
+                        mensagens no Teams (server/teams.js)
+     POST   /teams/conexao/inicio  { redirecionar } — a janela da Microsoft
+                        para conectar essa conta (so acesso total)
+     POST   /teams/conexao  { codigo, redirecionar } — guarda a conexao
+                        (so acesso total)
+     POST   /teams/teste  manda uma mensagem de teste no Teams para quem
+                        pediu
+     POST   /teams/senha-padrao  pede no Teams, a quem entra pelo Outlook e
+                        ainda tem a senha padrao, para trocar (so acesso total)
 
    O mesmo endpoint de outro usuario (o celular trocou de dono, ou
    outra pessoa entrou nele) passa para quem ligou por ultimo.
@@ -73,6 +87,68 @@ router.post('/teste', exigeSessao, async (req, res) => {
     return res.json({ enviados })
   } catch (e) {
     return tratar(e, res, 'push/teste')
+  }
+})
+
+/* conectar a conta que manda as mensagens e decisao da diretoria */
+async function soAcessoTotal(req, res, next) {
+  const meu = await meuCargo(req.dono.sub).catch(() => null)
+  if (!meu?.acessoTotal) return res.status(403).json({ erro: 'Só quem tem acesso total conecta a conta do Teams.' })
+  return next()
+}
+
+router.get('/teams', exigeSessao, async (_req, res) => {
+  try {
+    return res.json(await estadoDoTeams())
+  } catch (e) {
+    return tratar(e, res, 'push/teams')
+  }
+})
+
+router.post('/teams/conexao/inicio', exigeSessao, soAcessoTotal, (req, res) => {
+  if (!appConfigurado()) {
+    return res.status(503).json({ erro: 'O login com a Microsoft ainda não foi configurado no servidor (OUTLOOK_CLIENT_ID).' })
+  }
+  const redirecionar = String(req.body?.redirecionar ?? '').trim()
+  if (!redirecionar) return res.status(400).json({ erro: 'Endereço de retorno não informado.' })
+  const estado = crypto.randomBytes(16).toString('base64url')
+  return res.json({ url: urlDeConexao({ redirecionar, estado }), estado })
+})
+
+router.post('/teams/conexao', exigeSessao, soAcessoTotal, async (req, res) => {
+  try {
+    const conta = await conectarRemetente({
+      codigo: String(req.body?.codigo ?? ''),
+      redirecionar: String(req.body?.redirecionar ?? ''),
+      porId: req.dono.sub,
+    })
+    return res.json({ ok: true, ...conta })
+  } catch (e) {
+    return res.status(400).json({ erro: e.message })
+  }
+})
+
+router.post('/teams/teste', exigeSessao, async (req, res) => {
+  try {
+    if (!(await estadoDoTeams()).conectado) return res.json({ enviados: 0, conectado: false })
+    const { enviados } = await mandarNoTeams([req.dono.sub], {
+      titulo: 'Teste das notificações',
+      linhas: ['As notificações do Atmosfera LWN estão chegando no seu Teams.'],
+      link: linkDoSite('/core/app/configuracoes'),
+    })
+    return res.json({ enviados, conectado: true })
+  } catch (e) {
+    return tratar(e, res, 'push/teams-teste')
+  }
+})
+
+router.post('/teams/senha-padrao', exigeSessao, soAcessoTotal, async (req, res) => {
+  try {
+    if (!(await estadoDoTeams()).conectado) return res.json({ avisados: 0, conectado: false })
+    const { avisados } = await avisarSenhaPadrao({ quemPediu: req.dono.sub })
+    return res.json({ avisados, conectado: true })
+  } catch (e) {
+    return tratar(e, res, 'push/teams-senha-padrao')
   }
 })
 

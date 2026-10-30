@@ -13,6 +13,7 @@ import pushRouter from './routes/push.js'
 import comercialRouter from './routes/comercial.js'
 import presencaRouter from './routes/presenca.js'
 import turnosRouter from './routes/turnos.js'
+import sharepointRouter from './routes/sharepoint.js'
 import cargaRouter, { cargaJunto } from './carga.js'
 import { logger } from './logger.js'
 
@@ -94,6 +95,7 @@ app.use('/api/push', pushRouter)
 app.use('/api/comercial', comercialRouter)
 app.use('/api/presenca', presencaRouter)
 app.use('/api/turnos', turnosRouter)
+app.use('/api/sharepoint', sharepointRouter)
 
 app.use((erro, req, res, _next) => {
   /* imagem grande demais chegava aqui como 500 sem explicacao, e a tela

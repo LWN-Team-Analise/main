@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import AppShell from '@/components/AppShell/AppShell'
 import Avatar from '@/components/Avatar/Avatar'
@@ -13,6 +13,8 @@ import useNotificacoesCelular from '@/hooks/useNotificacoesCelular'
 import { carregarFotoOriginal, editarUsuario, trocarSenha } from '@/services/equipeService'
 import { validateCPF, vincularOutlook } from '@/services/authService'
 import { tokenAtual } from '@/services/api'
+import { avisarSenhaPadrao, conectarTeams, estadoTeams, inicioConexaoTeams, testarTeams } from '@/services/pushService'
+import { atualizarPlanilha, estadoSharepoint, moverAnexos } from '@/services/sharepointService'
 import { formatarCPF, formatarTelefone, soDigitos } from '@/utils/formato'
 import { prepararImagem } from '@/utils/imagem'
 import outlookLogo from '@/assets/outlook.png'
@@ -415,6 +417,10 @@ export default function Configuracoes() {
 
         <BlocoNotificacoes />
 
+        <BlocoTeams />
+
+        {user?.acessoTotal && <BlocoSharepoint />}
+
         <TrocarSenha chamado={local.state?.focar === 'senha' ? local.key : null} />
       </section>
 
@@ -638,6 +644,252 @@ function BlocoNotificacoes() {
             </>
           )}
         </div>
+      </div>
+    </article>
+  )
+}
+
+/**
+ * As mensagens automaticas no Teams (server/teams.js), das obras de que a
+ * pessoa participa: a inclusao, as etapas, a conclusao, o chat e a
+ * avaliacao. Saem da conta da empresa (lwnteamanalise@...), no chat 1:1
+ * com cada um. Quem tem acesso total conecta essa conta aqui, uma vez,
+ * na janela da Microsoft; todo mundo pode mandar um teste para si.
+ */
+function BlocoTeams() {
+  const { user } = useAuth()
+  const outlook = useOutlook()
+  const souTotal = Boolean(user?.acessoTotal)
+  const [estado, setEstado] = useState(null)
+  const [recado, setRecado] = useState('')
+  const [erro, setErro] = useState('')
+  const [ocupado, setOcupado] = useState(false)
+
+  const ler = useCallback(
+    () =>
+      estadoTeams()
+        .then(setEstado)
+        .catch(() => setEstado({ appConfigurado: false })),
+    [],
+  )
+
+  useEffect(() => {
+    ler()
+  }, [ler])
+
+  const conectar = async () => {
+    setRecado('')
+    setErro('')
+    setOcupado(true)
+    try {
+      const { codigo, redirecionar } = await outlook.abrir(inicioConexaoTeams)
+      const conta = await conectarTeams(codigo, redirecionar)
+      setRecado(`Conta ${conta.email} conectada: as mensagens automáticas saem por ela.`)
+      await ler()
+    } catch (e) {
+      setErro(e.message)
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  const testar = async () => {
+    setRecado('')
+    setErro('')
+    setOcupado(true)
+    try {
+      const { enviados } = await testarTeams()
+      if (enviados) setRecado(`Mensagem de teste enviada. Ela chega no seu Teams, num chat com ${estado.email}.`)
+      else setErro('A mensagem não saiu. Confira se a sua conta Microsoft está vinculada (Outlook).')
+    } catch (e) {
+      setErro(e.message)
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  /* acesso total: o pedido de troca a todos que ainda estao com a senha padrao */
+  const avisarSenha = async () => {
+    setRecado('')
+    setErro('')
+    setOcupado(true)
+    try {
+      const { avisados } = await avisarSenhaPadrao()
+      setRecado(
+        avisados
+          ? `${avisados === 1 ? '1 pessoa avisada' : `${avisados} pessoas avisadas`} no Teams para trocar a senha padrão.`
+          : 'Ninguém para avisar: todos já trocaram a senha padrão (ou já foram avisados hoje).',
+      )
+    } catch (e) {
+      setErro(e.message)
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  const situacao = !estado
+    ? 'Conferindo...'
+    : !estado.appConfigurado
+      ? 'O login com a Microsoft ainda não foi configurado no servidor.'
+      : estado.conectado
+        ? `Enviadas pela conta ${estado.email}.`
+        : estado.erro
+          ? `A conexão da conta ${estado.email ?? estado.remetente} caiu: é preciso conectar de novo.`
+          : `A conta ${estado.remetente} ainda não foi conectada.`
+
+  return (
+    <article className="config__bloco config__bloco--notificacoes vidro">
+      <h2 className="config__titulo">Notificações no Teams</h2>
+      <div className="config__outlookcorpo">
+        <div className="config__outlooktexto">
+          <p className="config__nota">
+            Mensagens automáticas no seu Teams sobre as obras de que você participa: inclusão, etapas concluídas,
+            conclusão da obra, mensagens no chat e avaliação.
+          </p>
+          <p className="config__nota">
+            <strong>{situacao}</strong>
+          </p>
+          {erro && (
+            <p className="config__recado config__recado--erro" role="alert">
+              {erro}
+            </p>
+          )}
+          {recado && (
+            <p className="config__recado" role="status">
+              {recado}
+            </p>
+          )}
+        </div>
+        {estado?.appConfigurado && (estado.conectado || souTotal) && (
+          <div className="config__outlookacao config__notifacoes">
+            {estado.conectado && (
+              <Button type="button" variant="ghost" onClick={testar} disabled={ocupado}>
+                Mandar um teste
+              </Button>
+            )}
+            {souTotal && estado.conectado && (
+              <button type="button" className="config__semfoto" onClick={avisarSenha} disabled={ocupado}>
+                Avisar quem está com a senha padrão
+              </button>
+            )}
+            {souTotal && (
+              <button type="button" className="config__semfoto" onClick={conectar} disabled={ocupado}>
+                {estado.conectado ? 'Conectar de novo' : 'Conectar a conta'}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </article>
+  )
+}
+
+/**
+ * Os arquivos do sistema no SharePoint (server/sharepoint.js), so para
+ * quem tem acesso total: os anexos de obra vao para "05 - Atmosfera / 01 -
+ * Anexos de obra" e a planilha do reembolso para "02 - Reembolso", sozinhos.
+ * Aqui ficam os dois empurroes: levar os anexos antigos, que ainda estao no
+ * banco, e gravar a planilha na hora.
+ */
+function BlocoSharepoint() {
+  const [estado, setEstado] = useState(null)
+  const [recado, setRecado] = useState('')
+  const [erro, setErro] = useState('')
+  const [ocupado, setOcupado] = useState(false)
+  const [planilha, setPlanilha] = useState(null)
+
+  const ler = useCallback(
+    () =>
+      estadoSharepoint()
+        .then(setEstado)
+        .catch(() => setEstado({ configurado: false, anexosNoBanco: 0 })),
+    [],
+  )
+
+  useEffect(() => {
+    ler()
+  }, [ler])
+
+  const executar = async (acao) => {
+    setRecado('')
+    setErro('')
+    setOcupado(true)
+    try {
+      await acao()
+      await ler()
+    } catch (e) {
+      setErro(e.message)
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  const mover = () =>
+    executar(async () => {
+      const { movidos, falhas, restam } = await moverAnexos()
+      if (falhas?.length) setErro(`Não foram: ${falhas.join('; ')}`)
+      setRecado(
+        `${movidos === 1 ? '1 anexo levado' : `${movidos} anexos levados`} para o SharePoint.${
+          restam ? ` Ainda faltam ${restam}: clique de novo.` : ''
+        }`,
+      )
+    })
+
+  const gravarPlanilha = () =>
+    executar(async () => {
+      const { url } = await atualizarPlanilha()
+      setPlanilha(url)
+      setRecado('Planilha do reembolso gravada no SharePoint.')
+    })
+
+  const situacao = !estado
+    ? 'Conferindo...'
+    : !estado.configurado
+      ? 'O SharePoint ainda não foi configurado no servidor: os anexos continuam no banco.'
+      : estado.anexosNoBanco > 0
+        ? `${estado.anexosNoBanco === 1 ? '1 anexo antigo ainda está' : `${estado.anexosNoBanco} anexos antigos ainda estão`} no banco.`
+        : 'Os anexos de obra e a planilha do reembolso vão para o SharePoint.'
+
+  return (
+    <article className="config__bloco config__bloco--notificacoes vidro">
+      <h2 className="config__titulo">SharePoint</h2>
+      <div className="config__outlookcorpo">
+        <div className="config__outlooktexto">
+          <p className="config__nota">
+            Pasta <strong>05 - Atmosfera</strong>: os anexos das obras em “01 - Anexos de obra” (ano, mês e obra) e a
+            planilha do reembolso em “02 - Reembolso”, atualizada a cada envio.
+          </p>
+          <p className="config__nota">
+            <strong>{situacao}</strong>
+          </p>
+          {erro && (
+            <p className="config__recado config__recado--erro" role="alert">
+              {erro}
+            </p>
+          )}
+          {recado && (
+            <p className="config__recado" role="status">
+              {recado}{' '}
+              {planilha && (
+                <a href={planilha} target="_blank" rel="noreferrer">
+                  Abrir a planilha
+                </a>
+              )}
+            </p>
+          )}
+        </div>
+        {estado?.configurado && (
+          <div className="config__outlookacao config__notifacoes">
+            {estado.anexosNoBanco > 0 && (
+              <Button type="button" variant="ghost" onClick={mover} disabled={ocupado}>
+                Levar os anexos para o SharePoint
+              </Button>
+            )}
+            <button type="button" className="config__semfoto" onClick={gravarPlanilha} disabled={ocupado}>
+              Gravar a planilha do reembolso agora
+            </button>
+          </div>
+        )}
       </div>
     </article>
   )

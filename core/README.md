@@ -123,7 +123,7 @@ placa x dia da semana, sem fim de semana e feriado; `GET
 que cai mostra os dias. Sem o prazo da execucao, a tela pede para definir o
 periodo; carro sem placa vai para o fim, sem conferencia.
 
-**Uso da frota no Painel.** A pagina inicial (aba Painel, para quem tambem
+**Uso da frota no Dashboard.** A pagina inicial (aba Dashboard, para quem tambem
 tem Frotas) mostra os km rodados por mes, quem mais dirigiu e a tabela de km
 por carro e por mes, sempre em doze meses (`GET /api/frotas/uso`). Cada
 viagem vai da saida (ou troca) ate o registro seguinte do carro e conta no mes
@@ -1025,6 +1025,112 @@ chat marca como lido (`POST /api/dados/chat/lido`). Quem ainda nao tinha
 leitura comeca "em dia". A tela do chat busca mensagens novas sozinha a cada
 12s.
 
+
+## Notificacoes no Teams
+
+Mensagens automaticas no Teams de cada pessoa, sobre as obras de que ela
+participa. Saem da conta da empresa — `lwnteamanalise@lwnengenharia.com.br`
+(`TEAMS_REMETENTE` troca) — no chat 1:1 dela com cada pessoa
+(`server/teams.js` envia; `server/avisosObra.js` decide o que e para quem).
+Recebe quem **esta na obra**: quem marcou check nela e os incluidos em Membros
+que aceitaram — a excecao e a propria inclusao.
+
+| O que | Para quem | A mensagem |
+|---|---|---|
+| inclusao em Membros | a pessoa incluida (pendente) | quem incluiu, com o cargo, e o pedido de aceitar |
+| etapa concluida | os membros | "A 1° Etapa foi concluida agora pela equipe Comercial", a proxima etapa e as tarefas DA PESSOA nela (os checks do setor dela, card a card) |
+| ultima etapa do setor | os membros daquele setor | os parabens por concluir todas as etapas em que estavam atribuidos (o tecnico que termina na 3a) |
+| obra concluida | os membros | os parabens |
+| mensagem no chat da obra | os membros (menos quem escreveu) | so o aviso, sem o texto |
+| avaliacao lancada ou nota mudada | os membros | a nota geral da obra e a nova nota de cada um (`usuario_media`) |
+| senha padrao (123456) ainda em uso | quem entra pelo Outlook | o pedido para trocar a senha, no login com o Outlook (no maximo uma vez por dia) ou pelo botao "Avisar quem esta com a senha padrao" de Configuracoes (acesso total; `server/avisosConta.js`) |
+
+Toda mensagem termina com "Nao responda esta mensagem": a conta da empresa nao le as respostas.
+
+A etapa e anunciada quando todos os checks que contam nela (as mesmas regras
+da conclusao da obra) estao feitos e o ultimo foi marcado ha menos de 15
+minutos — por qualquer caminho: o clique, o prazo, os ensaios, a reserva e a
+retirada do carro, o horario. O anuncio fica no historico ("2° Etapa
+concluida", acao `obra.etapa_concluida`), e e ele que impede anunciar de novo
+quem desmarca e marca outra vez. A janela de 15 minutos impede que, no dia em
+que isto entrar no ar, o primeiro check anuncie etapas antigas.
+
+### Como ligar (uma vez)
+
+O Graph so manda mensagem de chat em nome de uma PESSOA (permissao
+delegada): com as credenciais de aplicativo, as do e-mail, nao da. Por isso a
+conta da empresa e conectada uma vez, e o servidor manda em nome dela.
+
+No portal do Azure (Entra ID > Registros de aplicativo), no **mesmo
+aplicativo do login com Outlook** (o de `OUTLOOK_CLIENT_ID`):
+
+1. **Permissões de API > Adicionar uma permissão > Microsoft Graph >
+   Permissões delegadas**: `Chat.Create` e `ChatMessage.Send` (o
+   `offline_access` e o `User.Read` o login com Outlook ja usa).
+2. **Conceder consentimento do administrador** para o diretorio.
+3. Nada muda em Autenticacao: a conexao usa o mesmo endereco de retorno do
+   login com Outlook (`/core/outlook`).
+4. A conta `lwnteamanalise@` precisa ter licenca do Teams.
+
+No site, alguem com acesso total abre **Configuracoes > Notificacoes no
+Teams > Conectar a conta** e, na janela da Microsoft, entra com a conta
+`lwnteamanalise@` (com o MFA de sempre). O servidor confere que e essa
+conta, guarda o token de renovacao **cifrado** (AES-GCM, com a chave tirada do
+`JWT_SECRET`) em `configuracao` ('teams_remetente') e, a cada aviso, pega um
+token novo, abre (ou reaproveita) o chat 1:1 com a pessoa e posta a mensagem.
+"Mandar um teste" manda uma para quem clicou.
+
+A conexao cai se a senha da conta mudar, se o acesso for revogado ou se ela
+ficar 90 dias sem mandar nada — a tela mostra "a conexao caiu" e e so
+conectar de novo. O endereco de cada pessoa e a conta Microsoft dela (o
+Outlook vinculado) ou, sem ela, o e-mail do cadastro. Sem a conta conectada
+nada e enviado, e o resto do sistema segue igual. Rotas: `GET /api/push/teams`,
+`POST /api/push/teams/conexao/inicio`, `POST /api/push/teams/conexao` (as
+duas so com acesso total) e `POST /api/push/teams/teste`.
+
+### Quem entra na obra sem o "Incluir membro"
+
+- quem **cria** a obra (o "Nova obra", ou quem compartilha o negocio de Novos
+  negocios com a equipe) ja faz parte dela;
+- quem marca check sem precisar estar na obra (o setor com
+  `check_todas_obras`, ou o acesso total) entra nela ao marcar.
+
+Os dois entram na lista dos Incluidos ja como "aceito" (`server/membrosObra.js`)
+— e passam a receber os avisos da obra.
+
+## SharePoint (anexos de obra e planilha do reembolso)
+
+Os arquivos do sistema moram no SharePoint da empresa (`server/sharepoint.js`), na
+pasta **05 - Atmosfera** do site TimeCSeCX (Documentos Compartilhados >
+Principal > Departamento da Excelência > 00 - LWN):
+
+- **Anexos de obra** — `01 - Anexos de obra / 2026 / Outubro / Agener União - LWN-888-01 / arquivo`.
+  O ano e o mes sao os da CRIACAO da obra (fuso de Sao Paulo): os anexos de
+  uma obra ficam todos juntos. As pastas que faltam (ano, mes, obra) nascem no
+  proprio envio; nome repetido ganha um numero. No banco fica so o LINK
+  (`obra_anexo.tipo = 'text/uri-list'`, `conteudo` = endereco do arquivo), e a
+  tela abre o arquivo no SharePoint como qualquer anexo de link — quem abre
+  precisa de acesso a pasta. Tirar o anexo da obra nao apaga o arquivo do
+  SharePoint. Os anexos de antes, que ainda estao no banco, vao para la pelo
+  botao de **Configuracoes > SharePoint** (acesso total;
+  `POST /api/sharepoint/anexos`, 15 por clique). Sem as credenciais, o anexo
+  volta a ser gravado no banco.
+- **Planilha do reembolso** — `02 - Reembolso / Reembolso - Atmosfera LWN.xlsx`: um
+  arquivo so, com TODOS os envios, nas mesmas abas do "Exportar para o Excel"
+  (`src/domain/planilhaReembolso.js`, que a tela e o servidor usam igual),
+  regravado a cada envio e a cada exclusao (`atualizarPlanilhaNoSharePoint`, em
+  `server/routes/despesas.js`). O banco continua sendo a fonte; filtrar por mes
+  e no proprio Excel (ou no site). Se o arquivo estiver travado (aberto no
+  Excel do computador), a gravacao fica no log e a proxima mudanca grava de
+  novo; o botao "Gravar a planilha do reembolso agora" (acesso total,
+  `POST /api/sharepoint/reembolso`) forca na hora.
+
+Quem grava e o APLICATIVO (credenciais de cliente), e nao uma pessoa: o mesmo
+registro do login com Outlook, com a permissao de aplicativo
+**Sites.ReadWrite.All** do Microsoft Graph (consentida pelo administrador). O
+diretorio vem de `GRAPH_TENANT_ID` (ou de `OUTLOOK_TENANT`, se nao for
+"organizations"; sem nenhum, `lwnengenhariacombr.onmicrosoft.com`).
+`SHAREPOINT_SITE` e `SHAREPOINT_PASTA` trocam o lugar.
 
 ## Comercial (os funis de venda)
 

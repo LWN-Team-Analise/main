@@ -13,6 +13,10 @@ import { BASE } from '@/base'
  *     const outlook = useOutlook()
  *     const { codigo, redirecionar } = await outlook.abrir()
  *
+ * `abrir(inicio)` aceita outro pedido de janela no lugar do login: e
+ * por ele que Configuracoes conecta a conta que manda as mensagens no
+ * Teams (outros escopos, o mesmo endereco de retorno).
+ *
  * `outlook.disponivel` diz se o servidor esta configurado; enquanto
  * nao estiver, a tela mostra o recado em vez do botao. `outlook.motivo`
  * diz POR QUE nao esta — sem chave no servidor ou API sem responder —,
@@ -51,12 +55,12 @@ export default function useOutlook() {
     [],
   )
 
-  const abrir = useCallback(async () => {
+  const abrir = useCallback(async (inicio = inicioDoOutlook) => {
     const redirecionar = RETORNO()
     /* o `estado` volta da Microsoft no retorno: so o codigo que traz o
        MESMO estado e desta janela. Sem a conferencia, um codigo de outra
        conta, empurrado para o /outlook, entraria no lugar do nosso. */
-    const { url, estado } = await inicioDoOutlook(redirecionar)
+    const { url, estado } = await inicio(redirecionar)
 
     /* a janela e aberta ANTES do await sempre que possivel; como aqui
        ela vem depois de uma chamada, alguns navegadores podem barrar —

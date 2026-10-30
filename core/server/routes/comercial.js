@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { emTransacao, query } from '../db.js'
 import { exige, exigeSessao, tratar } from '../sessao.js'
 import { descreverObra, registrarAtividade } from '../atividade.js'
+import { incluirNaObra } from '../membrosObra.js'
 import { logger } from '../logger.js'
 import { anotar, estourou } from '../limite.js'
 import { enviarComo, podeEnviar, podeLerCaixas, ultimoDoContato } from '../graph.js'
@@ -482,6 +483,8 @@ router.post('/negocios/:id/compartilhar', exigeSessao, exige(EDITAR), async (req
       return res.status(resultado.status).json({ erro: resultado.erro, ...(resultado.campo ? { campo: resultado.campo } : {}) })
     }
 
+    /* quem compartilha cria a obra: ja faz parte dela */
+    await incluirNaObra(resultado.obraId, req.dono.sub)
     const negocio = await lerUm(req.params.id)
     await registrarAtividade(req, {
       acao: 'obra.criada',

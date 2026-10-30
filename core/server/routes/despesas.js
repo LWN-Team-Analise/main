@@ -2,6 +2,10 @@ import { Router } from 'express'
 import { query } from '../db.js'
 import { cargoPode, exige, exigeSessao, meuCargo, tratar } from '../sessao.js'
 import { descreverObra, registrarAtividade } from '../atividade.js'
+import { logger } from '../logger.js'
+import { guardarPlanilhaDoReembolso, sharepointConfigurado } from '../sharepoint.js'
+import { montarPlanilha } from '../../src/utils/planilha.js'
+import { abasDaPlanilha } from '../../src/domain/planilhaReembolso.js'
 /* os tipos, os valores fixos e os limites sao os MESMOS da tela: um
    arquivo so, sem React dentro, importado pelos dois lados (ver o
    comentario no topo dele) */
@@ -476,6 +480,32 @@ const CONSULTA_ENVIOS = `
 
 const soma = (l) => ({ total: Number(l?.total ?? 0), quantidade: Number(l?.quantidade ?? 0) })
 
+/**
+ * A planilha do reembolso no SharePoint (server/sharepoint.js):
+ * 02 - Reembolso / Reembolso - Atmosfera LWN.xlsx, com TODOS os envios,
+ * nas mesmas abas do "Exportar para o Excel" (src/domain/planilhaReembolso.js),
+ * trocada a cada envio e a cada exclusao. O banco continua sendo a fonte:
+ * o arquivo e a copia para abrir e filtrar no Excel.
+ *
+ * Nunca derruba quem chamou: se o arquivo estiver travado (alguem com ele
+ * aberto no Excel do computador) ou o SharePoint nao responder, fica no
+ * log, e a proxima mudanca grava de novo. Devolve o endereco, ou null.
+ */
+export async function atualizarPlanilhaNoSharePoint() {
+  if (!sharepointConfigurado()) return null
+  try {
+    const { rows } = await query(`${CONSULTA_ENVIOS} ORDER BY e.data DESC, e.criado_em DESC, e.id DESC`)
+    /* como a tela recebe: datas em texto (o JSON da API) */
+    const envios = JSON.parse(JSON.stringify(rows.map(paraEnvio)))
+    const abas = abasDaPlanilha(envios)
+    if (abas.length === 0) return null
+    return await guardarPlanilhaDoReembolso(Buffer.from(montarPlanilha(abas)))
+  } catch (erro) {
+    logger.error('despesas/planilha-sharepoint', erro.message)
+    return null
+  }
+}
+
 /* ============================================================
    ENVIAR
    ============================================================ */
@@ -613,6 +643,8 @@ router.post('/envios', exigeSessao, exige(PERMISSAO_ENVIAR), async (req, res) =>
       },
     })
 
+    /* a copia no SharePoint ja sai com o envio novo */
+    await atualizarPlanilhaNoSharePoint()
     return res.status(201).json({
       id: String(rows[0].id),
       criadoEm: rows[0].criado_em,
@@ -689,6 +721,8 @@ router.delete('/envios/:id', exigeSessao, exige(PERMISSAO_EXCLUIR), async (req, 
       },
     })
 
+    /* e sai sem o envio apagado */
+    await atualizarPlanilhaNoSharePoint()
     return res.status(204).end()
   } catch (erro) {
     return falhou(erro, res, 'despesas/excluir')
