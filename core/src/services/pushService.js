@@ -19,3 +19,6 @@ export const inicioConexaoTeams = (redirecionar) => post('/push/teams/conexao/in
 export const conectarTeams = (codigo, redirecionar) => post('/push/teams/conexao', { codigo, redirecionar })
 
 export const testarTeams = () => post('/push/teams/teste', {})
+
+/* o pedido de troca a quem entra pelo Outlook e ainda tem a senha padrao (acesso total) */
+export const avisarSenhaPadrao = () => post('/push/teams/senha-padrao', {})

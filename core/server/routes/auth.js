@@ -12,6 +12,7 @@ import { regraDoUsuario } from '../../src/domain/regrasCheck.js'
 import { logger } from '../logger.js'
 import { validarForcaSenha } from '../utils/senha.js'
 import { registrarAtividade } from '../atividade.js'
+import { avisarSenhaPadrao } from '../avisosConta.js'
 
 const router = Router()
 
@@ -579,7 +580,11 @@ router.post('/outlook/entrar', async (req, res) => {
       linha.foto = perfil.foto
     }
 
-    return res.json(await abrirSessao(linha))
+    const sessao = await abrirSessao(linha)
+    /* entrou pelo Outlook e a senha do site ainda e a padrao: o Teams pede
+       para trocar (no maximo uma vez por dia) */
+    await avisarSenhaPadrao({ usuarioIds: [linha.id] })
+    return res.json(sessao)
   } catch (erro) {
     logger.error('auth/outlook-entrar', erro.message)
     return res.status(400).json({ erro: erro.message || 'Não foi possível entrar com o Outlook.' })

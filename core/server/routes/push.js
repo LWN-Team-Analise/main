@@ -4,6 +4,7 @@ import { query } from '../db.js'
 import { exigeSessao, meuCargo, tratar } from '../sessao.js'
 import { chavePublica, notificar, pushConfigurado } from '../push.js'
 import { appConfigurado, conectarRemetente, estadoDoTeams, linkDoSite, mandarNoTeams, urlDeConexao } from '../teams.js'
+import { avisarSenhaPadrao } from '../avisosConta.js'
 
 /* ============================================================
    /api/push — ligar e desligar as notificacoes de um aparelho
@@ -24,6 +25,8 @@ import { appConfigurado, conectarRemetente, estadoDoTeams, linkDoSite, mandarNoT
                         (so acesso total)
      POST   /teams/teste  manda uma mensagem de teste no Teams para quem
                         pediu
+     POST   /teams/senha-padrao  pede no Teams, a quem entra pelo Outlook e
+                        ainda tem a senha padrao, para trocar (so acesso total)
 
    O mesmo endpoint de outro usuario (o celular trocou de dono, ou
    outra pessoa entrou nele) passa para quem ligou por ultimo.
@@ -136,6 +139,16 @@ router.post('/teams/teste', exigeSessao, async (req, res) => {
     return res.json({ enviados, conectado: true })
   } catch (e) {
     return tratar(e, res, 'push/teams-teste')
+  }
+})
+
+router.post('/teams/senha-padrao', exigeSessao, soAcessoTotal, async (req, res) => {
+  try {
+    if (!(await estadoDoTeams()).conectado) return res.json({ avisados: 0, conectado: false })
+    const { avisados } = await avisarSenhaPadrao({ quemPediu: req.dono.sub })
+    return res.json({ avisados, conectado: true })
+  } catch (e) {
+    return tratar(e, res, 'push/teams-senha-padrao')
   }
 })
 

@@ -1043,6 +1043,9 @@ que aceitaram — a excecao e a propria inclusao.
 | obra concluida | os membros | os parabens |
 | mensagem no chat da obra | os membros (menos quem escreveu) | so o aviso, sem o texto |
 | avaliacao lancada ou nota mudada | os membros | a nota geral da obra e a nova nota de cada um (`usuario_media`) |
+| senha padrao (123456) ainda em uso | quem entra pelo Outlook | o pedido para trocar a senha, no login com o Outlook (no maximo uma vez por dia) ou pelo botao "Avisar quem esta com a senha padrao" de Configuracoes (acesso total; `server/avisosConta.js`) |
+
+Toda mensagem termina com "Nao responda esta mensagem": a conta da empresa nao le as respostas.
 
 A etapa e anunciada quando todos os checks que contam nela (as mesmas regras
 da conclusao da obra) estao feitos e o ultimo foi marcado ha menos de 15

@@ -13,7 +13,7 @@ import useNotificacoesCelular from '@/hooks/useNotificacoesCelular'
 import { carregarFotoOriginal, editarUsuario, trocarSenha } from '@/services/equipeService'
 import { validateCPF, vincularOutlook } from '@/services/authService'
 import { tokenAtual } from '@/services/api'
-import { conectarTeams, estadoTeams, inicioConexaoTeams, testarTeams } from '@/services/pushService'
+import { avisarSenhaPadrao, conectarTeams, estadoTeams, inicioConexaoTeams, testarTeams } from '@/services/pushService'
 import { formatarCPF, formatarTelefone, soDigitos } from '@/utils/formato'
 import { prepararImagem } from '@/utils/imagem'
 import outlookLogo from '@/assets/outlook.png'
@@ -705,6 +705,25 @@ function BlocoTeams() {
     }
   }
 
+  /* acesso total: o pedido de troca a todos que ainda estao com a senha padrao */
+  const avisarSenha = async () => {
+    setRecado('')
+    setErro('')
+    setOcupado(true)
+    try {
+      const { avisados } = await avisarSenhaPadrao()
+      setRecado(
+        avisados
+          ? `${avisados === 1 ? '1 pessoa avisada' : `${avisados} pessoas avisadas`} no Teams para trocar a senha padrão.`
+          : 'Ninguém para avisar: todos já trocaram a senha padrão (ou já foram avisados hoje).',
+      )
+    } catch (e) {
+      setErro(e.message)
+    } finally {
+      setOcupado(false)
+    }
+  }
+
   const situacao = !estado
     ? 'Conferindo...'
     : !estado.appConfigurado
@@ -744,6 +763,11 @@ function BlocoTeams() {
               <Button type="button" variant="ghost" onClick={testar} disabled={ocupado}>
                 Mandar um teste
               </Button>
+            )}
+            {souTotal && estado.conectado && (
+              <button type="button" className="config__semfoto" onClick={avisarSenha} disabled={ocupado}>
+                Avisar quem está com a senha padrão
+              </button>
             )}
             {souTotal && (
               <button type="button" className="config__semfoto" onClick={conectar} disabled={ocupado}>

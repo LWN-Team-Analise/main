@@ -229,6 +229,7 @@ function mensagemEmHtml({ titulo, linhas, link, rotuloLink }) {
     `<p><strong>${escapar(titulo)}</strong></p>`,
     ...(linhas ?? []).filter(Boolean).map((l) => `<p>${linhaEmHtml(l)}</p>`),
     link ? `<p><a href="${escapar(link)}">${escapar(rotuloLink || 'Abrir no site')}</a></p>` : '',
+    '<p><em>Não responda esta mensagem.</em></p>',
   ].join('')
 }
 
