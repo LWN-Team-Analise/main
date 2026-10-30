@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { query } from '../db.js'
 import { exigeSessao, tratar } from '../sessao.js'
 import { chavePublica, notificar, pushConfigurado } from '../push.js'
+import { mandarNoTeams, linkDoSite, teamsConfigurado } from '../teams.js'
 
 /* ============================================================
    /api/push — ligar e desligar as notificacoes de um aparelho
@@ -13,6 +14,10 @@ import { chavePublica, notificar, pushConfigurado } from '../push.js'
      POST   /desligar   { endpoint } — desliga neste aparelho
      POST   /teste      manda uma notificacao de teste para os aparelhos
                         de quem pediu
+     GET    /teams      { configurado } — o servidor tem o fluxo do Teams
+                        (TEAMS_WEBHOOK_URL, server/teams.js)?
+     POST   /teams/teste  manda uma mensagem de teste no Teams para quem
+                        pediu
 
    O mesmo endpoint de outro usuario (o celular trocou de dono, ou
    outra pessoa entrou nele) passa para quem ligou por ultimo.
@@ -73,6 +78,22 @@ router.post('/teste', exigeSessao, async (req, res) => {
     return res.json({ enviados })
   } catch (e) {
     return tratar(e, res, 'push/teste')
+  }
+})
+
+router.get('/teams', exigeSessao, (_req, res) => res.json({ configurado: teamsConfigurado() }))
+
+router.post('/teams/teste', exigeSessao, async (req, res) => {
+  try {
+    if (!teamsConfigurado()) return res.json({ enviados: 0, configurado: false })
+    const { enviados } = await mandarNoTeams([req.dono.sub], {
+      titulo: 'Teste das notificações',
+      linhas: ['As notificações do Atmosfera LWN estão chegando no seu Teams.'],
+      link: linkDoSite('/core/app/configuracoes'),
+    })
+    return res.json({ enviados, configurado: true })
+  } catch (e) {
+    return tratar(e, res, 'push/teams-teste')
   }
 })
 

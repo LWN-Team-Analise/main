@@ -1026,6 +1026,59 @@ leitura comeca "em dia". A tela do chat busca mensagens novas sozinha a cada
 12s.
 
 
+## Notificacoes no Teams
+
+Mensagens automaticas no Teams de cada pessoa, sobre as obras de que ela
+participa (`server/teams.js` envia; `server/avisosObra.js` decide o que e
+para quem). Recebe quem **esta na obra**: quem marcou check nela e os
+incluidos em Membros que aceitaram — a excecao e a propria inclusao.
+
+| O que | Para quem | A mensagem |
+|---|---|---|
+| inclusao em Membros | a pessoa incluida (pendente) | quem incluiu, com o cargo, e o pedido de aceitar |
+| etapa concluida | os membros | "A 1° Etapa foi concluida agora pela equipe Comercial", a proxima etapa e as tarefas DA PESSOA nela (os checks do setor dela, card a card) |
+| ultima etapa do setor | os membros daquele setor | os parabens por concluir todas as etapas em que estavam atribuidos (o tecnico que termina na 3a) |
+| obra concluida | os membros | os parabens |
+| mensagem no chat da obra | os membros (menos quem escreveu) | so o aviso, sem o texto |
+| avaliacao lancada ou nota mudada | os membros | a nota geral da obra e a nova nota de cada um (`usuario_media`) |
+
+A etapa e anunciada quando todos os checks que contam nela (as mesmas regras
+da conclusao da obra) estao feitos e o ultimo foi marcado ha menos de 15
+minutos — por qualquer caminho: o clique, o prazo, os ensaios, a reserva e a
+retirada do carro, o horario. O anuncio fica no historico ("2° Etapa
+concluida", acao `obra.etapa_concluida`), e e ele que impede anunciar de novo
+quem desmarca e marca outra vez. A janela de 15 minutos impede que, no dia em
+que isto entrar no ar, o primeiro check anuncie etapas antigas.
+
+### Como ligar (uma vez)
+
+O Teams nao deixa um aplicativo mandar mensagem de chat para uma pessoa so com
+as credenciais de aplicativo (as do e-mail): por isso o envio passa por um
+fluxo do **Workflows** (Power Automate), que posta como o "Bot de fluxo".
+
+1. Em make.powerautomate.com (ou no Teams, app **Workflows**), crie um fluxo
+   do zero com o gatilho **"Quando uma solicitação de webhook do Teams for
+   recebida"** (*When a Teams webhook request is received*), com "Quem pode
+   disparar o fluxo": **Qualquer pessoa**.
+2. Acrescente a acao **"Postar cartão em um chat ou canal"** (*Post card in a
+   chat or channel*):
+   - Postar como: **Bot de fluxo** (*Flow bot*);
+   - Postar em: **Chat com o bot de fluxo** (*Chat with Flow bot*);
+   - Destinatário (expressão): `triggerBody()?['para']`;
+   - Cartão Adaptável (expressão): `triggerBody()?['attachments']?[0]?['content']`.
+3. Salve e copie a **URL HTTP** do gatilho. Ela tem assinatura: e um segredo.
+4. Na Vercel (projeto `main` > Settings > Environment Variables), crie
+   `TEAMS_WEBHOOK_URL` com a URL (Production e Preview) e faca o deploy.
+5. Em **Configuracoes > Notificacoes no Teams**, "Mandar um teste": a mensagem
+   chega no chat do Workflows de quem clicou.
+
+O site manda um POST por pessoa com `{ para, titulo, texto, link,
+attachments: [cartao adaptavel] }`. `para` e a conta Microsoft da pessoa (o
+Outlook vinculado) ou, sem ela, o e-mail do cadastro — tem de ser o endereco do
+Microsoft 365 dela. Sem `TEAMS_WEBHOOK_URL` nada e enviado, e o resto do
+sistema segue igual. Rotas: `GET /api/push/teams` (o servidor tem o fluxo?) e
+`POST /api/push/teams/teste`.
+
 ## Comercial (os funis de venda)
 
 A aba **Comercial** (`/app/comercial`, icone `fi-rr-calendar-clock` do

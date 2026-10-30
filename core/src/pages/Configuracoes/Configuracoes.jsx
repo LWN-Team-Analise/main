@@ -13,6 +13,7 @@ import useNotificacoesCelular from '@/hooks/useNotificacoesCelular'
 import { carregarFotoOriginal, editarUsuario, trocarSenha } from '@/services/equipeService'
 import { validateCPF, vincularOutlook } from '@/services/authService'
 import { tokenAtual } from '@/services/api'
+import { estadoTeams, testarTeams } from '@/services/pushService'
 import { formatarCPF, formatarTelefone, soDigitos } from '@/utils/formato'
 import { prepararImagem } from '@/utils/imagem'
 import outlookLogo from '@/assets/outlook.png'
@@ -415,6 +416,8 @@ export default function Configuracoes() {
 
         <BlocoNotificacoes />
 
+        <BlocoTeams />
+
         <TrocarSenha chamado={local.state?.focar === 'senha' ? local.key : null} />
       </section>
 
@@ -638,6 +641,84 @@ function BlocoNotificacoes() {
             </>
           )}
         </div>
+      </div>
+    </article>
+  )
+}
+
+/**
+ * As mensagens automaticas no Teams (server/teams.js), das obras de que a
+ * pessoa participa: a inclusao, as etapas, a conclusao, o chat e a
+ * avaliacao. Nao ha o que ligar: chegam na conta Microsoft da pessoa,
+ * pelo fluxo do Workflows que o servidor chama. Aqui fica o teste.
+ */
+function BlocoTeams() {
+  const [configurado, setConfigurado] = useState(null)
+  const [recado, setRecado] = useState('')
+  const [erro, setErro] = useState('')
+  const [enviando, setEnviando] = useState(false)
+
+  useEffect(() => {
+    let vivo = true
+    estadoTeams()
+      .then((ok) => vivo && setConfigurado(ok))
+      .catch(() => vivo && setConfigurado(false))
+    return () => {
+      vivo = false
+    }
+  }, [])
+
+  const testar = async () => {
+    setRecado('')
+    setErro('')
+    setEnviando(true)
+    try {
+      const { enviados } = await testarTeams()
+      if (enviados) setRecado('Mensagem de teste enviada. Ela chega no Teams, no chat do Workflows, em alguns segundos.')
+      else setErro('A mensagem não saiu. Confira se a sua conta Microsoft está vinculada e se o fluxo do Teams está ligado.')
+    } catch (e) {
+      setErro(e.message)
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <article className="config__bloco config__bloco--notificacoes vidro">
+      <h2 className="config__titulo">Notificações no Teams</h2>
+      <div className="config__outlookcorpo">
+        <div className="config__outlooktexto">
+          <p className="config__nota">
+            Mensagens automáticas no seu Teams sobre as obras de que você participa: inclusão, etapas concluídas,
+            conclusão da obra, mensagens no chat e avaliação.
+          </p>
+          <p className="config__nota">
+            <strong>
+              {configurado === null
+                ? 'Conferindo...'
+                : configurado
+                  ? 'Ligadas: chegam na sua conta Microsoft.'
+                  : 'As notificações no Teams ainda não foram configuradas no servidor.'}
+            </strong>
+          </p>
+          {erro && (
+            <p className="config__recado config__recado--erro" role="alert">
+              {erro}
+            </p>
+          )}
+          {recado && (
+            <p className="config__recado" role="status">
+              {recado}
+            </p>
+          )}
+        </div>
+        {configurado && (
+          <div className="config__outlookacao config__notifacoes">
+            <Button type="button" variant="ghost" onClick={testar} loading={enviando}>
+              Mandar um teste
+            </Button>
+          </div>
+        )}
       </div>
     </article>
   )

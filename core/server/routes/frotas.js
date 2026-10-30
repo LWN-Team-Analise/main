@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { emTransacao, query } from '../db.js'
 import { exige, exigeSessao, tratar } from '../sessao.js'
 import { registrarAtividade } from '../atividade.js'
+import { avisarEtapasConcluidas } from '../avisosObra.js'
 import { informacaoChegou } from '../semInformacao.js'
 import { logger } from '../logger.js'
 /* as perguntas, as posicoes das fotos e os limites sao os MESMOS da
@@ -551,6 +552,8 @@ router.post('/saidas', exigeSessao, exige(REGISTRAR), async (req, res) => {
       descricao: tipo === 'troca' ? 'Troca de condutor do veículo' : 'Saída de veículo',
       detalhes: { veiculo: veiculo.nome, condutor: condutor.name, km: kmLegivel(dados.km), destino },
     })
+    /* a retirada marcou o check da obra: a etapa pode ter fechado (aviso no Teams) */
+    if (retirada) await avisarEtapasConcluidas(corpo.obraId)
     return res.status(201).json({ registro: await lerUmRegistro(registroId), retirada })
   } catch (erro) {
     if (erro instanceof Recusa) return res.status(erro.status).json({ erro: erro.message, campo: erro.campo })
@@ -1063,6 +1066,8 @@ router.put('/reservas/:obraId', exigeSessao, exigeReservador, async (req, res) =
       descricao: veiculoNome ? 'Carro reservado para a obra' : 'Obra marcada sem carro da frota',
       detalhes: { obra: obraNome, veiculo: veiculoNome ?? 'sem carro' },
     })
+    /* a reserva marca o check da 1a etapa: a etapa pode ter fechado (aviso no Teams) */
+    await avisarEtapasConcluidas(obraId)
     return res.json({ ok: true })
   } catch (erro) {
     if (erro instanceof Recusa) return res.status(erro.status).json({ erro: erro.message, campo: erro.campo })

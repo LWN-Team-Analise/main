@@ -5,6 +5,7 @@ import { enviarAviso, temEmail } from '../email.js'
 import { logger } from '../logger.js'
 import { descreverObra, registrarAtividade } from '../atividade.js'
 import { concluidoSemInformacao, informacaoChegou, temSemInformacao } from '../semInformacao.js'
+import { avisarAvaliacao, avisarChat, avisarEtapasConcluidas, avisarInclusao, avisarObraConcluida } from '../avisosObra.js'
 import { notificar, pessoasDosSetores, todosAtivos } from '../push.js'
 import { IMAGEM_INVALIDA, imagemValida } from '../utils/imagem.js'
 import { proximaProposta } from '../../src/domain/proposta.js'
@@ -2342,6 +2343,8 @@ router.post('/obras/:id/concluir', exigeSessao, exige('editar_obras'), async (re
       descricao: 'Obra concluída',
       detalhes: { ...(await descreverObra(req.params.id)), observacao: observacao || null },
     })
+    /* os parabens no Teams a quem fez parte da obra */
+    await avisarObraConcluida(req.params.id)
     return res.json({ ok: true })
   } catch (e) {
     return tratar(e, res, 'dados/obra-concluir')
@@ -2801,6 +2804,8 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
             sem_informacao: falta.falta,
           },
         })
+        /* a etapa pode ter fechado agora: os membros da obra ficam sabendo no Teams */
+        await avisarEtapasConcluidas(req.params.id)
       }
       return res.json({ ok: true })
     }
@@ -2844,6 +2849,8 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
           ...(pergunta ? { resposta: rotuloResposta(resposta) } : {}),
         },
       })
+      /* a etapa pode ter fechado agora: os membros da obra ficam sabendo no Teams */
+      if (novo) await avisarEtapasConcluidas(req.params.id)
     }
     return res.json({ ok: true })
   } catch (e) {
@@ -3112,6 +3119,7 @@ router.put('/obras/:id/execucao', exigeSessao, obraAberta, async (req, res) => {
           descricao: 'Check concluído',
           detalhes: { ...(await descreverObra(req.params.id)), ...(await descreverCheck(checkPrazo)) },
         })
+        await avisarEtapasConcluidas(req.params.id)
       }
     }
     return res.json({ ok: true })
@@ -3218,6 +3226,7 @@ router.put('/obras/:id/ensaios', exigeSessao, obraAberta, async (req, res) => {
     }
 
     await conferirEnsaios(req, req.params.id)
+    if (concluir) await avisarEtapasConcluidas(req.params.id)
     return res.json({ ok: true })
   } catch (e) {
     if (e.code === '42P01') {
@@ -3714,6 +3723,7 @@ router.put('/obras/:id/planejamento-itens', exigeSessao, obraAberta, async (req,
     }
 
     await conferirEnsaios(req, obraId)
+    if (concluir) await avisarEtapasConcluidas(obraId)
     return res.json({ ok: true })
   } catch (e) {
     if (e.recusa) return res.status(e.recusa.status).json({ erro: e.recusa.erro })
@@ -4430,6 +4440,8 @@ router.post('/obras/:id/avaliacoes', exigeSessao, exige('editar_avaliacoes'), as
         nota: String(valor),
       },
     })
+    /* os membros recebem no Teams a nota geral da obra e a nova nota deles */
+    await avisarAvaliacao(req.params.id)
     return res.status(201).json({ id: String(rows[0].id), avaliadaEm: rows[0].avaliado_em })
   } catch (e) {
     if (e.code === '23503') return res.status(404).json({ erro: 'Obra não encontrada.' })
@@ -4473,6 +4485,8 @@ router.patch('/avaliacoes/:id', exigeSessao, exige('editar_avaliacoes'), async (
         nota: String(Number(rows[0].nota)),
       },
     })
+    /* a nota mudou: as notas novas vao para os membros */
+    if (req.body?.nota !== undefined) await avisarAvaliacao(rows[0].obra_id)
     return res.json({ ok: true })
   } catch (e) {
     return tratar(e, res, 'dados/avaliacao-editar')
@@ -4899,6 +4913,8 @@ router.post('/obras/:id/chat', exigeSessao, obraAberta, async (req, res) => {
       url: `/core/app/obras/${req.params.id}`,
       tag: `chat-obra-${req.params.id}`,
     })
+    /* e no Teams: so o aviso de que chegou mensagem, sem o texto */
+    await avisarChat(req.params.id, req.dono.sub)
 
     return res.status(201).json({
       mensagem: { ...paraMensagem(rows[0]), mencoes: mencoes.map(String) },
@@ -5067,6 +5083,7 @@ async function pedirInclusao(req, obraId, usuarioId) {
       url: `/core/app/obras/${obraId}`,
       tag: `parcial-${obraId}`,
     })
+    await avisarInclusao({ obraId, usuarioId, quemId: req.dono.sub })
   }
   return { status: rows[0].status }
 }
@@ -5318,6 +5335,7 @@ router.put('/obras/:id/horarios/:checkId', exigeSessao, obraAberta, async (req, 
         descricao: 'Check concluído',
         detalhes: { ...(await descreverObra(obraId)), ...(await descreverCheck(checkId)) },
       })
+      await avisarEtapasConcluidas(obraId)
     }
     return res.json({ ok: true })
   } catch (e) {
