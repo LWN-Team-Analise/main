@@ -31,6 +31,11 @@ const COR = {
   bonus: 'var(--gr-bonus)',
 }
 
+/* os tipos que ficam fora do grafico "por tipo" da categoria: o bonus de
+   viagem sai, e o "Bonus por tipo" mostra so o de apartamento. Os totais
+   do bonus (o quadrinho e a divisao por categoria) continuam com tudo */
+const FORA_DO_POR_TIPO = new Set(['bonus_viagem'])
+
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`
 
 /** R$ 1.234,56 -> "1,2 mil": o que cabe em cima de uma coluna estreita. */
@@ -117,7 +122,7 @@ export default function PainelDespesas({ fatias, passo, rotuloDaFatia }) {
       tipos: Object.fromEntries(
         CHAVES_CATEGORIA.map((c) => [
           c,
-          CATEGORIAS[c].tipos.map((t) => {
+          CATEGORIAS[c].tipos.filter((t) => !FORA_DO_POR_TIPO.has(t.chave)).map((t) => {
             const valor = Math.round((porTipo[t.chave] ?? 0) * 100) / 100
             return {
               chave: t.chave,
