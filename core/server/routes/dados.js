@@ -5,7 +5,8 @@ import { enviarAviso, temEmail } from '../email.js'
 import { logger } from '../logger.js'
 import { descreverObra, registrarAtividade } from '../atividade.js'
 import { concluidoSemInformacao, informacaoChegou, temSemInformacao } from '../semInformacao.js'
-import { avisarAvaliacao, avisarChat, avisarEtapasConcluidas, avisarInclusao, avisarObraConcluida } from '../avisosObra.js'
+import { avisarAvaliacao, avisarChat, avisarInclusao, avisarObraConcluida } from '../avisosObra.js'
+import { depoisDeMarcar, incluirNaObra } from '../membrosObra.js'
 import { notificar, pessoasDosSetores, todosAtivos } from '../push.js'
 import { IMAGEM_INVALIDA, imagemValida } from '../utils/imagem.js'
 import { proximaProposta } from '../../src/domain/proposta.js'
@@ -2081,6 +2082,8 @@ router.post('/obras', exigeSessao, exige('criar_obras'), async (req, res) => {
       descricao: tipo === 'emergencia' ? 'Nova obra de emergência criada' : 'Nova obra criada',
       detalhes: await descreverObra(rows[0].id),
     })
+    /* quem cria a obra ja faz parte dela: nao precisa se incluir em Membros */
+    await incluirNaObra(rows[0].id, req.dono.sub)
     return res.status(201).json({ id: String(rows[0].id), tipo })
   } catch (e) {
     if (e.code === '23503') return res.status(400).json({ erro: 'Cliente não encontrado.' })
@@ -2804,8 +2807,8 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
             sem_informacao: falta.falta,
           },
         })
-        /* a etapa pode ter fechado agora: os membros da obra ficam sabendo no Teams */
-        await avisarEtapasConcluidas(req.params.id)
+        /* quem marca sem precisar estar na obra entra nela; a etapa que fechou vai para os membros no Teams */
+        await depoisDeMarcar(req.dono.sub, req.params.id)
       }
       return res.json({ ok: true })
     }
@@ -2849,8 +2852,8 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
           ...(pergunta ? { resposta: rotuloResposta(resposta) } : {}),
         },
       })
-      /* a etapa pode ter fechado agora: os membros da obra ficam sabendo no Teams */
-      if (novo) await avisarEtapasConcluidas(req.params.id)
+      /* quem marca sem precisar estar na obra entra nela; a etapa que fechou vai para os membros no Teams */
+      if (novo) await depoisDeMarcar(req.dono.sub, req.params.id)
     }
     return res.json({ ok: true })
   } catch (e) {
@@ -3119,7 +3122,7 @@ router.put('/obras/:id/execucao', exigeSessao, obraAberta, async (req, res) => {
           descricao: 'Check concluído',
           detalhes: { ...(await descreverObra(req.params.id)), ...(await descreverCheck(checkPrazo)) },
         })
-        await avisarEtapasConcluidas(req.params.id)
+        await depoisDeMarcar(req.dono.sub, req.params.id)
       }
     }
     return res.json({ ok: true })
@@ -3226,7 +3229,7 @@ router.put('/obras/:id/ensaios', exigeSessao, obraAberta, async (req, res) => {
     }
 
     await conferirEnsaios(req, req.params.id)
-    if (concluir) await avisarEtapasConcluidas(req.params.id)
+    if (concluir) await depoisDeMarcar(req.dono.sub, req.params.id)
     return res.json({ ok: true })
   } catch (e) {
     if (e.code === '42P01') {
@@ -3723,7 +3726,7 @@ router.put('/obras/:id/planejamento-itens', exigeSessao, obraAberta, async (req,
     }
 
     await conferirEnsaios(req, obraId)
-    if (concluir) await avisarEtapasConcluidas(obraId)
+    if (concluir) await depoisDeMarcar(req.dono.sub, obraId)
     return res.json({ ok: true })
   } catch (e) {
     if (e.recusa) return res.status(e.recusa.status).json({ erro: e.recusa.erro })
@@ -5335,7 +5338,7 @@ router.put('/obras/:id/horarios/:checkId', exigeSessao, obraAberta, async (req, 
         descricao: 'Check concluído',
         detalhes: { ...(await descreverObra(obraId)), ...(await descreverCheck(checkId)) },
       })
-      await avisarEtapasConcluidas(obraId)
+      await depoisDeMarcar(req.dono.sub, obraId)
     }
     return res.json({ ok: true })
   } catch (e) {

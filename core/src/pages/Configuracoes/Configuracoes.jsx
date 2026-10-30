@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import AppShell from '@/components/AppShell/AppShell'
 import Avatar from '@/components/Avatar/Avatar'
@@ -13,7 +13,7 @@ import useNotificacoesCelular from '@/hooks/useNotificacoesCelular'
 import { carregarFotoOriginal, editarUsuario, trocarSenha } from '@/services/equipeService'
 import { validateCPF, vincularOutlook } from '@/services/authService'
 import { tokenAtual } from '@/services/api'
-import { estadoTeams, testarTeams } from '@/services/pushService'
+import { conectarTeams, estadoTeams, inicioConexaoTeams, testarTeams } from '@/services/pushService'
 import { formatarCPF, formatarTelefone, soDigitos } from '@/utils/formato'
 import { prepararImagem } from '@/utils/imagem'
 import outlookLogo from '@/assets/outlook.png'
@@ -649,39 +649,71 @@ function BlocoNotificacoes() {
 /**
  * As mensagens automaticas no Teams (server/teams.js), das obras de que a
  * pessoa participa: a inclusao, as etapas, a conclusao, o chat e a
- * avaliacao. Nao ha o que ligar: chegam na conta Microsoft da pessoa,
- * pelo fluxo do Workflows que o servidor chama. Aqui fica o teste.
+ * avaliacao. Saem da conta da empresa (lwnteamanalise@...), no chat 1:1
+ * com cada um. Quem tem acesso total conecta essa conta aqui, uma vez,
+ * na janela da Microsoft; todo mundo pode mandar um teste para si.
  */
 function BlocoTeams() {
-  const [configurado, setConfigurado] = useState(null)
+  const { user } = useAuth()
+  const outlook = useOutlook()
+  const souTotal = Boolean(user?.acessoTotal)
+  const [estado, setEstado] = useState(null)
   const [recado, setRecado] = useState('')
   const [erro, setErro] = useState('')
-  const [enviando, setEnviando] = useState(false)
+  const [ocupado, setOcupado] = useState(false)
+
+  const ler = useCallback(
+    () =>
+      estadoTeams()
+        .then(setEstado)
+        .catch(() => setEstado({ appConfigurado: false })),
+    [],
+  )
 
   useEffect(() => {
-    let vivo = true
-    estadoTeams()
-      .then((ok) => vivo && setConfigurado(ok))
-      .catch(() => vivo && setConfigurado(false))
-    return () => {
-      vivo = false
+    ler()
+  }, [ler])
+
+  const conectar = async () => {
+    setRecado('')
+    setErro('')
+    setOcupado(true)
+    try {
+      const { codigo, redirecionar } = await outlook.abrir(inicioConexaoTeams)
+      const conta = await conectarTeams(codigo, redirecionar)
+      setRecado(`Conta ${conta.email} conectada: as mensagens automáticas saem por ela.`)
+      await ler()
+    } catch (e) {
+      setErro(e.message)
+    } finally {
+      setOcupado(false)
     }
-  }, [])
+  }
 
   const testar = async () => {
     setRecado('')
     setErro('')
-    setEnviando(true)
+    setOcupado(true)
     try {
       const { enviados } = await testarTeams()
-      if (enviados) setRecado('Mensagem de teste enviada. Ela chega no Teams, no chat do Workflows, em alguns segundos.')
-      else setErro('A mensagem não saiu. Confira se a sua conta Microsoft está vinculada e se o fluxo do Teams está ligado.')
+      if (enviados) setRecado(`Mensagem de teste enviada. Ela chega no seu Teams, num chat com ${estado.email}.`)
+      else setErro('A mensagem não saiu. Confira se a sua conta Microsoft está vinculada (Outlook).')
     } catch (e) {
       setErro(e.message)
     } finally {
-      setEnviando(false)
+      setOcupado(false)
     }
   }
+
+  const situacao = !estado
+    ? 'Conferindo...'
+    : !estado.appConfigurado
+      ? 'O login com a Microsoft ainda não foi configurado no servidor.'
+      : estado.conectado
+        ? `Enviadas pela conta ${estado.email}.`
+        : estado.erro
+          ? `A conexão da conta ${estado.email ?? estado.remetente} caiu: é preciso conectar de novo.`
+          : `A conta ${estado.remetente} ainda não foi conectada.`
 
   return (
     <article className="config__bloco config__bloco--notificacoes vidro">
@@ -693,13 +725,7 @@ function BlocoTeams() {
             conclusão da obra, mensagens no chat e avaliação.
           </p>
           <p className="config__nota">
-            <strong>
-              {configurado === null
-                ? 'Conferindo...'
-                : configurado
-                  ? 'Ligadas: chegam na sua conta Microsoft.'
-                  : 'As notificações no Teams ainda não foram configuradas no servidor.'}
-            </strong>
+            <strong>{situacao}</strong>
           </p>
           {erro && (
             <p className="config__recado config__recado--erro" role="alert">
@@ -712,11 +738,18 @@ function BlocoTeams() {
             </p>
           )}
         </div>
-        {configurado && (
+        {estado?.appConfigurado && (estado.conectado || souTotal) && (
           <div className="config__outlookacao config__notifacoes">
-            <Button type="button" variant="ghost" onClick={testar} loading={enviando}>
-              Mandar um teste
-            </Button>
+            {estado.conectado && (
+              <Button type="button" variant="ghost" onClick={testar} disabled={ocupado}>
+                Mandar um teste
+              </Button>
+            )}
+            {souTotal && (
+              <button type="button" className="config__semfoto" onClick={conectar} disabled={ocupado}>
+                {estado.conectado ? 'Conectar de novo' : 'Conectar a conta'}
+              </button>
+            )}
           </div>
         )}
       </div>

@@ -123,7 +123,7 @@ placa x dia da semana, sem fim de semana e feriado; `GET
 que cai mostra os dias. Sem o prazo da execucao, a tela pede para definir o
 periodo; carro sem placa vai para o fim, sem conferencia.
 
-**Uso da frota no Painel.** A pagina inicial (aba Painel, para quem tambem
+**Uso da frota no Dashboard.** A pagina inicial (aba Dashboard, para quem tambem
 tem Frotas) mostra os km rodados por mes, quem mais dirigiu e a tabela de km
 por carro e por mes, sempre em doze meses (`GET /api/frotas/uso`). Cada
 viagem vai da saida (ou troca) ate o registro seguinte do carro e conta no mes
@@ -1029,9 +1029,11 @@ leitura comeca "em dia". A tela do chat busca mensagens novas sozinha a cada
 ## Notificacoes no Teams
 
 Mensagens automaticas no Teams de cada pessoa, sobre as obras de que ela
-participa (`server/teams.js` envia; `server/avisosObra.js` decide o que e
-para quem). Recebe quem **esta na obra**: quem marcou check nela e os
-incluidos em Membros que aceitaram — a excecao e a propria inclusao.
+participa. Saem da conta da empresa — `lwnteamanalise@lwnengenharia.com.br`
+(`TEAMS_REMETENTE` troca) — no chat 1:1 dela com cada pessoa
+(`server/teams.js` envia; `server/avisosObra.js` decide o que e para quem).
+Recebe quem **esta na obra**: quem marcou check nela e os incluidos em Membros
+que aceitaram — a excecao e a propria inclusao.
 
 | O que | Para quem | A mensagem |
 |---|---|---|
@@ -1052,32 +1054,46 @@ que isto entrar no ar, o primeiro check anuncie etapas antigas.
 
 ### Como ligar (uma vez)
 
-O Teams nao deixa um aplicativo mandar mensagem de chat para uma pessoa so com
-as credenciais de aplicativo (as do e-mail): por isso o envio passa por um
-fluxo do **Workflows** (Power Automate), que posta como o "Bot de fluxo".
+O Graph so manda mensagem de chat em nome de uma PESSOA (permissao
+delegada): com as credenciais de aplicativo, as do e-mail, nao da. Por isso a
+conta da empresa e conectada uma vez, e o servidor manda em nome dela.
 
-1. Em make.powerautomate.com (ou no Teams, app **Workflows**), crie um fluxo
-   do zero com o gatilho **"Quando uma solicitação de webhook do Teams for
-   recebida"** (*When a Teams webhook request is received*), com "Quem pode
-   disparar o fluxo": **Qualquer pessoa**.
-2. Acrescente a acao **"Postar cartão em um chat ou canal"** (*Post card in a
-   chat or channel*):
-   - Postar como: **Bot de fluxo** (*Flow bot*);
-   - Postar em: **Chat com o bot de fluxo** (*Chat with Flow bot*);
-   - Destinatário (expressão): `triggerBody()?['para']`;
-   - Cartão Adaptável (expressão): `triggerBody()?['attachments']?[0]?['content']`.
-3. Salve e copie a **URL HTTP** do gatilho. Ela tem assinatura: e um segredo.
-4. Na Vercel (projeto `main` > Settings > Environment Variables), crie
-   `TEAMS_WEBHOOK_URL` com a URL (Production e Preview) e faca o deploy.
-5. Em **Configuracoes > Notificacoes no Teams**, "Mandar um teste": a mensagem
-   chega no chat do Workflows de quem clicou.
+No portal do Azure (Entra ID > Registros de aplicativo), no **mesmo
+aplicativo do login com Outlook** (o de `OUTLOOK_CLIENT_ID`):
 
-O site manda um POST por pessoa com `{ para, titulo, texto, link,
-attachments: [cartao adaptavel] }`. `para` e a conta Microsoft da pessoa (o
-Outlook vinculado) ou, sem ela, o e-mail do cadastro — tem de ser o endereco do
-Microsoft 365 dela. Sem `TEAMS_WEBHOOK_URL` nada e enviado, e o resto do
-sistema segue igual. Rotas: `GET /api/push/teams` (o servidor tem o fluxo?) e
-`POST /api/push/teams/teste`.
+1. **Permissões de API > Adicionar uma permissão > Microsoft Graph >
+   Permissões delegadas**: `Chat.Create` e `ChatMessage.Send` (o
+   `offline_access` e o `User.Read` o login com Outlook ja usa).
+2. **Conceder consentimento do administrador** para o diretorio.
+3. Nada muda em Autenticacao: a conexao usa o mesmo endereco de retorno do
+   login com Outlook (`/core/outlook`).
+4. A conta `lwnteamanalise@` precisa ter licenca do Teams.
+
+No site, alguem com acesso total abre **Configuracoes > Notificacoes no
+Teams > Conectar a conta** e, na janela da Microsoft, entra com a conta
+`lwnteamanalise@` (com o MFA de sempre). O servidor confere que e essa
+conta, guarda o token de renovacao **cifrado** (AES-GCM, com a chave tirada do
+`JWT_SECRET`) em `configuracao` ('teams_remetente') e, a cada aviso, pega um
+token novo, abre (ou reaproveita) o chat 1:1 com a pessoa e posta a mensagem.
+"Mandar um teste" manda uma para quem clicou.
+
+A conexao cai se a senha da conta mudar, se o acesso for revogado ou se ela
+ficar 90 dias sem mandar nada — a tela mostra "a conexao caiu" e e so
+conectar de novo. O endereco de cada pessoa e a conta Microsoft dela (o
+Outlook vinculado) ou, sem ela, o e-mail do cadastro. Sem a conta conectada
+nada e enviado, e o resto do sistema segue igual. Rotas: `GET /api/push/teams`,
+`POST /api/push/teams/conexao/inicio`, `POST /api/push/teams/conexao` (as
+duas so com acesso total) e `POST /api/push/teams/teste`.
+
+### Quem entra na obra sem o "Incluir membro"
+
+- quem **cria** a obra (o "Nova obra", ou quem compartilha o negocio de Novos
+  negocios com a equipe) ja faz parte dela;
+- quem marca check sem precisar estar na obra (o setor com
+  `check_todas_obras`, ou o acesso total) entra nela ao marcar.
+
+Os dois entram na lista dos Incluidos ja como "aceito" (`server/membrosObra.js`)
+— e passam a receber os avisos da obra.
 
 ## Comercial (os funis de venda)
 
