@@ -1098,6 +1098,40 @@ duas so com acesso total) e `POST /api/push/teams/teste`.
 Os dois entram na lista dos Incluidos ja como "aceito" (`server/membrosObra.js`)
 — e passam a receber os avisos da obra.
 
+## SharePoint (anexos de obra e planilha do reembolso)
+
+Os arquivos do sistema moram no SharePoint da empresa (`server/sharepoint.js`), na
+pasta **05 - Atmosfera** do site TimeCSeCX (Documentos Compartilhados >
+Principal > Departamento da Excelência > 00 - LWN):
+
+- **Anexos de obra** — `01 - Anexos de obra / 2026 / Outubro / Agener União - LWN-888-01 / arquivo`.
+  O ano e o mes sao os da CRIACAO da obra (fuso de Sao Paulo): os anexos de
+  uma obra ficam todos juntos. As pastas que faltam (ano, mes, obra) nascem no
+  proprio envio; nome repetido ganha um numero. No banco fica so o LINK
+  (`obra_anexo.tipo = 'text/uri-list'`, `conteudo` = endereco do arquivo), e a
+  tela abre o arquivo no SharePoint como qualquer anexo de link — quem abre
+  precisa de acesso a pasta. Tirar o anexo da obra nao apaga o arquivo do
+  SharePoint. Os anexos de antes, que ainda estao no banco, vao para la pelo
+  botao de **Configuracoes > SharePoint** (acesso total;
+  `POST /api/sharepoint/anexos`, 15 por clique). Sem as credenciais, o anexo
+  volta a ser gravado no banco.
+- **Planilha do reembolso** — `02 - Reembolso / Reembolso - Atmosfera LWN.xlsx`: um
+  arquivo so, com TODOS os envios, nas mesmas abas do "Exportar para o Excel"
+  (`src/domain/planilhaReembolso.js`, que a tela e o servidor usam igual),
+  regravado a cada envio e a cada exclusao (`atualizarPlanilhaNoSharePoint`, em
+  `server/routes/despesas.js`). O banco continua sendo a fonte; filtrar por mes
+  e no proprio Excel (ou no site). Se o arquivo estiver travado (aberto no
+  Excel do computador), a gravacao fica no log e a proxima mudanca grava de
+  novo; o botao "Gravar a planilha do reembolso agora" (acesso total,
+  `POST /api/sharepoint/reembolso`) forca na hora.
+
+Quem grava e o APLICATIVO (credenciais de cliente), e nao uma pessoa: o mesmo
+registro do login com Outlook, com a permissao de aplicativo
+**Sites.ReadWrite.All** do Microsoft Graph (consentida pelo administrador). O
+diretorio vem de `GRAPH_TENANT_ID` (ou de `OUTLOOK_TENANT`, se nao for
+"organizations"; sem nenhum, `lwnengenhariacombr.onmicrosoft.com`).
+`SHAREPOINT_SITE` e `SHAREPOINT_PASTA` trocam o lugar.
+
 ## Comercial (os funis de venda)
 
 A aba **Comercial** (`/app/comercial`, icone `fi-rr-calendar-clock` do
