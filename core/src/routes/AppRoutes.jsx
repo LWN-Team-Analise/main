@@ -21,6 +21,13 @@ import RetornoOutlook from '@/pages/Login/RetornoOutlook'
 import ChatEquipe from '@/pages/Chat/ChatEquipe'
 import ProtectedRoute from './ProtectedRoute'
 
+/* o Almoxarife e a tela do lwncontrol (public/almoxarife), fora do React:
+   a rota so troca de pagina. A sessao vai junto pelo localStorage. */
+function Almoxarife() {
+  window.location.replace('/almoxarife/almoxarife.html')
+  return null
+}
+
 /**
  * Envolve a rota interna na guarda de sessao — e, quando a tela pede,
  * tambem na de permissao do cargo.
@@ -186,6 +193,14 @@ export default function AppRoutes() {
         element={
           <Interna permissao="ver_frotas">
             <Registros />
+          </Interna>
+        }
+      />
+      <Route
+        path="/app/almoxarife"
+        element={
+          <Interna permissao="ver_almoxarife">
+            <Almoxarife />
           </Interna>
         }
       />

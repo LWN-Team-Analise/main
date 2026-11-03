@@ -73,6 +73,13 @@ const Icone = {
       <circle cx="17" cy="17" r="2" />
     </svg>
   ),
+  /* Almoxarife: a caixa de ferramentas */
+  almoxarife: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <rect x="3" y="8" width="18" height="12" rx="2" />
+      <path d="M9 8V6a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 6v2M3 13h18M10 13v2h4v-2" />
+    </svg>
+  ),
   /* o "fi fi-rr-calendar-clock" do Flaticon (UIcons, regular rounded), tirado
      da propria fonte de icones: e um desenho cheio, entao vai com fill e
      sem o traco dos outros. A caixa e maior que a dos outros icones
@@ -182,6 +189,8 @@ const MENU = [
   { id: 'concluidas', rotulo: 'Concluídas', rota: '/app/concluidas', permissao: 'ver_concluidas' },
   { id: 'despesas', rotulo: 'Reembolso', rota: '/app/despesas', permissao: 'ver_despesas' },
   { id: 'frotas', rotulo: 'Frotas', rota: '/app/frotas', permissao: 'ver_frotas' },
+  /* o Almoxarife (o antigo lwncontrol) abre a tela dele, em /almoxarife */
+  { id: 'almoxarife', rotulo: 'Almoxarife', rota: '/app/almoxarife', permissao: 'ver_almoxarife' },
   { id: 'comercial', rotulo: 'Comercial', rota: '/app/comercial', permissao: 'ver_comercial' },
   { id: 'turnos', rotulo: 'Turnos', rota: '/app/turnos', permissao: 'ver_turnos' },
   { id: 'avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes', permissao: 'ver_avaliacoes' },

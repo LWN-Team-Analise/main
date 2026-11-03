@@ -64,6 +64,8 @@ const ARQUIVOS = [
   'db/atualizacao-35.sql.txt',
   'db/atualizacao-36.sql.txt',
   'db/atualizacao-37.sql.txt',
+  'db/atualizacao-38.sql.txt',
+  'db/atualizacao-39.sql.txt',
 ]
 
 /**
@@ -194,6 +196,15 @@ const CONFERENCIA = [
   ['negocio.compartilhado_em', col('negocio', 'compartilhado_em')],
   ['check_todas_obras no acesso total', permissaoNoAcessoTotal('check_todas_obras')],
   ['criar_obras no acesso total', permissaoNoAcessoTotal('criar_obras')],
+  ['schema almox', "SELECT to_regnamespace('almox') IS NOT NULL AS ok"],
+  ['almox.solicitacoes', "SELECT to_regclass('almox.solicitacoes') IS NOT NULL AS ok"],
+  ['almox.usuarios (view)', "SELECT to_regclass('almox.usuarios') IS NOT NULL AS ok"],
+  ['almox.clientes (view)', "SELECT to_regclass('almox.clientes') IS NOT NULL AS ok"],
+  ['cliente.abreviacao', col('cliente', 'abreviacao')],
+  ['check Enviar OS', "SELECT EXISTS (SELECT 1 FROM etapa_check WHERE tipo = 'enviar_os' AND vigente_ate IS NULL) AS ok"],
+  ['ver_almoxarife no acesso total', permissaoNoAcessoTotal('ver_almoxarife')],
+  ['veiculo_registro.combustivel', col('veiculo_registro', 'combustivel')],
+  ['cliente.oferece_alimentacao', col('cliente', 'oferece_alimentacao')],
 ]
 
 function col(tabela, coluna) {

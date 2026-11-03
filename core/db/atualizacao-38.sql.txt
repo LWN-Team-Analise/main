@@ -1,0 +1,553 @@
+-- ============================================================
+--  ATUALIZACAO 38 — O ALMOXARIFE (o antigo LWN Control) E O CHECK
+--  "ENVIAR OS"
+--
+--  1. O schema `almox`, com as tabelas do lwncontrol do jeito que
+--     estavam no banco dele (mesmas colunas, mesmos indices): as
+--     ferramentas e as baias do inventario, as O.S. (solicitacoes),
+--     os certificados, as manutencoes, os remanejamentos e os
+--     historicos. Ficam num schema proprio porque os nomes sao
+--     genericos (configuracoes, logs_atividade...) e o main ja tem
+--     parecidos (configuracao, atividade). A API (server/almoxarife)
+--     escreve sempre `almox.<tabela>`.
+--
+--     As tabelas do login do lwncontrol NAO vieram (usuarios,
+--     sessoes_persistentes, codigos_recuperacao, usuario_rostos,
+--     push_*, outlook_estados, webauthn_*): quem entra e o login do
+--     main. Nem as que o codigo nao usava mais (bipagens, ensaios,
+--     tipos_ativos, categorias_ensaios, permissoes...).
+--
+--     Os DADOS do lwncontrol nao vem neste arquivo: quem copia e
+--     `node core/server/scripts/importar-almoxarife.js` (ver o
+--     cabecalho dele). Este arquivo so cria a estrutura, vazia.
+--
+--  2. Duas VIEWS no lugar das tabelas do lwncontrol que o main ja tem:
+--
+--       almox.usuarios   os colaboradores do main, com o que a tela do
+--                        Almoxarife espera: nome, cpf, email, cargo
+--                        (o cargo da pessoa, Supervisor...) e a lista
+--                        de PERMISSOES do lwncontrol, tirada do setor
+--                        (as chaves almox_* de cargo.permissoes, sem o
+--                        prefixo). O setor com acesso total recebe
+--                        todas, menos a restricao
+--                        "manutencao_somente_leitura";
+--       almox.clientes   os clientes do main: nome, abreviacao,
+--                        cidade, uf. O cliente com unidades aparece
+--                        pelas unidades (tem_unidades).
+--
+--     cliente.abreviacao (nova): a sigla que o Almoxarife mostra
+--     (ABL, BMS...). NULL = o nome.
+--
+--  3. A O.S. ligada a OBRA do main: solicitacoes.cliente_id e
+--     solicitacoes.obra_id. Na Solicitacao de OS a pessoa escolhe o
+--     cliente e depois a obra dele (obrigatoria quando ha mais de uma
+--     aberta).
+--
+--  4. O check "Enviar OS" (etapa_check.tipo = 'enviar_os'): 3a etapa
+--     (execucao), card do Time Tecnico, depois do "Retirada do carro".
+--     NINGUEM marca na mao — nem com a permissao de concluir sem a
+--     informacao: quem marca e o sistema, quando uma O.S. ligada a obra
+--     e APROVADA no Almoxarife. Vale a partir de AGORA (vigente_de =
+--     now()), como os checks do carro: so as obras criadas daqui em
+--     diante o enxergam.
+--
+--  5. As permissoes novas (src/domain/permissoes.js): `ver_almoxarife`
+--     (a aba) e as `almox_*` (as abas e os poderes de dentro dele, as
+--     mesmas do lwncontrol). Distribuidas UMA vez (marca
+--     'marco_atualizacao_38'), no espelho do que os cargos do
+--     lwncontrol tinham:
+--       acesso total, almoxarife, excelencia   tudo
+--       tecnico (Tecnico de Qualificacao, Auxiliar Tecnico, Supervisor,
+--         Gerente de Operacoes)                painel, solicitar,
+--                                              retirada, devolutiva,
+--                                              prorrogar, concluidas,
+--                                              certificados, localizacao,
+--                                              remanejamento, manutencao
+--                                              (so ver) e responsavel por
+--                                              obra
+--       gq (Setor Qualidade)                   concluidas, certificados,
+--                                              localizacao, manutencao
+--                                              (so ver)
+--       adm (Analista Administrativo)          painel, certificados,
+--                                              localizacao, manutencao
+--                                              (so ver)
+--     Depois disso, quem decide e a tela de Setores.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao duplica nada.
+-- ============================================================
+
+BEGIN;
+
+CREATE SCHEMA IF NOT EXISTS almox;
+
+COMMENT ON SCHEMA almox IS
+    'O Almoxarife (o antigo LWN Control): inventario de instrumentos, baias, O.S., remanejamentos. API em server/almoxarife.';
+
+-- ---- 1. as tabelas do lwncontrol ----
+
+CREATE TABLE IF NOT EXISTS almox.baias (
+    id              serial PRIMARY KEY,
+    descricao       text NOT NULL,
+    status          varchar(20) DEFAULT 'disponivel',
+    os_id           integer,
+    data_reserva    date,
+    data_liberacao  date,
+    criado_em       timestamp DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em   timestamp DEFAULT CURRENT_TIMESTAMP,
+    identificador   varchar(10),
+    data_retorno    date,
+    observacoes     text,
+    codigo_barras   varchar(160),
+    ferramenta_id   integer,
+    CONSTRAINT baias_numero_key UNIQUE (descricao)
+);
+CREATE INDEX IF NOT EXISTS idx_baias_status ON almox.baias (status);
+CREATE INDEX IF NOT EXISTS idx_baias_os_id ON almox.baias (os_id);
+CREATE INDEX IF NOT EXISTS idx_baias_data_reserva ON almox.baias (data_reserva);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_baias_ferramenta_id ON almox.baias (ferramenta_id) WHERE ferramenta_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_baias_codigo_barras ON almox.baias (codigo_barras) WHERE codigo_barras IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS almox.ferramentas (
+    id                       serial PRIMARY KEY,
+    tag                      varchar(50) NOT NULL,
+    tipo                     varchar(100) NOT NULL,
+    fabricante               varchar(100),
+    numero_serie             varchar(100),
+    ultima_calibracao        date,
+    vencimento_calibracao    date,
+    observacoes              text,
+    status                   varchar(30) NOT NULL DEFAULT 'disponivel',
+    baias                    integer DEFAULT 1 CONSTRAINT baias_check CHECK (baias >= 1 AND baias <= 12),
+    tipo_ativo_id            integer,
+    categoria_tipo           varchar(100),
+    categoria_ensaio         varchar(100),
+    sigla                    varchar(20),
+    criado_em                timestamp DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em            timestamp DEFAULT CURRENT_TIMESTAMP,
+    data_calibracao_agendada date,
+    novo_vencimento_agendado date,
+    observacoes_calibracao   text,
+    data_retorno_calibracao  date,
+    data_envio_calibracao    date,
+    modelo                   varchar(120),
+    valor_calibracao         numeric(12,2) DEFAULT 0,
+    valor                    numeric(12,2) DEFAULT 0,
+    comprovante_valor        text,
+    data_aquisicao           date,
+    codigo_barras            varchar(160),
+    classificacao_lista      varchar(40),
+    localizacao_atual        varchar(180),
+    baia_pai_id              integer REFERENCES almox.ferramentas(id),
+    baia_id                  integer REFERENCES almox.baias(id),
+    acessorio_ativo          text,
+    avaria_utilizavel        boolean DEFAULT false,
+    avaria_observacao        text,
+    avaria_registrada_em     date
+);
+CREATE INDEX IF NOT EXISTS ferramentas_tipo_idx ON almox.ferramentas (tipo);
+CREATE UNIQUE INDEX IF NOT EXISTS ferramentas_codigo_barras_uidx ON almox.ferramentas (codigo_barras)
+    WHERE codigo_barras IS NOT NULL AND codigo_barras::text <> '';
+
+CREATE TABLE IF NOT EXISTS almox.solicitacoes (
+    id                                serial PRIMARY KEY,
+    numero_os                         integer,
+    cliente                           varchar(100),
+    responsavel                       varchar(100),
+    obra                              varchar(200),
+    data_inicio                       date,
+    data_fim                          date,
+    instrumentos                      jsonb DEFAULT '[]',
+    quantidades                       jsonb DEFAULT '{}',
+    status                            varchar(50) DEFAULT 'em_planejamento',
+    observacoes                       text,
+    data_criacao                      date DEFAULT CURRENT_DATE,
+    created_at                        timestamp DEFAULT CURRENT_TIMESTAMP,
+    updated_at                        timestamp DEFAULT CURRENT_TIMESTAMP,
+    baia_id                           integer REFERENCES almox.baias(id),
+    origem_importacao                 text,
+    baias_ids                         jsonb DEFAULT '[]',
+    conferencia                       jsonb DEFAULT '[]',
+    devolutiva                        jsonb DEFAULT '[]',
+    conferido_em                      timestamp,
+    conferido_por                     varchar(180),
+    devolvido_em                      timestamp,
+    devolvido_por                     varchar(180),
+    solicitado_por                    varchar(180),
+    baia_ferramenta_ids               jsonb DEFAULT '[]',
+    separado_em                       timestamp,
+    separado_por                      varchar(180),
+    inclusoes_parciais                jsonb DEFAULT '[]',
+    retiradas_parciais                jsonb DEFAULT '[]',
+    devolucoes_parciais               jsonb DEFAULT '[]',
+    solicitante                       text,
+    solicitante_id                    integer,
+    responsavel_id                    integer,
+    responsavel_email                 text,
+    aprovado_por                      text,
+    aprovado_por_id                   integer,
+    aprovado_em                       timestamptz,
+    rejeitado_por                     text,
+    rejeitado_por_id                  integer,
+    rejeitado_em                      timestamptz,
+    motivo_rejeicao                   text,
+    devolucao                         jsonb DEFAULT '[]',
+    solicitado_por_id                 integer,
+    reprovado_por                     varchar(180),
+    reprovado_por_id                  integer,
+    reprovado_em                      timestamp,
+    motivo_reprovacao                 text,
+    devolvida_antecipada              boolean DEFAULT false,
+    motivo_antecipacao                text,
+    data_fim_original                 date,
+    saidas_remanejamento              jsonb DEFAULT '[]',
+    editada_por                       text,
+    editada_por_id                    integer,
+    editada_em                        timestamp,
+    separacao_bipagem                 jsonb DEFAULT '[]',
+    bipagem_pendencias                jsonb DEFAULT '[]',
+    devolucao_conferida_em            timestamp,
+    devolucao_conferida_por           varchar(180),
+    devolucao_conferencia             jsonb DEFAULT '[]',
+    devolucao_conferencia_observacao  text
+);
+CREATE INDEX IF NOT EXISTS idx_solicitacoes_status ON almox.solicitacoes (status);
+CREATE INDEX IF NOT EXISTS idx_solicitacoes_responsavel_id ON almox.solicitacoes (responsavel_id);
+CREATE INDEX IF NOT EXISTS solicitacoes_responsavel_idx ON almox.solicitacoes (responsavel);
+CREATE INDEX IF NOT EXISTS idx_solicitacoes_data_inicio ON almox.solicitacoes (data_inicio);
+CREATE INDEX IF NOT EXISTS idx_solicitacoes_data_fim ON almox.solicitacoes (data_fim);
+
+CREATE TABLE IF NOT EXISTS almox.certificados (
+    id               serial PRIMARY KEY,
+    instrumento_id   integer NOT NULL REFERENCES almox.ferramentas(id) ON DELETE CASCADE,
+    data_emissao     date NOT NULL,
+    data_vencimento  date NOT NULL,
+    numero           varchar(100),
+    observacoes      text,
+    arquivo          text,
+    nome_arquivo     varchar(255),
+    criado_em        timestamp DEFAULT CURRENT_TIMESTAMP,
+    updated_at       timestamp DEFAULT CURRENT_TIMESTAMP,
+    valor            numeric(12,2) DEFAULT 0,
+    comprovante      text
+);
+CREATE INDEX IF NOT EXISTS idx_certificados_instrumento ON almox.certificados (instrumento_id);
+CREATE INDEX IF NOT EXISTS idx_certificados_vencimento ON almox.certificados (data_vencimento);
+
+CREATE TABLE IF NOT EXISTS almox.manutencoes (
+    id               serial PRIMARY KEY,
+    tag              varchar(120) NOT NULL,
+    instrumento_id   integer,
+    data_emissao     date,
+    data_manutencao  date,
+    observacao       text,
+    responsavel      varchar(180),
+    criado_em        timestamp DEFAULT CURRENT_TIMESTAMP,
+    valor            numeric(12,2) DEFAULT 0,
+    comprovante      text,
+    data_envio       date,
+    data_retorno     date,
+    empresa          varchar(180),
+    tipo             varchar(30) DEFAULT 'manutencao'
+);
+CREATE INDEX IF NOT EXISTS idx_manutencoes_tag ON almox.manutencoes (tag);
+
+CREATE TABLE IF NOT EXISTS almox.remanejamentos (
+    id                  serial PRIMARY KEY,
+    ferramenta_id       integer,
+    tag                 varchar(120),
+    tipo                varchar(160),
+    origem              varchar(180),
+    destino             varchar(180),
+    os_origem           varchar(40),
+    os_destino          varchar(40),
+    motivo              text,
+    observacao          text,
+    responsavel         varchar(180),
+    destinatario        varchar(180),
+    status              varchar(40) DEFAULT 'pendente',
+    origem_evento       varchar(40) DEFAULT 'remanejamento',
+    criado_em           timestamp DEFAULT CURRENT_TIMESTAMP,
+    confirmado_em       timestamp,
+    os_destino_id       integer,
+    devolvido_em        timestamp,
+    devolvido_estado    varchar(40),
+    devolvido_obs       text,
+    data_retorno        date,
+    solicitado_por      varchar(180),
+    solicitado_em       timestamp,
+    enviado_por         varchar(180),
+    enviado_em          timestamp,
+    recebido_por        varchar(180),
+    devolvido_por       varchar(180),
+    grupo_id            varchar(64),
+    aprovado_por        varchar(180),
+    aprovado_por_id     integer,
+    aprovado_em         timestamp,
+    rejeitado_por       varchar(180),
+    rejeitado_em        timestamp,
+    motivo_rejeicao     text,
+    recebimento_obs     text,
+    recebimento_ciente  boolean DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS idx_remanejamentos_status ON almox.remanejamentos (status);
+CREATE INDEX IF NOT EXISTS idx_remanejamentos_tag ON almox.remanejamentos (tag);
+CREATE INDEX IF NOT EXISTS idx_remanejamentos_destinatario ON almox.remanejamentos (destinatario);
+CREATE INDEX IF NOT EXISTS idx_remanejamentos_responsavel ON almox.remanejamentos (responsavel);
+CREATE INDEX IF NOT EXISTS idx_remanejamentos_grupo ON almox.remanejamentos (grupo_id);
+
+CREATE TABLE IF NOT EXISTS almox.os_historico (
+    id              serial PRIMARY KEY,
+    solicitacao_id  integer,
+    numero_os       varchar(40),
+    evento          varchar(60) NOT NULL,
+    ferramenta_id   integer,
+    tag             varchar(120),
+    tipo            varchar(160),
+    status_item     varchar(60),
+    motivo          text,
+    observacao      text,
+    estado          varchar(60),
+    data_evento     date,
+    usuario         varchar(180),
+    dados           jsonb DEFAULT '{}',
+    criado_em       timestamp DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_os_historico_os ON almox.os_historico (solicitacao_id);
+CREATE INDEX IF NOT EXISTS idx_os_historico_ferramenta ON almox.os_historico (ferramenta_id);
+
+CREATE TABLE IF NOT EXISTS almox.os_prorrogacoes (
+    id                   serial PRIMARY KEY,
+    solicitacao_id       integer NOT NULL,
+    numero_os            varchar(40),
+    data_fim_anterior    date,
+    data_fim_solicitada  date NOT NULL,
+    data_fim_aprovada    date,
+    motivo               text NOT NULL,
+    status               varchar(20) NOT NULL DEFAULT 'pendente',
+    editada              boolean DEFAULT false,
+    solicitado_por       varchar(180),
+    solicitado_por_id    integer,
+    solicitado_em        timestamp DEFAULT CURRENT_TIMESTAMP,
+    decidido_por         varchar(180),
+    decidido_por_id      integer,
+    decidido_em          timestamp,
+    motivo_decisao       text
+);
+CREATE INDEX IF NOT EXISTS idx_os_prorrogacoes_os ON almox.os_prorrogacoes (solicitacao_id);
+CREATE INDEX IF NOT EXISTS idx_os_prorrogacoes_status ON almox.os_prorrogacoes (status);
+
+CREATE TABLE IF NOT EXISTS almox.baia_historico (
+    id                  serial PRIMARY KEY,
+    baia_id             integer,
+    baia_ferramenta_id  integer,
+    baia_rotulo         varchar(180),
+    ferramenta_id       integer,
+    tag                 varchar(120),
+    evento              varchar(60),
+    origem              varchar(180),
+    destino             varchar(180),
+    os_id               integer,
+    numero_os           varchar(40),
+    motivo              text,
+    observacao          text,
+    usuario             varchar(180),
+    criado_em           timestamp DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_baia_historico_baia ON almox.baia_historico (baia_id);
+CREATE INDEX IF NOT EXISTS idx_baia_historico_ferramenta ON almox.baia_historico (ferramenta_id);
+
+CREATE TABLE IF NOT EXISTS almox.logs_atividade (
+    id              serial PRIMARY KEY,
+    usuario_id      integer,
+    usuario_nome    varchar(180),
+    usuario_cargo   varchar(120),
+    acao            varchar(80) NOT NULL,
+    modulo          varchar(80),
+    entidade        varchar(120),
+    descricao       text,
+    detalhes        jsonb,
+    criado_em       timestamp DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_logs_criado_em ON almox.logs_atividade (criado_em DESC);
+
+CREATE TABLE IF NOT EXISTS almox.configuracoes (
+    chave           varchar(80) PRIMARY KEY,
+    valor           jsonb NOT NULL DEFAULT '{}',
+    atualizado_em   timestamp DEFAULT CURRENT_TIMESTAMP,
+    atualizado_por  varchar(180)
+);
+
+CREATE TABLE IF NOT EXISTS almox.ativo_codigos_barras (
+    tipo           varchar(160) PRIMARY KEY,
+    codigo_barras  varchar(160) UNIQUE,
+    atualizado_em  timestamp DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS almox.notificacoes_enviadas (
+    id         serial PRIMARY KEY,
+    chave      text NOT NULL UNIQUE,
+    criado_em  timestamp DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ---- 2. a abreviacao do cliente e as views ----
+
+ALTER TABLE public.cliente ADD COLUMN IF NOT EXISTS abreviacao text;
+
+COMMENT ON COLUMN public.cliente.abreviacao IS
+    'A sigla que o Almoxarife mostra (ABL, BMS...). NULL = o nome.';
+
+CREATE OR REPLACE VIEW almox.clientes AS
+SELECT c.id,
+       CASE WHEN c.matriz_id IS NULL THEN c.nome
+            ELSE concat_ws(' ', m.nome, nullif(btrim(c.unidade), ''))
+                 || coalesce(' - ' || nullif(btrim(c.servico), ''), '')
+       END AS nome,
+       coalesce(nullif(btrim(c.abreviacao), ''),
+                CASE WHEN c.matriz_id IS NULL THEN c.nome
+                     ELSE concat_ws(' ', m.nome, nullif(btrim(c.unidade), '')) END) AS abreviacao,
+       c.cidade,
+       CASE WHEN coalesce(c.pais, 'BR') = 'BR' THEN upper(c.estado) END AS uf,
+       true AS ativo,
+       EXISTS (SELECT 1 FROM public.cliente u WHERE u.matriz_id = c.id) AS tem_unidades
+  FROM public.cliente c
+  LEFT JOIN public.cliente m ON m.id = c.matriz_id;
+
+COMMENT ON VIEW almox.clientes IS
+    'Os clientes do main no formato do Almoxarife (nome, abreviacao, cidade, uf, ativo).';
+
+CREATE OR REPLACE VIEW almox.usuarios AS
+SELECT u.id,
+       u.name AS nome,
+       u.cpf,
+       u.email,
+       u.telefone,
+       coalesce(nullif(btrim(t.nome), ''), nullif(btrim(u.cargo_titulo), ''), c.nome, u.cargo) AS cargo,
+       c.nome AS setor,
+       coalesce(u.ativo, true) AS ativo,
+       u.foto,
+       u.criado_em,
+       u.atualizado_em,
+       to_jsonb(CASE WHEN coalesce(c.acesso_total, false)
+                     THEN ARRAY['dashboard', 'solicitacoes', 'gerenciar_os', 'aprovar_todas_os', 'conferencia',
+                                'separar_tags', 'devolutiva', 'conferir_devolucao', 'prorrogar_os',
+                                'aceitar_prorrogacao', 'aprovar_remanejamento', 'concluidos', 'certificados',
+                                'baias', 'instrumentos', 'remanejamento', 'calibracao', 'clientes', 'relatorios',
+                                'manutencao', 'logs', 'responsavel_obra']
+                     ELSE ARRAY(SELECT substr(p, 7) FROM unnest(coalesce(c.permissoes, '{}'::text[])) AS p
+                                 WHERE p LIKE 'almox\_%')
+                END) AS permissoes,
+       (coalesce(c.acesso_total, false) OR 'almox_responsavel_obra' = ANY (coalesce(c.permissoes, '{}'::text[])))
+           AS responsavel_obra
+  FROM public.usuario u
+  LEFT JOIN public.cargo c        ON c.id = u.cargo_id
+  LEFT JOIN public.cargo_titulo t ON t.id = u.cargo_titulo_id
+ WHERE NOT coalesce(c.painel_tv, false);
+
+COMMENT ON VIEW almox.usuarios IS
+    'Os colaboradores do main no formato do Almoxarife. permissoes = as chaves almox_* do setor, sem o prefixo (acesso total: todas, menos manutencao_somente_leitura).';
+
+-- ---- 3. a O.S. ligada ao cliente e a obra do main ----
+
+ALTER TABLE almox.solicitacoes ADD COLUMN IF NOT EXISTS cliente_id bigint REFERENCES public.cliente(id) ON DELETE SET NULL;
+ALTER TABLE almox.solicitacoes ADD COLUMN IF NOT EXISTS obra_id bigint REFERENCES public.obra(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS solicitacoes_obra_idx ON almox.solicitacoes (obra_id);
+
+COMMENT ON COLUMN almox.solicitacoes.obra_id IS
+    'A obra do main desta O.S. Aprovada, ela marca o check "Enviar OS" da obra.';
+
+-- ---- 4. o check "Enviar OS" ----
+
+ALTER TABLE public.etapa_check DROP CONSTRAINT IF EXISTS etapa_check_tipo_valido;
+ALTER TABLE public.etapa_check ADD CONSTRAINT etapa_check_tipo_valido
+    CHECK (tipo IN ('comum', 'planejamento_ensaios', 'execucao_ensaios', 'material_gases',
+                    'prazo_execucao', 'reserva_carro', 'retirada_carro', 'enviar_os'));
+
+COMMENT ON COLUMN public.etapa_check.tipo IS
+    'comum, planejamento_ensaios, execucao_ensaios, material_gases, prazo_execucao, reserva_carro, retirada_carro ou enviar_os. Todos menos comum sao do sistema: nao se excluem.';
+
+-- "Enviar OS": no card da Execucao dos ensaios (Time Tecnico, 3a etapa), no fim
+INSERT INTO public.etapa_check (card_id, ordem, titulo, tipo, vigente_de)
+SELECT ex.card_id,
+       (SELECT coalesce(max(x.ordem), 0) + 1 FROM public.etapa_check x
+         WHERE x.card_id = ex.card_id AND x.vigente_ate IS NULL AND x.obra_id IS NULL),
+       'Enviar OS', 'enviar_os', now()
+  FROM public.etapa_check ex
+ WHERE ex.tipo = 'execucao_ensaios'
+   AND ex.vigente_ate IS NULL
+   AND ex.obra_id IS NULL
+   AND NOT EXISTS (SELECT 1 FROM public.etapa_check x
+                    WHERE x.tipo = 'enviar_os' AND x.vigente_ate IS NULL AND x.obra_id IS NULL)
+ ORDER BY ex.id
+ LIMIT 1;
+
+-- ---- 5. as permissoes, distribuidas uma vez ----
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY(
+           SELECT p FROM unnest(ARRAY['ver_almoxarife',
+               'almox_dashboard', 'almox_solicitacoes', 'almox_gerenciar_os', 'almox_aprovar_todas_os',
+               'almox_conferencia', 'almox_separar_tags', 'almox_devolutiva', 'almox_conferir_devolucao',
+               'almox_prorrogar_os', 'almox_aceitar_prorrogacao', 'almox_aprovar_remanejamento',
+               'almox_concluidos', 'almox_certificados', 'almox_baias', 'almox_instrumentos',
+               'almox_remanejamento', 'almox_calibracao', 'almox_clientes', 'almox_relatorios',
+               'almox_manutencao', 'almox_logs', 'almox_responsavel_obra']) AS p
+            WHERE NOT (p = ANY (permissoes)))
+ WHERE (acesso_total OR chave IN ('almoxarife', 'excelencia'))
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_38');
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY(
+           SELECT p FROM unnest(ARRAY['ver_almoxarife',
+               'almox_dashboard', 'almox_solicitacoes', 'almox_conferencia', 'almox_devolutiva',
+               'almox_prorrogar_os', 'almox_concluidos', 'almox_certificados', 'almox_baias',
+               'almox_remanejamento', 'almox_manutencao', 'almox_manutencao_somente_leitura',
+               'almox_responsavel_obra']) AS p
+            WHERE NOT (p = ANY (permissoes)))
+ WHERE chave = 'tecnico' AND NOT acesso_total
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_38');
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY(
+           SELECT p FROM unnest(ARRAY['ver_almoxarife',
+               'almox_concluidos', 'almox_certificados', 'almox_baias',
+               'almox_manutencao', 'almox_manutencao_somente_leitura']) AS p
+            WHERE NOT (p = ANY (permissoes)))
+ WHERE chave = 'gq' AND NOT acesso_total
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_38');
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY(
+           SELECT p FROM unnest(ARRAY['ver_almoxarife',
+               'almox_dashboard', 'almox_certificados', 'almox_baias',
+               'almox_manutencao', 'almox_manutencao_somente_leitura']) AS p
+            WHERE NOT (p = ANY (permissoes)))
+ WHERE chave = 'adm' AND NOT acesso_total
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_38');
+
+INSERT INTO public.configuracao (chave, valor)
+VALUES ('marco_atualizacao_38', 'permissoes do Almoxarife distribuidas')
+ON CONFLICT (chave) DO NOTHING;
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'schema almox' AS item, to_regnamespace('almox') IS NOT NULL AS ok
+UNION ALL SELECT 'almox.ferramentas', to_regclass('almox.ferramentas') IS NOT NULL
+UNION ALL SELECT 'almox.solicitacoes.obra_id',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_schema = 'almox' AND table_name = 'solicitacoes' AND column_name = 'obra_id')
+UNION ALL SELECT 'almox.usuarios (view)', to_regclass('almox.usuarios') IS NOT NULL
+UNION ALL SELECT 'almox.clientes (view)', to_regclass('almox.clientes') IS NOT NULL
+UNION ALL SELECT 'cliente.abreviacao',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'cliente' AND column_name = 'abreviacao')
+UNION ALL SELECT 'check Enviar OS',
+       EXISTS (SELECT 1 FROM public.etapa_check WHERE tipo = 'enviar_os' AND vigente_ate IS NULL)
+UNION ALL SELECT 'permissoes do Almoxarife',
+       EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_38');

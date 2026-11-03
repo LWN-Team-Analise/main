@@ -14,8 +14,10 @@ import comercialRouter from './routes/comercial.js'
 import presencaRouter from './routes/presenca.js'
 import turnosRouter from './routes/turnos.js'
 import sharepointRouter from './routes/sharepoint.js'
+import almoxarifeRouter, { notificacoesDiarias } from './almoxarife/index.js'
 import cargaRouter, { cargaJunto } from './carga.js'
 import { logger } from './logger.js'
+import { donoDoToken, exige, exigeSessao, meuCargo, tokenDo } from './sessao.js'
 
 /**
  * A API — so as rotas, sem servidor nenhum em volta.
@@ -96,6 +98,24 @@ app.use('/api/comercial', comercialRouter)
 app.use('/api/presenca', presencaRouter)
 app.use('/api/turnos', turnosRouter)
 app.use('/api/sharepoint', sharepointRouter)
+
+/* O ALMOXARIFE (o antigo lwncontrol, server/almoxarife). Os avisos do dia
+   (ultimo dia da obra, certificado vencendo) nao tem clique que os
+   dispare: quem chama e o cron da Vercel (vercel.json), uma vez por dia,
+   com o CRON_SECRET no cabecalho — ou alguem do acesso total, a mao.
+   O resto e do colaborador logado com a aba Almoxarife. */
+app.get('/api/almox/notificacoes/diarias', async (req, res, next) => {
+  const segredo = process.env.CRON_SECRET
+  if (segredo && req.headers.authorization === `Bearer ${segredo}`) return notificacoesDiarias(req, res)
+  try {
+    const dono = await donoDoToken(tokenDo(req))
+    if (dono && (await meuCargo(dono.sub)).acessoTotal) return notificacoesDiarias(req, res)
+  } catch (erro) {
+    return next(erro)
+  }
+  return res.status(401).json({ erro: 'Sem permissão.' })
+})
+app.use('/api/almox', exigeSessao, exige('ver_almoxarife'), almoxarifeRouter)
 
 app.use((erro, req, res, _next) => {
   /* imagem grande demais chegava aqui como 500 sem explicacao, e a tela
