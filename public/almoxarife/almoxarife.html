@@ -160,13 +160,33 @@
         </div>
     </div>
 
+    <!-- "Sair do sistema?": o pop-up de confirmacao do main (Modal + Confirma) -->
+    <div class="am-modal" id="almox-confirma-sair" hidden>
+        <div class="am-modal__caixa" role="dialog" aria-modal="true" aria-labelledby="almox-confirma-titulo" style="max-width: 430px;">
+            <header class="am-modal__topo">
+                <h2 class="am-modal__titulo" id="almox-confirma-titulo">Sair do sistema?</h2>
+                <button type="button" class="am-modal__x" data-acao="fechar" aria-label="Fechar">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18" /></svg>
+                </button>
+            </header>
+            <div class="am-modal__corpo">
+                <div class="confirma">
+                    <footer class="confirma__acoes">
+                        <button type="button" class="formobra__cancelar" data-acao="fechar">Cancelar</button>
+                        <button type="button" class="confirma__ok confirma__ok--acao" data-acao="confirmar">Sair</button>
+                    </footer>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Gantt Tooltip -->
     <div class="gantt-tooltip" id="gantt-tooltip"></div>
 
     <!-- Sidebar -->
 <aside id="sidebar">
-    <!-- a logo do Atmosfera LWN, no alto, como no resto do sistema -->
-    <a class="almox-marca" href="/core/app" aria-label="Página inicial">
+    <!-- a logo, solta no alto: a mesma .marca do AppShell do main -->
+    <a class="marca" href="/core/app" aria-label="Página inicial">
         <img class="logo-claro" src="/almoxarife/assets/firstLogoWhite.webp" alt="LWN">
         <img class="logo-escuro" src="/almoxarife/assets/firstLogoBlack.webp" alt="LWN">
     </a>
@@ -174,114 +194,120 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
             Voltar
         </a>
-    <ul class="sidebar-menu">
+    <!-- A bolha do menu: o mesmo .rail do AppShell do main. A lista continua
+         sendo a do lwncontrol (os li[data-modulo] que as permissoes escondem
+         e o .menu-item.active que o switchTab acende); menu-main.js segue o
+         .active e faz a marca deslizar, como no main -->
+    <nav class="rail vidro" id="almox-rail" aria-label="Navegação do Almoxarife">
+    <ul class="sidebar-menu rail__lista">
+        <span class="rail__marca" aria-hidden="true"><span class="rail__marca-anel"></span></span>
         <!-- Dashboard - Permissão: dashboard -->
         <li data-modulo="dashboard">
-            <button class="menu-item active" onclick="switchTab('dashboard')">
-                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2">
+            <button class="menu-item rail__btn active" onclick="switchTab('dashboard')" title="Painel Geral">
+                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3"y="3"width="7"height="9"></rect>
                     <rect x="14"y="3"width="7"height="5"></rect>
                     <rect x="14"y="12"width="7"height="9"></rect>
                     <rect x="3"y="16"width="7"height="5"></rect>
-                </svg>
-                Painel Geral
+                </svg></span>
+                <span class="rail__rotulo">Painel Geral</span>
             </button>
         </li>
 
         <!-- Retirada (antiga "Separação" / "Conferência") - Permissão: conferencia -->
         <li data-modulo="conferencia">
-            <button class="menu-item" onclick="switchTab('conferencia')">
-                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2">
+            <button class="menu-item rail__btn" onclick="switchTab('conferencia')" title="Retirada">
+                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M9 11l3 3L22 4"/>
                     <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                </svg>
-                Retirada
+                </svg></span>
+                <span class="rail__rotulo">Retirada</span>
                 <span id="badge-conferencia-count" class="badge badge-info" style="display:none;margin-left:auto;padding:0.1rem 0.4rem;font-size:0.65rem;">0</span>
             </button>
         </li>
 
         <!-- Devolutiva - Permissão: devolutiva -->
         <li data-modulo="devolutiva">
-            <button class="menu-item" onclick="switchTab('devolutiva')">
-                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2">
+            <button class="menu-item rail__btn" onclick="switchTab('devolutiva')" title="Devolutiva">
+                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="9 10 4 15 9 20"/>
                     <path d="M20 4v7a4 4 0 0 1-4 4H4"/>
-                </svg>
-                Devolutiva
+                </svg></span>
+                <span class="rail__rotulo">Devolutiva</span>
                 <span id="badge-devolutiva-count" class="badge badge-warning" style="display:none;margin-left:auto;padding:0.1rem 0.4rem;font-size:0.65rem;">0</span>
             </button>
         </li>
 
         <!-- OS Concluídas - Permissão: concluidos -->
         <li data-modulo="concluidos">
-            <button class="menu-item" onclick="switchTab('concluidos')">
-                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2">
+            <button class="menu-item rail__btn" onclick="switchTab('concluidos')" title="OS Concluídas">
+                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                     <polyline points="22 4 12 14.01 9 11.01"/>
-                </svg>
-                OS Concluídas
+                </svg></span>
+                <span class="rail__rotulo">OS Concluídas</span>
             </button>
         </li>
 
         <!-- Certificados - Permissão: certificados -->
         <li data-modulo="certificados">
-            <button class="menu-item" onclick="switchTab('certificados')">
-                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2">
+            <button class="menu-item rail__btn" onclick="switchTab('certificados')" title="Certificados">
+                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                     <polyline points="14 2 14 8 20 8"/>
                     <line x1="16"y1="13"x2="8"y2="13"/>
                     <line x1="16"y1="17"x2="8"y2="17"/>
-                </svg>
-                Certificados
+                </svg></span>
+                <span class="rail__rotulo">Certificados</span>
                 <span id="badge-cert-count" class="badge badge-danger" style="display: none; margin-left: auto; padding: 0.1rem 0.4rem; font-size: 0.65rem;">0</span>
             </button>
         </li>
 
         <!-- Localização - Permissão: baias -->
         <li data-modulo="baias">
-            <button class="menu-item" onclick="switchTab('localizacao')">
-                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2">
+            <button class="menu-item rail__btn" onclick="switchTab('localizacao')" title="Localização">
+                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12"cy="10"r="3"/>
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
-                </svg>
-                Localização
+                </svg></span>
+                <span class="rail__rotulo">Localização</span>
             </button>
         </li>
 
         <!-- Inventário - Permissão: instrumentos -->
         <li data-modulo="instrumentos">
-            <button class="menu-item" onclick="switchTab('inventario')">
-                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2">
+            <button class="menu-item rail__btn" onclick="switchTab('inventario')" title="Inventário">
+                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="4"y1="9"x2="20"y2="9"></line>
                     <line x1="4"y1="15"x2="20"y2="15"></line>
                     <line x1="10"y1="3"x2="8"y2="21"></line>
                     <line x1="16"y1="3"x2="14"y2="21"></line>
-                </svg>
-                Inventário
+                </svg></span>
+                <span class="rail__rotulo">Inventário</span>
             </button>
         </li>
 
         <!-- Manutenção - Permissão: manutencao -->
         <li data-modulo="manutencao">
-            <button class="menu-item" onclick="switchTab('manutencao')">
-                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2">
+            <button class="menu-item rail__btn" onclick="switchTab('manutencao')" title="Manutenção">
+                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                </svg>
-                Manutenção
+                </svg></span>
+                <span class="rail__rotulo">Manutenção</span>
                 <span id="badge-manutencao-count" class="badge badge-danger" style="display:none;margin-left:auto;padding:0.1rem 0.4rem;font-size:0.65rem;">0</span>
             </button>
         </li>
 
         <!-- Remanejamento - Permissão: remanejamento (INDEPENDENTE) -->
         <li data-modulo="remanejamento">
-            <button class="menu-item" onclick="switchTab('remanejamento')">
-                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2">
+            <button class="menu-item rail__btn" onclick="switchTab('remanejamento')" title="Remanejamento">
+                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="17 1 21 5 17 9"></polyline>
                     <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
                     <polyline points="7 23 3 19 7 15"></polyline>
                     <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
-                </svg>
-                Remanejamento
+                </svg></span>
+                <span class="rail__rotulo">Remanejamento</span>
                 <!-- Acende quando existe remanejamento parado no colo deste
                      usuário: para enviar, para receber ou para devolver. -->
                 <span id="badge-remanejamento-count" class="badge badge-danger" style="display:none;margin-left:auto;padding:0.1rem 0.4rem;font-size:0.65rem;">0</span>
@@ -290,12 +316,12 @@
 
         <!-- Calibração - Permissão: calibracao (INDEPENDENTE) -->
         <li data-modulo="calibracao">
-            <button class="menu-item" onclick="switchTab('calibracao')">
-                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2">
+            <button class="menu-item rail__btn" onclick="switchTab('calibracao')" title="Calibração">
+                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12"cy="12"r="10"></circle>
                     <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                Calibração
+                </svg></span>
+                <span class="rail__rotulo">Calibração</span>
             </button>
         </li>
 
@@ -304,29 +330,36 @@
 
         <!-- Logs - Permissão: logs -->
         <li data-modulo="logs">
-            <button class="menu-item" id="menu-logs" onclick="switchTab('logs')">
-                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2">
+            <button class="menu-item rail__btn" id="menu-logs" onclick="switchTab('logs')" title="Logs">
+                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                     <polyline points="14 2 14 8 20 8"></polyline>
                     <line x1="8"y1="13"x2="16"y2="13"></line>
                     <line x1="8"y1="17"x2="14"y2="17"></line>
-                </svg>
-                Logs
+                </svg></span>
+                <span class="rail__rotulo">Logs</span>
             </button>
         </li>
     </ul>
-    <div class="sidebar-logout-zone">
-        <button class="menu-item menu-item-logout" onclick="sairApp()">
-            <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21"y1="12"x2="9"y2="12"></line>
-            </svg>
-            Sair
+    </nav>
+    <!-- O avatar e o menu dele (Configurações, Sair): o mesmo .euzinho do
+         AppShell do main, montado por menu-main.js com quem esta logado -->
+    <div class="euzinho" id="almox-euzinho">
+        <div class="euzinho__menu" role="menu" hidden>
+            <p class="euzinho__quem"><strong data-eu="nome">Usuário</strong><span data-eu="setor"></span></p>
+            <button type="button" role="menuitem" class="euzinho__item" data-acao="config">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4.1a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4 1.7 1.7 0 0 0-1.6 1z" /></svg>
+                Configurações
+            </button>
+            <button type="button" role="menuitem" class="euzinho__item euzinho__item--sair" data-acao="sair">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 20H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h8" /><path d="m17 15 3-3-3-3M20 12H10" /></svg>
+                Sair
+            </button>
+        </div>
+        <button type="button" class="euzinho__botao" aria-haspopup="menu" aria-expanded="false" aria-label="Conta e configurações">
+            <span class="avatarfig" data-eu="avatar" style="width: 40px; height: 40px; font-size: 15px;" aria-hidden="true"></span>
         </button>
     </div>
-    <!-- quem esta logado, no pe da barra (a foto do cadastro do main) -->
-    <a class="almox-avatar" id="almox-avatar" href="/core/app/configuracoes" title="Configurações"></a>
 </aside>
 
     <!-- Main Content -->
@@ -1472,5 +1505,6 @@
     <script src="/almoxarife/os-parciais.js"></script>
     <script src="/almoxarife/aprovacao.js"></script>
     <script src="/almoxarife/obra-da-os.js"></script>
+    <script src="/almoxarife/menu-main.js"></script>
 </body>
 </html>

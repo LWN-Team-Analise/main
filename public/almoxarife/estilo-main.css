@@ -1,326 +1,850 @@
 /* ============================================================
-   O ALMOXARIFE COM A CARA DO ATMOSFERA LWN
+   O MENU DO ATMOSFERA LWN NO ALMOXARIFE
 
-   A tela continua sendo a do lwncontrol; o que muda aqui e a barra
-   lateral, que passa a ser a do resto do sistema (core/src/components/
-   AppShell): a logo solta no alto, a bolha de vidro flutuante com os
-   itens em icone + nome embaixo, o anel azul girando no item aceso e a
-   foto de quem esta logado no pe. As cores e medidas sao as de
-   core/src/styles/tokens.css e AppShell.css.
+   GERADO por scripts/estilo-almoxarife.mjs a partir do CSS do proprio
+   main — nao editar a mao a parte copiada (rode o script de novo). Ela e a barra lateral do AppShell (core/src/components/
+   AppShell/AppShell.css: a logo, a bolha de vidro, a marca que DESLIZA
+   de um item para o outro com o anel girando, o item aceso e o avatar
+   com o menu de Configurações / Sair), o vidro (styles/comum.css), o
+   Avatar e a confirmacao "Sair do sistema?" (Modal + Confirma).
 
-   So no computador (769px ou mais). No celular a barra lateral do
-   lwncontrol ja fica escondida e quem navega e a barra de baixo dele,
-   que continua como estava.
+   Duas trocas, so de nome:
+     - as variaveis do main viram --am-* (o lwncontrol tem --text-muted,
+       --danger... com outros valores), com os valores de
+       styles/tokens.css logo abaixo;
+     - o .modal do main vira .am-modal (o lwncontrol ja usa .modal) e o
+       tema escuro e o body.dark-mode do lwncontrol.
+
+   O que mede e move a marca e public/almoxarife/menu-main.js — a mesma
+   conta do AppShell.jsx. No fim do arquivo, a cola com o layout do
+   lwncontrol (a coluna, os contadores dos itens, o Voltar e o celular).
    ============================================================ */
 
 :root {
-  --am-texto-forte: #0d0d0d;
-  --am-texto-fraco: rgba(13, 13, 13, 0.55);
-  --am-vidro-fundo: rgba(255, 255, 255, 0.5);
-  --am-vidro-borda: rgba(255, 255, 255, 0.55);
-  --am-vidro-realce: inset 0 1px 0 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 0 rgba(13, 13, 13, 0.05),
-    0 1px 2px -1px rgba(13, 13, 13, 0.1);
-  --am-vidro-sombra: 0 18px 40px -24px rgba(9, 22, 52, 0.42), 0 3px 12px -8px rgba(9, 22, 52, 0.18);
+  --am-accent: #123b7a;
   --am-anel-1: #0a2547;
   --am-anel-2: #14417f;
   --am-anel-3: #3f8bdc;
   --am-anel-4: #a5d2ff;
-  --am-anel-miolo: rgba(255, 255, 255, 0.94);
   --am-anel-cova: rgba(13, 13, 13, 0.09);
-  --am-aceso: #14417f;
+  --am-anel-miolo: rgba(255, 255, 255, 0.94);
+  --am-btn-bg: #1a56c4;
+  --am-btn-fg: #ffffff;
+  --am-btn-shadow: 0 14px 30px -18px rgba(9, 30, 74, 0.75);
+  --am-control-bg: rgba(13, 13, 13, 0.05);
+  --am-control-bg-hover: rgba(13, 13, 13, 0.1);
+  --am-control-border: rgba(13, 13, 13, 0.16);
+  --am-danger: #b3261e;
+  --am-danger-bg: rgba(179, 38, 30, 0.08);
+  --am-dur-base: 320ms;
+  --am-dur-fast: 180ms;
+  --am-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --am-glass-blur: 18px;
+  --am-glass-edge-a: rgba(255, 255, 255, 0.95);
+  --am-glass-shadow: 0 30px 60px -32px rgba(0, 0, 0, 0.38), 0 4px 18px -12px rgba(0, 0, 0, 0.18);
+  --am-grad-b: #1b4386;
+  --am-line: rgba(13, 13, 13, 0.14);
+  --am-modal-bg: #ffffff;
+  --am-modal-borda: rgba(13, 13, 13, 0.12);
+  --am-modal-sombra: 0 30px 70px -28px rgba(0, 0, 0, 0.4), 0 6px 20px -10px rgba(0, 0, 0, 0.16);
+  --am-modal-veu: rgba(20, 22, 28, 0.42);
+  --am-radius-lg: 26px;
+  --am-radius-md: 16px;
+  --am-radius-pill: 999px;
+  --am-radius-sm: 10px;
+  --am-surface: #ffffff;
+  --am-text-base: rgba(13, 13, 13, 0.78);
+  --am-text-faint: rgba(13, 13, 13, 0.38);
+  --am-text-muted: rgba(13, 13, 13, 0.55);
+  --am-text-strong: #0d0d0d;
+  --am-vidro-borda: rgba(255, 255, 255, 0.55);
+  --am-vidro-fundo: rgba(255, 255, 255, 0.5);
+  --am-vidro-menu: rgba(255, 255, 255, 0.88);
+  --am-vidro-realce: inset 0 1px 0 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 0 rgba(13, 13, 13, 0.05), 0 1px 2px -1px rgba(13, 13, 13, 0.1);
+  --am-vidro-sombra: 0 18px 40px -24px rgba(9, 22, 52, 0.42), 0 3px 12px -8px rgba(9, 22, 52, 0.18);
 }
 
 body.dark-mode {
-  --am-texto-forte: #ffffff;
-  --am-texto-fraco: rgba(255, 255, 255, 0.55);
-  --am-vidro-fundo: rgba(255, 255, 255, 0.08);
-  --am-vidro-borda: rgba(255, 255, 255, 0.16);
-  --am-vidro-realce: inset 0 1px 0 0 rgba(255, 255, 255, 0.18), inset 0 -1px 0 0 rgba(0, 0, 0, 0.35),
-    0 1px 2px -1px rgba(0, 0, 0, 0.6);
-  --am-vidro-sombra: 0 20px 44px -24px rgba(0, 0, 0, 0.9), 0 3px 12px -8px rgba(0, 0, 0, 0.7);
-  --am-anel-miolo: rgba(14, 18, 28, 0.94);
+  --am-accent: #2c63bd;
+  --am-anel-1: #0a2547;
+  --am-anel-2: #14417f;
+  --am-anel-3: #3f8bdc;
+  --am-anel-4: #a5d2ff;
   --am-anel-cova: rgba(0, 0, 0, 0.55);
-  --am-aceso: #a5d2ff;
+  --am-anel-miolo: rgba(14, 18, 28, 0.94);
+  --am-btn-bg: #2f6ee0;
+  --am-btn-fg: #ffffff;
+  --am-btn-shadow: 0 14px 30px -18px rgba(120, 170, 240, 0.45);
+  --am-control-bg: rgba(255, 255, 255, 0.07);
+  --am-control-bg-hover: rgba(255, 255, 255, 0.14);
+  --am-control-border: rgba(255, 255, 255, 0.2);
+  --am-danger: #ff8a9c;
+  --am-danger-bg: rgba(255, 138, 156, 0.12);
+  --am-dur-base: 320ms;
+  --am-dur-fast: 180ms;
+  --am-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --am-glass-blur: 18px;
+  --am-glass-edge-a: rgba(255, 255, 255, 0.16);
+  --am-glass-shadow: 0 34px 70px -34px rgba(0, 0, 0, 1), 0 4px 18px -10px rgba(0, 0, 0, 0.85);
+  --am-grad-b: #a5d2ff;
+  --am-line: rgba(255, 255, 255, 0.16);
+  --am-modal-bg: #14161c;
+  --am-modal-borda: rgba(255, 255, 255, 0.12);
+  --am-modal-sombra: 0 34px 74px -30px rgba(0, 0, 0, 1), 0 6px 20px -10px rgba(0, 0, 0, 0.7);
+  --am-modal-veu: rgba(0, 0, 0, 0.62);
+  --am-radius-lg: 26px;
+  --am-radius-md: 16px;
+  --am-radius-pill: 999px;
+  --am-radius-sm: 10px;
+  --am-surface: #0d0d0d;
+  --am-text-base: rgba(255, 255, 255, 0.82);
+  --am-text-faint: rgba(255, 255, 255, 0.36);
+  --am-text-muted: rgba(255, 255, 255, 0.55);
+  --am-text-strong: #ffffff;
+  --am-vidro-borda: rgba(255, 255, 255, 0.16);
+  --am-vidro-fundo: rgba(255, 255, 255, 0.08);
+  --am-vidro-menu: rgba(22, 25, 34, 0.92);
+  --am-vidro-realce: inset 0 1px 0 0 rgba(255, 255, 255, 0.18), inset 0 -1px 0 0 rgba(0, 0, 0, 0.35), 0 1px 2px -1px rgba(0, 0, 0, 0.6);
+  --am-vidro-sombra: 0 20px 44px -24px rgba(0, 0, 0, 0.9), 0 3px 12px -8px rgba(0, 0, 0, 0.7);
 }
 
-/* o angulo do anel, animavel (o gradiente conico gira em volta do item) */
-@property --am-giro {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 220deg;
+.vidro {
+  position: relative;
+  background: var(--am-vidro-fundo);
+  border: 1px solid var(--am-vidro-borda);
+  box-shadow: var(--am-vidro-realce), var(--am-vidro-sombra);
+  backdrop-filter: blur(var(--am-glass-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--am-glass-blur)) saturate(160%);
 }
 
-@keyframes am-anel-gira {
-  to {
-    --am-giro: 580deg;
-  }
+.vidro > * {
+  position: relative;
+  z-index: 1;
 }
 
-/* fora do computador a logo e o avatar nao aparecem: no celular quem
-   navega e a barra de baixo do lwncontrol */
-.almox-marca,
-.almox-avatar {
+.rail {
+  background: var(--am-vidro-fundo);
+  box-shadow: var(--am-vidro-sombra);
+}
+
+/* ---------------- Logo ----------------
+   Solta no canto superior esquerdo do site, fora da bolha. */
+
+/* a caixa ocupa a mesma faixa da bolha (left + width) e centraliza o
+   conteudo: assim a logo fica no eixo do menu, e nao encostada a esquerda */
+.marca {
+  position: fixed;
+  left: 10px;
+  width: 72px;
+  top: 22px;
+  z-index: 21;
+  display: grid;
+  place-items: center;
+  transition: opacity var(--am-dur-fast) var(--am-ease-out);
+}
+
+.marca img {
+  /* monograma quadrado: largura e altura iguais */
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.marca:hover {
+  opacity: 0.75;
+}
+
+/* ---------------- Barra lateral ----------------
+   Bolha de vidro flutuante, colada a esquerda e centralizada na
+   vertical. Leva so os itens de navegacao: a logo fica no topo da
+   pagina e o avatar no rodape, os dois fora dela.
+   ------------------------------------------------------- */
+
+.rail {
+  /* o andar do item atual, igual nos dois menus */
+  --dur-viagem: 460ms;
+  --curva-viagem: cubic-bezier(0.32, 0.72, 0, 1);
+  /* quanto o icone aceso sobe no celular; o valor de verdade e medido
+     (ver `ergue` no AppShell.jsx), este so vale ate a primeira medida */
+  --ergue: 14px;
+  /* quanto o centro da bolha do celular fica abaixo da borda da barra:
+     o icone aceso so da um degrau de ~6px para fora. As curvas da bolha
+     no CSS mobile sao calculadas para ESTE valor. */
+  --afunda: 15px;
+
+  position: fixed;
+  left: 10px;
+  top: 50%;
+  z-index: 20;
+  transform: translateY(-50%);
+  /* a bolha encostou nos botoes: a folga lateral que sobrava so
+     empurrava o conteudo da tela para a direita */
+  width: 72px;
+  max-height: calc(100dvh - 190px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 5px;
+  border-radius: 26px;
+  /* o vidro vem da classe .vidro; aqui so o desfoque mais forte, que e
+     o que faz a bolha do menu parecer mais grossa que o resto */
+  backdrop-filter: blur(calc(var(--am-glass-blur) * 1.7)) saturate(175%);
+  -webkit-backdrop-filter: blur(calc(var(--am-glass-blur) * 1.7)) saturate(175%);
+}
+
+/* A camada liquida e a bolha sao do celular. No computador a bolha e
+   vertical e o anel deslizante ja da conta. */
+.rail__indicador {
   display: none;
 }
 
-@media (min-width: 769px) {
-  :root {
-    /* o conteudo comeca depois da bolha (72px + 10px de margem + folga) */
-    --sidebar-width: 96px;
-  }
+/* O Menu (hamburguer) e o menu lateral so existem no celular. Aqui em
+   cima a bolha e vertical e cabe o menu inteiro — guardar item atras de
+   um botao seria esconder o que ja estava a vista. */
+.rail__somobile,
+.menulado {
+  display: none;
+}
 
-  /* a coluna da esquerda deixa de ser um painel: so empilha as pecas —
-     logo, Voltar, a bolha, o Sair e o avatar. Empilhadas (e nao cada uma
-     fixa no seu canto) elas nunca se sobrepoem, nem em tela baixa: quem
-     encolhe e a bolha, que rola por dentro */
-  #sidebar {
-    width: 92px;
-    align-items: center;
-    gap: 10px;
-    padding: 22px 10px 20px;
-    background: transparent;
-    border-right: 0;
-    box-shadow: none;
-    pointer-events: none;
-  }
+.rail__lista {
+  /* a marca do item atual e posicionada por aqui */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 
-  #sidebar > * {
-    pointer-events: auto;
-  }
+.rail__btn {
+  /* acima da marca, que e irma e passa por baixo */
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  /* ALTURA FIXA, e e o que conserta a animacao.
 
-  /* ---- a logo, solta no alto, no eixo da bolha ---- */
-  .almox-marca {
-    flex: none;
-    width: 72px;
-    display: grid;
-    place-items: center;
-    z-index: 51;
-    transition: opacity 0.18s ease;
-  }
+     "Página inicial" quebra em duas linhas e os outros nao; com altura
+     automatica a marca tinha que MUDAR DE TAMANHO no meio do caminho, e
+     o que se via era a bolha se deformando de um item para o outro em
+     vez de deslizar. Com todos do mesmo tamanho, so sobra o translate —
+     que e uma propriedade de composicao e desliza liso. */
+  height: 56px;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+  color: var(--am-text-muted);
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  transition: color var(--am-dur-base) var(--am-ease-out);
+}
 
-  .almox-marca:hover {
-    opacity: 0.75;
-  }
+.rail__btn:hover {
+  color: var(--am-text-strong);
+}
 
-  .almox-marca img {
-    width: 32px;
-    height: 32px;
-    object-fit: contain;
-  }
+.rail__glifo {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  transition:
+    scale var(--am-dur-fast) var(--am-ease-out),
+    color var(--am-dur-base) var(--am-ease-out);
+}
 
-  .almox-marca .logo-escuro,
-  body.dark-mode .almox-marca .logo-claro {
-    display: none;
-  }
+/* `scale`, e nao `transform`: no celular o icone aceso (e o botao do
+   meio) sobe com `translate`. Com os dois no mesmo `transform`, apertar
+   trocava o "sobe" pelo "encolhe" — o botao despencava para fora do
+   dedo no meio do toque, e o clique so pegava na metade de baixo. */
+.rail__btn:active .rail__glifo {
+  scale: 0.9;
+}
 
-  body.dark-mode .almox-marca .logo-escuro {
-    display: block;
-  }
+/* Fonte pequena de proposito: a bolha tem 72px e o rotulo mais longo e
+   "Página inicial". Nesta medida ele quebra em duas linhas curtas e nenhuma
+   passa da largura do botao. */
+.rail__rotulo {
+  position: relative;
+  z-index: 2;
+  max-width: 100%;
+  font-size: 0.55rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: 0.005em;
+  hyphens: auto;
+  overflow-wrap: anywhere;
+  /* no maximo duas linhas: e o que cabe na altura fixa do botao */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 
-  /* o "Voltar" logo abaixo da logo: o canto de cima a esquerda */
-  .almox-voltar.almox-voltar--lateral {
-    flex: none;
-    width: 72px;
-    margin: 0;
-    padding: 0.3rem 0.35rem;
-    justify-content: center;
-    gap: 0.15rem;
-    font-size: 0.62rem;
-    z-index: 51;
-  }
+/* ---- Item atual: a marca que DESLIZA ----
 
-  /* ---- a bolha de vidro com os itens ---- */
-  #sidebar .sidebar-menu {
-    width: 72px;
-    min-height: 0;
-    display: flex;
-    flex: 0 1 auto;
-    flex-direction: column;
-    gap: 3px;
-    /* centralizada na altura que sobra entre o Voltar e o Sair */
-    margin: auto 0;
-    padding: 8px 5px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-width: none;
-    border-radius: 26px;
-    background: var(--am-vidro-fundo);
-    border: 1px solid var(--am-vidro-borda);
-    box-shadow: var(--am-vidro-realce), var(--am-vidro-sombra);
-    backdrop-filter: blur(30px) saturate(175%);
-    -webkit-backdrop-filter: blur(30px) saturate(175%);
-  }
+   Sao tres camadas empilhadas, na ordem em que se veem:
 
-  #sidebar .sidebar-menu::-webkit-scrollbar {
-    display: none;
-  }
+     .rail__marca        a cova — o encaixe fundo onde o botao assenta
+     .rail__marca-anel   o anel de gradiente, que gira sem parar
+     .rail__marca::after o miolo, que cobre o anel e deixa so a borda
 
-  #sidebar .sidebar-menu li {
-    width: 100%;
-    flex: none;
-  }
+   O anel e um quadrado bem maior que o botao girando por baixo; quem o
+   transforma em anel e o miolo por cima. Girar um gradiente conico direto no
+   fundo nao daria certo — o fundo nao gira sozinho.
 
-  /* o item: icone em cima, nome embaixo, todos do mesmo tamanho */
-  #sidebar .menu-item {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    width: 100%;
-    height: 56px;
-    margin: 0;
-    padding: 6px 2px;
-    border: 0;
-    border-radius: 18px;
-    background: transparent;
-    box-shadow: none;
-    color: var(--am-texto-fraco);
-    font-size: 0.55rem;
-    font-weight: 600;
-    line-height: 1.15;
-    letter-spacing: 0.005em;
-    text-align: center;
-    white-space: normal;
-    hyphens: auto;
-    overflow-wrap: anywhere;
-    isolation: isolate;
-  }
+   A peca e UMA SO para a barra inteira. Trocar de aba nao a apaga e recria
+   noutro lugar: ela muda de posicao e de tamanho, e a transicao abaixo faz o
+   caminho — que e o efeito pedido ao passar de um menu para o outro. */
 
-  #sidebar .menu-item svg {
-    width: 21px;
-    height: 21px;
-    margin: 0;
-    opacity: 1;
-    stroke: currentColor;
-    stroke-width: 1.7;
-  }
+.rail__marca {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 0;
+  width: var(--marca-l);
+  height: var(--marca-a);
+  border-radius: 18px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(var(--marca-x), var(--marca-y), 0);
+  background: var(--am-anel-cova);
+  box-shadow: inset 0 2px 6px var(--am-anel-cova), inset 0 0 4px var(--am-anel-cova),
+    0 1px 0 var(--am-glass-edge-a);
+  /* SO o transform anima.
 
-  #sidebar .menu-item:hover,
-  body.dark-mode #sidebar .menu-item:hover {
-    background: transparent;
-    color: var(--am-texto-forte);
-  }
+     Largura e altura ficam de fora de proposito: os botoes agora tem o
+     mesmo tamanho, entao elas nao mudam — e animar caixa forcaria o
+     navegador a recalcular layout a cada quadro, que e de onde vinha o
+     tranco. Assim a bolha escorrega numa camada so.
 
-  #sidebar .menu-item:hover svg {
-    stroke: currentColor;
-  }
+     A curva arranca rapido e assenta devagar, sem passar do ponto: a
+     mesma do indicador do celular, para os dois menus terem o mesmo
+     andar. */
+  transition: transform var(--dur-viagem) var(--curva-viagem),
+    opacity var(--am-dur-fast) var(--am-ease-out);
+  will-change: transform;
+}
 
-  /* o item aceso: a cova, o miolo e o anel de gradiente girando em volta */
-  #sidebar .menu-item.active,
-  body.dark-mode #sidebar .menu-item.active,
-  #sidebar .sidebar-menu .menu-item.active[onclick*="certificados"] {
-    background: var(--am-anel-miolo) !important;
-    box-shadow: inset 0 1px 3px var(--am-anel-cova), 0 0 0 1px var(--am-anel-cova) !important;
-    color: var(--am-texto-forte) !important;
-    font-weight: 700 !important;
-  }
+/* antes da primeira pintura nao ha de onde vir: a marca so aparece */
+.rail:not(.is-viaja) .rail__marca {
+  transition: opacity var(--am-dur-fast) var(--am-ease-out);
+}
 
-  #sidebar .menu-item.active::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    padding: 3px;
-    border-radius: 18px;
-    background: conic-gradient(
-      from var(--am-giro),
-      var(--am-anel-1) 0%,
-      var(--am-anel-2) 18%,
-      var(--am-anel-3) 36%,
-      var(--am-anel-4) 50%,
-      var(--am-anel-3) 64%,
-      var(--am-anel-2) 82%,
-      var(--am-anel-1) 100%
-    );
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-    animation: am-anel-gira 4s linear infinite;
-    pointer-events: none;
-  }
+/* so aparece depois da primeira medida — senao entrava deslizando do
+   canto 0,0 toda vez que a tela carrega */
+.rail__marca.is-pronta {
+  opacity: 1;
+}
+.rail__marca-anel {
+  position: absolute;
+  /* bem maior que o botao: girando, as pontas nunca deixam canto vazio */
+  inset: -60%;
+  background: conic-gradient(
+    from 220deg,
+    var(--am-anel-1) 0%,
+    var(--am-anel-2) 18%,
+    var(--am-anel-3) 36%,
+    var(--am-anel-4) 50%,
+    var(--am-anel-3) 64%,
+    var(--am-anel-2) 82%,
+    var(--am-anel-1) 100%
+  );
+  animation: anel-gira 4s linear infinite;
+  will-change: transform;
+}
 
-  #sidebar .menu-item.active svg,
-  body.dark-mode #sidebar .menu-item.active svg,
-  #sidebar .sidebar-menu .menu-item.active[onclick*="certificados"] svg {
-    stroke: var(--am-aceso) !important;
-  }
+.rail__marca::after {
+  content: '';
+  position: absolute;
+  /* os 3px que sobram por fora sao a espessura do anel */
+  inset: 3px;
+  border-radius: 15px;
+  background: var(--am-anel-miolo);
+  box-shadow: inset 0 1px 3px var(--am-anel-cova);
+}
 
-  @media (prefers-reduced-motion: reduce) {
-    #sidebar .menu-item.active::before {
-      animation: none;
-    }
-  }
-
-  /* os contadores (Retirada, Devolutiva, Manutencao...) no canto do item */
-  #sidebar .menu-item .badge {
-    position: absolute;
-    top: 3px;
-    right: 5px;
-    margin: 0 !important;
-    padding: 0 0.3rem !important;
-    min-width: 1rem;
-    font-size: 0.55rem !important;
-    line-height: 1rem;
-  }
-
-  /* ---- o Sair, numa bolha pequena acima do avatar ---- */
-  #sidebar .sidebar-logout-zone {
-    flex: none;
-    width: 72px;
-    padding: 5px;
-    border: 1px solid var(--am-vidro-borda);
-    border-radius: 22px;
-    background: var(--am-vidro-fundo);
-    box-shadow: var(--am-vidro-realce), var(--am-vidro-sombra);
-    backdrop-filter: blur(30px) saturate(175%);
-    -webkit-backdrop-filter: blur(30px) saturate(175%);
-  }
-
-  #sidebar .sidebar-logout-zone .menu-item {
-    height: 46px;
-  }
-
-  #sidebar .menu-item-logout:hover {
-    color: var(--danger, #ef4444);
-  }
-
-  /* ---- a foto de quem esta logado, no pe, como no resto do sistema ---- */
-  .almox-avatar {
-    flex: none;
-    width: 72px;
-    display: grid;
-    place-items: center;
-    z-index: 51;
-    text-decoration: none;
-  }
-
-  .almox-avatar span,
-  .almox-avatar img {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    object-fit: cover;
-    box-shadow: 0 0 0 2px var(--am-anel-miolo), 0 4px 12px -4px rgba(9, 22, 52, 0.45);
-  }
-
-  .almox-avatar span {
-    display: grid;
-    place-items: center;
-    background: linear-gradient(135deg, var(--am-anel-3), var(--am-anel-2));
-    color: #fff;
-    font-size: 0.85rem;
-    font-weight: 700;
+@keyframes anel-gira {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-/* "Remanejamento" e a unica palavra que nao cabe na largura do item: um
-   ponto menor, para nao quebrar no meio */
-@media (min-width: 769px) {
-  #sidebar .menu-item[onclick*="'remanejamento'"] {
-    font-size: 0.5rem;
-    letter-spacing: -0.02em;
-    overflow-wrap: normal;
+@media (prefers-reduced-motion: reduce) {
+  .rail__marca {
+    transition: opacity var(--am-dur-fast) var(--am-ease-out);
+  }
+
+  .rail__marca-anel {
+    animation: none;
+  }
+}
+
+.rail__btn.is-atual {
+  color: var(--am-text-strong);
+  font-weight: 600;
+}
+
+.rail__btn.is-atual .rail__glifo {
+  color: var(--am-accent);
+}
+
+body.dark-mode .rail__btn.is-atual .rail__glifo {
+  color: var(--am-grad-b);
+}
+
+/* ---------------- Avatar + menu ----------------
+   Solto no canto inferior esquerdo, fora da bolha do menu. */
+
+.euzinho {
+  position: fixed;
+  left: 10px;
+  width: 72px;
+  bottom: 22px;
+  z-index: 21;
+  display: grid;
+  place-items: center;
+}
+
+/* A copia do avatar que mora na barra de cima so existe no celular; no
+   computador quem vale e a do canto, junto da bolha do menu.
+
+   A regra tem de vir DEPOIS da de cima: as duas tem a mesma forca (uma
+   classe cada), entao quem ganha e a ultima. Escrita antes, o
+   `display: grid` do `.euzinho` passava por cima e as duas copias
+   apareciam juntas no computador. */
+.euzinho--barra {
+  display: none;
+}
+
+.euzinho__botao {
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  border: 1px solid var(--am-vidro-borda);
+  border-radius: 50%;
+  background: var(--am-vidro-fundo);
+  box-shadow: var(--am-vidro-realce), var(--am-vidro-sombra);
+  backdrop-filter: blur(var(--am-glass-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--am-glass-blur)) saturate(160%);
+  cursor: pointer;
+  transition: box-shadow var(--am-dur-fast) var(--am-ease-out),
+    transform var(--am-dur-fast) var(--am-ease-out);
+}
+
+.euzinho__botao:hover,
+.euzinho__botao.is-aberto {
+  box-shadow: 0 0 0 2px var(--am-accent);
+}
+
+.euzinho__botao:active {
+  transform: scale(0.94);
+}
+
+.euzinho__menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 6px;
+  z-index: 30;
+  width: 216px;
+  padding: 7px;
+  border-radius: var(--am-radius-md);
+  background: var(--am-vidro-menu);
+  border: 1px solid var(--am-vidro-borda);
+  box-shadow: var(--am-glass-shadow), var(--am-vidro-realce);
+  backdrop-filter: blur(calc(var(--am-glass-blur) * 1.5)) saturate(175%);
+  -webkit-backdrop-filter: blur(calc(var(--am-glass-blur) * 1.5)) saturate(175%);
+  animation: menu-sobe var(--am-dur-fast) var(--am-ease-out);
+}
+
+@keyframes menu-sobe {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.euzinho__quem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 8px 11px 10px;
+  border-bottom: 1px solid var(--am-line);
+  margin-bottom: 5px;
+}
+
+.euzinho__quem strong {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--am-text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.euzinho__quem span {
+  font-size: 0.73rem;
+  color: var(--am-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.euzinho__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: var(--am-radius-sm);
+  background: transparent;
+  color: var(--am-text-base);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--am-dur-fast) var(--am-ease-out),
+    color var(--am-dur-fast) var(--am-ease-out);
+}
+
+.euzinho__item:hover {
+  background: var(--am-control-bg);
+  color: var(--am-text-strong);
+}
+
+.euzinho__item--sair:hover {
+  background: var(--am-danger-bg);
+  color: var(--am-danger);
+}
+
+
+
+.euzinho__menu {
+  left: 0;
+}
+
+@media (max-width: 1000px) {
+  .rail,
+  .marca,
+  .euzinho {
+    width: 66px;
+    left: 8px;
+  }
+
+  .rail__rotulo {
+    font-size: 0.6rem;
+  }
+}
+
+
+
+.avatarfig {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--am-control-bg);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  box-shadow: 0 0 0 1.5px var(--avatar-anel, var(--am-surface));
+  user-select: none;
+}
+
+.avatarfig img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.am-modal {
+  --modal-topo: clamp(20px, 11vh, 96px);
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  /* A coluna e a TELA, e nao o conteudo: sem isso um pop-up com algo
+     largo dentro (as cinco etapas do modelo da obra) crescia ate a
+     largura do conteudo e vazava para fora do celular, sem rolar. */
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  padding: var(--modal-topo) 20px 20px;
+  background: var(--am-modal-veu);
+  animation: modal-entra var(--am-dur-fast) var(--am-ease-out);
+}
+
+.am-modal__caixa {
+  width: 100%;
+  max-height: min(calc(100dvh - var(--modal-topo) - 20px), 860px);
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--am-radius-lg);
+  background: var(--am-modal-bg);
+  border: 1px solid var(--am-modal-borda);
+  box-shadow: var(--am-modal-sombra);
+  animation: modal-sobe var(--am-dur-base) var(--am-ease-out);
+}
+
+.am-modal__caixa:focus {
+  outline: none;
+}
+
+.am-modal__topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid var(--am-line);
+}
+
+.am-modal__titulo {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--am-text-strong);
+}
+
+.am-modal__x {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--am-control-border);
+  border-radius: 50%;
+  background: var(--am-control-bg);
+  color: var(--am-text-muted);
+  cursor: pointer;
+  transition: background var(--am-dur-fast) var(--am-ease-out), color var(--am-dur-fast) var(--am-ease-out);
+}
+
+.am-modal__x:hover {
+  background: var(--am-control-bg-hover);
+  color: var(--am-text-strong);
+}
+
+.am-modal__corpo {
+  padding: 18px 20px 20px;
+  overflow-y: auto;
+}
+
+@keyframes modal-entra {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-sobe {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+
+.confirma {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.confirma__acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding-top: 6px;
+}
+
+.confirma__ok {
+  padding: 10px 20px;
+  border: 0;
+  border-radius: var(--am-radius-pill);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter var(--am-dur-fast) var(--am-ease-out), transform var(--am-dur-fast) var(--am-ease-out);
+}
+
+.confirma__ok--acao {
+  background: var(--am-btn-bg);
+  color: var(--am-btn-fg);
+  box-shadow: var(--am-btn-shadow);
+}
+
+.confirma__ok:hover {
+  filter: brightness(1.08);
+}
+
+.confirma__ok:active {
+  transform: scale(0.98);
+}
+
+.formobra__cancelar {
+  padding: 10px 18px;
+  border: 1px solid var(--am-control-border);
+  border-radius: var(--am-radius-pill);
+  background: transparent;
+  color: var(--am-text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background var(--am-dur-fast) var(--am-ease-out), color var(--am-dur-fast) var(--am-ease-out);
+}
+
+.formobra__cancelar:hover {
+  background: var(--am-control-bg);
+  color: var(--am-text-strong);
+}
+
+/* ============================================================
+   A COLA COM O LWNCONTROL (escrita a mao)
+   ============================================================ */
+
+/* a coluna da esquerda do lwncontrol deixa de ser um painel: as pecas
+   (logo, bolha, avatar) sao fixas, como no main. O conteudo comeca onde
+   comeca no main (.shell { padding-left: 86px }) */
+:root {
+  --sidebar-width: 86px;
+}
+
+#sidebar {
+  width: 0;
+  overflow: visible;
+  background: transparent;
+  border-right: 0;
+  box-shadow: none;
+}
+
+/* a lista do lwncontrol dentro da bolha: sem o recheio dela */
+.rail .sidebar-menu.rail__lista {
+  flex: 1 1 auto;
+  padding: 0;
+  gap: 3px;
+}
+
+/* o item do lwncontrol (.menu-item) com o desenho do main (.rail__btn) */
+.rail .menu-item.rail__btn,
+.rail .menu-item.rail__btn:hover,
+.rail .menu-item.rail__btn.active,
+body.dark-mode .rail .menu-item.rail__btn,
+body.dark-mode .rail .menu-item.rail__btn:hover,
+body.dark-mode .rail .menu-item.rail__btn.active,
+.rail .sidebar-menu .menu-item.active[onclick*="certificados"] {
+  background: transparent !important;
+  box-shadow: none !important;
+  letter-spacing: normal;
+  white-space: normal;
+  font-size: inherit;
+}
+
+.rail .menu-item.rail__btn {
+  font-weight: 400;
+  color: var(--am-text-muted);
+}
+
+.rail .menu-item.rail__btn:hover {
+  color: var(--am-text-strong);
+}
+
+.rail .menu-item.rail__btn.is-atual,
+.rail .sidebar-menu .menu-item.is-atual[onclick*="certificados"] {
+  color: var(--am-text-strong) !important;
+  font-weight: 600 !important;
+}
+
+.rail .menu-item.rail__btn svg {
+  width: 21px;
+  height: 21px;
+  opacity: 1;
+  stroke: currentColor !important;
+}
+
+/* os contadores do lwncontrol (Retirada, Devolutiva, Manutenção...) no
+   canto do item */
+.rail .menu-item.rail__btn .badge {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  z-index: 3;
+  margin: 0 !important;
+  padding: 0 0.3rem !important;
+  min-width: 1rem;
+  font-size: 0.55rem !important;
+  line-height: 1rem;
+}
+
+/* no main o menu do avatar e a confirmacao so existem quando abertos (o
+   React os monta); aqui eles ficam no HTML com o atributo hidden — e o
+   display do CSS copiado passaria por cima dele */
+.euzinho__menu[hidden],
+.am-modal[hidden] {
+  display: none !important;
+}
+
+/* "Remanejamento" e a unica palavra das abas que nao cabe na largura do
+   item: um ponto menor, para nao quebrar no meio */
+.rail__btn[onclick*="'remanejamento'"] .rail__rotulo {
+  font-size: 0.5rem;
+  letter-spacing: -0.02em;
+  overflow-wrap: normal;
+}
+
+/* a logo certa para cada tema */
+.marca .logo-escuro,
+body.dark-mode .marca .logo-claro {
+  display: none;
+}
+
+body.dark-mode .marca .logo-escuro {
+  display: block;
+}
+
+/* o "Voltar", logo abaixo da logo, no eixo da bolha */
+.almox-voltar.almox-voltar--lateral {
+  position: fixed;
+  left: 10px;
+  top: 62px;
+  z-index: 21;
+  width: 72px;
+  margin: 0;
+  padding: 0.25rem 0.35rem;
+  justify-content: center;
+  gap: 0.15rem;
+  font-size: 0.62rem;
+}
+
+@media (max-width: 1000px) {
+  :root {
+    --sidebar-width: 78px;
+  }
+
+  .almox-voltar.almox-voltar--lateral {
+    width: 66px;
+    left: 8px;
+  }
+}
+
+/* no celular quem navega e a barra de baixo do lwncontrol */
+@media (max-width: 768px) {
+  .marca,
+  .rail,
+  .euzinho,
+  .almox-voltar.almox-voltar--lateral {
+    display: none !important;
   }
 }
