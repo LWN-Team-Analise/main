@@ -1,16 +1,6 @@
 import Avatar, { PilhaAvatares } from '@/components/Avatar/Avatar'
 import { useDados } from '@/context/DadosContext'
-import {
-  etapaDeExecucao,
-  nomeProprioDaEtapa,
-  prazoFinalDaObra,
-  prontaEm as momentoPronta,
-  rotuloPrioridadeObra,
-  tituloDaObra,
-  tomPrioridadeObra,
-} from '@/domain/obras'
-import { useTheme } from '@/context/ThemeContext'
-import { textoSobre } from '@/utils/cor'
+import { prontaEm as momentoPronta, tituloDaObra, tomPrioridadeObra } from '@/domain/obras'
 import { dataBR, dataHora } from '@/utils/formato'
 import './CardObra.css'
 
@@ -56,69 +46,38 @@ function textoDoMotivo(m, nomeDoCargo, comSelo = false) {
  * ultimo check e marcado (e o dia desse check). O da EXECUCAO tambem
  * nao entra.
  *
- * O FIO DA ESQUERDA e outra coisa: a cor da PRIORIDADE (data-pri), a
- * mesma da palavra em "Prioridade: Alta".
+ * O FIO DA ESQUERDA e outra coisa: a cor da PRIORIDADE (data-pri).
  *
- * Quando a cor nao e a de sempre, uma linha diz o PORQUE (o motivo mais
- * urgente; os outros ficam na dica dele).
+ * O card e so o essencial — o resto mora dentro da obra:
  *
- *   foto da empresa · empresa - proposta · etapa atual  fotos de quem mexeu
- *   [téc] [gq]
- *   motivo da cor
- *   descricao · execucao dos ensaios
- *   prioridade + datas                    "Concluído em"
+ *   foto da empresa · empresa - proposta        fotos de quem mexeu
+ *   [téc] [gq]   os setores que faltam para a etapa avancar
+ *
+ * A etapa nao aparece: o card ja esta na coluna dela. A descricao, a
+ * prioridade, as datas, a execucao e as etiquetas sairam do card. O
+ * PORQUE da cor (quando ela nao e a de sempre) e o "Concluído em" (o
+ * ultimo check marcado, que lembra de fechar a obra) ficam na dica, ao
+ * passar o mouse.
  *
  * O titulo e "1042/2026 - Acme": o n. da proposta na frente, porque e
  * por ele que a obra e procurada. Obra antiga, sem proposta cadastrada,
  * mostra so o nome do cliente.
  */
 export default function CardObra({ obra, cliente, pessoas = [], situacao, aoAbrir }) {
-  const {
-    corSuaveDoCargo,
-    cargoPorChave,
-    roteiroDaObra,
-    etapaDaObra,
-    pendentesDaObra,
-    concluida,
-    etiquetasDaObra,
-    termoEtapa,
-    nomeDoCargo,
-    execucaoDaObra,
-  } = useDados()
-  const { isDark } = useTheme()
+  const { corSuaveDoCargo, cargoPorChave, roteiroDaObra, etapaDaObra, pendentesDaObra, nomeDoCargo } = useDados()
 
   const numeroEtapa = etapaDaObra(obra)
-  /* o roteiro desta obra, nao o de agora: obra antiga desenha a etapa
-     que ela realmente tem */
-  const roteiro = roteiroDaObra(obra)
-  const etapa = roteiro.find((e) => e.numero === numeroEtapa)
-  /* "3ª Etapa" — o rotulo automatico, com a palavra que a empresa
-     escolheu. E com ele que o nome da etapa e comparado. */
-  const rotuloDaEtapa = `${numeroEtapa}ª ${termoEtapa}`
-
-  /* ---- "Concluído em" ----
-
-     Quando o ULTIMO check da obra e marcado, o trabalho acabou — mesmo
-     que ninguem tenha clicado em "Concluir obra" ainda. O card diz
-     quando isso aconteceu: e o que faz alguem lembrar de fechar. */
-  const prontaEm = momentoPronta(roteiro, obra)
-  /* o prazo final e o DIA desse ultimo check — so existe com ele */
-  const prazoFinal = prazoFinalDaObra(roteiro, obra)
-  const marcas = etiquetasDaObra(obra)
+  /* "Concluído em": quando o ULTIMO check da obra e marcado, o trabalho
+     acabou — mesmo que ninguem tenha clicado em "Concluir obra" ainda.
+     Fica na dica do card: e o que faz alguem lembrar de fechar */
+  const prontaEm = momentoPronta(roteiroDaObra(obra), obra)
   const pendentes = pendentesDaObra(obra, numeroEtapa)
-  const fechada = concluida(obra)
   const tom = situacao?.tom ?? (obra.tipo === 'emergencia' ? 'emergencia' : 'ok')
   const motivos = situacao?.motivos ?? []
-
-  /* a barra de execucao aparece da etapa de execucao em diante — antes
-     disso ela seria sempre 0% e so ocuparia lugar */
-  const execucao = execucaoDaObra(obra)
-  const etapaExec = etapaDeExecucao(roteiro)
-  const mostraExecucao =
-    execucao !== null &&
-    (obra.tipo === 'emergencia' || !etapaExec || numeroEtapa >= etapaExec.numero || execucao.geral > 0)
-
-  const nomeDaEtapa = etapa ? nomeProprioDaEtapa(etapa.nome, rotuloDaEtapa) : ''
+  const dica = [
+    ...motivos.map((m) => textoDoMotivo(m, nomeDoCargo)),
+    prontaEm ? `Concluído em: ${dataHora(prontaEm)}` : null,
+  ].filter(Boolean)
 
   return (
     <button
@@ -127,20 +86,12 @@ export default function CardObra({ obra, cliente, pessoas = [], situacao, aoAbri
       data-tom={tom}
       data-pri={tomPrioridadeObra(obra)}
       onClick={aoAbrir}
-      title={motivos.length > 1 ? motivos.map((m) => textoDoMotivo(m, nomeDoCargo)).join('\n') : undefined}
+      title={dica.length ? dica.join('\n') : undefined}
     >
       <header className="obracard__topo">
         <Avatar nome={cliente?.nome} foto={cliente?.logo} tamanho={26} quadrado className="obracard__logo" />
         <span className="obracard__quem">
           <strong className="obracard__empresa">{tituloDaObra(obra, cliente)}</strong>
-          {/* "3ª — execução". O nome so entra quando acrescenta: uma
-              etapa chamada "3° Etapa" no roteiro daria "3ª — 3° etapa" */}
-          <span className="obracard__etapa">
-            {termoEtapa} atual:{' '}
-            {fechada || !etapa
-              ? 'concluída'
-              : [`${etapa.numero}ª`, nomeDaEtapa.toLowerCase()].filter(Boolean).join(' — ')}
-          </span>
         </span>
 
         {/* quem mexeu na obra: no canto de CIMA, a direita */}
@@ -151,7 +102,7 @@ export default function CardObra({ obra, cliente, pessoas = [], situacao, aoAbri
         )}
 
         {pendentes.length > 0 && (
-          <span className="obracard__setores" title="Setores que ainda devem informação">
+          <span className="obracard__setores" title="Setores que faltam para a etapa avançar">
             {pendentes.map((s) => (
               <span
                 key={s}
@@ -164,75 +115,6 @@ export default function CardObra({ obra, cliente, pessoas = [], situacao, aoAbri
           </span>
         )}
       </header>
-
-      {/* o porque da cor, quando ela nao e a de sempre */}
-      {motivos.length > 0 && (
-        <p className="obracard__motivo">
-          {tom === 'vencido' && <span className="obracard__atrasada">Atrasada</span>}
-          <span>{textoDoMotivo(motivos[0], nomeDoCargo, tom === 'vencido')}</span>
-          {motivos.length > 1 && <em>+{motivos.length - 1}</em>}
-        </p>
-      )}
-
-      {/* a descricao e opcional: sem ela o card nao abre um vazio no meio */}
-      {obra.descricao && <p className="obracard__desc">{obra.descricao}</p>}
-
-      {mostraExecucao && (
-        <span className="obracard__exec" title="Execução dos ensaios (média dos ensaios planejados)">
-          <span>Execução</span>
-          <span className="obracard__barra" role="img" aria-label={`${execucao.geral}% executado`}>
-            <span style={{ width: `${execucao.geral}%` }} />
-          </span>
-          <strong>{execucao.geral}%</strong>
-        </span>
-      )}
-
-      {marcas.length > 0 && (
-        <span className="obracard__etiquetas">
-          {marcas.map((e) => (
-            <span
-              key={e.id}
-              className="obracard__etiqueta"
-              style={{ background: e.cor, color: textoSobre(e.cor, isDark) }}
-            >
-              {e.nome}
-            </span>
-          ))}
-        </span>
-      )}
-
-      <footer className="obracard__base">
-        <span className="obracard__meta">
-          {/* a cor vem do data-pri do card, e e a mesma do fio da
-              esquerda: vermelho alta, amarelo media, verde baixa, azul
-              no "Urgente" da emergencia */}
-          <span className="obracard__pri">
-            Prioridade: <strong>{rotuloPrioridadeObra(obra)}</strong>
-          </span>
-
-          {/* o inicio e, quando o ultimo check da obra for marcado, o
-              prazo final — o dia desse check. Antes disso ele nao existe */}
-          <span className="obracard__datas">
-            {obra.dataInicio && (
-              <span className="obracard__data">
-                início: <strong>{dataBR(obra.dataInicio)}</strong>
-              </span>
-            )}
-
-            {prazoFinal && (
-              <span className="obracard__data">
-                prazo final: <strong>{dataBR(prazoFinal)}</strong>
-              </span>
-            )}
-          </span>
-        </span>
-
-        {prontaEm && (
-          <span className="obracard__pronta">
-            Concluído em: <strong>{dataHora(prontaEm)}</strong>
-          </span>
-        )}
-      </footer>
     </button>
   )
 }
