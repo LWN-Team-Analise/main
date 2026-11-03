@@ -212,6 +212,49 @@ function falhou(erro, res, onde) {
 const recusa = (res, campo, erro, status = 400) => res.status(status).json({ erro, campo })
 
 /* ------------------------------------------------------------
+   A REFEICAO E O CLIENTE (atualizacao 39)
+
+   "Enviar refeição" so vale para o cliente que NAO oferece alimentacao
+   (cliente.oferece_alimentacao; a unidade sem resposta propria vale a
+   do cliente dela) e so para quem esta numa obra desse cliente — quem
+   marcou check nela ou foi incluido em Membros e aceitou. O cliente que
+   oferece a refeicao (sim no cadastro) nao recebe envio de refeicao.
+
+   A conta e uma so, em SQL, para a recusa do envio e para a lista que a
+   tela usa (GET /refeicao/clientes): `$1` e quem envia.
+   ------------------------------------------------------------ */
+const CLIENTES_DA_REFEICAO = `
+  SELECT c.id,
+         coalesce(c.oferece_alimentacao, m.oferece_alimentacao) IS TRUE AS oferece,
+         EXISTS (
+           SELECT 1 FROM obra o
+            WHERE (o.cliente_id = c.id OR o.cliente_id = c.matriz_id
+                   OR o.cliente_id IN (SELECT u.id FROM cliente u WHERE u.matriz_id = c.id))
+              AND (EXISTS (SELECT 1 FROM obra_membro om WHERE om.obra_id = o.id AND om.usuario_id = $1)
+                   OR EXISTS (SELECT 1 FROM obra_membro_parcial op
+                               WHERE op.obra_id = o.id AND op.usuario_id = $1 AND op.status = 'aceito'))
+         ) AS na_obra
+    FROM cliente c
+    LEFT JOIN cliente m ON m.id = c.matriz_id`
+
+/** O porque da recusa da refeicao para este cliente, ou null quando pode. */
+async function refeicaoRecusada(clienteId, usuarioId) {
+  let linha
+  try {
+    const { rows } = await query(`${CLIENTES_DA_REFEICAO} WHERE c.id = $2`, [usuarioId, clienteId])
+    linha = rows[0]
+  } catch (erro) {
+    /* banco sem a atualizacao 39: a regra de antes (qualquer cliente) */
+    if (erro.code === '42703') return null
+    throw erro
+  }
+  if (!linha) return null
+  if (linha.oferece) return 'Este cliente oferece alimentação: não há envio de refeição para ele.'
+  if (!linha.na_obra) return 'A refeição só pode ser enviada por quem está em uma obra deste cliente (Membros da obra).'
+  return null
+}
+
+/* ------------------------------------------------------------
    Datas
 
    Tudo em 'AAAA-MM-DD', comparado como texto — nessa forma a ordem
@@ -510,6 +553,26 @@ export async function atualizarPlanilhaNoSharePoint() {
    ENVIAR
    ============================================================ */
 
+/**
+ * GET /refeicao/clientes — para quem esta logado: os clientes em que ele
+ * pode lancar refeicao (`permitidos`) e os que oferecem a alimentacao
+ * (`oferecem`). E o que o "Enviar refeição" mostra no campo Cliente.
+ * Banco sem a atualizacao 39: `regra: false` (vale qualquer cliente).
+ */
+router.get('/refeicao/clientes', exigeSessao, exige(PERMISSAO_VER), async (req, res) => {
+  try {
+    const { rows } = await query(CLIENTES_DA_REFEICAO, [req.dono.sub])
+    return res.json({
+      regra: true,
+      permitidos: rows.filter((l) => !l.oferece && l.na_obra).map((l) => String(l.id)),
+      oferecem: rows.filter((l) => l.oferece).map((l) => String(l.id)),
+    })
+  } catch (erro) {
+    if (erro.code === '42703') return res.json({ regra: false, permitidos: [], oferecem: [] })
+    return tratar(erro, res, 'despesas/refeicao-clientes')
+  }
+})
+
 router.post('/envios', exigeSessao, exige(PERMISSAO_ENVIAR), async (req, res) => {
   const corpo = req.body ?? {}
   const categoria = texto(corpo.categoria)
@@ -583,6 +646,12 @@ router.post('/envios', exigeSessao, exige(PERMISSAO_ENVIAR), async (req, res) =>
     const cliente = await query('SELECT nome FROM cliente WHERE id = $1', [clienteId])
     if (!cliente.rows[0]) {
       return recusa(res, 'clienteId', 'O cliente escolhido não existe mais. Escolha outro.')
+    }
+
+    /* a refeicao: so cliente que nao oferece, e so de quem esta na obra dele */
+    if (categoria === 'refeicao') {
+      const recusada = await refeicaoRecusada(clienteId, req.dono.sub)
+      if (recusada) return recusa(res, 'clienteId', recusada)
     }
 
     /* a obra, quando vem, tem de ser DESSE cliente — senao o envio

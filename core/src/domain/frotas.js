@@ -39,7 +39,8 @@ export const POSICOES = [
 export const CHAVES_POSICAO = POSICOES.map((p) => p.chave)
 
 /**
- * As perguntas de sim/nao da devolucao, na ordem do formulario.
+ * As perguntas de sim/nao da devolucao — e, desde a atualizacao 39, da
+ * saida tambem —, na ordem do formulario.
  *
  * `importante`: o NAO dela e um problema e fica em vermelho na lista
  * de registros. O "Sem Parar" e a excecao — nao usar o Sem Parar nao
@@ -67,6 +68,38 @@ export const CHECKLIST = [
 ]
 
 export const CHAVES_CHECKLIST = CHECKLIST.map((c) => c.chave)
+
+/* ---------------- O combustivel da devolucao (atualizacao 39) ---------------- */
+
+/**
+ * O nivel do tanque na DEVOLUCAO, em % (veiculo_registro.combustivel).
+ * O carro volta com METADE ou mais: abaixo disso a devolucao entra do
+ * mesmo jeito, mas o servidor avisa no Teams quem esta num setor com
+ * `alerta_combustivel_frota`.
+ */
+export const NIVEIS_COMBUSTIVEL = [
+  { valor: 0, rotulo: 'Reserva' },
+  { valor: 25, rotulo: '1/4' },
+  { valor: 50, rotulo: '1/2 (metade)' },
+  { valor: 75, rotulo: '3/4' },
+  { valor: 100, rotulo: 'Cheio' },
+]
+
+export const COMBUSTIVEL_MINIMO = 50
+
+export const PERGUNTA_COMBUSTIVEL = 'Qual o nível do combustível (marcador do painel)?'
+
+/** '50' / 50 -> 50; o que nao e um dos niveis -> null. */
+export function lerCombustivel(valor) {
+  if (valor === null || valor === undefined || valor === '') return null
+  const n = Number(valor)
+  return NIVEIS_COMBUSTIVEL.some((nivel) => nivel.valor === n) ? n : null
+}
+
+/** 25 -> '1/4'; null -> '' */
+export function rotuloDoCombustivel(valor) {
+  return NIVEIS_COMBUSTIVEL.find((nivel) => nivel.valor === Number(valor))?.rotulo ?? ''
+}
 
 export const PERGUNTA_POSTO =
   'Em qual posto e qual o valor aproximado do abastecimento? (Exemplo: Posto Ipiranga Barueri, R$ 20,50)'
@@ -126,7 +159,9 @@ export function bytesDoDataUrl(dataUrl) {
  * registros antigos tinham algumas) nao entra.
  */
 export function alertasDe(registro) {
-  if (registro?.tipo !== 'devolucao') return []
+  /* a saida (e a troca) passou a responder as mesmas perguntas (atualizacao
+     39): o registro sem checklist e o antigo, de antes disso */
+  if (!registro?.checklist) return []
   return CHECKLIST.filter((c) => c.importante && registro.checklist?.[c.chave] === false).map((c) => c.chave)
 }
 

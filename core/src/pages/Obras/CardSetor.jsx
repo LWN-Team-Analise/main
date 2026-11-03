@@ -8,6 +8,8 @@ import {
   CHECK_PRAZO_EXECUCAO,
   CHECK_RESERVA,
   CHECK_RETIRADA,
+  CHECK_ENVIAR_OS,
+  DICA_ENVIAR_OS,
   checksExigidos,
   checkTemDonoProprio,
   anexoDaProposta,
@@ -80,7 +82,8 @@ export default function CardSetor({
   /* "de outro" e quando NENHUM check do card abre para a pessoa: o card
      e de outro setor, ela nao esta na obra, ou o cargo dela nao marca
      estes (atualizacao 37). O cadeado diz qual dos tres */
-  const travas = card.checks.map((c) => travaDoCheck(usuario, c, card, obra))
+  /* o "Enviar OS" fica de fora: ele nao abre para ninguem (so o Almoxarife marca) */
+  const travas = card.checks.filter((c) => c.tipo !== CHECK_ENVIAR_OS).map((c) => travaDoCheck(usuario, c, card, obra))
   const semPermissao = travas.length > 0 && travas.every(Boolean)
   const motivoDoCard = travas.includes('membro') ? 'membro' : travas.includes('setor') ? 'setor' : 'cargo'
   const cor = corDoSetorDoCard(card, corSuaveDoCargo)
@@ -259,7 +262,9 @@ export default function CardSetor({
               : check.opcional
                 ? 'Opcional: esta obra não tem ensaio de GASES.'
                 : `Obrigatório: esta obra tem ensaio de GASES atribuído (${check.exigidoPor.join(', ')}).`
-          const dicaDoCheck = [porqueGases, check.informacoes].filter(Boolean).join('\n\n')
+          /* o "Enviar OS" (atualizacao 38): marcado pelo Almoxarife, nunca no clique */
+          const enviarOS = check.tipo === CHECK_ENVIAR_OS
+          const dicaDoCheck = [porqueGases, enviarOS ? DICA_ENVIAR_OS : '', check.informacoes].filter(Boolean).join('\n\n')
           /* so o check que ainda vale tem ordem: o que ja saiu do roteiro
              (e uma obra antiga ainda mostra) nao se arrasta */
           const arrastavel = Boolean(arraste) && podeChecks && !check.vigenteAte
@@ -288,7 +293,7 @@ export default function CardSetor({
                 type="button"
                 className={`tarefa ${feito ? 'is-feita' : ''} ${resposta === false ? 'is-nao' : ''} ${
                   !modelo && !meu && !abreSemPermissao ? 'is-deoutro' : ''
-                } ${doSistema || proposta || doCarro ? 'is-sistema' : ''} ${modelo ? 'is-modelo' : ''}`.trim()}
+                } ${doSistema || proposta || doCarro || enviarOS ? 'is-sistema' : ''} ${modelo ? 'is-modelo' : ''}`.trim()}
                 onClick={() => !travadoAqui && aoMarcar(check)}
                 aria-disabled={travadoAqui || undefined}
                 title={

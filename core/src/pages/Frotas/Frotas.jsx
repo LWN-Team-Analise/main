@@ -195,12 +195,14 @@ export default function Frotas() {
     carregar()
   }, [carregar])
 
-  const registrado = (registro) => {
+  const registrado = (registro, resposta) => {
     setRetirando(null)
     const qual = TIPOS[registro.tipo]?.rotulo ?? 'Registro'
     setRecado(
       `${qual} do ${registro.veiculoNome} registrada: ${registro.condutorNome}, ${kmLegivel(registro.km)}.` +
-        (registro.alertas?.length ? ` Atenção: ${registro.alertas.length} item(ns) do checklist com "não".` : ''),
+        (registro.alertas?.length ? ` Atenção: ${registro.alertas.length} item(ns) do checklist com "não".` : '') +
+        /* abaixo da metade do tanque (atualizacao 39): o setor responsavel foi avisado no Teams */
+        (resposta?.combustivelBaixo ? ' O combustível ficou abaixo dos 50% obrigatórios: o setor responsável foi avisado.' : ''),
     )
     carregar()
   }

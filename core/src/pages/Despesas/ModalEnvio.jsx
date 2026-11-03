@@ -136,6 +136,8 @@ export default function ModalEnvio({ categoria, valores = VALORES_FIXOS, aoFecha
   const [preparando, setPreparando] = useState(false)
   const [erros, setErros] = useState({})
   const [salvando, setSalvando] = useState(false)
+  /* a refeicao (atualizacao 39): os clientes em que a pessoa pode lancar */
+  const [daRefeicao, setDaRefeicao] = useState(null)
 
   /* abriu: comeca limpo, com a data de hoje */
   useEffect(() => {
@@ -146,14 +148,32 @@ export default function ModalEnvio({ categoria, valores = VALORES_FIXOS, aoFecha
     setPreparando(false)
   }, [aberto, categoria])
 
+  /* "Enviar refeição" so para o cliente que NAO oferece alimentacao, e so
+     de quem esta numa obra dele (o servidor confere igual) */
+  useEffect(() => {
+    if (!aberto || categoria !== 'refeicao') return undefined
+    let vivo = true
+    setDaRefeicao(null)
+    despesasApi
+      .carregarClientesDaRefeicao()
+      .then((r) => vivo && setDaRefeicao(r))
+      .catch(() => vivo && setDaRefeicao({ regra: false, permitidos: [], oferecem: [] }))
+    return () => {
+      vivo = false
+    }
+  }, [aberto, categoria])
+
   /* ---- cliente ----
      Obrigatorio. As unidades da LWN (prioritarias) vem primeiro: a
      ordem e a do servidor. O cliente com unidades e so a vitrine delas
      e sai da lista: escolhe-se a unidade. */
-  const opcoesCliente = useMemo(
-    () => clientesParaEscolher(clientes, form.clienteId).map((c) => ({ valor: String(c.id), rotulo: c.nome })),
-    [clientes, form.clienteId],
-  )
+  const opcoesCliente = useMemo(() => {
+    const regra = categoria === 'refeicao' && daRefeicao?.regra
+    const pode = new Set(daRefeicao?.permitidos ?? [])
+    return clientesParaEscolher(clientes, form.clienteId)
+      .filter((c) => !regra || pode.has(String(c.id)))
+      .map((c) => ({ valor: String(c.id), rotulo: c.nome }))
+  }, [clientes, form.clienteId, categoria, daRefeicao])
 
   const mudar = (campo) => (evento) => {
     const valor = evento?.target ? evento.target.value : evento
@@ -276,10 +296,19 @@ export default function ModalEnvio({ categoria, valores = VALORES_FIXOS, aoFecha
     )
 
   const campoObra =
-    opcoesCliente.length === 0 ? (
+    categoria === 'refeicao' && !daRefeicao ? (
       <div key="obra" className="campo">
         <span className="campo__rotulo">Cliente</span>
-        <p className="formdesp__aviso">Nenhum cliente cadastrado ainda. Os envios são lançados para um cliente.</p>
+        <p className="formdesp__aviso">Carregando os clientes...</p>
+      </div>
+    ) : opcoesCliente.length === 0 ? (
+      <div key="obra" className="campo">
+        <span className="campo__rotulo">Cliente</span>
+        <p className="formdesp__aviso">
+          {categoria === 'refeicao' && daRefeicao?.regra
+            ? 'A refeição só pode ser enviada para o cliente que não oferece alimentação, e por quem está em uma obra dele. Você não está em nenhuma obra assim.'
+            : 'Nenhum cliente cadastrado ainda. Os envios são lançados para um cliente.'}
+        </p>
       </div>
     ) : (
       <div key="obra" className={`campo ${erros.clienteId ? 'has-erro' : ''}`.trim()}>

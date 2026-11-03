@@ -493,6 +493,7 @@ export default function Home() {
                   { valor: 'obras', rotulo: 'Obras' },
                   { valor: 'despesas', rotulo: 'Despesas' },
                   { valor: 'frotas', rotulo: 'Frotas' },
+                  ...(pode('ver_almoxarife') && pode('almox_relatorios') ? [{ valor: 'almoxarife', rotulo: 'Almoxarife' }] : []),
                   ...(pode('ver_comercial') ? [{ valor: 'comercial', rotulo: 'Comercial' }] : []),
                 ]}
               />

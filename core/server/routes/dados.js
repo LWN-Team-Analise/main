@@ -204,6 +204,10 @@ const paraCliente = (l) => ({
   matrizId: l.matriz_id === null || l.matriz_id === undefined ? null : String(l.matriz_id),
   unidade: l.unidade ?? null,
   servico: l.servico ?? null,
+  /* "Oferece alimentação?" (atualizacao 39): true = o cliente da a
+     refeicao, e o Reembolso nao aceita "Enviar refeição" para ele. A
+     unidade sem resposta propria vale a do cliente */
+  ofereceAlimentacao: typeof l.oferece_alimentacao === 'boolean' ? l.oferece_alimentacao : null,
   criadoEm: l.criado_em,
 })
 
@@ -242,13 +246,19 @@ async function lerTermos() {
    `c` e a linha; `i` e de onde vem a imagem, o setor e a prioridade:
    o proprio cliente, ou — na UNIDADE (atualizacao 33) — o cliente dela,
    para o Einstein Anapolis ter a logo e o setor do Einstein. */
-const COLUNAS_CLIENTE = `c.id, c.nome, i.recorte_logo, i.recorte_capa, i.setor_id, c.endereco, c.bairro,
+const COLUNAS_CLIENTE_38 = `c.id, c.nome, i.recorte_logo, i.recorte_capa, i.setor_id, c.endereco, c.bairro,
   c.cidade, c.estado, c.cep, c.pais, c.criado_em, i.ordem_prioridade, c.proprietario_id, c.proximo_contato,
   c.matriz_id, c.unidade, c.servico,
   md5(coalesce(i.logo, '') || '|' || coalesce(i.capa, '')) AS imagem_versao`
 
+/* com o "Oferece alimentação?" (atualizacao 39) */
+const COLUNAS_CLIENTE = COLUNAS_CLIENTE_38.replace(
+  ' c.servico,',
+  ' c.servico, coalesce(c.oferece_alimentacao, i.oferece_alimentacao) AS oferece_alimentacao,',
+)
+
 /* banco com o servico das unidades e sem o pais (sem a atualizacao 35) */
-const COLUNAS_CLIENTE_34 = COLUNAS_CLIENTE.replace(' c.pais,', '')
+const COLUNAS_CLIENTE_34 = COLUNAS_CLIENTE_38.replace(' c.pais,', '')
 
 /* banco com as unidades e sem o servico delas (sem a atualizacao 34) */
 const COLUNAS_CLIENTE_33 = COLUNAS_CLIENTE_34.replace(' c.servico,', '')
@@ -272,6 +282,16 @@ async function lerClientes(imagens) {
          JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
         ${ORDEM_CLIENTES}`,
     )
+      .catch((erro) => {
+        /* banco sem o "Oferece alimentação?" (atualizacao 39) */
+        if (erro.code !== '42703') throw erro
+        return query(
+          `SELECT ${COLUNAS_CLIENTE_38}${imagens ? ', i.logo, i.capa' : ''}
+             FROM cliente c
+             JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
+            ${ORDEM_CLIENTES}`,
+        )
+      })
       .catch((erro) => {
         /* banco sem o pais: o endereco e todo do Brasil */
         if (erro.code !== '42703') throw erro
@@ -1235,7 +1255,22 @@ function lerExtrasDoCliente(corpo) {
     pessoas: pessoas ? limpas : null,
     proximoContato: proximo || null,
     proprietarioId: /^\d{1,15}$/.test(dono) ? dono : null,
+    /* "Oferece alimentação?": sim, nao ou sem resposta (null). Fora do
+       corpo = a tela nao mexeu, e fica como estava */
+    ofereceAlimentacao:
+      corpo && 'ofereceAlimentacao' in corpo
+        ? typeof corpo.ofereceAlimentacao === 'boolean'
+          ? corpo.ofereceAlimentacao
+          : null
+        : undefined,
   }
+}
+
+/* banco sem a atualizacao 39: o resto do cadastro grava, sem a resposta */
+async function gravarAlimentacao(clienteId, valor) {
+  await query('UPDATE cliente SET oferece_alimentacao = $2 WHERE id = $1', [clienteId, valor]).catch((erro) => {
+    if (erro.code !== '42703') throw erro
+  })
 }
 
 async function gravarExtrasDoCliente(clienteId, extras, { novo, usuarioId }) {
@@ -1266,6 +1301,7 @@ async function gravarExtrasDoCliente(clienteId, extras, { novo, usuarioId }) {
         }
       }
     })
+    if (extras.ofereceAlimentacao !== undefined) await gravarAlimentacao(clienteId, extras.ofereceAlimentacao)
   } catch (erro) {
     /* banco ainda sem a atualizacao 27: o cadastro em si ja foi gravado */
     if (erro.code === '42P01' || erro.code === '42703') return
@@ -2493,7 +2529,8 @@ async function recusouMarcar(res, usuarioId, checkId, obraId, deOutro) {
  *           ainda nao tem a atualizacao 13 — ai nao existe pergunta
  *           nem coluna de resposta, e a marcacao segue como sempre;
  *   tipo    'comum', 'planejamento_ensaios', 'execucao_ensaios',
- *           'material_gases', 'prazo_execucao', 'reserva_carro' ou 'retirada_carro';
+ *           'material_gases', 'prazo_execucao', 'reserva_carro', 'retirada_carro'
+ *           ou 'enviar_os' (este so o Almoxarife marca);
  *   papel   o papel da etapa dele. Na de 'execucao' nada se marca
  *           sem o prazo da execucao.
  */
@@ -2773,6 +2810,15 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
     const resposta = req.body?.resposta
     const semInformacao = req.body?.semInformacao === true
 
+    /* O "Enviar OS" (3a etapa, atualizacao 38) e o unico check que ninguem
+       marca na mao — nem concluindo sem a informacao: quem marca e o
+       Almoxarife, quando uma OS desta obra e aprovada (server/almoxarife) */
+    if (regra.tipo === 'enviar_os') {
+      return res.status(409).json({
+        erro: 'Este check é marcado pelo sistema quando uma OS desta obra é aprovada no Almoxarife.',
+      })
+    }
+
     if (semInformacao && !cargoPode(await meuCargo(req.dono.sub), 'check_sem_informacao')) {
       return res.status(403).json({ erro: 'Seu setor não tem permissão para concluir check sem a informação.' })
     }
@@ -2870,6 +2916,13 @@ router.delete('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req,
        O concluido SEM a informacao (atualizacao 36) nao acompanha nada —
        nem o prazo, nem a reserva, nem a saida —, e desmarca como os outros */
     const { tipo } = await regraDoCheck(req.params.checkId)
+    /* o "Enviar OS" acompanha a OS aprovada no Almoxarife: sai sozinho se
+       a OS for excluida */
+    if (tipo === 'enviar_os') {
+      return res.status(409).json({
+        erro: 'Este check acompanha a OS aprovada no Almoxarife e não se desmarca por aqui.',
+      })
+    }
     const semInformacao = await concluidoSemInformacao(req.params.id, req.params.checkId)
     if (tipo === 'prazo_execucao' && !semInformacao) {
       return res.status(409).json({

@@ -448,6 +448,20 @@ export const nomeDaProposta = (anexo) => String(anexo?.nome ?? '').slice(PREFIXO
 export const CHECK_RESERVA = 'reserva_carro'
 export const CHECK_RETIRADA = 'retirada_carro'
 
+/* ------------------------------------------------------------
+   O "Enviar OS" (atualizacao 38)
+
+   3a etapa, card do Time Tecnico. E o UNICO check que ninguem marca na
+   mao — nem concluindo sem a informacao: quem marca e o Almoxarife,
+   quando uma OS ligada a esta obra e APROVADA (server/almoxarife). A OS
+   aprovada que e excluida leva o check junto.
+   ------------------------------------------------------------ */
+
+export const CHECK_ENVIAR_OS = 'enviar_os'
+
+export const DICA_ENVIAR_OS =
+  'Marcado pelo sistema: a OS pedida no Almoxarife para esta obra (cliente e obra escolhidos na Solicitação) marca este check quando é aprovada.'
+
 /** O roteiro da obra sem o "Retirada do carro" quando ela nao reservou carro. */
 export function aplicarRegraDaReserva(roteiro, obra) {
   if (obra?.reserva?.veiculoId) return roteiro
@@ -884,6 +898,8 @@ export function ehMembroDaObra(usuario, obra) {
  */
 export function travaDoCheck(usuario, check, card, obra) {
   if (!usuario) return 'setor'
+  /* nem o acesso total marca o "Enviar OS": e do Almoxarife */
+  if (check?.tipo === CHECK_ENVIAR_OS) return 'sistema'
   if (temAcessoTotal(usuario)) return null
   if (usuario.checkSoNaObra !== false && !podeFazer(usuario, 'check_todas_obras') && !ehMembroDaObra(usuario, obra)) {
     return 'membro'

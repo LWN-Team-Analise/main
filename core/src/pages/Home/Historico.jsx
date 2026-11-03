@@ -53,6 +53,9 @@ const ROTULOS = {
   prazo_final: 'Prazo final',
   inicio: 'Início',
   prazo_execucao: 'Prazo da execução',
+  /* o "Enviar OS" marcado pelo Almoxarife (atualizacao 38) */
+  os: 'OS',
+  aprovada_por: 'Aprovada por',
   dias: 'Dias',
   dia: 'Dia',
   ensaio: 'Ensaio',

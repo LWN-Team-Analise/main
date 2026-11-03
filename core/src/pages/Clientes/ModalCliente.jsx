@@ -54,6 +54,9 @@ const VAZIO = {
      select de cliente e na aba Clientes (a ordem_prioridade da atualizacao
      23, a mesma das unidades da LWN) */
   fixado: false,
+  /* "Oferece alimentação?" (atualizacao 39): true, false ou null (sem
+     resposta). Quem oferece nao recebe "Enviar refeição" no Reembolso */
+  ofereceAlimentacao: null,
   /* as unidades (atualizacao 33): Einstein Anapolis, Einstein Alphaville... */
   unidades: [],
   /* a UNIDADE cadastrada ou editada sozinha: o cliente dela (o "Unidade
@@ -152,6 +155,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
               fixado: cliente.ordemPrioridade !== null && cliente.ordemPrioridade !== undefined,
               proprietarioId: cliente.proprietarioId ?? '',
               proximoContato: cliente.proximoContato ?? '',
+              ofereceAlimentacao: typeof cliente.ofereceAlimentacao === 'boolean' ? cliente.ofereceAlimentacao : null,
               pessoas: (cliente.pessoas ?? []).map((p) => ({ ...PESSOA_VAZIA, ...p })),
               matrizId: cliente.matrizId ?? '',
               unidade: cliente.unidade ?? '',
@@ -216,6 +220,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
       ...enderecoDoBanco(escolhido),
       proprietarioId: escolhido.proprietarioId ?? (user?.id ? String(user.id) : ''),
       proximoContato: escolhido.proximoContato ?? '',
+      ofereceAlimentacao: typeof escolhido.ofereceAlimentacao === 'boolean' ? escolhido.ofereceAlimentacao : null,
       /* copias: as pessoas da unidade sao dela, sem mexer nas do cliente */
       pessoas: (escolhido.pessoas ?? []).map((p) => ({ ...PESSOA_VAZIA, ...p, id: null })),
     })
@@ -429,6 +434,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
         pessoas,
         proprietarioId: form.proprietarioId || null,
         proximoContato: form.proximoContato || null,
+        ofereceAlimentacao: form.ofereceAlimentacao,
       })
       aoFechar()
       return
@@ -451,6 +457,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
       cidade: u.cidade.trim(),
     }))
     campos.fixado = Boolean(form.fixado)
+    campos.ofereceAlimentacao = form.ofereceAlimentacao
     campos.proprietarioId = form.proprietarioId || null
     campos.proximoContato = form.proximoContato || null
     /* a imagem viaja em bloco, e SO quando alguem mexeu nela: os dois
@@ -619,6 +626,28 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
             </label>
           </>
         )}
+
+        {/* "Oferece alimentação?" (atualizacao 39): o sim tira o "Enviar
+            refeição" do Reembolso para as obras deste cliente; marcar de
+            novo o que ja estava marcado volta a "sem resposta" */}
+        <div className="formcli__alimentacao" role="group" aria-label="Oferece alimentação?">
+          <span className="campo__rotulo">Oferece alimentação?</span>
+          {[
+            { valor: true, rotulo: 'sim' },
+            { valor: false, rotulo: 'não' },
+          ].map((opcao) => (
+            <label key={opcao.rotulo} className="formcli__fixar">
+              <input
+                type="checkbox"
+                checked={form.ofereceAlimentacao === opcao.valor}
+                onChange={(e) =>
+                  setForm((atual) => ({ ...atual, ofereceAlimentacao: e.target.checked ? opcao.valor : null }))
+                }
+              />
+              <span>{opcao.rotulo}</span>
+            </label>
+          ))}
+        </div>
 
         {/* o endereco do cliente; com unidade ele some, e cada unidade
             tem o seu (la embaixo) */}

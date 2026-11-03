@@ -5,11 +5,13 @@ import { registrarAtividade } from '../atividade.js'
 import { depoisDeMarcar } from '../membrosObra.js'
 import { informacaoChegou } from '../semInformacao.js'
 import { logger } from '../logger.js'
+import { linkDoSite, mandarNoTeams } from '../teams.js'
 /* as perguntas, as posicoes das fotos e os limites sao os MESMOS da
    tela: um arquivo so, sem React dentro, importado pelos dois lados */
 import {
   CHAVES_CHECKLIST,
   CHAVES_POSICAO,
+  COMBUSTIVEL_MINIMO,
   FOTO_BYTES_MAXIMOS,
   KM_MAXIMO,
   NOME_VEICULO_MAXIMO,
@@ -18,9 +20,11 @@ import {
   TIPOS,
   alertasDe,
   kmLegivel,
+  lerCombustivel,
   lerHora,
   lerKm,
   lerSimNao,
+  rotuloDoCombustivel,
 } from '../../src/domain/frotas.js'
 import { AREA, HORARIOS, finaisDoDia, finalDaPlaca } from '../../src/domain/rodizio.js'
 import { CORREDORES, MUNICIPIOS_RMSP, REGIOES, nivelPelaVelocidade } from '../../src/domain/transito.js'
@@ -169,7 +173,11 @@ function paraVeiculo(l) {
 
 function paraRegistro(l) {
   const devolucao = l.tipo === 'devolucao'
-  const checklist = devolucao
+  /* a saida (e a troca) responde as mesmas perguntas desde a atualizacao
+     39; a de antes nao tem resposta nenhuma, e fica sem checklist */
+  const respondeu = [l.pneus, l.oleo, l.agua, l.abastecido, l.sem_parar, l.limpo_interno, l.limpo_externo, l.farois]
+    .some((v) => v !== null && v !== undefined)
+  const checklist = devolucao || respondeu
     ? {
         pneus: l.pneus,
         oleo: l.oleo,
@@ -201,6 +209,8 @@ function paraRegistro(l) {
     observacao: l.observacao ?? '',
     checklist,
     posto: l.posto ?? '',
+    /* o nivel do tanque na devolucao, em % (atualizacao 39) */
+    combustivel: l.combustivel ?? null,
     fotos: Number(l.fotos ?? 0),
     fotosExternas: l.fotos_externas ?? [],
     daPlanilha: l.planilha_id !== null && l.planilha_id !== undefined,
@@ -494,6 +504,63 @@ async function gravarFotos(cliente, registroId, fotos) {
   }
 }
 
+/** As respostas Sim/Nao (saida e devolucao) e o posto do Sem Parar. */
+function lerChecklist(corpo) {
+  const respostas = {}
+  for (const chave of CHAVES_CHECKLIST) {
+    const resposta = lerSimNao(corpo.checklist?.[chave])
+    if (resposta === null) throw new Recusa(`checklist.${chave}`, 'Responda sim ou não.')
+    respostas[chave] = resposta
+  }
+  const posto = respostas.semParar ? texto(corpo.posto) : ''
+  if (respostas.semParar && !posto) throw new Recusa('posto', 'Informe o posto e o valor aproximado do abastecimento.')
+  if (posto.length > POSTO_MAXIMO) throw new Recusa('posto', `No máximo ${POSTO_MAXIMO} caracteres.`)
+  return { respostas, posto }
+}
+
+/* banco sem a atualizacao 39: a devolucao grava sem o combustivel */
+let temCombustivel = null
+async function bancoTemCombustivel(db) {
+  if (temCombustivel) return true
+  const { rows } = await db.query(
+    `SELECT EXISTS (SELECT 1 FROM information_schema.columns
+                     WHERE table_name = 'veiculo_registro' AND column_name = 'combustivel') AS ok`,
+  )
+  temCombustivel = rows[0]?.ok === true
+  return temCombustivel
+}
+
+/**
+ * O carro voltou com MENOS da metade do tanque: o aviso no Teams para quem
+ * esta num setor com `alerta_combustivel_frota` (so a chave marcada conta —
+ * o acesso total nao entra sozinho). Nunca derruba a devolucao.
+ */
+async function avisarCombustivel({ condutor, veiculo, nivel, quemRegistrou }) {
+  try {
+    const { rows } = await query(
+      `SELECT u.id FROM usuario u JOIN cargo c ON c.id = u.cargo_id
+        WHERE coalesce(u.ativo, true) AND 'alerta_combustivel_frota' = ANY (c.permissoes)`,
+    )
+    if (!rows.length) return
+    const tanque = nivel === 0 ? 'na reserva' : `${rotuloDoCombustivel(nivel)} do tanque`
+    await mandarNoTeams(
+      rows.map((r) => r.id),
+      {
+        titulo: 'Devolução com menos de 50% de combustível',
+        linhas: [
+          `**${condutor}** devolveu o carro **${veiculo}** com o combustível abaixo dos 50% obrigatórios (${tanque}).`,
+          quemRegistrou && quemRegistrou !== condutor ? `Registrado por ${quemRegistrou}.` : null,
+        ],
+        link: linkDoSite('/core/app/frotas/registros'),
+        rotuloLink: 'Abrir as saídas e devoluções',
+      },
+    )
+  } catch (erro) {
+    logger.error('frotas/aviso-combustivel', erro.message)
+  }
+}
+
+
 /** Um registro inteiro, no formato da lista. */
 async function lerUmRegistro(id) {
   const { rows } = await query(`${CONSULTA_REGISTROS} SELECT * FROM base WHERE id = $1`, [id])
@@ -509,6 +576,8 @@ router.post('/saidas', exigeSessao, exige(REGISTRAR), async (req, res) => {
     const corpo = req.body ?? {}
     const dados = lerComum(corpo)
     if (!idValido(corpo.obraId)) throw new Recusa('obraId', 'Escolha a obra de destino.')
+    /* as mesmas perguntas Sim/Nao da devolucao (atualizacao 39) */
+    const { respostas, posto } = lerChecklist(corpo)
 
     const { registroId, tipo, veiculo, condutor, destino, retirada } = await emTransacao(async (cliente) => {
       const { veiculo: v, ultimo, condutor: c, quem } = await prepararRegistro(cliente, dados, req.dono.sub)
@@ -532,10 +601,16 @@ router.post('/saidas', exigeSessao, exige(REGISTRAR), async (req, res) => {
       const { rows } = await cliente.query(
         `INSERT INTO veiculo_registro (
            veiculo_id, tipo, usuario_id, usuario_nome, condutor_id, condutor_nome,
-           km, data, hora, obra_id, destino, observacao
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+           km, data, hora, obra_id, destino, observacao,
+           pneus, oleo, agua, abastecido, sem_parar, posto, limpo_interno, limpo_externo, farois
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
          RETURNING id`,
-        [v.id, tipoRegistro, req.dono.sub, quem, c.id, c.name, dados.km, dados.data, dados.hora, obra.id, destinoObra.slice(0, 500), dados.observacao],
+        [
+          v.id, tipoRegistro, req.dono.sub, quem, c.id, c.name, dados.km, dados.data, dados.hora, obra.id,
+          destinoObra.slice(0, 500), dados.observacao,
+          respostas.pneus, respostas.oleo, respostas.agua, respostas.abastecido, respostas.semParar,
+          posto || null, respostas.limpoInterno, respostas.limpoExterno, respostas.farois,
+        ],
       )
       await gravarFotos(cliente, rows[0].id, dados.fotos)
       await cliente.query('UPDATE veiculo SET km_atual = $2 WHERE id = $1', [v.id, dados.km])
@@ -570,17 +645,12 @@ router.post('/devolucoes', exigeSessao, exige(REGISTRAR), async (req, res) => {
     const corpo = req.body ?? {}
     const dados = lerComum(corpo)
 
-    const respostas = {}
-    for (const chave of CHAVES_CHECKLIST) {
-      const resposta = lerSimNao(corpo.checklist?.[chave])
-      if (resposta === null) throw new Recusa(`checklist.${chave}`, 'Responda sim ou não.')
-      respostas[chave] = resposta
-    }
-    const posto = respostas.semParar ? texto(corpo.posto) : ''
-    if (respostas.semParar && !posto) throw new Recusa('posto', 'Informe o posto e o valor aproximado do abastecimento.')
-    if (posto.length > POSTO_MAXIMO) throw new Recusa('posto', `No máximo ${POSTO_MAXIMO} caracteres.`)
+    const { respostas, posto } = lerChecklist(corpo)
+    /* o tanque: o carro volta com metade ou mais (atualizacao 39) */
+    const combustivel = lerCombustivel(corpo.combustivel)
+    if (combustivel === null) throw new Recusa('combustivel', 'Informe o nível do combustível.')
 
-    const { registroId, veiculo, condutor, alertas } = await emTransacao(async (cliente) => {
+    const { registroId, veiculo, condutor, alertas, quemRegistrou } = await emTransacao(async (cliente) => {
       const { veiculo: v, ultimo, condutor: c, quem } = await prepararRegistro(cliente, dados, req.dono.sub)
       if (!ultimo || ultimo.tipo === 'devolucao') {
         throw new Recusa('veiculoId', `O ${v.nome} não está em uso: ele já foi devolvido.`, 409)
@@ -614,6 +684,9 @@ router.post('/devolucoes', exigeSessao, exige(REGISTRAR), async (req, res) => {
           respostas.farois,
         ],
       )
+      if (await bancoTemCombustivel(cliente)) {
+        await cliente.query('UPDATE veiculo_registro SET combustivel = $2 WHERE id = $1', [rows[0].id, combustivel])
+      }
       await gravarFotos(cliente, rows[0].id, dados.fotos)
       await cliente.query('UPDATE veiculo SET km_atual = $2 WHERE id = $1', [v.id, dados.km])
       return {
@@ -621,6 +694,7 @@ router.post('/devolucoes', exigeSessao, exige(REGISTRAR), async (req, res) => {
         veiculo: v,
         condutor: c,
         alertas: alertasDe({ tipo: 'devolucao', checklist: respostas }).length,
+        quemRegistrou: quem,
       }
     })
 
@@ -634,9 +708,14 @@ router.post('/devolucoes', exigeSessao, exige(REGISTRAR), async (req, res) => {
         condutor: condutor.name,
         km: kmLegivel(dados.km),
         pendencias: alertas ? `${alertas} item(ns) com "não"` : undefined,
+        combustivel: `${combustivel}%`,
       },
     })
-    return res.status(201).json({ registro: await lerUmRegistro(registroId) })
+    /* abaixo da metade: a devolucao fica, e o setor responsavel e avisado */
+    if (combustivel < COMBUSTIVEL_MINIMO) {
+      await avisarCombustivel({ condutor: condutor.name, veiculo: veiculo.nome, nivel: combustivel, quemRegistrou })
+    }
+    return res.status(201).json({ registro: await lerUmRegistro(registroId), combustivelBaixo: combustivel < COMBUSTIVEL_MINIMO })
   } catch (erro) {
     if (erro instanceof Recusa) return res.status(erro.status).json({ erro: erro.message, campo: erro.campo })
     return falhou(erro, res, 'frotas/devolucoes')
@@ -1141,9 +1220,10 @@ const CONSULTA_REGISTROS = `
   )
 `
 
-/* a mesma regra de alertasDe (src/domain/frotas.js), em SQL: devolucao
-   com algum NAO importante — o Sem Parar nao conta */
-const COM_ALERTA = `(tipo = 'devolucao' AND false IN (pneus, oleo, agua, abastecido, limpo_interno, limpo_externo, farois))`
+/* a mesma regra de alertasDe (src/domain/frotas.js), em SQL: registro
+   com algum NAO importante — o Sem Parar nao conta. A saida antiga nao
+   respondeu nada (tudo NULL) e nao entra */
+const COM_ALERTA = `(false IN (pneus, oleo, agua, abastecido, limpo_interno, limpo_externo, farois))`
 
 router.get('/registros', exigeSessao, exige(VER), async (req, res) => {
   const filtros = []

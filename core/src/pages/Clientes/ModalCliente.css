@@ -431,3 +431,22 @@
   accent-color: var(--accent);
   cursor: pointer;
 }
+
+/* "Oferece alimentação? [ ] sim [ ] não" (atualizacao 39): a pergunta e as
+   duas caixas na mesma linha, ocupando a largura do formulario */
+.formcli__alimentacao {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 18px;
+}
+
+.formcli__alimentacao .campo__rotulo {
+  margin: 0;
+}
+
+.formcli__alimentacao .formcli__fixar {
+  min-height: 36px;
+  align-self: center;
+}
