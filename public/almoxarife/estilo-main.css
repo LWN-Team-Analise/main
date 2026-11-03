@@ -17,7 +17,7 @@
 
    O que mede e move a marca e public/almoxarife/menu-main.js — a mesma
    conta do AppShell.jsx. No fim do arquivo, a cola com o layout do
-   lwncontrol (a coluna, os contadores dos itens, o Voltar e o celular).
+   lwncontrol (a coluna, os contadores dos itens e o celular).
    ============================================================ */
 
 :root {
@@ -796,12 +796,34 @@ body.dark-mode .rail .menu-item.rail__btn.active,
   display: none !important;
 }
 
-/* "Remanejamento" e a unica palavra das abas que nao cabe na largura do
-   item: um ponto menor, para nao quebrar no meio */
+/* As abas do Almoxarife tem palavras mais compridas que as do main:
+   "Certificados", "Localização", "Manutenção" e "Remanejamento" nao
+   cabem na largura do item no tamanho do main e quebrariam no meio da
+   palavra. Essas quatro ficam um ponto menores — e mais um pouco abaixo de
+   1000px, onde a bolha estreita para 66px (como no main) */
+.rail__btn[onclick*="'certificados'"] .rail__rotulo,
+.rail__btn[onclick*="'localizacao'"] .rail__rotulo,
+.rail__btn[onclick*="'manutencao'"] .rail__rotulo,
 .rail__btn[onclick*="'remanejamento'"] .rail__rotulo {
   font-size: 0.5rem;
   letter-spacing: -0.02em;
   overflow-wrap: normal;
+}
+
+.rail__btn[onclick*="'remanejamento'"] .rail__rotulo {
+  font-size: 0.46rem;
+}
+
+@media (max-width: 1000px) {
+  .rail__btn[onclick*="'certificados'"] .rail__rotulo,
+  .rail__btn[onclick*="'localizacao'"] .rail__rotulo,
+  .rail__btn[onclick*="'manutencao'"] .rail__rotulo {
+    font-size: 0.46rem;
+  }
+
+  .rail__btn[onclick*="'remanejamento'"] .rail__rotulo {
+    font-size: 0.42rem;
+  }
 }
 
 /* a logo certa para cada tema */
@@ -814,28 +836,9 @@ body.dark-mode .marca .logo-escuro {
   display: block;
 }
 
-/* o "Voltar", logo abaixo da logo, no eixo da bolha */
-.almox-voltar.almox-voltar--lateral {
-  position: fixed;
-  left: 10px;
-  top: 62px;
-  z-index: 21;
-  width: 72px;
-  margin: 0;
-  padding: 0.25rem 0.35rem;
-  justify-content: center;
-  gap: 0.15rem;
-  font-size: 0.62rem;
-}
-
 @media (max-width: 1000px) {
   :root {
     --sidebar-width: 78px;
-  }
-
-  .almox-voltar.almox-voltar--lateral {
-    width: 66px;
-    left: 8px;
   }
 }
 
@@ -843,8 +846,7 @@ body.dark-mode .marca .logo-escuro {
 @media (max-width: 768px) {
   .marca,
   .rail,
-  .euzinho,
-  .almox-voltar.almox-voltar--lateral {
+  .euzinho {
     display: none !important;
   }
 }
