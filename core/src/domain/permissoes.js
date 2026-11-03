@@ -60,7 +60,6 @@ export const ALMOXARIFE_MODULOS = [
   ['instrumentos', 'Inventário'],
   ['remanejamento', 'Remanejamento'],
   ['calibracao', 'Calibração'],
-  ['clientes', 'Clientes do Almoxarife'],
   ['relatorios', 'Dashboard do Almoxarife (página inicial)'],
   ['manutencao', 'Manutenção'],
   ['manutencao_somente_leitura', 'Manutenção — apenas visualizar'],

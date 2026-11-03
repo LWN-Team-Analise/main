@@ -7792,7 +7792,7 @@ function showSolicitacaoConfirm() {
     
     confirmBody.innerHTML = `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-bottom:1rem;">
-            <div><strong>Cliente:</strong> ${cliente}</div>
+            <div><strong>Cliente:</strong> ${cliente}</div>${(() => { const o = typeof almoxObraDaOS === 'function' ? almoxObraDaOS().obra_rotulo : null; return o ? '<div><strong>Obra:</strong> ' + o + '</div>' : ''; })()}
             <div><strong>Responsável:</strong> ${supervisor}</div>
             <div><strong>Data Início:</strong> ${formatDate(startDate)}</div>
             <div><strong>Data Fim:</strong> ${formatDate(endDate)}</div>
@@ -7867,7 +7867,7 @@ function abrirConfirmacaoFinalSolicitacao() {
             </div>
             <div class="modal-body" style="padding:1.5rem;">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:1rem;font-size:0.85rem;">
-                    <div><strong>Cliente:</strong> ${cliente}</div>
+                    <div><strong>Cliente:</strong> ${cliente}</div>${(() => { const o = typeof almoxObraDaOS === 'function' ? almoxObraDaOS().obra_rotulo : null; return o ? '<div><strong>Obra:</strong> ' + o + '</div>' : ''; })()}
                     <div><strong>Responsável:</strong> ${supervisor}</div>
                     <div><strong>Data Início:</strong> ${formatDate(startDate)}</div>
                     <div><strong>Data Fim:</strong> ${formatDate(endDate)}</div>

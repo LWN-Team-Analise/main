@@ -1,0 +1,326 @@
+/* ============================================================
+   O ALMOXARIFE COM A CARA DO ATMOSFERA LWN
+
+   A tela continua sendo a do lwncontrol; o que muda aqui e a barra
+   lateral, que passa a ser a do resto do sistema (core/src/components/
+   AppShell): a logo solta no alto, a bolha de vidro flutuante com os
+   itens em icone + nome embaixo, o anel azul girando no item aceso e a
+   foto de quem esta logado no pe. As cores e medidas sao as de
+   core/src/styles/tokens.css e AppShell.css.
+
+   So no computador (769px ou mais). No celular a barra lateral do
+   lwncontrol ja fica escondida e quem navega e a barra de baixo dele,
+   que continua como estava.
+   ============================================================ */
+
+:root {
+  --am-texto-forte: #0d0d0d;
+  --am-texto-fraco: rgba(13, 13, 13, 0.55);
+  --am-vidro-fundo: rgba(255, 255, 255, 0.5);
+  --am-vidro-borda: rgba(255, 255, 255, 0.55);
+  --am-vidro-realce: inset 0 1px 0 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 0 rgba(13, 13, 13, 0.05),
+    0 1px 2px -1px rgba(13, 13, 13, 0.1);
+  --am-vidro-sombra: 0 18px 40px -24px rgba(9, 22, 52, 0.42), 0 3px 12px -8px rgba(9, 22, 52, 0.18);
+  --am-anel-1: #0a2547;
+  --am-anel-2: #14417f;
+  --am-anel-3: #3f8bdc;
+  --am-anel-4: #a5d2ff;
+  --am-anel-miolo: rgba(255, 255, 255, 0.94);
+  --am-anel-cova: rgba(13, 13, 13, 0.09);
+  --am-aceso: #14417f;
+}
+
+body.dark-mode {
+  --am-texto-forte: #ffffff;
+  --am-texto-fraco: rgba(255, 255, 255, 0.55);
+  --am-vidro-fundo: rgba(255, 255, 255, 0.08);
+  --am-vidro-borda: rgba(255, 255, 255, 0.16);
+  --am-vidro-realce: inset 0 1px 0 0 rgba(255, 255, 255, 0.18), inset 0 -1px 0 0 rgba(0, 0, 0, 0.35),
+    0 1px 2px -1px rgba(0, 0, 0, 0.6);
+  --am-vidro-sombra: 0 20px 44px -24px rgba(0, 0, 0, 0.9), 0 3px 12px -8px rgba(0, 0, 0, 0.7);
+  --am-anel-miolo: rgba(14, 18, 28, 0.94);
+  --am-anel-cova: rgba(0, 0, 0, 0.55);
+  --am-aceso: #a5d2ff;
+}
+
+/* o angulo do anel, animavel (o gradiente conico gira em volta do item) */
+@property --am-giro {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 220deg;
+}
+
+@keyframes am-anel-gira {
+  to {
+    --am-giro: 580deg;
+  }
+}
+
+/* fora do computador a logo e o avatar nao aparecem: no celular quem
+   navega e a barra de baixo do lwncontrol */
+.almox-marca,
+.almox-avatar {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  :root {
+    /* o conteudo comeca depois da bolha (72px + 10px de margem + folga) */
+    --sidebar-width: 96px;
+  }
+
+  /* a coluna da esquerda deixa de ser um painel: so empilha as pecas —
+     logo, Voltar, a bolha, o Sair e o avatar. Empilhadas (e nao cada uma
+     fixa no seu canto) elas nunca se sobrepoem, nem em tela baixa: quem
+     encolhe e a bolha, que rola por dentro */
+  #sidebar {
+    width: 92px;
+    align-items: center;
+    gap: 10px;
+    padding: 22px 10px 20px;
+    background: transparent;
+    border-right: 0;
+    box-shadow: none;
+    pointer-events: none;
+  }
+
+  #sidebar > * {
+    pointer-events: auto;
+  }
+
+  /* ---- a logo, solta no alto, no eixo da bolha ---- */
+  .almox-marca {
+    flex: none;
+    width: 72px;
+    display: grid;
+    place-items: center;
+    z-index: 51;
+    transition: opacity 0.18s ease;
+  }
+
+  .almox-marca:hover {
+    opacity: 0.75;
+  }
+
+  .almox-marca img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+  }
+
+  .almox-marca .logo-escuro,
+  body.dark-mode .almox-marca .logo-claro {
+    display: none;
+  }
+
+  body.dark-mode .almox-marca .logo-escuro {
+    display: block;
+  }
+
+  /* o "Voltar" logo abaixo da logo: o canto de cima a esquerda */
+  .almox-voltar.almox-voltar--lateral {
+    flex: none;
+    width: 72px;
+    margin: 0;
+    padding: 0.3rem 0.35rem;
+    justify-content: center;
+    gap: 0.15rem;
+    font-size: 0.62rem;
+    z-index: 51;
+  }
+
+  /* ---- a bolha de vidro com os itens ---- */
+  #sidebar .sidebar-menu {
+    width: 72px;
+    min-height: 0;
+    display: flex;
+    flex: 0 1 auto;
+    flex-direction: column;
+    gap: 3px;
+    /* centralizada na altura que sobra entre o Voltar e o Sair */
+    margin: auto 0;
+    padding: 8px 5px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    border-radius: 26px;
+    background: var(--am-vidro-fundo);
+    border: 1px solid var(--am-vidro-borda);
+    box-shadow: var(--am-vidro-realce), var(--am-vidro-sombra);
+    backdrop-filter: blur(30px) saturate(175%);
+    -webkit-backdrop-filter: blur(30px) saturate(175%);
+  }
+
+  #sidebar .sidebar-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  #sidebar .sidebar-menu li {
+    width: 100%;
+    flex: none;
+  }
+
+  /* o item: icone em cima, nome embaixo, todos do mesmo tamanho */
+  #sidebar .menu-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    height: 56px;
+    margin: 0;
+    padding: 6px 2px;
+    border: 0;
+    border-radius: 18px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--am-texto-fraco);
+    font-size: 0.55rem;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: 0.005em;
+    text-align: center;
+    white-space: normal;
+    hyphens: auto;
+    overflow-wrap: anywhere;
+    isolation: isolate;
+  }
+
+  #sidebar .menu-item svg {
+    width: 21px;
+    height: 21px;
+    margin: 0;
+    opacity: 1;
+    stroke: currentColor;
+    stroke-width: 1.7;
+  }
+
+  #sidebar .menu-item:hover,
+  body.dark-mode #sidebar .menu-item:hover {
+    background: transparent;
+    color: var(--am-texto-forte);
+  }
+
+  #sidebar .menu-item:hover svg {
+    stroke: currentColor;
+  }
+
+  /* o item aceso: a cova, o miolo e o anel de gradiente girando em volta */
+  #sidebar .menu-item.active,
+  body.dark-mode #sidebar .menu-item.active,
+  #sidebar .sidebar-menu .menu-item.active[onclick*="certificados"] {
+    background: var(--am-anel-miolo) !important;
+    box-shadow: inset 0 1px 3px var(--am-anel-cova), 0 0 0 1px var(--am-anel-cova) !important;
+    color: var(--am-texto-forte) !important;
+    font-weight: 700 !important;
+  }
+
+  #sidebar .menu-item.active::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    padding: 3px;
+    border-radius: 18px;
+    background: conic-gradient(
+      from var(--am-giro),
+      var(--am-anel-1) 0%,
+      var(--am-anel-2) 18%,
+      var(--am-anel-3) 36%,
+      var(--am-anel-4) 50%,
+      var(--am-anel-3) 64%,
+      var(--am-anel-2) 82%,
+      var(--am-anel-1) 100%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    animation: am-anel-gira 4s linear infinite;
+    pointer-events: none;
+  }
+
+  #sidebar .menu-item.active svg,
+  body.dark-mode #sidebar .menu-item.active svg,
+  #sidebar .sidebar-menu .menu-item.active[onclick*="certificados"] svg {
+    stroke: var(--am-aceso) !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #sidebar .menu-item.active::before {
+      animation: none;
+    }
+  }
+
+  /* os contadores (Retirada, Devolutiva, Manutencao...) no canto do item */
+  #sidebar .menu-item .badge {
+    position: absolute;
+    top: 3px;
+    right: 5px;
+    margin: 0 !important;
+    padding: 0 0.3rem !important;
+    min-width: 1rem;
+    font-size: 0.55rem !important;
+    line-height: 1rem;
+  }
+
+  /* ---- o Sair, numa bolha pequena acima do avatar ---- */
+  #sidebar .sidebar-logout-zone {
+    flex: none;
+    width: 72px;
+    padding: 5px;
+    border: 1px solid var(--am-vidro-borda);
+    border-radius: 22px;
+    background: var(--am-vidro-fundo);
+    box-shadow: var(--am-vidro-realce), var(--am-vidro-sombra);
+    backdrop-filter: blur(30px) saturate(175%);
+    -webkit-backdrop-filter: blur(30px) saturate(175%);
+  }
+
+  #sidebar .sidebar-logout-zone .menu-item {
+    height: 46px;
+  }
+
+  #sidebar .menu-item-logout:hover {
+    color: var(--danger, #ef4444);
+  }
+
+  /* ---- a foto de quem esta logado, no pe, como no resto do sistema ---- */
+  .almox-avatar {
+    flex: none;
+    width: 72px;
+    display: grid;
+    place-items: center;
+    z-index: 51;
+    text-decoration: none;
+  }
+
+  .almox-avatar span,
+  .almox-avatar img {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 0 0 2px var(--am-anel-miolo), 0 4px 12px -4px rgba(9, 22, 52, 0.45);
+  }
+
+  .almox-avatar span {
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, var(--am-anel-3), var(--am-anel-2));
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+}
+
+/* "Remanejamento" e a unica palavra que nao cabe na largura do item: um
+   ponto menor, para nao quebrar no meio */
+@media (min-width: 769px) {
+  #sidebar .menu-item[onclick*="'remanejamento'"] {
+    font-size: 0.5rem;
+    letter-spacing: -0.02em;
+    overflow-wrap: normal;
+  }
+}

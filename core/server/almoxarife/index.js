@@ -660,10 +660,11 @@ app.delete("/ferramentas/:id", async (req, res) => {
 // uf e ativo. O cliente com unidades (Einstein, Einstein Anapolis...)
 // aparece pelas unidades, como nos seletores do main.
 //
-// Cadastrar e editar por aqui gravam no cadastro do main. Excluir so com
-// `editar_clientes` (a permissao da aba Clientes do main) e so o cliente
-// sem obra nem unidade: a exclusao de la apaga as obras junto, e isso nao
-// e coisa para o Almoxarife fazer.
+// A aba Clientes saiu da tela do Almoxarife: quem cadastra e a aba
+// Clientes do main. As rotas de gravar continuam (o mesmo contrato do
+// lwncontrol), mas so para quem tem `editar_clientes`, a permissao de la.
+// Excluir, so o cliente sem obra nem unidade: a exclusao do main apaga as
+// obras junto, e isso nao e coisa para o Almoxarife fazer.
 // ============================================================
 
 /* " - Sumaré/SP" no fim do nome: o main guarda a cidade e o estado nos
@@ -671,11 +672,8 @@ app.delete("/ferramentas/:id", async (req, res) => {
 const semCidadeNoNome = (nome) =>
     String(nome || '').replace(/\s*[-–]\s*[^-–]+\/[A-Za-z]{2}\s*$/, '').trim() || String(nome || '').trim();
 
-async function podeMexerEmCliente(req, chave) {
-    const cargo = await meuCargo(req.dono.sub);
-    return chave === 'editar_clientes'
-        ? cargoPode(cargo, 'editar_clientes')
-        : cargoPode(cargo, 'editar_clientes') || cargoPode(cargo, 'almox_clientes');
+async function podeMexerEmCliente(req) {
+    return cargoPode(await meuCargo(req.dono.sub), 'editar_clientes');
 }
 
 app.get("/clientes", async (req, res) => {
@@ -785,7 +783,7 @@ app.put("/clientes/:id", async (req, res) => {
 
 app.delete("/clientes/:id", async (req, res) => {
     try {
-        if (!(await podeMexerEmCliente(req, 'editar_clientes'))) {
+        if (!(await podeMexerEmCliente(req))) {
             return res.status(403).json({ erro: "Excluir cliente é da aba Clientes do sistema (permissão Adicionar / editar clientes)." });
         }
         const { id } = req.params;

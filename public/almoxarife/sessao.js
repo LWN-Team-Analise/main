@@ -63,6 +63,27 @@
         try { sessionStorage.setItem('lwn_user', pedido.responseText); } catch (e) { /* segue */ }
     }
 
+    /* a foto (ou as iniciais) de quem esta logado no pe da barra lateral,
+       como no resto do sistema */
+    document.addEventListener('DOMContentLoaded', function () {
+        var lugar = document.getElementById('almox-avatar');
+        if (!lugar) return;
+        var eu = {};
+        try { eu = JSON.parse(sessionStorage.getItem('lwn_user') || '{}') || {}; } catch (e) { eu = {}; }
+        var nome = String(eu.nome || '').trim();
+        lugar.title = nome ? nome + ' · Configurações' : 'Configurações';
+        if (eu.foto) {
+            var img = document.createElement('img');
+            img.src = eu.foto;
+            img.alt = nome;
+            lugar.appendChild(img);
+            return;
+        }
+        var iniciais = document.createElement('span');
+        iniciais.textContent = nome.split(/\s+/).filter(Boolean).slice(0, 2).map(function (p) { return p[0]; }).join('').toUpperCase() || '?';
+        lugar.appendChild(iniciais);
+    });
+
     /* a notificacao (celular ou e-mail) abre a aba do aviso: ?aba=devolutiva.
        "aprovar" e "minhas-obras" sao abas de dentro do Painel Geral */
     window.addEventListener('load', function () {

@@ -434,7 +434,7 @@ SELECT u.id,
                      THEN ARRAY['dashboard', 'solicitacoes', 'gerenciar_os', 'aprovar_todas_os', 'conferencia',
                                 'separar_tags', 'devolutiva', 'conferir_devolucao', 'prorrogar_os',
                                 'aceitar_prorrogacao', 'aprovar_remanejamento', 'concluidos', 'certificados',
-                                'baias', 'instrumentos', 'remanejamento', 'calibracao', 'clientes', 'relatorios',
+                                'baias', 'instrumentos', 'remanejamento', 'calibracao', 'relatorios',
                                 'manutencao', 'logs', 'responsavel_obra']
                      ELSE ARRAY(SELECT substr(p, 7) FROM unnest(coalesce(c.permissoes, '{}'::text[])) AS p
                                  WHERE p LIKE 'almox\_%')
@@ -492,7 +492,7 @@ UPDATE public.cargo
                'almox_conferencia', 'almox_separar_tags', 'almox_devolutiva', 'almox_conferir_devolucao',
                'almox_prorrogar_os', 'almox_aceitar_prorrogacao', 'almox_aprovar_remanejamento',
                'almox_concluidos', 'almox_certificados', 'almox_baias', 'almox_instrumentos',
-               'almox_remanejamento', 'almox_calibracao', 'almox_clientes', 'almox_relatorios',
+               'almox_remanejamento', 'almox_calibracao', 'almox_relatorios',
                'almox_manutencao', 'almox_logs', 'almox_responsavel_obra']) AS p
             WHERE NOT (p = ANY (permissoes)))
  WHERE (acesso_total OR chave IN ('almoxarife', 'excelencia'))

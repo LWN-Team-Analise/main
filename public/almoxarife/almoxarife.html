@@ -9,6 +9,8 @@
     <link rel="stylesheet"href="/almoxarife/almoxarife.css">
     <link rel="stylesheet" href="/almoxarife/logs.css">
     <link rel="stylesheet" href="/almoxarife/responsivo.css">
+    <!-- a barra lateral e o fundo com a cara do Atmosfera LWN: ver estilo-main.css -->
+    <link rel="stylesheet" href="/almoxarife/estilo-main.css">
     <link rel="icon"href="/almoxarife/assets/app-icon-192.png" type="image/png">
   <meta name="theme-color" content="#1e40af">
   <meta name="mobile-web-app-capable" content="yes">
@@ -142,10 +144,6 @@
                 <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"><circle cx="12"cy="12"r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 Calibração
             </button>
-            <button class="bnav-drawer-item" id="bdrawer-clientes" data-bnav-modulo="clientes" onclick="bnavDrawerSwitch('clientes')">
-                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9"cy="7"r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                Clientes
-            </button>
             <button class="bnav-drawer-item" id="bdrawer-logs" data-bnav-modulo="logs" onclick="bnavDrawerSwitch('logs')">
                 <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8"y1="13"x2="16"y2="13"></line><line x1="8"y1="17"x2="14"y2="17"></line></svg>
                 Logs
@@ -167,25 +165,15 @@
 
     <!-- Sidebar -->
 <aside id="sidebar">
+    <!-- a logo do Atmosfera LWN, no alto, como no resto do sistema -->
+    <a class="almox-marca" href="/core/app" aria-label="Página inicial">
+        <img class="logo-claro" src="/almoxarife/assets/firstLogoWhite.webp" alt="LWN">
+        <img class="logo-escuro" src="/almoxarife/assets/firstLogoBlack.webp" alt="LWN">
+    </a>
     <a class="almox-voltar almox-voltar--lateral" href="/core/app" aria-label="Voltar para a página inicial">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
             Voltar
         </a>
-    <div class="sidebar-brand">
-        <div class="brand-container">
-            <!-- Logo para modo claro -->
-            <img src="/almoxarife/assets/firstLogoWhite.webp" alt="LWN Engenharia" class="logo-claro" style="height: 2rem; width: auto; object-fit: contain; display: block;"onerror="this.style.display='none'">
-            <!-- Logo para modo escuro -->
-            <img src="/almoxarife/assets/firstLogoBlack.webp" alt="LWN Engenharia" class="logo-escuro" style="height: 2rem; width: auto; object-fit: contain; display: none;"onerror="this.style.display='none'">
-            <span class="brand-text">LWN Control</span>
-        </div>
-        <button class="sidebar-close-btn" onclick="toggleMobileSidebar()"aria-label="Fechar Menu">
-            <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2.5"stroke-linecap="round"stroke-linejoin="round" style="width: 1.25rem; height: 1.25rem;">
-                <line x1="18"y1="6"x2="6"y2="18"></line>
-                <line x1="6"y1="6"x2="18"y2="18"></line>
-            </svg>
-        </button>
-    </div>
     <ul class="sidebar-menu">
         <!-- Dashboard - Permissão: dashboard -->
         <li data-modulo="dashboard">
@@ -311,18 +299,6 @@
             </button>
         </li>
 
-        <!-- Clientes - Permissão: clientes -->
-        <li data-modulo="clientes">
-            <button class="menu-item" onclick="switchTab('clientes')">
-                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9"cy="7"r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-                Clientes
-            </button>
-        </li>
 
 
 
@@ -349,10 +325,8 @@
             Sair
         </button>
     </div>
-    <div class="sidebar-footer">
-        <p><strong>LWN Engenharia &copy; 2026</strong></p>
-        <p style="opacity: 0.6; font-size: 0.65rem; margin-top: 0.25rem;">Desenvolvido por LWN</p>
-    </div>
+    <!-- quem esta logado, no pe da barra (a foto do cadastro do main) -->
+    <a class="almox-avatar" id="almox-avatar" href="/core/app/configuracoes" title="Configurações"></a>
 </aside>
 
     <!-- Main Content -->
@@ -383,7 +357,7 @@
             <section id="dashboard-tab" class="tab-content active">
                 <div style="margin-bottom: 1.5rem;">
                     <h2  style="font-size: 1.6rem; font-weight: 850; color: var(--text-main); letter-spacing: -0.02em;"><span id="dash-greeting">Ótimo dia</span>, <strong class="dashName" id="dash-user-name" style="color: var(--primary);">Usuário</strong>!</h2> 
-                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">Bem-vindo ao LWN Control,</p>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">Bem-vindo ao Almoxarife,</p>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.1rem;">Aqui está o resumo de hoje.</p>
                 </div>
                 <!-- Volta para o resumo do Painel Geral. Fica ACIMA da aba e
@@ -1247,50 +1221,6 @@
             <!-- USUÁRIOS / COLABORADORES -->
 
             <!-- CLIENTES -->
-            <section id="clientes-tab" class="tab-content">
-                <!-- BARRA DE AÇÃO SUPERIOR -->
-                <div class="action-bar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:0.75rem;">
-                    <span class="card-title" style="font-size:1.15rem;font-weight:800;color:var(--text-main);">Clientes</span>
-                    <button class="btn btn-primary" onclick="openClienteFormModal()" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 1.25rem;border:none;border-radius:0.5rem;background:var(--primary);color:white;cursor:pointer;font-weight:600;font-size:0.9rem;">
-                        <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2.5" style="width:1rem;height:1rem;"><path d="M12 5v14M5 12h14"/></svg>
-                        Novo Cliente
-                    </button>
-                </div>
-
-                <!-- FILTROS -->
-                <div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-end;background:var(--bg-surface);padding:1rem 1.25rem;border-radius:0.75rem;border:1px solid var(--border-color);margin-bottom:1.5rem;">
-                    <div style="flex:1;min-width:150px;">
-                        <label class="form-label" style="display:block;font-size:0.8rem;font-weight:600;color:var(--text-main);margin-bottom:0.25rem;">UF (Estado)</label>
-                        <select id="filtro-cli-uf" class="form-select" style="width:100%;padding:0.5rem 0.8rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.9rem;" onchange="popularFiltroCidades(this.value)">
-                            <option value="">— Todos os Estados —</option>
-                            <!-- Os estados serão populados via JavaScript -->
-                        </select>
-                    </div>
-                    <div style="flex:1;min-width:150px;">
-                        <label class="form-label" style="display:block;font-size:0.8rem;font-weight:600;color:var(--text-main);margin-bottom:0.25rem;">Cidade</label>
-                        <select id="filtro-cli-cidade" class="form-select" style="width:100%;padding:0.5rem 0.8rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-muted);font-size:0.9rem;"disabled onchange="aplicarFiltroClientes()">
-                            <option value="">— Selecione o Estado primeiro —</option>
-                        </select>
-                    </div>
-                    <div style="display:flex;gap:0.5rem;align-items:center;padding-bottom:0.1rem;">
-                        <button onclick="aplicarFiltroClientes()" class="btn btn-primary" style="padding:0.5rem 1.25rem;border:none;border-radius:0.5rem;background:var(--primary);color:white;cursor:pointer;font-weight:600;font-size:0.85rem;display:flex;align-items:center;gap:0.4rem;">
-                            <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2" style="width:0.9rem;height:0.9rem;"><polyline points="22 3 15 10 22 21"/><polyline points="2 21 9 10 2 3"/></svg>
-                            Filtrar
-                        </button>
-                        <button onclick="limparFiltroClientes()" class="btn btn-outline" style="padding:0.5rem 1.25rem;border:2px solid var(--border-color);border-radius:0.5rem;background:transparent;color:var(--text-muted);cursor:pointer;font-weight:600;font-size:0.85rem;">
-                            Limpar
-                        </button>
-                    </div>
-                </div>
-
-                <!-- CONTADOR -->
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
-                    <span id="clientes-contador" style="font-size:0.85rem;color:var(--text-muted);">Carregando...</span>
-                </div>
-
-                <!-- GRID DE CLIENTES -->
-                <div id="clientes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:0.65rem;padding:0 0 2rem;"></div>
-            </section>
 
             <!-- DASHBOARD POWERBI -->
             <!-- LOGS DE ATIVIDADE -->
