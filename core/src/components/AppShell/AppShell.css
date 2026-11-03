@@ -130,6 +130,13 @@
   list-style: none;
   overflow-y: auto;
   overflow-x: hidden;
+  /* rola (roda do mouse, toque), mas sem a barra de rolagem a vista: na
+     bolha estreita ela aparecia como um risco cinza ao lado dos itens */
+  scrollbar-width: none;
+}
+
+.rail__lista::-webkit-scrollbar {
+  display: none;
 }
 
 .rail__btn {

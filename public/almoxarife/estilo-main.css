@@ -36,11 +36,13 @@
   --am-control-border: rgba(13, 13, 13, 0.16);
   --am-danger: #b3261e;
   --am-danger-bg: rgba(179, 38, 30, 0.08);
+  --am-danger-border: rgba(179, 38, 30, 0.28);
   --am-dur-base: 320ms;
   --am-dur-fast: 180ms;
   --am-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --am-glass-blur: 18px;
   --am-glass-edge-a: rgba(255, 255, 255, 0.95);
+  --am-glass-fallback: #f7f7f7;
   --am-glass-shadow: 0 30px 60px -32px rgba(0, 0, 0, 0.38), 0 4px 18px -12px rgba(0, 0, 0, 0.18);
   --am-grad-b: #1b4386;
   --am-line: rgba(13, 13, 13, 0.14);
@@ -48,6 +50,10 @@
   --am-modal-borda: rgba(13, 13, 13, 0.12);
   --am-modal-sombra: 0 30px 70px -28px rgba(0, 0, 0, 0.4), 0 6px 20px -10px rgba(0, 0, 0, 0.16);
   --am-modal-veu: rgba(20, 22, 28, 0.42);
+  --am-obra-emerg: #d9542a;
+  --am-obra-padrao: #12315c;
+  --am-page-bg: #ffffff;
+  --am-pri-alta: #d93a34;
   --am-radius-lg: 26px;
   --am-radius-md: 16px;
   --am-radius-pill: 999px;
@@ -58,7 +64,9 @@
   --am-text-muted: rgba(13, 13, 13, 0.55);
   --am-text-strong: #0d0d0d;
   --am-vidro-borda: rgba(255, 255, 255, 0.55);
+  --am-vidro-borda-forte: rgba(13, 13, 13, 0.12);
   --am-vidro-fundo: rgba(255, 255, 255, 0.5);
+  --am-vidro-fundo-forte: rgba(255, 255, 255, 0.72);
   --am-vidro-menu: rgba(255, 255, 255, 0.88);
   --am-vidro-realce: inset 0 1px 0 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 0 rgba(13, 13, 13, 0.05), 0 1px 2px -1px rgba(13, 13, 13, 0.1);
   --am-vidro-sombra: 0 18px 40px -24px rgba(9, 22, 52, 0.42), 0 3px 12px -8px rgba(9, 22, 52, 0.18);
@@ -80,11 +88,13 @@ body.dark-mode {
   --am-control-border: rgba(255, 255, 255, 0.2);
   --am-danger: #ff8a9c;
   --am-danger-bg: rgba(255, 138, 156, 0.12);
+  --am-danger-border: rgba(255, 138, 156, 0.3);
   --am-dur-base: 320ms;
   --am-dur-fast: 180ms;
   --am-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --am-glass-blur: 18px;
   --am-glass-edge-a: rgba(255, 255, 255, 0.16);
+  --am-glass-fallback: #121214;
   --am-glass-shadow: 0 34px 70px -34px rgba(0, 0, 0, 1), 0 4px 18px -10px rgba(0, 0, 0, 0.85);
   --am-grad-b: #a5d2ff;
   --am-line: rgba(255, 255, 255, 0.16);
@@ -92,6 +102,10 @@ body.dark-mode {
   --am-modal-borda: rgba(255, 255, 255, 0.12);
   --am-modal-sombra: 0 34px 74px -30px rgba(0, 0, 0, 1), 0 6px 20px -10px rgba(0, 0, 0, 0.7);
   --am-modal-veu: rgba(0, 0, 0, 0.62);
+  --am-obra-emerg: #e0602c;
+  --am-obra-padrao: #17406f;
+  --am-page-bg: #000000;
+  --am-pri-alta: #f0554c;
   --am-radius-lg: 26px;
   --am-radius-md: 16px;
   --am-radius-pill: 999px;
@@ -102,7 +116,9 @@ body.dark-mode {
   --am-text-muted: rgba(255, 255, 255, 0.55);
   --am-text-strong: #ffffff;
   --am-vidro-borda: rgba(255, 255, 255, 0.16);
+  --am-vidro-borda-forte: rgba(255, 255, 255, 0.24);
   --am-vidro-fundo: rgba(255, 255, 255, 0.08);
+  --am-vidro-fundo-forte: rgba(255, 255, 255, 0.14);
   --am-vidro-menu: rgba(22, 25, 34, 0.92);
   --am-vidro-realce: inset 0 1px 0 0 rgba(255, 255, 255, 0.18), inset 0 -1px 0 0 rgba(0, 0, 0, 0.35), 0 1px 2px -1px rgba(0, 0, 0, 0.6);
   --am-vidro-sombra: 0 20px 44px -24px rgba(0, 0, 0, 0.9), 0 3px 12px -8px rgba(0, 0, 0, 0.7);
@@ -122,7 +138,8 @@ body.dark-mode {
   z-index: 1;
 }
 
-.rail {
+.rail,
+.topbar {
   background: var(--am-vidro-fundo);
   box-shadow: var(--am-vidro-sombra);
 }
@@ -219,6 +236,13 @@ body.dark-mode {
   list-style: none;
   overflow-y: auto;
   overflow-x: hidden;
+  /* rola (roda do mouse, toque), mas sem a barra de rolagem a vista: na
+     bolha estreita ela aparecia como um risco cinza ao lado dos itens */
+  scrollbar-width: none;
+}
+
+.rail__lista::-webkit-scrollbar {
+  display: none;
 }
 
 .rail__btn {
@@ -551,6 +575,724 @@ body.dark-mode .rail__btn.is-atual .rail__glifo {
 
 
 
+/* ---------------- Barra superior ---------------- */
+
+.topbar {
+  position: sticky;
+  top: 18px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 10px 9px 18px;
+  border-radius: var(--am-radius-pill);
+  /* o vidro vem da classe .vidro; o desfoque forte e o que deixa o
+     conteudo passar por baixo da barra sem atrapalhar a leitura */
+  backdrop-filter: blur(calc(var(--am-glass-blur) * 1.7)) saturate(175%);
+  -webkit-backdrop-filter: blur(calc(var(--am-glass-blur) * 1.7)) saturate(175%);
+}
+
+.topbar__saudacao {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--am-text-base);
+  white-space: nowrap;
+}
+
+.topbar__saudacao strong {
+  font-weight: 600;
+  color: var(--am-text-strong);
+}
+
+/* ---- Campo de busca com o orbe ---- */
+
+.omni {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 8px 18px;
+  border-radius: var(--am-radius-pill);
+  background: var(--am-vidro-fundo);
+  border: 1px solid var(--am-vidro-borda);
+  box-shadow: var(--am-vidro-realce);
+}
+
+/* o orbe e um canvas: o desenho vem do componente, aqui fica so o
+   halo que o assenta dentro do campo de busca */
+.omni__orb {
+  filter: drop-shadow(0 0 6px rgba(77, 143, 240, 0.45));
+}
+
+.omni__campo {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.88rem;
+  color: var(--am-text-strong);
+}
+
+.omni__campo::placeholder {
+  color: var(--am-text-faint);
+}
+
+.omni__campo:focus {
+  outline: none;
+}
+
+/* ---- Acoes da direita ---- */
+
+.topbar__acoes {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar__sino {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--am-vidro-fundo);
+  border: 1px solid var(--am-vidro-borda);
+  box-shadow: var(--am-vidro-realce);
+  color: var(--am-text-base);
+  cursor: pointer;
+  transition: background var(--am-dur-fast) var(--am-ease-out),
+    color var(--am-dur-fast) var(--am-ease-out);
+}
+
+.topbar__sino:hover {
+  background: var(--am-vidro-fundo-forte);
+  color: var(--am-text-strong);
+}
+
+
+
+/* ============================================================
+   Sininho e o painel de notificacoes
+
+   O selo vermelho conta os avisos que chegaram para o cargo de
+   quem esta logado e ainda nao foram abertos. Abrir o painel
+   zera a conta.
+   ============================================================ */
+
+.sininho {
+  position: relative;
+}
+
+.topbar__sino {
+  position: relative;
+}
+
+.topbar__sino.is-aberto {
+  background: var(--am-vidro-fundo-forte);
+  color: var(--am-text-strong);
+  box-shadow: var(--am-vidro-realce), 0 0 0 2px var(--am-accent);
+}
+
+.sininho__selo {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  display: grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: var(--am-radius-pill);
+  border: 2px solid var(--am-page-bg);
+  background: var(--am-pri-alta);
+  color: #fff;
+  font-size: 0.64rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.sininho__painel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 30;
+  width: min(360px, calc(100vw - 32px));
+  max-height: min(72dvh, 520px);
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--am-radius-md);
+  background: var(--am-vidro-menu);
+  border: 1px solid var(--am-vidro-borda);
+  box-shadow: var(--am-glass-shadow), var(--am-vidro-realce);
+  backdrop-filter: blur(calc(var(--am-glass-blur) * 1.5)) saturate(175%);
+  -webkit-backdrop-filter: blur(calc(var(--am-glass-blur) * 1.5)) saturate(175%);
+  animation: menu-sobe var(--am-dur-fast) var(--am-ease-out);
+  overflow: hidden;
+}
+
+.sininho__topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 15px 11px;
+  border-bottom: 1px solid var(--am-line);
+}
+
+.sininho__topo h2 {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--am-text-strong);
+}
+
+.sininho__topo span {
+  margin-left: auto;
+  padding: 2px 9px;
+  border-radius: var(--am-radius-pill);
+  background: var(--am-control-bg-hover);
+  color: var(--am-text-base);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.sininho__vazio {
+  margin: 0;
+  padding: 26px 18px;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  text-align: center;
+  color: var(--am-text-faint);
+}
+
+.sininho__lista {
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.sininho__item {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 10px 10px 8px;
+  border: 0;
+  border-radius: var(--am-radius-sm);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--am-dur-fast) var(--am-ease-out);
+}
+
+.sininho__item:hover {
+  background: var(--am-control-bg);
+}
+
+/* a barrinha da esquerda leva a cor do tipo da obra */
+.sininho__marca {
+  flex-shrink: 0;
+  width: 3px;
+  border-radius: var(--am-radius-pill);
+  background: var(--am-obra-padrao);
+}
+
+.sininho__marca[data-tipo='emergencia'] {
+  background: var(--am-obra-emerg);
+}
+
+.sininho__corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sininho__corpo strong {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--am-text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sininho__texto {
+  font-size: 0.79rem;
+  line-height: 1.4;
+  color: var(--am-text-base);
+}
+
+.sininho__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 0.68rem;
+  color: var(--am-text-faint);
+}
+
+.sininho__meta em {
+  font-style: normal;
+}
+
+/* aviso ainda nao lido: o nome fica cheio e um ponto marca a linha */
+.sininho__item.is-nova {
+  background: var(--am-control-bg);
+}
+
+.sininho__item.is-nova .sininho__corpo strong::after {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: var(--am-pri-alta);
+  vertical-align: middle;
+}
+
+/* as solicitacoes (inclusao como membro parcial): no alto do painel,
+   cada uma com Aceitar e Recusar. A lista delas rola sozinha quando
+   sao muitas, para nao empurrar os avisos para fora */
+.sininho__pedidos {
+  flex: none;
+  max-height: 60%;
+  border-bottom: 1px solid var(--am-line);
+}
+
+.sininho__pedido {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 10px 10px 10px 8px;
+  border-radius: var(--am-radius-sm);
+  /* solido: o painel e de vidro, e o texto de baixo aparecia atras do pedido */
+  background: color-mix(in srgb, var(--am-accent) 7%, var(--am-surface));
+}
+
+.sininho__pedido + .sininho__pedido {
+  margin-top: 6px;
+}
+
+.sininho__obra {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--am-text-faint);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sininho__obra:hover {
+  color: var(--am-text-strong);
+}
+
+/* o texto do pedido quebra linha (o strong do sino e de uma linha so) */
+.sininho__pedido .pedido__texto strong {
+  font-size: inherit;
+  white-space: normal;
+  overflow: visible;
+}
+
+
+
+/* ============================================================
+   A LISTA DA BUSCA
+
+   O campo em si (a pílula de vidro, o orbe, o placeholder) continua
+   sendo estilizado pelo `.omni` do AppShell.css — ele já existia e
+   não mudou. Aqui mora só o que nasceu com a busca: a caixa de
+   resultados que desce por baixo dele.
+   ============================================================ */
+
+.busca {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.busca__caixa {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  max-height: min(60vh, 460px);
+  padding: 8px;
+  border-radius: var(--am-radius-md);
+  /* O vidro vem escrito aqui, e não pela classe `.vidro` do comum.css:
+     aquela declara `position: relative`, e as duas regras têm a mesma
+     força — quem ganhava era a última folha a entrar no pacote. Com a
+     classe, a caixa chegou a nascer DENTRO da linha, empurrada para o
+     lado do campo em vez de descer por baixo dele. Escrito aqui, não há
+     disputa nenhuma para a ordem dos imports decidir.
+
+     O fundo é o `--vidro-menu`, e não o `--vidro-fundo`: este último é
+     feito para superfície que ENCOSTA na página (header, card), onde o
+     que passa por trás é o próprio fundo. A lista flutua por cima do
+     conteúdo da tela, e com 50% de transparência o texto dela caía em
+     cima de outro texto — dois alfabetos disputando o mesmo pixel. */
+  background: var(--am-vidro-menu);
+  border: 1px solid var(--am-vidro-borda);
+  backdrop-filter: blur(calc(var(--am-glass-blur) * 1.4)) saturate(170%);
+  -webkit-backdrop-filter: blur(calc(var(--am-glass-blur) * 1.4)) saturate(170%);
+  box-shadow: var(--am-vidro-realce), 0 18px 40px rgba(0, 0, 0, 0.22);
+  overflow-y: auto;
+  animation: busca-desce var(--am-dur-fast) var(--am-ease-out);
+}
+
+@keyframes busca-desce {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.busca__grupo + .busca__grupo {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--am-line);
+}
+
+.busca__rotulo {
+  margin: 2px 0 4px;
+  padding: 0 8px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--am-text-faint);
+}
+
+/* ---- cada item é uma lâmina de vidro ----
+
+   Fundo transparente deixava a linha sem corpo: o texto ficava solto
+   sobre o que estivesse por trás e a lista parecia um borrão com
+   palavras. Agora cada item tem superfície própria — tinta translúcida,
+   desfoque do que passa atrás, aro claro em cima e a refração do
+   `#lg-refraction`, o mesmo filtro que veste os cartões do site.
+
+   `isolation: isolate` é o que segura a camada de refração: sem ela o
+   `z-index: -1` do ::before escapa do item e some por trás da caixa
+   inteira, levando junto o fundo da lista. */
+.busca__item {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--am-vidro-borda);
+  border-radius: var(--am-radius-sm);
+  background: var(--am-vidro-fundo);
+  box-shadow: var(--am-vidro-realce);
+  backdrop-filter: blur(calc(var(--am-glass-blur) * 0.7)) saturate(150%);
+  -webkit-backdrop-filter: blur(calc(var(--am-glass-blur) * 0.7)) saturate(150%);
+  color: var(--am-text-base);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background var(--am-dur-fast) var(--am-ease-out);
+}
+
+.busca__item + .busca__item {
+  margin-top: 4px;
+}
+
+/* a refração: distorce de leve o que está atrás da lâmina */
+.busca__item::before {
+  content: "";
+  position: absolute;
+  inset: -14%;
+  z-index: -1;
+  opacity: 0.3;
+  pointer-events: none;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+@supports (filter: url("#lg-refraction")) {
+  .busca__item::before {
+    filter: url("#lg-refraction");
+  }
+}
+
+/* uma classe só para as duas entradas — teclado e mouse marcam a MESMA
+   linha, senão a seta mostra uma e o Enter abriria outra */
+.busca__item.is-ativo {
+  background: var(--am-vidro-fundo-forte);
+  border-color: var(--am-vidro-borda-forte);
+}
+
+/* Sem `backdrop-filter` o item ficaria quase invisível: a tinta sozinha
+   é translúcida demais. Aí ele vira superfície chapada, que é feia mas
+   se lê. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .busca__item {
+    background: var(--am-glass-fallback);
+  }
+}
+
+.busca__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.busca__texto strong {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--am-text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.busca__texto small {
+  font-size: 0.72rem;
+  color: var(--am-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.busca__marca {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: var(--am-radius-pill);
+  font-size: 0.64rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.busca__marca[data-fechada='sim'] {
+  background: rgba(61, 220, 151, 0.16);
+  color: #1c8f5f;
+}
+
+.busca__marca[data-fechada='nao'] {
+  background: rgba(255, 159, 67, 0.16);
+  color: #b96a12;
+}
+
+/* no escuro o texto da etiqueta precisa clarear: o mesmo verde que lê
+   bem sobre branco some sobre a superfície escura */
+body.dark-mode .busca__marca[data-fechada='sim'] {
+  color: #6ff0b6;
+}
+
+body.dark-mode .busca__marca[data-fechada='nao'] {
+  color: #ffc082;
+}
+
+.busca__nada {
+  margin: 0;
+  padding: 12px 10px;
+  font-size: 0.82rem;
+  color: var(--am-text-faint);
+}
+
+.busca__nada strong {
+  color: var(--am-text-base);
+}
+
+/* No celular ela acompanha o campo EXATAMENTE. Antes vazava 8px para
+   cada lado para ganhar largura, e o resultado era uma lista visivelmente
+   mais larga que a caixa de busca logo acima dela — duas bordas
+   diferentes, uma em cima da outra. A largura que ela tem basta: o campo
+   agora ocupa a linha inteira da barra. */
+@media (max-width: 640px) {
+  .busca__caixa {
+    max-height: 56vh;
+  }
+}
+
+/* No celular a lista e a resposta inteira — nao ha tela ao lado para
+   conferir. O que era letra de apoio no computador vira o texto
+   principal aqui. */
+@media (max-width: 720px) {
+  .busca__rotulo {
+    font-size: 0.68rem;
+  }
+
+  .busca__item {
+    padding: 10px;
+  }
+
+  .busca__texto strong {
+    font-size: 0.95rem;
+  }
+
+  .busca__texto small {
+    font-size: 0.82rem;
+  }
+
+  .busca__marca {
+    font-size: 0.7rem;
+  }
+}
+
+
+/* ============================================================
+   Orbe de pontos
+
+   O tamanho vem por atributo (o canvas precisa dele em pixels
+   reais para nao borrar); aqui fica so o que e visual.
+   ============================================================ */
+
+.interlock {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+
+/* A solicitacao de inclusao como membro parcial (PedidoInclusao.jsx) */
+
+.pedido {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pedido__texto {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--am-text-base);
+  overflow-wrap: anywhere;
+}
+
+.pedido__texto strong {
+  color: var(--am-text-strong);
+}
+
+.pedido__quando {
+  margin: -5px 0 0;
+  font-size: 0.7rem;
+  color: var(--am-text-faint);
+}
+
+.pedido__motivo {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.pedido__motivo span {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--am-text-faint);
+}
+
+.pedido__motivo textarea {
+  width: 100%;
+  min-height: 58px;
+  padding: 8px 10px;
+  border: 1px solid var(--am-control-border);
+  border-radius: var(--am-radius-md);
+  background: var(--am-control-bg);
+  color: var(--am-text-strong);
+  font: inherit;
+  font-size: 0.82rem;
+  resize: vertical;
+}
+
+.pedido__motivo textarea:focus {
+  outline: none;
+  border-color: var(--am-accent);
+}
+
+.pedido__motivo textarea[aria-invalid='true'] {
+  border-color: var(--am-danger);
+}
+
+.pedido__erro {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--am-danger);
+}
+
+.pedido__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.pedido__botao {
+  padding: 6px 14px;
+  border: 1px solid var(--am-control-border);
+  border-radius: var(--am-radius-pill);
+  background: var(--am-control-bg);
+  color: var(--am-text-muted);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--am-dur-fast) var(--am-ease-out), color var(--am-dur-fast) var(--am-ease-out);
+}
+
+.pedido__botao:hover:not(:disabled) {
+  background: var(--am-control-bg-hover);
+  color: var(--am-text-strong);
+}
+
+.pedido__botao:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pedido__botao--aceitar {
+  border-color: transparent;
+  background: var(--am-accent);
+  color: #fff;
+}
+
+.pedido__botao--aceitar:hover:not(:disabled) {
+  background: var(--am-accent);
+  color: #fff;
+  filter: brightness(1.08);
+}
+
+.pedido__botao--recusar {
+  border-color: var(--am-danger-border, transparent);
+  background: var(--am-danger-bg);
+  color: var(--am-danger);
+}
+
+.pedido__botao--recusar:hover:not(:disabled) {
+  background: var(--am-danger-bg);
+  color: var(--am-danger);
+  filter: brightness(0.96);
+}
+
+.pedido__botao:focus-visible {
+  outline: 2px solid var(--am-accent);
+  outline-offset: 2px;
+}
+
+
 .avatarfig {
   display: inline-grid;
   place-items: center;
@@ -788,12 +1530,41 @@ body.dark-mode .rail .menu-item.rail__btn.active,
   line-height: 1rem;
 }
 
-/* no main o menu do avatar e a confirmacao so existem quando abertos (o
-   React os monta); aqui eles ficam no HTML com o atributo hidden — e o
-   display do CSS copiado passaria por cima dele */
+/* no main o menu do avatar, a confirmacao, a lista da busca, o painel e o
+   selo do sino so existem quando abertos (o React os monta); aqui eles
+   ficam no HTML com o atributo hidden — e o display do CSS copiado
+   passaria por cima dele */
 .euzinho__menu[hidden],
-.am-modal[hidden] {
+.am-modal[hidden],
+.busca__caixa[hidden],
+.sininho__painel[hidden],
+.sininho__selo[hidden] {
   display: none !important;
+}
+
+/* a barra de cima no lugar do header do lwncontrol, com a folga da coluna
+   do main (.shell__coluna: 18px) e o respiro ate o conteudo
+   (.shell__conteudo: 18px) */
+#almox-topo {
+  margin: 18px 18px 0;
+}
+
+#almox-topo + .content-container {
+  margin-top: 18px;
+}
+
+/* no celular: a barra cola nas bordas e a saudacao sai, para a busca caber */
+@media (max-width: 768px) {
+  #almox-topo {
+    top: 10px;
+    margin: 10px 10px 0;
+    gap: 8px;
+    padding-left: 10px;
+  }
+
+  #almox-topo .topbar__saudacao {
+    display: none;
+  }
 }
 
 /* As abas do Almoxarife tem palavras mais compridas que as do main:

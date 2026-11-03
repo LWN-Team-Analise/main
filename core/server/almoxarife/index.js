@@ -7958,6 +7958,88 @@ async function lerClienteEObra(clienteIdBruto, obraIdBruto) {
 }
 
 // ============================================================
+// GET /api/almox/sininho — o sino da barra de cima, o mesmo do main
+//
+// No main o sino le o que ja esta na carga do quadro (as obras com os
+// avisos e os membros parciais, em DadosContext: minhasNotificacoes e
+// minhasSolicitacoes). A tela do Almoxarife nao carrega o quadro, entao
+// aqui vem so o que o sino mostra, com as mesmas regras:
+//
+//   avisos   os avisos das obras para o SETOR de quem esta logado (aviso
+//            sem setor e de todo mundo), do mais novo para o mais velho,
+//            com `lido` (aviso_leitura). O sino mostra os 20 primeiros;
+//   pedidos  as inclusoes como membro parcial que esperam a resposta
+//            dele (status pendente).
+//
+// Marcar como lido e responder o pedido sao as rotas do main de sempre
+// (POST /api/dados/avisos/lidos e /api/dados/obras/:id/parciais/...).
+// ============================================================
+app.get("/sininho", async (req, res) => {
+    try {
+        const eu = req.dono.sub;
+        const [avisos, pedidos, termo] = await Promise.all([
+            pool.query(
+                `WITH meu AS (
+                     SELECT c.chave FROM usuario u LEFT JOIN cargo c ON c.id = u.cargo_id WHERE u.id = $1
+                 )
+                 SELECT a.id, a.obra_id, a.etapa, a.mensagem, a.enviado_em, u.name AS enviado_por_nome,
+                        o.tipo AS obra_tipo, cl.nome AS cliente,
+                        coalesce((SELECT array_agg(c.nome ORDER BY c.ordem)
+                                    FROM obra_aviso_cargo ac JOIN cargo c ON c.id = ac.cargo_id
+                                   WHERE ac.aviso_id = a.id), '{}') AS setores,
+                        EXISTS (SELECT 1 FROM aviso_leitura l WHERE l.aviso_id = a.id AND l.usuario_id = $1) AS lido
+                   FROM obra_aviso a
+                   JOIN obra o         ON o.id = a.obra_id
+                   LEFT JOIN cliente cl ON cl.id = o.cliente_id
+                   LEFT JOIN usuario u  ON u.id = a.enviado_por
+                  WHERE NOT EXISTS (SELECT 1 FROM obra_aviso_cargo ac WHERE ac.aviso_id = a.id)
+                     OR EXISTS (SELECT 1 FROM obra_aviso_cargo ac JOIN cargo c ON c.id = ac.cargo_id
+                                 WHERE ac.aviso_id = a.id AND c.chave = (SELECT chave FROM meu))
+                  ORDER BY a.enviado_em DESC`,
+                [eu]
+            ),
+            pool.query(
+                `SELECT p.obra_id, p.incluido_em, u.name AS incluido_por_nome,
+                        o.tipo AS obra_tipo, o.proposta, cl.nome AS cliente
+                   FROM obra_membro_parcial p
+                   JOIN obra o          ON o.id = p.obra_id
+                   LEFT JOIN cliente cl ON cl.id = o.cliente_id
+                   LEFT JOIN usuario u  ON u.id = p.incluido_por
+                  WHERE p.usuario_id = $1 AND p.status = 'pendente'
+                  ORDER BY p.incluido_em DESC`,
+                [eu]
+            ).catch((e) => (e.code === '42P01' ? { rows: [] } : Promise.reject(e))),
+            pool.query("SELECT valor FROM configuracao WHERE chave = 'termo_etapa'").catch(() => ({ rows: [] }))
+        ]);
+        res.json({
+            termoEtapa: termo.rows[0]?.valor || 'Etapa',
+            avisos: avisos.rows.map((a) => ({
+                id: String(a.id),
+                obraId: String(a.obra_id),
+                obraTipo: a.obra_tipo,
+                cliente: a.cliente,
+                etapa: a.etapa,
+                mensagem: a.mensagem || '',
+                setores: a.setores,
+                enviadoPorNome: a.enviado_por_nome,
+                enviadoEm: a.enviado_em,
+                lido: a.lido
+            })),
+            pedidos: pedidos.rows.map((p) => ({
+                obraId: String(p.obra_id),
+                obraTipo: p.obra_tipo,
+                obra: [p.cliente, p.proposta].filter(Boolean).join(' - ') || 'Obra',
+                incluidoPorNome: p.incluido_por_nome,
+                incluidoEm: p.incluido_em
+            }))
+        });
+    } catch (err) {
+        logger.error('almox/sininho', err.message);
+        res.status(500).json({ erro: "Não foi possível ler as notificações." });
+    }
+});
+
+// ============================================================
 // GET /api/almox/painel — o painel do Almoxarife no Dashboard
 //
 // Era o "Dashboard PowerBI" do lwncontrol. Saiu da tela do Almoxarife e

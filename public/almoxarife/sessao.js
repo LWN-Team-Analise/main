@@ -63,6 +63,23 @@
         try { sessionStorage.setItem('lwn_user', pedido.responseText); } catch (e) { /* segue */ }
     }
 
+    /* O TEMA e o do main: o botao do modo noturno do lwncontrol saiu, e a
+       escolha mora em Configurações > Aparência (localStorage
+       'customers.theme', o de core/src/context/ThemeContext.jsx). Trocado
+       em outra aba, vale aqui tambem. */
+    var TEMA_DO_MAIN = 'customers.theme';
+    function aplicarTema() {
+        var escuro = false;
+        try { escuro = localStorage.getItem(TEMA_DO_MAIN) === 'dark'; } catch (e) { escuro = false; }
+        document.documentElement.setAttribute('data-theme', escuro ? 'dark' : 'light');
+        if (document.body) document.body.classList.toggle('dark-mode', escuro);
+    }
+    aplicarTema();
+    document.addEventListener('DOMContentLoaded', aplicarTema);
+    window.addEventListener('storage', function (evento) {
+        if (evento.key === TEMA_DO_MAIN) aplicarTema();
+    });
+
     /* a notificacao (celular ou e-mail) abre a aba do aviso: ?aba=devolutiva.
        "aprovar" e "minhas-obras" sao abas de dentro do Painel Geral */
     window.addEventListener('load', function () {

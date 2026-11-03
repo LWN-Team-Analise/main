@@ -148,12 +148,12 @@
     <!-- "Sair do sistema?": o pop-up de confirmacao do main (Modal + Confirma) -->
     <div class="am-modal" id="almox-confirma-sair" hidden>
         <div class="am-modal__caixa" role="dialog" aria-modal="true" aria-labelledby="almox-confirma-titulo" style="max-width: 430px;">
-            <header class="am-modal__topo">
+            <div class="am-modal__topo">
                 <h2 class="am-modal__titulo" id="almox-confirma-titulo">Sair do sistema?</h2>
                 <button type="button" class="am-modal__x" data-acao="fechar" aria-label="Fechar">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18" /></svg>
                 </button>
-            </header>
+            </div>
             <div class="am-modal__corpo">
                 <div class="confirma">
                     <footer class="confirma__acoes">
@@ -354,31 +354,34 @@
 
     <!-- Main Content -->
     <main id="main-content">
-        <header>
-            <div class="header-actions">
-                <button class="theme-toggle-btn" onclick="toggleTheme()"aria-label="Alternar tema claro/escuro">
-                    <svg class="sun-icon"viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"><circle cx="12"cy="12"r="5"></circle><line x1="12"y1="1"x2="12"y2="3"></line><line x1="12"y1="21"x2="12"y2="23"></line><line x1="4.22"y1="4.22"x2="5.64"y2="5.64"></line><line x1="18.36"y1="18.36"x2="19.78"y2="19.78"></line><line x1="1"y1="12"x2="3"y2="12"></line><line x1="21"y1="12"x2="23"y2="12"></line><line x1="4.22"y1="19.78"x2="5.64"y2="18.36"></line><line x1="18.36"y1="5.64"x2="19.78"y2="4.22"></line></svg>
-                    <svg class="moon-icon"viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                </button>
+        <!-- A barra de cima do main (AppShell): a saudacao, a busca com o orbe
+             e o sino. Um div, e nao <header>: o lwncontrol tem um estilo para
+             todo <header> que passaria por cima do desenho. Quem faz a busca,
+             o orbe e o sino funcionarem e topo-main.js -->
+        <div class="topbar vidro" role="banner" id="almox-topo">
+            <p class="topbar__saudacao"><span data-topo="saudacao">Ótimo dia</span>, <strong data-topo="nome">Usuário</strong>!</p>
+            <div class="busca" id="almox-busca">
+                <form class="omni" role="search" onsubmit="return false;">
+                    <canvas class="interlock omni__orb" style="width: 26px; height: 26px;" aria-hidden="true"></canvas>
+                    <input class="omni__campo" placeholder="Buscar ferramenta, OS, cliente ou aba" aria-label="Buscar" aria-expanded="false" aria-controls="busca-resultados" role="combobox" autocomplete="off">
+                </form>
+                <div class="busca__caixa" id="busca-resultados" role="listbox" hidden></div>
             </div>
-            <div class="notifications-dropdown" id="notifications-dropdown">
-                <div class="notif-header">
-                    <span class="notif-title">Atividades Auditadas</span>
-                    <button class="btn btn-outline btn-sm" onclick="clearNotifications()" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">Marcar lidas</button>
+            <div class="topbar__acoes">
+                <div class="sininho" id="almox-sininho">
+                    <button type="button" class="topbar__sino" aria-haspopup="menu" aria-expanded="false" aria-label="Notificações" title="Notificações">
+                        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15V10a6 6 0 1 0-12 0v5l-1.5 2.5h15z" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>
+                        <span class="sininho__selo" aria-hidden="true" hidden></span>
+                    </button>
+                    <div class="sininho__painel" role="menu" hidden></div>
                 </div>
-                <div class="notif-list" id="notifications-list"></div>
             </div>
-        </header>
+        </div>
 
         <div class="content-container">
 
             <!-- DASHBOARD -->
             <section id="dashboard-tab" class="tab-content active">
-                <div style="margin-bottom: 1.5rem;">
-                    <h2  style="font-size: 1.6rem; font-weight: 850; color: var(--text-main); letter-spacing: -0.02em;"><span id="dash-greeting">Ótimo dia</span>, <strong class="dashName" id="dash-user-name" style="color: var(--primary);">Usuário</strong>!</h2> 
-                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">Bem-vindo ao Almoxarife,</p>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.1rem;">Aqui está o resumo de hoje.</p>
-                </div>
                 <!-- Volta para o resumo do Painel Geral. Fica ACIMA da aba e
                      só ocupa espaço quando um painel está aberto: a linha
                      cresce de altura 0 no mesmo tempo da aba que se abre. -->
@@ -1492,5 +1495,6 @@
     <script src="/almoxarife/aprovacao.js"></script>
     <script src="/almoxarife/obra-da-os.js"></script>
     <script src="/almoxarife/menu-main.js"></script>
+    <script src="/almoxarife/topo-main.js"></script>
 </body>
 </html>

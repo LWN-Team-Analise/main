@@ -21,6 +21,9 @@ const comum = ler('styles/comum.css')
 const avatar = ler('components/Avatar/Avatar.css')
 const modal = ler('components/Modal/Modal.css')
 const confirma = ler('components/Confirma/Confirma.css')
+const busca = ler('components/Busca/Busca.css')
+const orbe = ler('components/ParticleInterlock/ParticleInterlock.css')
+const pedido = ler('components/PedidoInclusao/PedidoInclusao.css')
 const tokens = ler('styles/tokens.css').replace(/\/\*[\s\S]*?\*\//g, '')
 
 /* um bloco do CSS do main pelo seletor de abertura, ate o } que fecha */
@@ -43,10 +46,18 @@ const ate1000 = (() => {
 })()
 
 /* na ordem em que o main carrega: o vidro (comum.css), o ajuste do menu
-   em comum.css e so depois o AppShell.css — e o .rail de la que vale */
+   e da barra de cima em comum.css e so depois o AppShell.css — e o .rail
+   e o .topbar de la que valem */
 const vidro =
-  regra(comum, '.vidro') + '\n\n' + regra(comum, '.vidro > *') + '\n\n' +
-  regra(comum, '.rail,\n.topbar').replace('.rail,\n.topbar {', '.rail {')
+  regra(comum, '.vidro') + '\n\n' + regra(comum, '.vidro > *') + '\n\n' + regra(comum, '.rail,\n.topbar')
+
+/* a barra de cima (a saudacao, o campo com o orbe e o sino) e o painel do sino */
+const topo = appshell.slice(
+  appshell.indexOf('/* ---------------- Barra superior ---------------- */'),
+  appshell.indexOf('/* ---------------- Conteudo ---------------- */'),
+)
+const sinoIni = appshell.indexOf('/* ============================================================\n   Sininho e o painel de notificacoes')
+const sino = appshell.slice(sinoIni, appshell.indexOf('/* ============================================================', sinoIni + 10))
 const cancelar = regra(comum, '.formobra__cancelar') + '\n\n' + regra(comum, '.formobra__cancelar:hover')
 const avatarCss = regra(avatar, '.avatarfig') + '\n\n' + regra(avatar, '.avatarfig img')
 const modalCss = ['.modal', '.modal__caixa', '.modal__caixa:focus', '.modal__topo', '.modal__titulo', '.modal__x', '.modal__x:hover', '.modal__corpo']
@@ -56,7 +67,7 @@ const confirmaCss = ['.confirma', '.confirma__acoes', '.confirma__ok', '.confirm
   .map((sel) => regra(confirma, sel))
   .join('\n\n')
 
-let copiado = [vidro, barra, naColuna, ate1000, avatarCss, modalCss, confirmaCss, cancelar].join('\n\n')
+let copiado = [vidro, barra, naColuna, ate1000, topo, sino, busca, orbe, pedido, avatarCss, modalCss, confirmaCss, cancelar].join('\n\n')
 
 /* o pop-up do lwncontrol ja usa .modal: o do main vira .am-modal */
 copiado = copiado.replace(/\.modal(?=[\s_:{,.])/g, '.am-modal')
@@ -197,12 +208,41 @@ body.dark-mode .rail .menu-item.rail__btn.active,
   line-height: 1rem;
 }
 
-/* no main o menu do avatar e a confirmacao so existem quando abertos (o
-   React os monta); aqui eles ficam no HTML com o atributo hidden — e o
-   display do CSS copiado passaria por cima dele */
+/* no main o menu do avatar, a confirmacao, a lista da busca, o painel e o
+   selo do sino so existem quando abertos (o React os monta); aqui eles
+   ficam no HTML com o atributo hidden — e o display do CSS copiado
+   passaria por cima dele */
 .euzinho__menu[hidden],
-.am-modal[hidden] {
+.am-modal[hidden],
+.busca__caixa[hidden],
+.sininho__painel[hidden],
+.sininho__selo[hidden] {
   display: none !important;
+}
+
+/* a barra de cima no lugar do header do lwncontrol, com a folga da coluna
+   do main (.shell__coluna: 18px) e o respiro ate o conteudo
+   (.shell__conteudo: 18px) */
+#almox-topo {
+  margin: 18px 18px 0;
+}
+
+#almox-topo + .content-container {
+  margin-top: 18px;
+}
+
+/* no celular: a barra cola nas bordas e a saudacao sai, para a busca caber */
+@media (max-width: 768px) {
+  #almox-topo {
+    top: 10px;
+    margin: 10px 10px 0;
+    gap: 8px;
+    padding-left: 10px;
+  }
+
+  #almox-topo .topbar__saudacao {
+    display: none;
+  }
 }
 
 /* As abas do Almoxarife tem palavras mais compridas que as do main:
