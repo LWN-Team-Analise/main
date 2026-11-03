@@ -10,7 +10,7 @@
      terca    finais 3 e 4      sexta   finais 9 e 0
      quarta   finais 5 e 6
 
-   Das 7h as 10h e das 17h as 20h, so no Centro Expandido (o
+   Das 7h as 10h e das 17h as 20h, so no centro (o
    minianel viario). Sabado, domingo e feriado: livre. A CET as vezes
    SUSPENDE o rodizio (Carnaval, fim de ano) — os feriados e a quarta
    de cinzas a API ja conhece; uma suspensao avulsa, nao.
@@ -24,7 +24,7 @@ export const HORARIOS = [
   { de: '17:00', ate: '20:00' },
 ]
 
-export const AREA = 'Centro Expandido (minianel viário)'
+export const AREA = 'Centro (minianel viário)'
 
 export const DIAS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado']
 

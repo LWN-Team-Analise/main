@@ -69,7 +69,7 @@ export default function PainelRodizio({ rodizio, veiculos }) {
         <p className="rodizio__frota">
           {pegos.length > 0 ? (
             <>
-              Da frota, hoje não circulam no centro expandido:{' '}
+              Da frota, hoje não circulam no centro de São Paulo:{' '}
               {pegos.map((v, i) => (
                 <span key={v.id}>
                   {i > 0 && ', '}

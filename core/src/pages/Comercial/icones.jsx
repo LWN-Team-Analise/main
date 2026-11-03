@@ -117,8 +117,8 @@ export const IconeTrofeu = ({ tamanho = 16 }) =>
 
 /* ---------------- a situacao da proxima atividade ---------------- */
 
-/** O triangulo amarelo: nenhuma atividade marcada. */
-export const IconeSemAtividade = ({ tamanho = 20 }) => (
+/** O triangulo amarelo: o negocio tem alerta (alertasDoNegocio). */
+export const IconeAlerta = ({ tamanho = 20 }) => (
   <svg viewBox="0 0 24 24" width={tamanho} height={tamanho} aria-hidden="true">
     <path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" fill="#f5c518" />
     <path d="M12 9v5M12 17.2v.3" stroke="#1d1d1d" strokeWidth="2.2" strokeLinecap="round" />

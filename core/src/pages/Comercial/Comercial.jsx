@@ -15,14 +15,16 @@ import {
   ROTULO_SITUACAO,
   ROTULO_STATUS,
   TIPOS_CONTATO,
+  alertasDoNegocio,
   comparar,
   funilPorId,
   rotuloDaEtapa,
   situacaoDaAtividade,
 } from '@/domain/comercial'
+import { situacaoDaObra } from '@/domain/obras'
 import * as comercial from '@/services/comercialService'
 import { baixarPlanilha } from '@/utils/planilha'
-import { hojeISO } from '@/utils/formato'
+import { dataBR, hojeISO } from '@/utils/formato'
 import QuadroFunil from './QuadroFunil'
 import { ListaNegocios, PrevisaoNegocios } from './Visoes'
 import ModalNegocio from './ModalNegocio'
@@ -157,7 +159,7 @@ function Menu({ rotulo, conteudo, children, classe = '', alinhar = 'esquerda', t
  * Outlook de quem esta logado (ModalEmail).
  */
 export default function Comercial() {
-  const { pode, equipe } = useDados()
+  const { pode, equipe, obraPorId, roteiroDaObra } = useDados()
   const { user } = useAuth()
   const guardado = useMemo(lerGuardado, [])
 
@@ -273,6 +275,29 @@ export default function Comercial() {
          negocio com e-mail de contato */
       (email.leitura ? n.email.aguardando : true),
     [podeResponder, email],
+  )
+
+  /* o negocio que ja virou obra: o check vencido dela e o mesmo atraso
+     que pinta o card na aba Obras (situacaoDaObra) */
+  const atrasoDaObra = useMemo(() => {
+    const mapa = new Map()
+    negocios.forEach((n) => {
+      const obra = n.obraId ? obraPorId(n.obraId) : null
+      if (!obra) return
+      const vencidos = situacaoDaObra(roteiroDaObra(obra), obra, hoje).motivos.filter((m) => m.venceu)
+      if (vencidos.length === 0) return
+      const m = vencidos[0]
+      const prazo = m.titulo ? `o prazo de "${m.titulo}"` : 'o prazo'
+      const mais = vencidos.length > 1 ? ` (e mais ${vencidos.length - 1})` : ''
+      mapa.set(n.id, `Obra atrasada: ${prazo} venceu em ${dataBR(m.prazo).slice(0, 5)}${mais}`)
+    })
+    return mapa
+  }, [negocios, obraPorId, roteiroDaObra, hoje])
+
+  /* o triangulo do cartao: so aparece com algum destes */
+  const alertasEm = useCallback(
+    (n) => [atrasoDaObra.get(n.id), ...alertasDoNegocio(n, hoje)].filter(Boolean),
+    [atrasoDaObra, hoje],
   )
 
   const funilVazio =
@@ -749,6 +774,7 @@ export default function Comercial() {
             podeEditar={podeEditar}
             podeExcluir={podeExcluir}
             responderEm={responderEm}
+            alertasEm={alertasEm}
             vazio={funilVazio}
             aoAbrir={(n) => setEditando({ negocio: n })}
             aoNovo={(etapa) => setEditando({ inicial: { funil: funil.id, etapa } })}
@@ -780,6 +806,7 @@ export default function Comercial() {
             hoje={hoje}
             donoDe={donoDe}
             responderEm={responderEm}
+            alertasEm={alertasEm}
             aoAbrir={(n) => setEditando({ negocio: n })}
             aoResponder={setEscrevendo}
           />

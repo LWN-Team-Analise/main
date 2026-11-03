@@ -111,7 +111,7 @@ function CartaoVeiculo({ veiculo, editavel, aoEditar, rodizio, agora }) {
       {/* o porque do "Rodizio agora" (e o aviso para quem esta com ele na rua) */}
       {horario && (
         <p className="veiculo__rodizio">
-          Placa final {finalDaPlaca(veiculo.placa)}: não pode circular no centro expandido de São Paulo agora, até
+          Placa final {finalDaPlaca(veiculo.placa)}: não pode circular no centro de São Paulo agora, até
           as {horaCurta(horario.ate)}.
         </p>
       )}

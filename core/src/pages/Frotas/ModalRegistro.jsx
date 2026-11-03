@@ -387,7 +387,7 @@ export default function ModalRegistro({ modo, veiculos, aoFechar, aoRegistrado, 
 
         {noRodizio && (
           <p className="frota-form__aviso is-rodizio" role="note">
-            <strong>Rodízio:</strong> placa final {finalPlaca} não circula no Centro Expandido de São Paulo{' '}
+            <strong>Rodízio:</strong> placa final {finalPlaca} não circula no centro de São Paulo{' '}
             {diaRodizio.data === hojeISO() ? 'hoje' : `nesta ${DIAS[diaRodizio.diaSemana]}`} das{' '}
             {horaCurta(horarioRodizio.de)} às {horaCurta(horarioRodizio.ate)}.
           </p>

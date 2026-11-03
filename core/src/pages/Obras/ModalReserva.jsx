@@ -164,7 +164,7 @@ export default function ModalReserva({ aberto, obra, check, nomeCard, podeReserv
                   Execução de {dataBR(frota.execucao.de)} a {dataBR(frota.execucao.ate)}
                 </strong>
                 <span>
-                  {frota.execucao.dias} {frota.execucao.dias === 1 ? 'dia' : 'dias'} · rodízio no centro expandido,{' '}
+                  {frota.execucao.dias} {frota.execucao.dias === 1 ? 'dia' : 'dias'} · rodízio no centro de São Paulo,{' '}
                   {horariosLegiveis()}
                 </span>
               </header>
@@ -225,13 +225,13 @@ export default function ModalReserva({ aberto, obra, check, nomeCard, podeReserv
               })}
             </ul>
 
-            {/* o carro escolhido nao pode rodar no centro expandido em algum dia de campo */}
+            {/* o carro escolhido nao pode rodar no centro de Sao Paulo em algum dia de campo */}
             {carroEscolhido?.rodizio.length > 0 && (
               <p className="proposta__aviso reserva__rodizio" role="note">
                 <strong>Rodízio:</strong> o {carroEscolhido.nome} (placa final {finalDaPlaca(carroEscolhido.placa)}) não
-                circula no centro expandido de São Paulo, {horariosLegiveis()}, em {carroEscolhido.rodizio.length}{' '}
+                circula no centro de São Paulo, {horariosLegiveis()}, em {carroEscolhido.rodizio.length}{' '}
                 {carroEscolhido.rodizio.length === 1 ? 'dia' : 'dias'} da execução: {listaDeDias(carroEscolhido.rodizio)}.
-                Se a obra fica no centro expandido, prefira outro carro.
+                Se a obra fica no centro de São Paulo, prefira outro carro.
               </p>
             )}
           </>

@@ -1,7 +1,7 @@
 import Avatar from '@/components/Avatar/Avatar'
 import { ROTULO_SITUACAO, corDaEtiqueta, situacaoDaAtividade, valorCurto } from '@/domain/comercial'
 import { dataBR } from '@/utils/formato'
-import { IconeAtividade, IconeEmail, IconePessoa, IconeSemAtividade } from './icones'
+import { IconeAlerta, IconeAtividade, IconeEmail, IconePessoa } from './icones'
 
 /**
  * "Negociação/Aprovação Interna" com um ponto de quebra depois de cada
@@ -18,8 +18,9 @@ export function quebraNaBarra(texto) {
  *
  *   a faixa da etiqueta em cima, o titulo, a empresa, a pessoa de
  *   contato e o valor; embaixo, o responsavel (a foto, ou o bonequinho)
- *   e a situacao da proxima atividade; e, quando o contato espera
- *   resposta, o "Responder?".
+ *   e a situacao da proxima atividade; o triangulo amarelo so quando ha
+ *   alerta (`alertas`: a obra atrasada, a informacao que falta); e,
+ *   quando o contato espera resposta, o "Responder?".
  *
  * O cartao inteiro abre o negocio. Ele e um <div role="button">, e nao
  * um <button>, porque leva outro botao dentro (o "Responder?").
@@ -30,6 +31,7 @@ export default function CartaoNegocio({
   dono,
   arrastavel = false,
   responder = false,
+  alertas = [],
   aoAbrir,
   aoResponder,
   aoComecarArrasto,
@@ -39,10 +41,11 @@ export default function CartaoNegocio({
   const etiqueta = corDaEtiqueta(negocio.etiqueta)
   const dicaAtividade =
     situacao === 'sem'
-      ? ROTULO_SITUACAO.sem
+      ? null
       : `${ROTULO_SITUACAO[situacao]}: ${dataBR(negocio.proximaAtividade)}${
           negocio.atividadeDescricao ? ` — ${negocio.atividadeDescricao}` : ''
         }`
+  const comAtividade = negocio.status === 'aberto' && dicaAtividade
 
   return (
     <article
@@ -98,9 +101,23 @@ export default function CartaoNegocio({
           </span>
         )}
 
-        {negocio.status === 'aberto' && (
-          <span className="cartaoneg__atividade" title={dicaAtividade} role="img" aria-label={dicaAtividade}>
-            {situacao === 'sem' ? <IconeSemAtividade /> : <IconeAtividade situacao={situacao} />}
+        {(alertas.length > 0 || comAtividade) && (
+          <span className="cartaoneg__sinais">
+            {alertas.length > 0 && (
+              <span
+                className="cartaoneg__alerta"
+                title={alertas.join('\n')}
+                role="img"
+                aria-label={`Alerta: ${alertas.join('; ')}`}
+              >
+                <IconeAlerta />
+              </span>
+            )}
+            {comAtividade && (
+              <span className="cartaoneg__atividade" title={dicaAtividade} role="img" aria-label={dicaAtividade}>
+                <IconeAtividade situacao={situacao} />
+              </span>
+            )}
           </span>
         )}
       </div>
