@@ -79,6 +79,13 @@ import pg from 'pg'
      npm run db:almoxarife -- --origem-env=...\lwncontrol\.env --destino-env=.env.producao --gravar
      Remove-Item .env.producao
 */
+/* o endereco de dentro do texto, ou null. Sem usuario@servidor e o
+   exemplo da instrucao (postgresql://...), nao um endereco */
+const enderecoDe = (texto) => {
+  const achado = String(texto ?? '').match(/postgres(?:ql)?:\/\/[^\s'"]+/i)
+  return achado && achado[0].includes('@') ? achado[0] : null
+}
+
 const DESTINO_ENV = process.argv.slice(2).find((a) => a.startsWith('--destino-env='))?.slice(14)
 if (DESTINO_ENV) {
   if (!fs.existsSync(DESTINO_ENV)) {
@@ -86,18 +93,38 @@ if (DESTINO_ENV) {
     process.exit(1)
   }
   const lido = dotenv.parse(fs.readFileSync(DESTINO_ENV))
-  const doArquivo = lido.DATABASE_URL || lido.POSTGRES_URL || lido.DATABASE_URL_UNPOOLED
-  if (!doArquivo?.trim()) {
-    console.error(`\nO arquivo ${DESTINO_ENV} nao tem o DATABASE_URL (na Vercel ele pode estar marcado como "Sensitive", e ai nao desce).\n`)
+  /* os nomes que a Vercel e a integracao do Neon usam para o banco; o
+     primeiro que for um endereco de verdade vale */
+  const CHAVES = ['DATABASE_URL', 'POSTGRES_URL', 'DATABASE_URL_UNPOOLED', 'POSTGRES_URL_NON_POOLING', 'POSTGRES_PRISMA_URL']
+  let endereco = CHAVES.map((k) => enderecoDe(lido[k])).find(Boolean) ?? null
+  /* ou montado das partes (PGHOST, PGUSER...), que a integracao tambem cria */
+  if (!endereco) {
+    const host = lido.PGHOST || lido.POSTGRES_HOST
+    const usuario = lido.PGUSER || lido.POSTGRES_USER
+    const senha = lido.PGPASSWORD || lido.POSTGRES_PASSWORD
+    const banco = lido.PGDATABASE || lido.POSTGRES_DATABASE
+    if (host && usuario && senha && banco) {
+      endereco = `postgresql://${encodeURIComponent(usuario)}:${encodeURIComponent(senha)}@${host}/${banco}?sslmode=require`
+    }
+  }
+  if (!endereco) {
+    /* o que veio, sem mostrar valor nenhum: so o nome e o formato */
+    console.error(`\nO arquivo ${DESTINO_ENV} nao tem um endereco de banco que sirva. O que veio da Vercel:`)
+    const doBanco = Object.keys(lido).filter((k) => /DATABASE|POSTGRES|^PG/i.test(k))
+    if (!doBanco.length) console.error('  nenhuma variavel de banco')
+    doBanco.forEach((k) => {
+      const v = String(lido[k] ?? '')
+      console.error(`  ${k}: ${v.length ? `${v.length} letras` : 'VAZIO'}, comeca com postgres: ${/^\s*['"]?\s*(psql\s+['"])?postgres/i.test(v) ? 'sim' : 'nao'}, tem @: ${v.includes('@') ? 'sim' : 'nao'}, tem ://: ${v.includes('://') ? 'sim' : 'nao'}`)
+    })
+    console.error('\n(VAZIO costuma ser variavel marcada como "Sensitive" na Vercel: ela nao desce para o computador.)\n')
     process.exit(1)
   }
-  process.env.DATABASE_URL = doArquivo
+  process.env.DATABASE_URL = endereco
 }
 const enderecoBruto = process.env.DATABASE_URL
 if (enderecoBruto?.trim()) {
-  const achado = enderecoBruto.match(/postgres(?:ql)?:\/\/[^\s'"]+/)
-  /* sem usuario@servidor e o exemplo da instrucao (postgresql://...), nao um endereco */
-  if (!achado || !achado[0].includes('@')) {
+  const achado = [enderecoDe(enderecoBruto)]
+  if (!achado[0]) {
     console.error('\nO DATABASE_URL nao e o endereco de um banco: ele precisa comecar com postgresql://')
     console.error('No Neon: projeto costumers > Connect > copie o endereco que comeca com postgresql:// (com a senha)')
     console.error('e rode de novo:  $env:DATABASE_URL = "postgresql://..."\n')
