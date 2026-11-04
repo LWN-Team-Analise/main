@@ -67,7 +67,21 @@ const confirmaCss = ['.confirma', '.confirma__texto', '.confirma__acoes', '.conf
   .map((sel) => regra(confirma, sel))
   .join('\n\n')
 
-let copiado = [vidro, barra, naColuna, ate1000, topo, sino, busca, orbe, pedido, avatarCss, modalCss, confirmaCss, cancelar].join('\n\n')
+/* o celular: a bolha deita no rodape (o indicador que desliza, o icone
+   aceso que sobe para dentro dele, o Mais na ponta), o avatar vai para a
+   barra de cima, o hamburguer vira X girando e o menu lateral do Mais */
+const celular = appshell.slice(
+  appshell.indexOf('@media (max-width: 860px) {'),
+  appshell.indexOf('/* ---------------- Recado de falha'),
+)
+const marcaMenu = '/* ------------------------------------------------------------\n   O MENU LATERAL'
+const ham = appshell.slice(appshell.indexOf('/* ------------------------------------------------------------\n   O hambúrguer'), appshell.indexOf(marcaMenu))
+const menulado = appshell.slice(appshell.indexOf(marcaMenu))
+if (!celular.startsWith('@media') || !ham.includes('.ham {') || !menulado.includes('.menulado__painel')) {
+  throw new Error('o celular, o hamburguer ou o menu lateral mudaram de lugar no AppShell.css')
+}
+
+let copiado = [vidro, barra, naColuna, ate1000, topo, sino, busca, orbe, pedido, avatarCss, modalCss, confirmaCss, cancelar, celular, ham, menulado].join('\n\n')
 
 /* o pop-up do lwncontrol ja usa .modal: o do main vira .am-modal */
 copiado = copiado.replace(/\.modal(?=[\s_:{,.])/g, '.am-modal')
@@ -75,8 +89,10 @@ copiado = copiado.replace(/\.modal(?=[\s_:{,.])/g, '.am-modal')
 copiado = copiado.split(":root[data-theme='dark']").join('body.dark-mode')
 
 /* ---- as variaveis do main que o CSS copiado usa, renomeadas ---- */
-const internas = new Set(['marca-x', 'marca-y', 'marca-l', 'marca-a', 'ind-x', 'ergue', 'afunda', 'dur-viagem', 'curva-viagem', 'avatar-anel', 'modal-topo'])
-const usadas = new Set()
+const internas = new Set(['marca-x', 'marca-y', 'marca-l', 'marca-a', 'ind-x', 'ergue', 'afunda', 'dur-viagem', 'curva-viagem', 'avatar-anel', 'modal-topo', 'i', 'menulado-curva', 'menulado-entra', 'menulado-sai'])
+/* a cor das estrelas da nota no menu lateral (components/Estrelas): so a
+   cola usa */
+const usadas = new Set(['pri-media'])
 copiado = copiado.replace(/var\(--([a-z0-9-]+)/g, (m, nome) => {
   if (internas.has(nome)) return m
   usadas.add(nome)
@@ -231,20 +247,6 @@ body.dark-mode .rail .menu-item.rail__btn.active,
   margin-top: 18px;
 }
 
-/* no celular: a barra cola nas bordas e a saudacao sai, para a busca caber */
-@media (max-width: 768px) {
-  #almox-topo {
-    top: 10px;
-    margin: 10px 10px 0;
-    gap: 8px;
-    padding-left: 10px;
-  }
-
-  #almox-topo .topbar__saudacao {
-    display: none;
-  }
-}
-
 /* As abas do Almoxarife tem palavras mais compridas que as do main:
    "Certificados", "Localização", "Manutenção" e "Remanejamento" nao
    cabem na largura do item no tamanho do main e quebrariam no meio da
@@ -291,13 +293,95 @@ body.dark-mode .marca .logo-escuro {
   }
 }
 
-/* no celular quem navega e a barra de baixo do lwncontrol */
-@media (max-width: 768px) {
-  .marca,
-  .rail,
-  .euzinho {
+/* ---- o celular: o mesmo do main ----
+   A bolha deita no rodape com Painel, Solicitar, Certificados e o Mais
+   (o hamburguer), e o Mais abre o menu lateral com o resto. A barra de
+   baixo e a gaveta do lwncontrol saem. */
+
+/* Solicitar so existe na barra do celular: no computador ele e o botao
+   SOLICITAR do Painel Geral */
+.rail__lista > li[data-so-celular] {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .rail__lista > li[data-so-celular] {
+    display: block;
+  }
+
+  /* a ordem na barra: Painel · Solicitar · Certificados · Mais */
+  .rail__lista > li[data-id='dashboard'] {
+    order: 1;
+  }
+
+  .rail__lista > li[data-id='solicitar'] {
+    order: 2;
+  }
+
+  .rail__lista > li[data-id='certificados'] {
+    order: 3;
+  }
+
+  /* o "Certificados" encolhido do computador volta ao rotulo do celular */
+  .rail__btn[onclick*="'certificados'"] .rail__rotulo {
+    font-size: 0.54rem;
+    letter-spacing: normal;
+  }
+
+  /* a coluna do lwncontrol vira gaveta no celular (transform). Com
+     transform num ancestral, o fixed da barra passa a contar a partir dele
+     e a barra sairia da tela junto com a gaveta */
+  #sidebar {
+    transform: none !important;
+  }
+
+  :root {
+    --sidebar-width: 0px;
+  }
+
+  /* o conteudo usa a largura toda e termina acima da barra
+     (.shell__coluna do main: 104px) */
+  #main-content {
+    margin-left: 0;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 104px);
+  }
+
+  #almox-topo {
+    margin: 14px 14px 0;
+  }
+
+  #almox-topo + .content-container {
+    margin-top: 14px;
+  }
+
+  #bottom-nav,
+  #bnav-more-drawer,
+  #bnav-more-overlay,
+  #sidebar-backdrop {
     display: none !important;
   }
+}
+
+/* no main as linhas do menu lateral sao links (NavLink); aqui as abas sao
+   botoes (o switchTab): sem a cara de botao do navegador */
+button.menulado__item {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* a nota embaixo do nome: as estrelas de components/Estrelas do main */
+.menulado__nota .estrelas {
+  display: inline-flex;
+  gap: 1px;
+}
+
+.menulado__nota .estrelas svg {
+  display: block;
 }
 `
 

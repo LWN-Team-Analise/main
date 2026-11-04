@@ -63,7 +63,10 @@
         const s = document.querySelector('[data-topo="saudacao"]');
         const n = document.querySelector('[data-topo="nome"]');
         if (s) s.textContent = saudacao();
-        if (n) n.textContent = String(eu.nome || '').trim().split(/\s+/)[0] || 'Usuário';
+        /* o nome do login do main vale quando /api/almox/eu nao trouxe */
+        let doMain = {};
+        try { doMain = (JSON.parse(localStorage.getItem('customers.session') || 'null') || {}).user || {}; } catch (e) { doMain = {}; }
+        if (n) n.textContent = String(eu.nome || doMain.name || '').trim().split(/\s+/)[0] || 'Usuário';
     }
 
     // ---------------- o orbe (ParticleInterlock) ----------------
@@ -155,7 +158,8 @@
     /* o que a pessoa pode digitar para achar cada aba — como os ATALHOS
        de src/domain/busca.js */
     const SINONIMOS = {
-        dashboard: 'painel geral inicio resumo solicitar solicitacao aprovar aprovacao minhas obras baias quadro',
+        dashboard: 'painel geral inicio resumo aprovar aprovacao minhas obras baias quadro',
+        solicitar: 'solicitar solicitacao nova os pedido pedir ferramentas',
         conferencia: 'retirada separar separacao conferencia bipar bipagem saida',
         devolutiva: 'devolutiva devolucao devolver retorno prorrogar prorrogacao',
         concluidos: 'os concluidas historico pdf encerradas finalizadas',
@@ -194,9 +198,12 @@
 
     const POR_GRUPO = 6;
 
+    /* as abas que a permissao deixa ver — e nao as que estao NA TELA: no
+       celular a barra so mostra quatro, e o resto mora no Mais. O Mais em si
+       nao e aba */
     function abasVisiveis() {
         return [...document.querySelectorAll('#almox-rail .rail__lista > li')]
-            .filter((li) => li.style.display !== 'none' && li.offsetParent !== null)
+            .filter((li) => li.style.display !== 'none' && !li.classList.contains('rail__somobile') && !li.classList.contains('no-permissions-msg'))
             .map((li) => li.querySelector('.rail__btn'))
             .filter(Boolean);
     }

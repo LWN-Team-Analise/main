@@ -856,7 +856,15 @@ app.get("/usuarios", async (req, res) => {
    ao abrir a tela */
 app.get("/eu", async (req, res) => {
     try {
-        const r = await pool.query("SELECT * FROM almox.usuarios WHERE id = $1", [req.dono.sub]);
+        /* com a media das obras avaliadas (a view public.usuario_media), que
+           o menu lateral do celular mostra embaixo do nome, como no main */
+        const r = await pool.query(
+            `SELECT u.*, m.media::float AS media, coalesce(m.obras_avaliadas, 0)::int AS obras_avaliadas
+               FROM almox.usuarios u
+               LEFT JOIN public.usuario_media m ON m.usuario_id = u.id
+              WHERE u.id = $1`,
+            [req.dono.sub]
+        );
         if (!r.rows[0]) return res.status(404).json({ erro: "Usuário não encontrado" });
         res.json(r.rows[0]);
     } catch (err) {

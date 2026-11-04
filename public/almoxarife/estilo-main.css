@@ -28,6 +28,7 @@
   --am-anel-4: #a5d2ff;
   --am-anel-cova: rgba(13, 13, 13, 0.09);
   --am-anel-miolo: rgba(255, 255, 255, 0.94);
+  --am-barra-cor: #ffffff;
   --am-btn-bg: #1a56c4;
   --am-btn-fg: #ffffff;
   --am-btn-shadow: 0 14px 30px -18px rgba(9, 30, 74, 0.75);
@@ -54,6 +55,7 @@
   --am-obra-padrao: #12315c;
   --am-page-bg: #ffffff;
   --am-pri-alta: #d93a34;
+  --am-pri-media: #e08a1e;
   --am-radius-lg: 26px;
   --am-radius-md: 16px;
   --am-radius-pill: 999px;
@@ -80,6 +82,7 @@ body.dark-mode {
   --am-anel-4: #a5d2ff;
   --am-anel-cova: rgba(0, 0, 0, 0.55);
   --am-anel-miolo: rgba(14, 18, 28, 0.94);
+  --am-barra-cor: #1b1f27;
   --am-btn-bg: #2f6ee0;
   --am-btn-fg: #ffffff;
   --am-btn-shadow: 0 14px 30px -18px rgba(120, 170, 240, 0.45);
@@ -106,6 +109,7 @@ body.dark-mode {
   --am-obra-padrao: #17406f;
   --am-page-bg: #000000;
   --am-pri-alta: #f0554c;
+  --am-pri-media: #f0a83c;
   --am-radius-lg: 26px;
   --am-radius-md: 16px;
   --am-radius-pill: 999px;
@@ -1460,6 +1464,794 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
   color: var(--am-text-strong);
 }
 
+@media (max-width: 860px) {
+  .shell {
+    flex-direction: column;
+    padding-left: 0;
+  }
+
+  /* no celular a bolha deita e vira uma faixa no rodape.
+     width: 100% (em vez de left+right) porque com width:auto a barra
+     estica ate caber os seis itens e vaza a tela. */
+  .rail {
+    position: fixed;
+    top: auto;
+    /* a faixa do gesto de voltar para a tela inicial come os ultimos
+       ~20px do iPhone: sem a area segura a barra fica por baixo dela */
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+    left: 8px;
+    width: calc(100% - 16px);
+    padding: 6px 8px;
+    max-height: none;
+    transform: none;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    /* 18px nas laterais, e nao 8: o vinco do indicador se estende 10px
+       para fora do circulo, e no primeiro e no ultimo item isso caia
+       fora da quina arredondada da barra — uma corcova escura do lado
+       de fora, bem visivel no tema escuro. Com o respiro maior os dois
+       extremos ficam dentro da faixa. */
+    padding: 6px 18px;
+    border-radius: 22px;
+  }
+
+  .rail__lista {
+    margin: 0;
+  }
+
+  /* min-width: 0 deixa a lista encolher: os itens rolam por dentro dela,
+     em vez de empurrarem a barra para fora da tela */
+  /* Sem rolagem: os itens que sobram dividem a largura em partes
+     iguais. Uma barra que rola de lado esconde item sem avisar que
+     esconde — quem nao arrasta nunca descobre o que ha depois.
+
+     `overflow: visible` nos DOIS eixos, e nao so no horizontal: com um
+     eixo `visible` e o outro `auto`, o navegador trata os dois como
+     `auto` e a lista vira caixa de recorte. Era isso que cortava o topo
+     do botao redondo, que sobe para fora da barra. */
+  .rail__lista {
+    flex: 1;
+    min-width: 0;
+    flex-direction: row;
+    gap: 2px;
+    overflow: visible;
+  }
+
+  .rail__lista > li {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  /* as que foram para o menu lateral somem da barra */
+  .rail__lista > li[data-principal="nao"] {
+    display: none;
+  }
+
+  /* ---- a ordem na barra ----
+     inicio · obras · despesas · menu
+
+     O Menu fica na PONTA DIREITA, com cara de item igual aos outros:
+     e o lugar onde todo aplicativo poe o "mais", e e onde o polegar
+     da mao direita chega sem esticar. */
+  .rail__lista > li[data-id='inicio'] {
+    order: 1;
+  }
+
+  .rail__lista > li[data-id='obras'] {
+    order: 2;
+  }
+
+  .rail__lista > li[data-id='despesas'] {
+    order: 3;
+  }
+
+  .rail__somobile {
+    display: block;
+    order: 4;
+  }
+
+  /* o Menu e um <button>, os outros sao links: a mesma letra e o mesmo
+     cursor para os quatro */
+  .rail__menu {
+    font: inherit;
+    cursor: pointer;
+  }
+
+  /* ============================================================
+     O INDICADOR
+
+     O desenho e o do exemplo: um circulo DA COR DA BARRA que
+     desliza ate o item escolhido, subindo metade para fora dela, e
+     duas pecas laterais que preenchem o vinco entre o circulo e a
+     linha reta da faixa. Sem essas duas, o que se ve e um circulo
+     encostado num retangulo; com elas, a silhueta sobe em curva.
+
+     As pecas nao tem fundo: elas sao a SOMBRA de um circulo,
+     deslocada para dentro do vinco. Sombra de circulo e circulo, e
+     e a borda dele que faz a curva.
+
+     Por isso a faixa deixa de ser vidro no celular: as pecas sao
+     pintadas com uma cor chapada, e cor chapada nao casa com
+     superficie translucida. Ela vira uma superficie propria — que
+     de quebra e mais legivel sobre qualquer tela.
+     ============================================================ */
+  .rail {
+    background: var(--am-barra-cor);
+    border: 1px solid var(--am-vidro-borda);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    overflow: visible;
+  }
+
+  /* ---- a geometria da bolha ----
+     O circulo tem 56px e o centro dele fica ABAIXO da borda de cima
+     da barra — `--afunda` (15px). O indicador aflora so 13px, e o icone
+     aceso dentro dele so ~6px: um degrau, e nao um icone flutuando
+     longe da barra.
+
+     As duas curvas que ligam o circulo a linha reta da barra sao um
+     `radial-gradient` recortado numa caixa pequena: transparente dentro
+     de um circulo de 12px, cor da barra fora dele. As medidas saem da
+     tangencia desse circulo com a barra e com a bolha (distancia entre
+     centros = 28 + 12 = 40): centro 1,51px fora do circulo, caixa de
+     8,85 x 3,9px. Se o `--afunda` mudar, os numeros mudam junto. */
+  .rail__indicador {
+    display: block;
+    position: absolute;
+    left: 0;
+    z-index: 0;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--am-barra-cor);
+    pointer-events: none;
+  }
+
+  .rail__indicador {
+    top: calc(var(--afunda) - 28px);
+  }
+
+  .rail__indicador::before,
+  .rail__indicador::after {
+    content: '';
+    position: absolute;
+  }
+
+  .rail__indicador::before,
+  .rail__indicador::after {
+    top: 9.1px;
+    width: 8.85px;
+    height: 3.9px;
+  }
+
+  .rail__indicador::before {
+    left: -1.51px;
+    background: radial-gradient(
+      circle 12px at 0 -8.1px,
+      transparent 11.5px,
+      var(--am-barra-cor) 12px
+    );
+  }
+
+  .rail__indicador::after {
+    right: -1.51px;
+    background: radial-gradient(
+      circle 12px at 100% -8.1px,
+      transparent 11.5px,
+      var(--am-barra-cor) 12px
+    );
+  }
+
+  /* O que viaja. `--ind-x` e o centro do icone aceso medido na caixa
+     da propria barra (ver `posicaoDentro` no AppShell.jsx) — e nao
+     uma conta de indice vezes largura: vale em qualquer tela e com
+     qualquer quantidade de abas. So o `transform` anima, entao a
+     viagem nao mexe em layout nenhum. */
+  .rail__indicador {
+    opacity: 0;
+    transform: translate3d(calc(var(--ind-x) - 28px), 0, 0);
+    transition:
+      transform var(--dur-viagem) var(--curva-viagem),
+      opacity 0.22s var(--am-ease-out);
+    will-change: transform;
+  }
+
+  .rail__indicador.is-pronta {
+    opacity: 1;
+  }
+
+  /* antes da primeira pintura nao ha de onde vir: ele so aparece */
+  .rail:not(.is-viaja) .rail__indicador {
+    transition: opacity 0.22s var(--am-ease-out);
+  }
+
+  /* o anel deslizante do computador sai de cena */
+  .rail__marca {
+    display: none;
+  }
+
+  /* O destaque cinza que o iPhone pinta no toque cobria a caixa
+     inteira do botao — era o "quadrado cinza" embaixo do hamburguer. */
+  .rail__btn {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Altura que CABE o conteudo: icone de 42px + rotulo. Com os 56px e
+     o recheio antigos o flex encolhia os dois para caber — o circulo
+     virava um ovo de 42x32 e o rotulo era cortado ao meio. */
+  .rail__btn {
+    min-width: 0;
+    height: 60px;
+    padding: 2px 2px 3px;
+    gap: 3px;
+    transition: color 0.24s var(--am-ease-out);
+  }
+
+  .rail__btn > * {
+    flex-shrink: 0;
+  }
+
+  /* ---- o icone ----
+     Ele vira um circulo e, aceso, sobe para dentro do indicador: o
+     centro dele cai no centro da bolha porque a distancia (`--ergue`)
+     e medida, e nao chutada — e como a bolha so aflora um pouco da
+     barra, o icone tambem so sobe um pouco.
+
+     A subida usa `translate`, e nao `transform`: assim o `scale` do
+     toque (la em cima) soma com ela em vez de substitui-la.
+
+     Na chegada ha um atraso curto — o encaixe chega primeiro, o
+     icone logo atras. Na saida nao ha atraso: o icone que deixou de
+     ser o atual desce na hora, enquanto o indicador parte. */
+  .rail__glifo {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    translate: 0 0;
+    transition:
+      translate 0.32s var(--curva-viagem),
+      scale var(--am-dur-fast) var(--am-ease-out),
+      background-color 0.24s var(--am-ease-out),
+      color 0.24s var(--am-ease-out);
+  }
+
+  .rail__btn.is-atual .rail__glifo {
+    background: var(--am-accent);
+    color: #fff;
+    translate: 0 calc(var(--ergue) * -1);
+    transition:
+      translate 0.44s cubic-bezier(0.34, 1.16, 0.64, 1) 0.1s,
+      scale var(--am-dur-fast) var(--am-ease-out),
+      background-color 0.32s var(--am-ease-out) 0.1s,
+      color 0.32s var(--am-ease-out) 0.1s;
+  }
+
+  /* o brilho colorido por baixo do icone erguido */
+  .rail__glifo::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    top: 8px;
+    border-radius: 50%;
+    background: var(--am-accent);
+    filter: blur(6px);
+    opacity: 0;
+    transition: opacity 0.2s var(--am-ease-out);
+    z-index: -1;
+  }
+
+  .rail__btn.is-atual .rail__glifo::before {
+    opacity: 0.45;
+    transition: opacity 0.35s var(--am-ease-out) 0.18s;
+  }
+
+  /* o rotulo encolhe em vez de vazar o botao: numa tela de 360px os
+     cinco nomes tem de caber sem um empurrar o outro */
+  .rail__rotulo {
+    font-size: 0.54rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    opacity: 0.62;
+    transition: opacity 0.24s var(--am-ease-out);
+  }
+
+  .rail__btn.is-atual .rail__rotulo {
+    opacity: 1;
+  }
+
+  /* com o menu lateral aberto o botao flutuante do chat sai de cena */
+  .shell.tem-gaveta .bolhachat {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 0.16s var(--am-ease-out),
+      visibility 0s linear 0.16s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rail__indicador,
+    .rail__glifo,
+    .rail__btn.is-atual .rail__glifo {
+      transition-duration: 0.01s;
+      transition-delay: 0s;
+    }
+  }
+
+  /* ---- o hamburguer ----
+     O conjunto da MEIA VOLTA enquanto as barras se cruzam: o X nasce
+     girando. Duas velocidades de proposito — a volta em 0,4s e as
+     barras em 0,2s —, e e a diferenca entre elas que faz o desenho
+     se montar no meio do giro em vez de no fim.
+
+     Fica FORA do bloco do celular porque o botao existe so la; a
+     regra podia ficar aqui dentro, mas assim ela acompanha o icone
+     caso ele apareca em outro lugar um dia. */
+
+  /* no celular a logo sai da tela: o topo e pequeno demais para marca
+     e saudacao ao mesmo tempo */
+  .marca {
+    display: none;
+  }
+
+  /* O avatar sobe para o alto, a direita.
+
+     Com `position: static` ele voltava para o fluxo do .shell — que no
+     celular empilha — e pousava SOZINHO no canto de cima a esquerda,
+     antes da barra, com cara de peca esquecida. Fixo no alto a direita
+     ele fica onde todo aplicativo de celular poe a conta, e a barra
+     ganha o recuo para o sino nao passar por baixo dele. */
+  /* O avatar e `fixed`, entao ele conta a partir da JANELA — e a barra
+     conta a partir do fluxo. Os dois so ficam na mesma linha se a conta
+     for a mesma: 14px de respiro da coluna + 12px de recheio da barra,
+     menos a diferenca de altura entre o avatar (46px) e o sino (42px).
+
+     Sem isso ele ficava em `top: 20px` fixo e, desde que a ilha passou a
+     empurrar a barra para baixo, pousava ACIMA dela — solto, no meio do
+     caminho entre o aviso e o sino. */
+  .euzinho {
+    top: calc(env(safe-area-inset-top, 0px) + 24px);
+    right: 14px;
+    bottom: auto;
+    left: auto;
+    width: auto;
+    z-index: 22;
+  }
+
+  /* com a ilha no ar a barra desce 62px, e o avatar desce junto */
+  .shell.tem-ilha .euzinho {
+    top: calc(env(safe-area-inset-top, 0px) + 72px);
+  }
+
+  /* o menu do avatar agora desce, e nao sobe: nao ha tela acima dele */
+  .euzinho__menu {
+    top: calc(100% + 8px);
+    bottom: auto;
+    left: auto;
+    right: 0;
+  }
+
+  .shell__coluna {
+    padding: 14px 14px 104px;
+  }
+
+  /* Respiro IGUAL nos quatro lados. Ele era `12px 58px 12px 12px`: os
+     58px da direita eram o lugar do avatar, que flutua por cima da
+     barra. So que padding vale para a barra inteira, e quem pagava a
+     conta era o campo de busca da segunda linha — 13px de folga a
+     esquerda contra 59px a direita, que era a torta visivel.
+
+     O recuo agora e margem, e so da PRIMEIRA linha (o sino). A busca
+     usa a largura toda. */
+  /* Mais baixa no celular: saudacao, sino, avatar e busca menores. Do
+     jeito que era, a barra tomava quase um quarto da altura da tela. */
+  .topbar {
+    top: 10px;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    border-radius: var(--am-radius-lg);
+    padding: 7px 9px;
+  }
+
+  .topbar__saudacao {
+    font-size: 0.78rem;
+  }
+
+  .topbar__sino {
+    width: 34px;
+    height: 34px;
+  }
+
+  .topbar__sino svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .euzinho__botao {
+    padding: 2px;
+  }
+
+  /* Sem o recuo: o avatar agora e um item DA barra, e nao uma peca
+     flutuando por cima dela. */
+  .topbar__acoes {
+    gap: 8px;
+  }
+
+  .euzinho--barra {
+    display: grid;
+    position: static;
+    width: auto;
+    z-index: auto;
+  }
+
+  /* a do canto some: as duas ao mesmo tempo seriam dois rostos */
+  .euzinho:not(.euzinho--barra) {
+    display: none;
+  }
+
+  /* o menu do avatar desce a partir do proprio avatar */
+  .euzinho--barra .euzinho__menu {
+    top: calc(100% + 8px);
+    bottom: auto;
+    left: auto;
+    right: 0;
+  }
+
+  /* Quem desce para a segunda linha e o `.busca`, e nao o `.omni`.
+     Desde que a busca virou componente proprio, o `.omni` deixou de ser
+     filho direto da barra — e a regra, mirando o neto, nao pegava mais:
+     o campo continuava espremido ao lado da saudacao. */
+  .busca {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .topbar__acoes {
+    margin-left: auto;
+  }
+}
+
+/* Telefone estreito (~320px): com 18px de recheio o icone da ponta
+   ficava a menos de 48px da borda, e o batente do indicador (ver
+   `folga` no AppShell.jsx) o deixava uns 5px fora do centro. Com mais
+   respiro o centro do icone ja cai dentro do limite. */
+@media (max-width: 359px) {
+  .rail {
+    padding-inline: 24px;
+  }
+}
+
+@media (max-width: 520px) {
+  .topbar__saudacao {
+    font-size: 0.86rem;
+    white-space: normal;
+  }
+
+}
+
+
+
+/* ------------------------------------------------------------
+   O hambúrguer
+
+   Três barras. Abrindo, o conjunto dá meia volta enquanto a de
+   cima e a de baixo se cruzam e a do meio some — o X nasce
+   girando. Duas velocidades de propósito: a volta em 0,4s e as
+   barras em 0,2s. É a diferença entre elas que faz o desenho se
+   montar no meio do giro, e não no fim dele.
+   ------------------------------------------------------------ */
+
+.ham {
+  position: relative;
+  display: block;
+  width: 20px;
+  height: 14px;
+  transition: transform 0.4s var(--am-ease-out);
+}
+
+.ham__bar {
+  position: absolute;
+  left: 0;
+  width: 20px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition:
+    transform 0.2s var(--am-ease-out),
+    opacity 0.2s var(--am-ease-out);
+}
+
+.ham__bar--1 {
+  top: 0;
+}
+
+.ham__bar--2 {
+  top: 6px;
+}
+
+.ham__bar--3 {
+  top: 12px;
+}
+
+[aria-expanded='true'] .ham {
+  transform: rotate(180deg);
+}
+
+[aria-expanded='true'] .ham__bar--1 {
+  transform: translateY(6px) rotate(45deg);
+}
+
+[aria-expanded='true'] .ham__bar--2 {
+  opacity: 0;
+}
+
+[aria-expanded='true'] .ham__bar--3 {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+
+
+/* ------------------------------------------------------------
+   O MENU LATERAL (celular)
+
+   Abre pela direita a partir do Menu da barra de baixo. Fica montado
+   mesmo fechado, escondido por visibility, para o fechar tambem
+   deslizar.
+
+   A entrada tem tres tempos: o veu escurece (e desfoca) a tela, o
+   painel desliza na curva da folha do iPhone — sai rapido e assenta
+   devagar — e as pecas de dentro chegam logo atras, uma depois da
+   outra (`--i`, posto no JSX). Fechando, tudo sai junto e mais rapido:
+   ninguem quer esperar um menu ir embora.
+
+   A curva mora AQUI, e nao herdada da .rail: o menu fica fora da
+   barra, e com a variavel indefinida a transicao inteira caia — o
+   painel aparecia de uma vez, sem deslizar.
+   ------------------------------------------------------------ */
+.menulado {
+  --menulado-curva: cubic-bezier(0.32, 0.72, 0, 1);
+  --menulado-entra: 0.5s;
+  --menulado-sai: 0.28s;
+}
+
+@media (max-width: 860px) {
+  .menulado {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    visibility: hidden;
+    pointer-events: none;
+    transition: visibility 0s linear var(--menulado-sai);
+  }
+
+  .menulado.is-aberto {
+    visibility: visible;
+    pointer-events: auto;
+    transition: visibility 0s;
+  }
+
+  .menulado__veu {
+    position: absolute;
+    inset: 0;
+    padding: 0;
+    border: 0;
+    background: var(--am-modal-veu);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    opacity: 0;
+    transition: opacity var(--menulado-sai) var(--am-ease-out);
+  }
+
+  .menulado.is-aberto .menulado__veu {
+    opacity: 1;
+    transition-duration: var(--menulado-entra);
+  }
+
+  .menulado__painel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    width: min(300px, 82vw);
+    padding: calc(env(safe-area-inset-top, 0px) + 20px) 20px calc(env(safe-area-inset-bottom, 0px) + 14px);
+    border-left: 1px solid var(--am-vidro-borda);
+    border-radius: 24px 0 0 24px;
+    background: var(--am-barra-cor);
+    box-shadow: -24px 0 48px -20px rgba(0, 0, 0, 0.5);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    outline: none;
+    /* 104%, e nao 100%: a sombra tambem sai da tela */
+    transform: translate3d(104%, 0, 0);
+    transition: transform var(--menulado-sai) var(--menulado-curva);
+  }
+
+  .menulado.is-aberto .menulado__painel {
+    transform: none;
+    transition-duration: var(--menulado-entra);
+  }
+
+  /* a cascata: cada peca chega da direita, atras do painel */
+  .menulado__perfil,
+  .menulado__lista > .menulado__item,
+  .menulado__rodape {
+    opacity: 0;
+    transform: translate3d(32px, 0, 0);
+    transition:
+      opacity 0.14s var(--am-ease-out),
+      transform 0.2s var(--am-ease-out);
+  }
+
+  .menulado.is-aberto :is(.menulado__perfil, .menulado__lista > .menulado__item, .menulado__rodape) {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.32s var(--am-ease-out),
+      transform 0.55s var(--menulado-curva);
+    transition-delay: calc(110ms + var(--i, 0) * 45ms);
+  }
+
+  /* ---- quem esta logado ---- */
+  .menulado__perfil {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 18px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--am-line);
+  }
+
+  /* a foto nasce um pouco menor e cresce com um leve repique */
+  .menulado__perfil > .avatarfig {
+    flex: none;
+    transform: scale(0.7);
+    transition: transform 0.2s var(--am-ease-out);
+  }
+
+  .menulado.is-aberto .menulado__perfil > .avatarfig {
+    transform: none;
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.16s;
+  }
+
+  .menulado__quem {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .menulado__quem strong {
+    color: var(--am-text-strong);
+    font-size: 0.95rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .menulado__nota {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--am-text-muted);
+    font-size: 0.74rem;
+  }
+
+  .menulado__nota b {
+    color: var(--am-text-strong);
+  }
+
+  .menulado__nota em {
+    font-style: normal;
+  }
+
+  /* o X entra girando um quarto de volta */
+  .menulado__fechar {
+    align-self: flex-start;
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--am-control-bg-hover);
+    color: var(--am-text-base);
+    cursor: pointer;
+    transform: rotate(-90deg) scale(0.6);
+    transition: transform 0.2s var(--am-ease-out);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .menulado.is-aberto .menulado__fechar {
+    transform: none;
+    transition: transform 0.5s var(--menulado-curva) 0.2s;
+  }
+
+  .menulado__fechar:active {
+    background: var(--am-control-border);
+  }
+
+  /* ---- as abas ----
+     So o icone e o nome, sem fundo e sem caixa: uma linha fina entre
+     uma aba e a outra, e nada mais. */
+  .menulado__lista {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .menulado__item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 15px 2px;
+    color: var(--am-text-strong);
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .menulado__lista > .menulado__item + .menulado__item {
+    border-top: 1px solid var(--am-line);
+  }
+
+  .menulado__glifo {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 22px;
+    color: var(--am-text-muted);
+  }
+
+  .menulado__glifo svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .menulado__item:active {
+    opacity: 0.55;
+  }
+
+  /* a tela em que se esta: o nome e o icone na cor do sistema */
+  .menulado__item.is-atual {
+    color: var(--am-accent);
+    font-weight: 700;
+  }
+
+  .menulado__item.is-atual .menulado__glifo {
+    color: inherit;
+  }
+
+  /* ---- Configuracoes, sozinha no rodape ---- */
+  .menulado__rodape {
+    margin-top: auto;
+    padding-top: 24px;
+  }
+
+  .menulado__rodape .menulado__item {
+    border-top: 1px solid var(--am-line);
+  }
+}
+
+@media (max-width: 860px) and (prefers-reduced-motion: reduce) {
+  .menulado,
+  .menulado *,
+  .menulado.is-aberto * {
+    transition-duration: 0.01s !important;
+    transition-delay: 0s !important;
+  }
+}
+
+
 /* ============================================================
    A COLA COM O LWNCONTROL (escrita a mao)
    ============================================================ */
@@ -1560,20 +2352,6 @@ body.dark-mode .rail .menu-item.rail__btn.active,
   margin-top: 18px;
 }
 
-/* no celular: a barra cola nas bordas e a saudacao sai, para a busca caber */
-@media (max-width: 768px) {
-  #almox-topo {
-    top: 10px;
-    margin: 10px 10px 0;
-    gap: 8px;
-    padding-left: 10px;
-  }
-
-  #almox-topo .topbar__saudacao {
-    display: none;
-  }
-}
-
 /* As abas do Almoxarife tem palavras mais compridas que as do main:
    "Certificados", "Localização", "Manutenção" e "Remanejamento" nao
    cabem na largura do item no tamanho do main e quebrariam no meio da
@@ -1620,11 +2398,93 @@ body.dark-mode .marca .logo-escuro {
   }
 }
 
-/* no celular quem navega e a barra de baixo do lwncontrol */
-@media (max-width: 768px) {
-  .marca,
-  .rail,
-  .euzinho {
+/* ---- o celular: o mesmo do main ----
+   A bolha deita no rodape com Painel, Solicitar, Certificados e o Mais
+   (o hamburguer), e o Mais abre o menu lateral com o resto. A barra de
+   baixo e a gaveta do lwncontrol saem. */
+
+/* Solicitar so existe na barra do celular: no computador ele e o botao
+   SOLICITAR do Painel Geral */
+.rail__lista > li[data-so-celular] {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .rail__lista > li[data-so-celular] {
+    display: block;
+  }
+
+  /* a ordem na barra: Painel · Solicitar · Certificados · Mais */
+  .rail__lista > li[data-id='dashboard'] {
+    order: 1;
+  }
+
+  .rail__lista > li[data-id='solicitar'] {
+    order: 2;
+  }
+
+  .rail__lista > li[data-id='certificados'] {
+    order: 3;
+  }
+
+  /* o "Certificados" encolhido do computador volta ao rotulo do celular */
+  .rail__btn[onclick*="'certificados'"] .rail__rotulo {
+    font-size: 0.54rem;
+    letter-spacing: normal;
+  }
+
+  /* a coluna do lwncontrol vira gaveta no celular (transform). Com
+     transform num ancestral, o fixed da barra passa a contar a partir dele
+     e a barra sairia da tela junto com a gaveta */
+  #sidebar {
+    transform: none !important;
+  }
+
+  :root {
+    --sidebar-width: 0px;
+  }
+
+  /* o conteudo usa a largura toda e termina acima da barra
+     (.shell__coluna do main: 104px) */
+  #main-content {
+    margin-left: 0;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 104px);
+  }
+
+  #almox-topo {
+    margin: 14px 14px 0;
+  }
+
+  #almox-topo + .content-container {
+    margin-top: 14px;
+  }
+
+  #bottom-nav,
+  #bnav-more-drawer,
+  #bnav-more-overlay,
+  #sidebar-backdrop {
     display: none !important;
   }
+}
+
+/* no main as linhas do menu lateral sao links (NavLink); aqui as abas sao
+   botoes (o switchTab): sem a cara de botao do navegador */
+button.menulado__item {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* a nota embaixo do nome: as estrelas de components/Estrelas do main */
+.menulado__nota .estrelas {
+  display: inline-flex;
+  gap: 1px;
+}
+
+.menulado__nota .estrelas svg {
+  display: block;
 }

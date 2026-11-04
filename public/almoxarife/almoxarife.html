@@ -142,6 +142,48 @@
         </div>
     </div>
 
+    <!-- O MENU LATERAL do celular: o .menulado do AppShell do main
+         (MenuLateral), aberto pelo Mais da barra de baixo. Quem esta logado
+         (a foto, o nome e a nota), as abas que nao cabem na barra e
+         Configurações no rodape. As abas tem data-modulo: as permissoes
+         escondem as que o setor nao ve, como na barra. Quem abre, fecha e
+         preenche e menu-main.js; --i e a ordem da entrada em cascata -->
+    <div class="menulado" id="almox-menulado" aria-hidden="true">
+        <button type="button" class="menulado__veu" tabindex="-1" aria-label="Fechar o menu"></button>
+        <aside class="menulado__painel" id="menu-lateral" aria-label="Menu" tabindex="-1">
+            <!-- div, e nao <header>/<footer> como no main: o lwncontrol tem
+                 estilo para toda tag header e footer -->
+            <div class="menulado__perfil" style="--i: 0">
+                <span class="avatarfig" data-eu="avatar" style="width: 52px; height: 52px; font-size: 20px;" aria-hidden="true"></span>
+                <div class="menulado__quem">
+                    <strong data-eu="nome">Usuário</strong>
+                    <span class="menulado__nota" data-eu="nota">Sem avaliação ainda</span>
+                </div>
+                <button type="button" class="menulado__fechar" aria-label="Fechar o menu" tabindex="-1">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                </button>
+            </div>
+
+            <nav class="menulado__lista" aria-label="Mais telas">
+            <button type="button" class="menulado__item" data-modulo="solicitacoes" data-aba="aprovar" style="--i: 1"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Aprovar OS</button>
+            <button type="button" class="menulado__item" data-modulo="solicitacoes" data-aba="minhas-obras" style="--i: 2"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>Minhas Obras</button>
+            <button type="button" class="menulado__item" data-modulo="conferencia" data-aba="conferencia" style="--i: 3"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Retirada</button>
+            <button type="button" class="menulado__item" data-modulo="devolutiva" data-aba="devolutiva" style="--i: 4"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg></span>Devolutiva</button>
+            <button type="button" class="menulado__item" data-modulo="concluidos" data-aba="concluidos" style="--i: 5"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>OS Concluídas</button>
+            <button type="button" class="menulado__item" data-modulo="baias" data-aba="localizacao" style="--i: 6"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg></span>Localização</button>
+            <button type="button" class="menulado__item" data-modulo="instrumentos" data-aba="inventario" style="--i: 7"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg></span>Inventário</button>
+            <button type="button" class="menulado__item" data-modulo="manutencao" data-aba="manutencao" style="--i: 8"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>Manutenção</button>
+            <button type="button" class="menulado__item" data-modulo="remanejamento" data-aba="remanejamento" style="--i: 9"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span>Remanejamento</button>
+            <button type="button" class="menulado__item" data-modulo="calibracao" data-aba="calibracao" style="--i: 10"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>Calibração</button>
+            <a class="menulado__item" href="/core/app" style="--i: 11"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg></span>Atmosfera</a>
+            </nav>
+
+            <div class="menulado__rodape" style="--i: 12">
+                <a class="menulado__item" href="/core/app/configuracoes"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4.1a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4 1.7 1.7 0 0 0-1.6 1z"/></svg></span>Configurações</a>
+            </div>
+        </aside>
+    </div>
+
     <!-- "Sair do sistema?": o pop-up de confirmacao do main (Modal + Confirma) -->
     <div class="am-modal" id="almox-confirma-sair" hidden>
         <div class="am-modal__caixa" role="dialog" aria-modal="true" aria-labelledby="almox-confirma-titulo" style="max-width: 430px;">
@@ -177,10 +219,14 @@
          e o .menu-item.active que o switchTab acende); menu-main.js segue o
          .active e faz a marca deslizar, como no main -->
     <nav class="rail vidro" id="almox-rail" aria-label="Navegação do Almoxarife">
+    <!-- o indicador do celular: o circulo da cor da barra que desliza ate o
+         item aceso, com o icone subindo para dentro dele (menu-main.js mede
+         e poe --ind-x e --ergue na barra, como o AppShell.jsx) -->
+    <span class="rail__indicador" aria-hidden="true"></span>
     <ul class="sidebar-menu rail__lista">
         <span class="rail__marca" aria-hidden="true"><span class="rail__marca-anel"></span></span>
         <!-- Dashboard - Permissão: dashboard -->
-        <li data-modulo="dashboard">
+        <li data-modulo="dashboard" data-id="dashboard" data-principal="sim">
             <button class="menu-item rail__btn active" onclick="switchTab('dashboard')" title="Painel Geral">
                 <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3"y="3"width="7"height="9"></rect>
@@ -188,12 +234,21 @@
                     <rect x="14"y="12"width="7"height="9"></rect>
                     <rect x="3"y="16"width="7"height="5"></rect>
                 </svg></span>
-                <span class="rail__rotulo">Painel Geral</span>
+                <span class="rail__rotulo" data-rotulo-celular="Painel">Painel Geral</span>
+            </button>
+        </li>
+
+        <!-- Solicitar: so na barra de baixo do celular (no computador ele e o
+             botao SOLICITAR do Painel Geral). Permissão: solicitacoes -->
+        <li data-modulo="solicitacoes" data-id="solicitar" data-principal="sim" data-so-celular>
+            <button class="menu-item rail__btn" onclick="switchTab('solicitar')" title="Solicitar">
+                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></span>
+                <span class="rail__rotulo">Solicitar</span>
             </button>
         </li>
 
         <!-- Retirada (antiga "Separação" / "Conferência") - Permissão: conferencia -->
-        <li data-modulo="conferencia">
+        <li data-modulo="conferencia" data-principal="nao">
             <button class="menu-item rail__btn" onclick="switchTab('conferencia')" title="Retirada">
                 <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M9 11l3 3L22 4"/>
@@ -205,7 +260,7 @@
         </li>
 
         <!-- Devolutiva - Permissão: devolutiva -->
-        <li data-modulo="devolutiva">
+        <li data-modulo="devolutiva" data-principal="nao">
             <button class="menu-item rail__btn" onclick="switchTab('devolutiva')" title="Devolutiva">
                 <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="9 10 4 15 9 20"/>
@@ -217,7 +272,7 @@
         </li>
 
         <!-- OS Concluídas - Permissão: concluidos -->
-        <li data-modulo="concluidos">
+        <li data-modulo="concluidos" data-principal="nao">
             <button class="menu-item rail__btn" onclick="switchTab('concluidos')" title="OS Concluídas">
                 <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
@@ -228,7 +283,7 @@
         </li>
 
         <!-- Certificados - Permissão: certificados -->
-        <li data-modulo="certificados">
+        <li data-modulo="certificados" data-id="certificados" data-principal="sim">
             <button class="menu-item rail__btn" onclick="switchTab('certificados')" title="Certificados">
                 <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -242,7 +297,7 @@
         </li>
 
         <!-- Localização - Permissão: baias -->
-        <li data-modulo="baias">
+        <li data-modulo="baias" data-principal="nao">
             <button class="menu-item rail__btn" onclick="switchTab('localizacao')" title="Localização">
                 <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12"cy="10"r="3"/>
@@ -253,7 +308,7 @@
         </li>
 
         <!-- Inventário - Permissão: instrumentos -->
-        <li data-modulo="instrumentos">
+        <li data-modulo="instrumentos" data-principal="nao">
             <button class="menu-item rail__btn" onclick="switchTab('inventario')" title="Inventário">
                 <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="4"y1="9"x2="20"y2="9"></line>
@@ -266,7 +321,7 @@
         </li>
 
         <!-- Manutenção - Permissão: manutencao -->
-        <li data-modulo="manutencao">
+        <li data-modulo="manutencao" data-principal="nao">
             <button class="menu-item rail__btn" onclick="switchTab('manutencao')" title="Manutenção">
                 <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
@@ -277,7 +332,7 @@
         </li>
 
         <!-- Remanejamento - Permissão: remanejamento (INDEPENDENTE) -->
-        <li data-modulo="remanejamento">
+        <li data-modulo="remanejamento" data-principal="nao">
             <button class="menu-item rail__btn" onclick="switchTab('remanejamento')" title="Remanejamento">
                 <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="17 1 21 5 17 9"></polyline>
@@ -293,7 +348,7 @@
         </li>
 
         <!-- Calibração - Permissão: calibracao (INDEPENDENTE) -->
-        <li data-modulo="calibracao">
+        <li data-modulo="calibracao" data-principal="nao">
             <button class="menu-item rail__btn" onclick="switchTab('calibracao')" title="Calibração">
                 <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12"cy="12"r="10"></circle>
@@ -306,7 +361,7 @@
         <!-- Atmosfera, a ultima: volta para a pagina inicial do sistema. Sem data-modulo
              de proposito — e de todo mundo, nenhuma permissao a esconde — e e
              um link (<a>, como os NavLink do main), nao um botao do switchTab -->
-        <li>
+        <li data-principal="nao">
             <a class="rail__btn" href="/core/app" title="Atmosfera">
                 <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z" /></svg></span>
                 <span class="rail__rotulo">Atmosfera</span>
@@ -316,6 +371,15 @@
 
 
 
+
+        <!-- Mais: so no celular, na ponta direita da barra de baixo (o
+             hamburguer do main). Abre o menu lateral com o resto das abas -->
+        <li class="rail__somobile">
+            <button type="button" class="rail__btn rail__menu" id="almox-mais" aria-expanded="false" aria-controls="menu-lateral" title="Mais">
+                <span class="rail__glifo"><span class="ham" aria-hidden="true"><span class="ham__bar ham__bar--1"></span><span class="ham__bar ham__bar--2"></span><span class="ham__bar ham__bar--3"></span></span></span>
+                <span class="rail__rotulo">Mais</span>
+            </button>
+        </li>
     </ul>
     </nav>
     <!-- O avatar e o menu dele (Configurações, Sair): o mesmo .euzinho do
@@ -360,6 +424,24 @@
                         <span class="sininho__selo" aria-hidden="true" hidden></span>
                     </button>
                     <div class="sininho__painel" role="menu" hidden></div>
+                </div>
+                <!-- o avatar na barra de cima: so no celular (o .euzinho--barra
+                     do main), com o mesmo menu de Configurações e Sair -->
+                <div class="euzinho euzinho--barra">
+                    <div class="euzinho__menu" role="menu" hidden>
+                        <p class="euzinho__quem"><strong data-eu="nome">Usuário</strong><span data-eu="setor"></span></p>
+                        <button type="button" role="menuitem" class="euzinho__item" data-acao="config">
+                            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4.1a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4 1.7 1.7 0 0 0-1.6 1z" /></svg>
+                            Configurações
+                        </button>
+                        <button type="button" role="menuitem" class="euzinho__item euzinho__item--sair" data-acao="sair">
+                            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 20H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h8" /><path d="m17 15 3-3-3-3M20 12H10" /></svg>
+                            Sair
+                        </button>
+                    </div>
+                    <button type="button" class="euzinho__botao" aria-haspopup="menu" aria-expanded="false" aria-label="Conta e configurações">
+                        <span class="avatarfig" data-eu="avatar" style="width: 32px; height: 32px; font-size: 12px;" aria-hidden="true"></span>
+                    </button>
                 </div>
             </div>
         </div>
