@@ -43,7 +43,7 @@
  * escolhido como responsavel da O.S. e receber remanejamento).
  */
 export const ALMOXARIFE_MODULOS = [
-  ['dashboard', 'Painel Geral'],
+  ['dashboard', 'Painel'],
   ['solicitacoes', 'Solicitação de OS'],
   ['gerenciar_os', 'Editar OS (ver todas, editar e excluir)'],
   ['aprovar_todas_os', 'Aprovar / editar qualquer OS'],

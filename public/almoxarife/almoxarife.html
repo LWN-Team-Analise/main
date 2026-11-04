@@ -37,7 +37,7 @@
     <nav id="bottom-nav"role="navigation"aria-label="Navegação principal">
         <div class="bottom-nav-inner">
             <div id="bnav-pill"></div>
-            <button class="bnav-item active" id="bnav-dashboard" onclick="bnavSwitch('dashboard')"aria-label="Painel Geral">
+            <button class="bnav-item active" id="bnav-dashboard" onclick="bnavSwitch('dashboard')"aria-label="Painel">
                 <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"><rect x="3"y="3"width="7"height="9"rx="1"/><rect x="14"y="3"width="7"height="5"rx="1"/><rect x="14"y="12"width="7"height="9"rx="1"/><rect x="3"y="16"width="7"height="5"rx="1"/></svg>
                 <span class="bnav-label">Painel</span>
             </button>
@@ -74,7 +74,7 @@
         <div class="bnav-drawer-grid">
             <button class="bnav-drawer-item" id="bdrawer-dashboard" data-bnav-modulo="dashboard" onclick="bnavDrawerSwitch('dashboard')">
                 <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"><rect x="3"y="3"width="7"height="9"></rect><rect x="14"y="3"width="7"height="5"></rect><rect x="14"y="12"width="7"height="9"></rect><rect x="3"y="16"width="7"height="5"></rect></svg>
-                Painel Geral
+                Painel
             </button>
             <button class="bnav-drawer-item" id="bdrawer-aprovar" data-bnav-modulo="solicitacoes" onclick="bnavDrawerSwitch('aprovar')">
                 <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
@@ -89,7 +89,7 @@
                 Solicitação
             </button>
             <button class="bnav-drawer-item" id="bdrawer-conferencia" data-bnav-modulo="conferencia" onclick="bnavDrawerSwitch('conferencia')">
-                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21l-8-4.5v-9l8-4.5 8 4.5v4.5"/><path d="M12 12l8-4.5"/><path d="M12 12v9"/><path d="M12 12 4 7.5"/><path d="M15 18h7"/><path d="M19 15l3 3-3 3"/></svg>
                 Retirada
             </button>
             <button class="bnav-drawer-item" id="bdrawer-devolutiva" data-bnav-modulo="devolutiva" onclick="bnavDrawerSwitch('devolutiva')">
@@ -167,7 +167,7 @@
             <nav class="menulado__lista" aria-label="Mais telas">
             <button type="button" class="menulado__item" data-modulo="solicitacoes" data-aba="aprovar" style="--i: 1"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Aprovar OS</button>
             <button type="button" class="menulado__item" data-modulo="solicitacoes" data-aba="minhas-obras" style="--i: 2"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>Minhas Obras</button>
-            <button type="button" class="menulado__item" data-modulo="conferencia" data-aba="conferencia" style="--i: 3"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Retirada</button>
+            <button type="button" class="menulado__item" data-modulo="conferencia" data-aba="conferencia" style="--i: 3"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21l-8-4.5v-9l8-4.5 8 4.5v4.5"/><path d="M12 12l8-4.5"/><path d="M12 12v9"/><path d="M12 12 4 7.5"/><path d="M15 18h7"/><path d="M19 15l3 3-3 3"/></svg></span>Retirada</button>
             <button type="button" class="menulado__item" data-modulo="devolutiva" data-aba="devolutiva" style="--i: 4"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg></span>Devolutiva</button>
             <button type="button" class="menulado__item" data-modulo="concluidos" data-aba="concluidos" style="--i: 5"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>OS Concluídas</button>
             <button type="button" class="menulado__item" data-modulo="baias" data-aba="localizacao" style="--i: 6"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg></span>Localização</button>
@@ -227,14 +227,14 @@
         <span class="rail__marca" aria-hidden="true"><span class="rail__marca-anel"></span></span>
         <!-- Dashboard - Permissão: dashboard -->
         <li data-modulo="dashboard" data-id="dashboard" data-principal="sim">
-            <button class="menu-item rail__btn active" onclick="switchTab('dashboard')" title="Painel Geral">
+            <button class="menu-item rail__btn active" onclick="switchTab('dashboard')" title="Painel">
                 <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3"y="3"width="7"height="9"></rect>
                     <rect x="14"y="3"width="7"height="5"></rect>
                     <rect x="14"y="12"width="7"height="9"></rect>
                     <rect x="3"y="16"width="7"height="5"></rect>
                 </svg></span>
-                <span class="rail__rotulo" data-rotulo-celular="Painel">Painel Geral</span>
+                <span class="rail__rotulo">Painel</span>
             </button>
         </li>
 
@@ -250,10 +250,7 @@
         <!-- Retirada (antiga "Separação" / "Conferência") - Permissão: conferencia -->
         <li data-modulo="conferencia" data-principal="nao">
             <button class="menu-item rail__btn" onclick="switchTab('conferencia')" title="Retirada">
-                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M9 11l3 3L22 4"/>
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                </svg></span>
+                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21l-8-4.5v-9l8-4.5 8 4.5v4.5"/><path d="M12 12l8-4.5"/><path d="M12 12v9"/><path d="M12 12 4 7.5"/><path d="M15 18h7"/><path d="M19 15l3 3-3 3"/></svg></span>
                 <span class="rail__rotulo">Retirada</span>
                 <span id="badge-conferencia-count" class="badge badge-info" style="display:none;margin-left:auto;padding:0.1rem 0.4rem;font-size:0.65rem;">0</span>
             </button>

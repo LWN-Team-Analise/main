@@ -145,22 +145,9 @@
                 return resposta;
             };
         });
-        // No celular o rotulo e o curto (Painel, e nao Painel Geral): na barra
-        // de baixo cada item tem um quarto da largura
-        const rotular = () => {
-            lista.querySelectorAll('[data-rotulo-celular]').forEach((el) => {
-                if (!el.dataset.rotuloComputador) el.dataset.rotuloComputador = el.textContent;
-                el.textContent = celular.matches ? el.dataset.rotuloCelular : el.dataset.rotuloComputador;
-            });
-        };
-
         // a virada computador <-> celular troca a barra de forma
-        celular.addEventListener('change', () => {
-            rotular();
-            acender();
-        });
+        celular.addEventListener('change', acender);
 
-        rotular();
         acender();
         // as transicoes de lugar so depois da primeira pintura
         requestAnimationFrame(() => requestAnimationFrame(() => nav.classList.add('is-viaja')));
