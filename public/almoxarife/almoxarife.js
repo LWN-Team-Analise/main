@@ -3933,7 +3933,8 @@ function switchTab(tabName) {
             if (typeof initRemanejamentoForm === 'function') initRemanejamentoForm();
             break;
         case 'configuracoes':
-            if (typeof initConfiguracoes === 'function') initConfiguracoes();
+            // a tela de Configurações do main, dentro do Control (menu-main.js)
+            if (typeof abrirConfiguracoesDoMain === 'function') abrirConfiguracoesDoMain();
             break;
         case 'planejamento':
             if (typeof renderGanttChart === 'function') renderGanttChart();

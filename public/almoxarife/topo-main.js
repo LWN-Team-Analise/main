@@ -235,7 +235,7 @@
             }
         });
         if (acha('configuracoes conta perfil senha foto tema modo noturno escuro claro notificacoes ajustes')) {
-            telas.push({ id: 'tela-config', grupo: 'Telas', titulo: 'Configurações', detalhe: 'Conta, senha, tema e notificações', ir: '/core/app/configuracoes' });
+            telas.push({ id: 'tela-config', grupo: 'Telas', titulo: 'Configurações', detalhe: 'Conta, senha, tema e foto', aba: 'configuracoes' });
         }
         resultados.push(...telas.slice(0, POR_GRUPO));
 

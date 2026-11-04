@@ -53,7 +53,22 @@ const Lua = () => (
  * O tema tambem mora aqui, e agora na propria linha do nome, sem card
  * separado.
  */
-export default function Configuracoes() {
+/**
+ * A moldura da tela dentro do LWN Control: a aba Configurações de
+ * public/almoxarife mostra ESTA tela num iframe (/core/app/configuracoes/
+ * embutida), sem o menu do Atmosfera — quem esta no Control continua no
+ * Control. Fundo transparente (o do Control aparece por tras); o resto e
+ * a mesma tela, entao o que se muda aqui vale nos dois.
+ */
+function MolduraEmbutida({ children }) {
+  useEffect(() => {
+    document.documentElement.classList.add('embutida')
+    return () => document.documentElement.classList.remove('embutida')
+  }, [])
+  return <div className="config-embutida">{children}</div>
+}
+
+export default function Configuracoes({ embutida = false }) {
   const { user, atualizarPerfil } = useAuth()
   const local = useLocation()
   const { cargos, titulos, pessoaPorId, pode, recarregar } = useDados()
@@ -228,8 +243,10 @@ export default function Configuracoes() {
     }
   }
 
+  const Moldura = embutida ? MolduraEmbutida : AppShell
+
   return (
-    <AppShell>
+    <Moldura>
       <section className="config">
         <header>
           <h1 className="tela__titulo">Configurações</h1>
@@ -441,7 +458,7 @@ export default function Configuracoes() {
         }}
         aoFechar={() => setAjustando(null)}
       />
-    </AppShell>
+    </Moldura>
   )
 }
 

@@ -374,6 +374,22 @@ button.menulado__item {
   cursor: pointer;
 }
 
+/* a aba Configurações: a tela do main num iframe que vai ate o pe da
+   janela (menu-main.js mede a altura) e rola por dentro */
+.almox-config {
+  display: block;
+  width: 100%;
+  min-height: 360px;
+  border: 0;
+  background: transparent;
+  color-scheme: normal;
+}
+
+/* com ela aberta a pagina nao rola: quem rola e o iframe */
+#main-content:has(#configuracoes-tab.active) {
+  padding-bottom: 0;
+}
+
 /* a nota embaixo do nome: as estrelas de components/Estrelas do main */
 .menulado__nota .estrelas {
   display: inline-flex;

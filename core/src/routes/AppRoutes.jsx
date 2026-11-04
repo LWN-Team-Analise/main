@@ -233,6 +233,16 @@ export default function AppRoutes() {
           </Interna>
         }
       />
+      {/* a mesma tela sem o menu do Atmosfera: a aba Configurações do LWN
+          Control (public/almoxarife) a mostra num iframe */}
+      <Route
+        path="/app/configuracoes/embutida"
+        element={
+          <Interna>
+            <Configuracoes embutida />
+          </Interna>
+        }
+      />
       {/* o chat da equipe tambem nao: conversar e de todo mundo que entra */}
       <Route
         path="/app/chat"

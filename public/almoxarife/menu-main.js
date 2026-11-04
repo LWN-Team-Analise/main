@@ -191,6 +191,7 @@
     function pintarAvatar(avatar, nome, foto) {
         if (!avatar) return;
         avatar.textContent = '';
+        avatar.style.background = '';
         if (foto) {
             const img = document.createElement('img');
             img.src = foto;
@@ -290,12 +291,12 @@
         celular.addEventListener('change', () => {
             if (!celular.matches) abrir(false);
         });
-        lado.querySelector('.menulado__lista').addEventListener('click', (evento) => {
+        painel.addEventListener('click', (evento) => {
             const item = evento.target.closest('.menulado__item');
             if (!item) return;
             abrir(false);
-            // as abas do Almoxarife (os links, Atmosfera e Configurações,
-            // seguem sozinhos)
+            // as abas do Almoxarife e Configurações (o link do Atmosfera
+            // segue sozinho)
             if (item.dataset.aba && typeof window.switchTab === 'function') window.switchTab(item.dataset.aba);
         });
     }
@@ -339,7 +340,7 @@
                 const item = evento.target.closest('[data-acao]');
                 if (!item) return;
                 abrir(false);
-                if (item.dataset.acao === 'config') window.location.href = '/core/app/configuracoes';
+                if (item.dataset.acao === 'config' && typeof window.switchTab === 'function') window.switchTab('configuracoes');
                 if (item.dataset.acao === 'sair' && confirma) confirma.hidden = false;
             });
         });
@@ -377,6 +378,63 @@
             window.location.href = '/core/login';
         });
     }
+
+    // ---------------- Configurações dentro do Control ----------------
+    //
+    // A aba Configurações mostra a tela do main num iframe, sem o menu do
+    // Atmosfera (/core/app/configuracoes/embutida): quem esta no Control
+    // continua no Control. O endereco so entra na primeira vez que a aba
+    // abre — a tela do main e pesada para carregar a toa. O iframe vai ate
+    // o pe da janela e rola por dentro (no celular a barra de baixo fica por
+    // cima, e a tela embutida tem o respiro dela).
+
+    const QUADRO = '/core/app/configuracoes/embutida';
+
+    function ajustarQuadro() {
+        const quadro = document.getElementById('almox-config');
+        if (!quadro || quadro.offsetParent === null) return;
+        const topo = quadro.getBoundingClientRect().top + window.scrollY;
+        quadro.style.height = `${Math.max(360, window.innerHeight - topo)}px`;
+    }
+
+    window.abrirConfiguracoesDoMain = function () {
+        const quadro = document.getElementById('almox-config');
+        if (!quadro) return;
+        if (!quadro.getAttribute('src')) {
+            quadro.addEventListener('load', ajustarQuadro);
+            quadro.setAttribute('src', QUADRO);
+        }
+        window.scrollTo(0, 0);
+        // na hora (a aba ja esta a vista: o switchTab acendeu antes) e de
+        // novo no proximo quadro, depois de o layout assentar
+        ajustarQuadro();
+        requestAnimationFrame(ajustarQuadro);
+    };
+    window.addEventListener('resize', ajustarQuadro);
+
+    // O que se muda em Configurações vale aqui na hora. O tema ja vinha
+    // (sessao.js ouve 'customers.theme'); a foto e o nome chegam pela
+    // sessao do main, que a tela de la grava a cada mudanca — e o evento
+    // 'storage' avisa as outras janelas do site, o iframe incluido.
+    window.addEventListener('storage', (evento) => {
+        if (evento.key !== 'customers.session' || !evento.newValue) return;
+        let usuario = null;
+        try { usuario = (JSON.parse(evento.newValue) || {}).user || null; } catch (e) { usuario = null; }
+        if (!usuario) return;
+        // o 'lwn_user' (de /api/almox/eu, que o resto do Control le)
+        // acompanha a foto e o nome novos
+        try {
+            const eu = JSON.parse(sessionStorage.getItem('lwn_user') || '{}') || {};
+            if (usuario.name) eu.nome = usuario.name;
+            if ('foto' in usuario) eu.foto = usuario.foto;
+            sessionStorage.setItem('lwn_user', JSON.stringify(eu));
+        } catch (e) { /* segue */ }
+        const { nome, foto } = quemEsta();
+        document.querySelectorAll('[data-eu="avatar"]').forEach((avatar) => pintarAvatar(avatar, nome, foto));
+        document.querySelectorAll('[data-eu="nome"]').forEach((el) => { el.textContent = nome; });
+        const saudado = document.querySelector('[data-topo="nome"]');
+        if (saudado) saudado.textContent = nome.split(/\s+/)[0];
+    });
 
     document.addEventListener('DOMContentLoaded', () => {
         montarBarra();

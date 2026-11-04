@@ -1,3 +1,31 @@
+/* ---- dentro do LWN Control (o iframe da aba Configurações) ----
+   Sem o fundo do main: o do Control aparece por tras. O respiro de baixo
+   e o da barra do celular, que fica por cima do iframe. */
+html.embutida,
+html.embutida body {
+  background: transparent;
+}
+
+html.embutida body::after {
+  display: none;
+}
+
+/* o aviso de cookies e do site, e nao desta tela: dentro do Control ele
+   nao repete */
+html.embutida .cookie {
+  display: none;
+}
+
+.config-embutida {
+  padding: 2px 2px 24px;
+}
+
+@media (max-width: 860px) {
+  .config-embutida {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 110px);
+  }
+}
+
 /* Sem largura travada: os blocos ocupam a linha inteira e se
    distribuem em colunas quando ha espaco, em vez de deixar meia tela
    em branco. */

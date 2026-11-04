@@ -179,7 +179,7 @@
             </nav>
 
             <div class="menulado__rodape" style="--i: 12">
-                <a class="menulado__item" href="/core/app/configuracoes"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4.1a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4 1.7 1.7 0 0 0-1.6 1z"/></svg></span>Configurações</a>
+                <button type="button" class="menulado__item" data-aba="configuracoes"><span class="menulado__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4.1a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4 1.7 1.7 0 0 0-1.6 1z"/></svg></span>Configurações</button>
             </div>
         </aside>
     </div>
@@ -1310,6 +1310,14 @@
             <!-- CLIENTES -->
 
             <!-- DASHBOARD POWERBI -->
+
+            <!-- CONFIGURAÇÕES: a MESMA tela do main (conta Microsoft, foto,
+                 nome, tema, senha), sem o menu do Atmosfera — quem esta no
+                 Control continua no Control, e o que muda vale nos dois.
+                 O endereco so entra quando a aba abre (menu-main.js) -->
+            <section id="configuracoes-tab" class="tab-content">
+                <iframe id="almox-config" class="almox-config" title="Configurações"></iframe>
+            </section>
         </div>
     </main>
 
