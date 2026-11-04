@@ -61,6 +61,7 @@
  * ferramenta e de baia dentro dos JSON), e as sequencias seguem do maior.
  */
 import fs from 'node:fs'
+import readline from 'node:readline'
 import dotenv from 'dotenv'
 import pg from 'pg'
 
@@ -84,6 +85,50 @@ import pg from 'pg'
 const enderecoDe = (texto) => {
   const achado = String(texto ?? '').match(/postgres(?:ql)?:\/\/[^\s'"]+/i)
   return achado && achado[0].includes('@') ? achado[0] : null
+}
+
+/* --perguntar: o endereco do Neon e colado na tela, quando o script
+   pede — sem montar comando com aspas. O que se cola nao aparece (e a
+   senha do banco); aparece so o servidor e o banco, para conferir.
+   (O DATABASE_URL da Vercel e "Sensitive": `vercel env pull` traz so o
+   marcador "[sensitive]", e o --destino-env nao serve para ele.) */
+if (process.argv.includes('--perguntar')) {
+  /* uma leitura da entrada para todas as tentativas (o que foi colado
+     de uma vez so nao se perde entre uma e outra) */
+  const entrada = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: Boolean(process.stdin.isTTY) })
+  let pergunta = ''
+  /* o readline redesenha a linha com a pergunta e o que foi digitado:
+     aparece so a pergunta */
+  entrada._writeToOutput = (texto) => {
+    if (pergunta && texto.startsWith(pergunta)) entrada.output.write(pergunta)
+  }
+  const linhas = entrada[Symbol.asyncIterator]()
+  const perguntarEscondido = async (texto) => {
+    pergunta = texto
+    entrada.output.write(texto)
+    const { value, done } = await linhas.next()
+    entrada.output.write('\n')
+    return done ? '' : value
+  }
+
+  console.log('\nO endereco do banco do site (Neon, projeto costumers):')
+  console.log('  1. abra https://console.neon.tech/app/projects/crimson-rice-67646817')
+  console.log('  2. clique em Connect, depois em "Show password" e em "Copy snippet"')
+  console.log('  3. cole aqui (Ctrl+V ou botao direito) e aperte Enter — o texto nao aparece, e normal\n')
+  let endereco = null
+  for (let tentativa = 1; tentativa <= 3 && !endereco; tentativa++) {
+    endereco = enderecoDe(await perguntarEscondido('Endereco: '))
+    if (!endereco) console.log('Isso nao e o endereco: ele comeca com postgresql:// e tem um @ no meio. Copie de novo no Neon.\n')
+  }
+  entrada.close()
+  if (!endereco) process.exit(1)
+  try {
+    const u = new URL(endereco)
+    console.log(`Recebido: servidor ${u.hostname}, banco ${u.pathname.replace(/^\//, '') || '(sem nome)'}`)
+  } catch {
+    /* segue: o pg diz se nao conseguir */
+  }
+  process.env.DATABASE_URL = endereco
 }
 
 const DESTINO_ENV = process.argv.slice(2).find((a) => a.startsWith('--destino-env='))?.slice(14)
