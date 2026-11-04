@@ -4,8 +4,8 @@
  * Hoje e um so: quem entra pelo Outlook e ainda esta com a senha padrao
  * do site (123456, a SENHA_PADRAO do cadastro) recebe no Teams o pedido
  * para trocar. Sai sozinho no login com o Outlook (no maximo uma vez por
- * dia por pessoa) e, para todo mundo de uma vez, pelo botao de
- * Configuracoes > Notificacoes no Teams (acesso total).
+ * dia por pessoa). (A rota POST /api/push/teams/senha-padrao, que avisa
+ * todo mundo de uma vez, continua no servidor, sem botao na tela.)
  *
  * A senha padrao e conferida no hash (bcrypt), e nao pela marca
  * senha_temporaria: o vinculo com o Outlook liga essa marca de proposito,

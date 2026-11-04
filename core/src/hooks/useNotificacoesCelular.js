@@ -52,6 +52,91 @@ async function registro() {
   return navigator.serviceWorker.ready
 }
 
+/**
+ * Inscreve este aparelho (cria a inscricao no navegador se faltar) e a
+ * entrega ao servidor, no nome de quem esta logado. So com a permissao
+ * ja dada.
+ */
+async function garantirInscricao(chave) {
+  const reg = await registro()
+  let inscricao = await reg.pushManager.getSubscription()
+  if (!inscricao) {
+    try {
+      inscricao = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: emBytes(chave) })
+    } catch (e) {
+      /* inscricao velha, de outra chave: sai dela e entra de novo */
+      if (e.name !== 'InvalidStateError') throw e
+      await (await reg.pushManager.getSubscription())?.unsubscribe()
+      inscricao = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: emBytes(chave) })
+    }
+  }
+  await pushApi.inscrever(inscricao.toJSON(), nomeDoAparelho())
+}
+
+/* ============================================================
+   AS NOTIFICACOES AUTOMATICAS: ninguem precisa ir em Configuracoes
+   ligar. O AppShell chama, e a conferencia roda uma vez por carga da
+   pagina (cada tela monta o proprio AppShell):
+
+     permissao ja dada     confere a inscricao deste aparelho (cria se
+                           faltar) e a passa para quem esta logado;
+     ainda nao perguntado  pergunta no PRIMEIRO clique ou tecla na tela:
+                           o Safari e o Firefox so deixam perguntar a
+                           partir de um gesto da pessoa, e perguntar sem
+                           gesto faz o Chrome esconder a pergunta. Se a
+                           pessoa fechar sem responder, so pergunta de
+                           novo em 7 dias;
+     bloqueado, sem suporte, iPhone fora do app instalado ou servidor
+     sem as chaves         nao faz nada.
+   ============================================================ */
+
+let conferidoNestaCarga = false
+const PERGUNTADO_EM = 'customers.notificacoes.perguntado'
+const SETE_DIAS = 7 * 24 * 60 * 60 * 1000
+
+export function useNotificacoesAutomaticas(logado) {
+  useEffect(() => {
+    if (!logado || conferidoNestaCarga) return
+    conferidoNestaCarga = true
+    ;(async () => {
+      if (!temSuporte()) return
+      const chave = await pushApi.carregarChave().catch(() => null)
+      if (!chave) return
+      if (Notification.permission === 'granted') {
+        await garantirInscricao(chave)
+        return
+      }
+      if (Notification.permission !== 'default') return
+
+      let perguntado = 0
+      try {
+        perguntado = Number(localStorage.getItem(PERGUNTADO_EM)) || 0
+      } catch {
+        perguntado = 0
+      }
+      if (Date.now() - perguntado < SETE_DIAS) return
+
+      /* Os ouvintes ficam na JANELA, e nao no componente: trocar de tela
+         desmonta o AppShell, e a pergunta continua esperando o gesto. A
+         permissao e pedida ANTES de qualquer await — o navegador so a
+         aceita dentro do gesto. */
+      const eventos = ['click', 'keydown']
+      const perguntar = () => {
+        eventos.forEach((nome) => window.removeEventListener(nome, perguntar, true))
+        try {
+          localStorage.setItem(PERGUNTADO_EM, String(Date.now()))
+        } catch {
+          /* segue */
+        }
+        Notification.requestPermission()
+          .then((permissao) => (permissao === 'granted' ? garantirInscricao(chave) : null))
+          .catch(() => {})
+      }
+      eventos.forEach((nome) => window.addEventListener(nome, perguntar, true))
+    })().catch(() => {})
+  }, [logado])
+}
+
 export default function useNotificacoesCelular() {
   const [estado, setEstado] = useState('carregando')
   const [ocupado, setOcupado] = useState(false)
@@ -93,20 +178,7 @@ export default function useNotificacoesCelular() {
         setEstado(permissao === 'denied' ? 'bloqueado' : 'desligado')
         return
       }
-      const chave = await pushApi.carregarChave()
-      const reg = await registro()
-      let inscricao = await reg.pushManager.getSubscription()
-      if (!inscricao) {
-        try {
-          inscricao = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: emBytes(chave) })
-        } catch (e) {
-          /* inscricao velha, de outra chave: sai dela e entra de novo */
-          if (e.name !== 'InvalidStateError') throw e
-          await (await reg.pushManager.getSubscription())?.unsubscribe()
-          inscricao = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: emBytes(chave) })
-        }
-      }
-      await pushApi.inscrever(inscricao.toJSON(), nomeDoAparelho())
+      await garantirInscricao(await pushApi.carregarChave())
       setEstado('ligado')
     } catch (e) {
       setErro(e.message || 'Não foi possível ligar as notificações neste aparelho.')

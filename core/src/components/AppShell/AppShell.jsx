@@ -11,6 +11,7 @@ import Confirma from '@/components/Confirma/Confirma'
 import Estrelas from '@/components/Estrelas/Estrelas'
 import { ehAplicativo } from '@/utils/dispositivo'
 import useNaoLidasChat from '@/hooks/useNaoLidasChat'
+import { useNotificacoesAutomaticas } from '@/hooks/useNotificacoesCelular'
 import { primeiroNome, saudacao } from '@/utils/pessoa'
 import { dataHora } from '@/utils/formato'
 /* O nome do arquivo diz para QUAL FUNDO a logo foi feita:
@@ -902,6 +903,9 @@ export default function AppShell({
   const navegar = useNavigate()
   /* fora da tela do chat, o botao mostra quantas mensagens faltam ler */
   const naoLidas = useNaoLidasChat(!semChat)
+  /* as notificacoes no celular se ligam sozinhas (o aparelho pergunta no
+     primeiro clique, uma vez): nao ha cartao em Configuracoes */
+  useNotificacoesAutomaticas(Boolean(user))
 
   /* o toque numa notificacao do celular com o app ja aberto: o service
      worker manda o endereco, e a tela troca sem recarregar o app */
