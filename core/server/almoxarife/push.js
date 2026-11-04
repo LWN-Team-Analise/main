@@ -129,7 +129,7 @@ export async function notificar(pool, tipo, opcoes) {
             titulo: modelo.titulo,
             corpo: `${o.corpo || modelo.corpo} ${o.detalhe || linhaOS(o.os, o.remetente)}`,
             tag: `lwn-${tipo}-${(o.os && o.os.id) || Date.now()}`,
-            url: `/almoxarife/almoxarife.html?aba=${modelo.aba}`
+            url: `/core/app/control/${modelo.aba}`
         });
         return { enviadas: r.enviados, destinatarios: ids };
     } catch (e) {

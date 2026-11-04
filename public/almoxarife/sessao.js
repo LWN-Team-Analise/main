@@ -24,6 +24,10 @@
     var LOGIN = '/core/login';
     var INICIO = '/core/app';
 
+    /* a pagina abriu: a marca que o React deixa antes de mandar para
+       /core/app/control (core/src/routes/AppRoutes.jsx) ja pode sair */
+    try { sessionStorage.removeItem('lwn-control-recarga'); } catch (e) { /* segue */ }
+
     var token = null;
     try { token = (JSON.parse(localStorage.getItem(SESSAO_DO_MAIN) || 'null') || {}).token || null; } catch (e) { token = null; }
     if (!token) { location.replace(LOGIN); return; }
@@ -117,12 +121,6 @@
         if (evento.key === TEMA_DO_MAIN) aplicarTema();
     });
 
-    /* a notificacao (celular ou e-mail) abre a aba do aviso: ?aba=devolutiva.
-       "aprovar" e "minhas-obras" sao abas de dentro do Painel Geral */
-    window.addEventListener('load', function () {
-        var aba = new URLSearchParams(location.search).get('aba');
-        if (!aba || typeof window.switchTab !== 'function') return;
-        var dentroDoPainel = { aprovar: 'dashboard', 'minhas-obras': 'dashboard' };
-        try { window.switchTab(dentroDoPainel[aba] || aba); } catch (e) { /* aba que nao existe mais */ }
-    });
+    /* A aba que o endereco pede (/core/app/control/devolutiva, ou o
+       ?aba= dos links antigos) e endereco.js quem abre. */
 })();

@@ -21,7 +21,7 @@
       ]
     },
     {
-      "source": "/core/:path*",
+      "source": "/core/((?!app/control).*)",
       "headers": [
         {
           "key": "Content-Security-Policy",
@@ -33,10 +33,22 @@
           "value": "camera=(self), microphone=(), geolocation=(), payment=(), usb=()"
         }
       ]
+    },
+    {
+      "source": "/core/app/control(.*)",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "DENY" },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(), geolocation=(), payment=(), usb=()"
+        }
+      ]
     }
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/core/app/control", "destination": "/almoxarife/almoxarife.html" },
+    { "source": "/core/app/control/:path*", "destination": "/almoxarife/almoxarife.html" },
     { "source": "/core/:path*", "destination": "/core/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]

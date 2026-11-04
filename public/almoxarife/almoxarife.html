@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport"content="width=device-width, initial-scale=1.0">
-    <title>Almoxarife - LWN Engenharia</title>
+    <title>LWN Control</title>
     <!-- A sessao do main (login, permissoes) antes de tudo: ver sessao.js -->
     <script src="/almoxarife/sessao.js"></script>
     <link rel="stylesheet"href="/almoxarife/almoxarife.css">
@@ -11,13 +11,14 @@
     <link rel="stylesheet" href="/almoxarife/responsivo.css">
     <!-- a barra lateral e o fundo com a cara do Atmosfera LWN: ver estilo-main.css -->
     <link rel="stylesheet" href="/almoxarife/estilo-main.css">
-    <link rel="icon"href="/almoxarife/assets/app-icon-192.png" type="image/png">
+    <!-- o icone da aba e o mesmo do Atmosfera LWN (core/index.html) -->
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
   <meta name="theme-color" content="#1e40af">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Almoxarife">
-  <link rel="apple-touch-icon" href="/almoxarife/assets/app-icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="LWN Control">
+  <link rel="apple-touch-icon" sizes="180x180" href="/core/icone-app-180.png">
 </head>
 <body>
 <svg width="0"height="0" style="position:absolute;">
@@ -71,11 +72,6 @@
         <div class="bnav-drawer-handle"></div>
         <div class="bnav-drawer-title">Todas as seções</div>
         <div class="bnav-drawer-grid">
-            <!-- Atmosfera: volta para o sistema (sem data-bnav-modulo: sempre aparece) -->
-            <a class="bnav-drawer-item" id="bdrawer-atmosfera" href="/core/app" style="text-decoration: none;">
-                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"></path></svg>
-                Atmosfera
-            </a>
             <button class="bnav-drawer-item" id="bdrawer-dashboard" data-bnav-modulo="dashboard" onclick="bnavDrawerSwitch('dashboard')">
                 <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"><rect x="3"y="3"width="7"height="9"></rect><rect x="14"y="3"width="7"height="5"></rect><rect x="14"y="12"width="7"height="9"></rect><rect x="3"y="16"width="7"height="5"></rect></svg>
                 Painel Geral
@@ -129,10 +125,11 @@
                 <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"><circle cx="12"cy="12"r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 Calibração
             </button>
-            <button class="bnav-drawer-item" id="bdrawer-logs" data-bnav-modulo="logs" onclick="bnavDrawerSwitch('logs')">
-                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8"y1="13"x2="16"y2="13"></line><line x1="8"y1="17"x2="14"y2="17"></line></svg>
-                Logs
-            </button>
+            <!-- Atmosfera: volta para o sistema (sem data-bnav-modulo: sempre aparece) -->
+            <a class="bnav-drawer-item" id="bdrawer-atmosfera" href="/core/app" style="text-decoration: none;">
+                <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"></path></svg>
+                Atmosfera
+            </a>
 
             <button class="menu-item menu-item-logout" onclick="sairApp()">
                 <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2">
@@ -182,15 +179,6 @@
     <nav class="rail vidro" id="almox-rail" aria-label="Navegação do Almoxarife">
     <ul class="sidebar-menu rail__lista">
         <span class="rail__marca" aria-hidden="true"><span class="rail__marca-anel"></span></span>
-        <!-- Atmosfera: volta para a pagina inicial do sistema. Sem data-modulo
-             de proposito — e de todo mundo, nenhuma permissao a esconde — e e
-             um link (<a>, como os NavLink do main), nao um botao do switchTab -->
-        <li>
-            <a class="rail__btn" href="/core/app" title="Atmosfera">
-                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z" /></svg></span>
-                <span class="rail__rotulo">Atmosfera</span>
-            </a>
-        </li>
         <!-- Dashboard - Permissão: dashboard -->
         <li data-modulo="dashboard">
             <button class="menu-item rail__btn active" onclick="switchTab('dashboard')" title="Painel Geral">
@@ -315,21 +303,19 @@
             </button>
         </li>
 
-
-
-
-        <!-- Logs - Permissão: logs -->
-        <li data-modulo="logs">
-            <button class="menu-item rail__btn" id="menu-logs" onclick="switchTab('logs')" title="Logs">
-                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="8"y1="13"x2="16"y2="13"></line>
-                    <line x1="8"y1="17"x2="14"y2="17"></line>
-                </svg></span>
-                <span class="rail__rotulo">Logs</span>
-            </button>
+        <!-- Atmosfera, a ultima: volta para a pagina inicial do sistema. Sem data-modulo
+             de proposito — e de todo mundo, nenhuma permissao a esconde — e e
+             um link (<a>, como os NavLink do main), nao um botao do switchTab -->
+        <li>
+            <a class="rail__btn" href="/core/app" title="Atmosfera">
+                <span class="rail__glifo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z" /></svg></span>
+                <span class="rail__rotulo">Atmosfera</span>
+            </a>
         </li>
+
+
+
+
     </ul>
     </nav>
     <!-- O avatar e o menu dele (Configurações, Sair): o mesmo .euzinho do
@@ -1245,10 +1231,6 @@
             <!-- CLIENTES -->
 
             <!-- DASHBOARD POWERBI -->
-            <!-- LOGS DE ATIVIDADE -->
-            <section id="logs-tab" class="tab-content">
-                <div class="logs-wrap" id="logs-root"></div>
-            </section>
         </div>
     </main>
 
@@ -1496,5 +1478,7 @@
     <script src="/almoxarife/obra-da-os.js"></script>
     <script src="/almoxarife/menu-main.js"></script>
     <script src="/almoxarife/topo-main.js"></script>
+    <!-- por ultimo: o endereco de cada aba (/core/app/control/inventario) -->
+    <script src="/almoxarife/endereco.js"></script>
 </body>
 </html>

@@ -114,6 +114,13 @@ const nomeBase = (nome) =>
 
 const soDigitos = (v) => String(v ?? '').replace(/\D/g, '')
 
+/* a sigla do cliente no lwncontrol; um endereco digitado no campo (o da
+   Visoflex: "R. ANDRÉ ADOLFO FERRARI, 104") nao e sigla */
+const siglaValida = (sigla) => {
+  const t = String(sigla ?? '').trim()
+  return !t || (/\d/.test(t) && t.includes(',')) ? null : t
+}
+
 /* o main so aceita a sigla de duas letras (cliente_uf_forma) */
 const ufValida = (uf) => {
   const t = String(uf ?? '').trim().toUpperCase()
@@ -409,17 +416,26 @@ async function passoImportar() {
   try {
     await cliente.query('BEGIN')
 
-    /* clientes: cria os novos, completa a sigla dos ligados */
+    /* clientes: cria os novos, completa a sigla dos ligados. A sigla so
+       vem quando e uma so: Cristalia 1, 3, 5 e 8 vao para o mesmo
+       cliente, e nenhuma delas e a sigla dele */
     const clientePorNomeLwn = new Map()
+    const siglasPorDestino = new Map()
     for (const { de, para } of ligar) {
-      await cliente.query("UPDATE cliente SET abreviacao = $2 WHERE id = $1 AND coalesce(abreviacao, '') = ''", [para.id, de.abreviacao])
       clientePorNomeLwn.set(de.nome, Number(para.id))
+      if (!siglasPorDestino.has(para.id)) siglasPorDestino.set(para.id, new Set())
+      siglasPorDestino.get(para.id).add(siglaValida(de.abreviacao) ?? '')
+    }
+    for (const [id, siglas] of siglasPorDestino) {
+      const [sigla] = [...siglas]
+      if (siglas.size !== 1 || !sigla) continue
+      await cliente.query("UPDATE cliente SET abreviacao = $2 WHERE id = $1 AND coalesce(abreviacao, '') = ''", [id, sigla])
     }
     for (const grupo of criarPorNome.values()) {
       const c = grupo[0]
       const { rows } = await cliente.query(
         'INSERT INTO cliente (nome, abreviacao, cidade, estado) VALUES ($1, $2, $3, $4) RETURNING id',
-        [nomeBase(c.nome), c.abreviacao || null, c.cidade || null, ufValida(c.uf)],
+        [nomeBase(c.nome), siglaValida(c.abreviacao), c.cidade || null, ufValida(c.uf)],
       )
       grupo.forEach((g) => clientePorNomeLwn.set(g.nome, Number(rows[0].id)))
     }
@@ -433,7 +449,7 @@ async function passoImportar() {
     console.log(`\n  ${ligadas[0].n} O.S. ligadas a um cliente do main pelo nome`)
 
     await cliente.query('COMMIT')
-    console.log('\nAlmoxarife importado. Confira em /almoxarife/almoxarife.html.\n')
+    console.log('\nAlmoxarife importado. Confira em /core/app/control.\n')
   } catch (erro) {
     await cliente.query('ROLLBACK').catch(() => {})
     console.error('\nERRO — nada foi gravado:', erro.message, '\n')

@@ -230,8 +230,8 @@ function esc(t) {
 }
 
 function linkDoApp(aba) {
-    const base = ORIGEM + '/almoxarife/almoxarife.html';
-    return aba ? `${base}?aba=${encodeURIComponent(aba)}` : base;
+    const base = ORIGEM + '/core/app/control';
+    return aba ? `${base}/${encodeURIComponent(aba)}` : base;
 }
 
 const CORES = {

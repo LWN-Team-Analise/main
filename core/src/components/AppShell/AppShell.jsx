@@ -190,7 +190,7 @@ const MENU = [
   { id: 'despesas', rotulo: 'Reembolso', rota: '/app/despesas', permissao: 'ver_despesas' },
   { id: 'frotas', rotulo: 'Frotas', rota: '/app/frotas', permissao: 'ver_frotas' },
   /* o Almoxarife (o antigo lwncontrol) abre a tela dele, em /almoxarife */
-  { id: 'almoxarife', rotulo: 'Almoxarife', rota: '/app/almoxarife', permissao: 'ver_almoxarife' },
+  { id: 'almoxarife', rotulo: 'Almoxarife', rota: '/app/control', permissao: 'ver_almoxarife' },
   { id: 'comercial', rotulo: 'Comercial', rota: '/app/comercial', permissao: 'ver_comercial' },
   { id: 'turnos', rotulo: 'Turnos', rota: '/app/turnos', permissao: 'ver_turnos' },
   { id: 'avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes', permissao: 'ver_avaliacoes' },

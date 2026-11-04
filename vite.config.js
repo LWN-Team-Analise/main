@@ -11,11 +11,16 @@ import path from 'node:path'
  */
 
 // Any page address inside /core (not a file) opens LWN Core, as the
-// rewrites in vercel.json do in production.
+// rewrites in vercel.json do in production. /core/app/control is the
+// exception: LWN Control (the old lwncontrol, public/almoxarife) is a page
+// of its own, outside React.
 const coreFallback = (req, _res, next) => {
   const [pathname] = req.url.split('?')
   const isPage = (pathname === '/core' || pathname.startsWith('/core/')) && !path.extname(pathname)
-  if (isPage && req.headers.accept?.includes('text/html')) req.url = '/core/index.html'
+  const isControl = pathname === '/core/app/control' || pathname.startsWith('/core/app/control/')
+  if (isPage && req.headers.accept?.includes('text/html')) {
+    req.url = isControl ? '/almoxarife/almoxarife.html' : '/core/index.html'
+  }
   next()
 }
 

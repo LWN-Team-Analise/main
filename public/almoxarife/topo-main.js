@@ -164,8 +164,7 @@
         inventario: 'inventario ferramentas ferramenta instrumentos ativos tags cadastro codigo de barras',
         manutencao: 'manutencao conserto avaria avariada reparo',
         remanejamento: 'remanejamento remanejar passar transferir receber enviar',
-        calibracao: 'calibracao calibrar vencimento prazo',
-        logs: 'logs historico atividade auditoria registros'
+        calibracao: 'calibracao calibrar vencimento prazo'
     };
 
     /* o status da O.S. como a tela o le */

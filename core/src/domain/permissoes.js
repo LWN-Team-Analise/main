@@ -63,7 +63,6 @@ export const ALMOXARIFE_MODULOS = [
   ['relatorios', 'Dashboard do Almoxarife (página inicial)'],
   ['manutencao', 'Manutenção'],
   ['manutencao_somente_leitura', 'Manutenção — apenas visualizar'],
-  ['logs', 'Logs de atividade'],
   ['responsavel_obra', 'Pode ser responsável por obra (OS e remanejamento)'],
 ]
 
@@ -77,7 +76,7 @@ export const VISUALIZACAO = [
   { chave: 'ver_frotas', rotulo: 'Frotas', rota: '/app/frotas' },
   /* o Almoxarife (o antigo lwncontrol, atualizacao 38): a aba abre a tela
      dele, em /almoxarife. As abas de dentro dele sao as almox_* de baixo */
-  { chave: 'ver_almoxarife', rotulo: 'Almoxarife', rota: '/app/almoxarife' },
+  { chave: 'ver_almoxarife', rotulo: 'Almoxarife', rota: '/app/control' },
   { chave: 'ver_comercial', rotulo: 'Comercial', rota: '/app/comercial' },
   { chave: 'ver_turnos', rotulo: 'Turnos', rota: '/app/turnos' },
   { chave: 'ver_avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes' },
