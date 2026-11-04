@@ -63,7 +63,26 @@
 import fs from 'node:fs'
 import dotenv from 'dotenv'
 import pg from 'pg'
-import { pool } from '../db.js'
+
+/* O endereco do banco do main (producao) vem do DATABASE_URL, copiado do
+   botao Connect do Neon — que as vezes vem embrulhado: o comando do psql
+   (psql 'postgresql://...'), aspas, espacos. Sem o postgresql:// na
+   frente, o pg le o texto como um servidor chamado "base" e a conexao
+   morre em "getaddrinfo ENOTFOUND base". Aqui o endereco e tirado de
+   dentro do embrulho, ou a explicacao sai clara. Por isso server/db.js
+   so e carregado depois (import dinamico). */
+const enderecoBruto = process.env.DATABASE_URL
+if (enderecoBruto?.trim()) {
+  const achado = enderecoBruto.match(/postgres(?:ql)?:\/\/[^\s'"]+/)
+  if (!achado) {
+    console.error('\nO DATABASE_URL nao e o endereco de um banco: ele precisa comecar com postgresql://')
+    console.error('No Neon: projeto costumers > Connect > copie o endereco que comeca com postgresql:// (com a senha)')
+    console.error('e rode de novo:  $env:DATABASE_URL = "postgresql://..."\n')
+    process.exit(1)
+  }
+  process.env.DATABASE_URL = achado[0]
+}
+const { pool } = await import('../db.js')
 
 const args = process.argv.slice(2)
 const preparar = args.includes('--preparar')
