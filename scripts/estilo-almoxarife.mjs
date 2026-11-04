@@ -63,7 +63,7 @@ const avatarCss = regra(avatar, '.avatarfig') + '\n\n' + regra(avatar, '.avatarf
 const modalCss = ['.modal', '.modal__caixa', '.modal__caixa:focus', '.modal__topo', '.modal__titulo', '.modal__x', '.modal__x:hover', '.modal__corpo']
   .map((sel) => regra(modal, sel))
   .join('\n\n') + '\n\n' + regra(modal, '@keyframes modal-entra') + '\n\n' + regra(modal, '@keyframes modal-sobe')
-const confirmaCss = ['.confirma', '.confirma__acoes', '.confirma__ok', '.confirma__ok--acao', '.confirma__ok:hover', '.confirma__ok:active']
+const confirmaCss = ['.confirma', '.confirma__texto', '.confirma__acoes', '.confirma__ok', '.confirma__ok--acao', '.confirma__ok:hover', '.confirma__ok:active']
   .map((sel) => regra(confirma, sel))
   .join('\n\n')
 

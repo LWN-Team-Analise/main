@@ -105,7 +105,12 @@
 
         let eu = {};
         try { eu = JSON.parse(sessionStorage.getItem('lwn_user') || '{}') || {}; } catch (e) { eu = {}; }
-        const nome = String(eu.nome || '').trim() || 'Usuário';
+        /* o usuario da sessao do main (o mesmo do avatar do AppShell): vale
+           quando /api/almox/eu nao trouxe o nome ou a foto */
+        let doMain = {};
+        try { doMain = (JSON.parse(localStorage.getItem('customers.session') || 'null') || {}).user || {}; } catch (e) { doMain = {}; }
+        const nome = String(eu.nome || doMain.name || '').trim() || 'Usuário';
+        const foto = eu.foto || doMain.foto || null;
 
         caixa.querySelector('[data-eu="nome"]').textContent = nome;
         caixa.querySelector('[data-eu="setor"]').textContent = eu.setor || eu.email || '';
@@ -113,14 +118,14 @@
 
         // o Avatar do main: a foto, ou as iniciais sobre a cor do nome
         const avatar = caixa.querySelector('[data-eu="avatar"]');
-        if (eu.foto) {
+        if (foto) {
             const img = document.createElement('img');
-            img.src = eu.foto;
+            img.src = foto;
             img.alt = nome;
             avatar.appendChild(img);
         } else {
-            avatar.style.background = corDoNome(eu.nome);
-            avatar.textContent = iniciaisDe(eu.nome);
+            avatar.style.background = corDoNome(nome);
+            avatar.textContent = iniciaisDe(nome);
         }
 
         const abrir = (sim) => {

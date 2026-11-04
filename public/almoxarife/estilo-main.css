@@ -1405,6 +1405,13 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
   gap: 14px;
 }
 
+.confirma__texto {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--am-text-base);
+}
+
 .confirma__acoes {
   display: flex;
   justify-content: flex-end;

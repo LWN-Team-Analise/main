@@ -59,6 +59,34 @@ async function certColunasLeves() {
 const app = express.Router();
 
 // ============================================================
+// O BANCO JÁ TEM O ALMOXARIFE?
+//
+// O código pode chegar ao ar antes das atualizações 38 e 39 rodarem no
+// banco (o schema almox, as views e as permissões). Sem elas toda rota
+// daqui quebrava com um 500 sem explicação, e a tela abria vazia dizendo
+// que o colaborador não tinha permissão. Agora a resposta diz o que falta.
+// Conferido uma vez por instância: depois que o schema existe, não some.
+// ============================================================
+let bancoPronto = false;
+app.use(async (req, res, next) => {
+    if (bancoPronto) return next();
+    try {
+        const r = await pool.query("SELECT to_regclass('almox.usuarios') IS NOT NULL AS ok");
+        if (!r.rows[0].ok) {
+            logger.error('almox/banco', 'o schema almox nao existe: falta rodar as atualizacoes 38 e 39');
+            return res.status(503).json({
+                erro: "O banco de dados ainda não tem o Almoxarife: falta rodar as atualizações 38 e 39 (npm run db:atualizar).",
+                banco: false,
+            });
+        }
+        bancoPronto = true;
+        return next();
+    } catch (err) {
+        return next(err);
+    }
+});
+
+// ============================================================
 // INVALIDAÇÃO AUTOMÁTICA DE CACHE
 // Qualquer escrita (POST/PUT/DELETE) limpa o cache do recurso
 // afetado, garantindo que ninguém veja dado velho.

@@ -12,6 +12,11 @@
  *
  * (no PowerShell: $env:LWNCONTROL_DATABASE_URL="postgres://..." antes do npm)
  *
+ * Ou, sem copiar o endereco, apontando o .env do proprio lwncontrol (a
+ * linha DATABASE_URL de la):
+ *
+ *   npm run db:almoxarife -- --origem-env=C:\Users\...\lwncontrol\.env --preparar
+ *
  * Sao tres passos, nesta ordem:
  *
  *   --preparar   escreve almoxarife-clientes.csv (na pasta onde rodou):
@@ -56,6 +61,7 @@
  * ferramenta e de baia dentro dos JSON), e as sequencias seguem do maior.
  */
 import fs from 'node:fs'
+import dotenv from 'dotenv'
 import pg from 'pg'
 import { pool } from '../db.js'
 
@@ -64,7 +70,19 @@ const preparar = args.includes('--preparar')
 const gravar = args.includes('--gravar')
 const ARQUIVO = (args.find((a) => a.startsWith('--arquivo=')) ?? '--arquivo=almoxarife-clientes.csv').slice(10)
 
-const URL_ORIGEM = process.env.LWNCONTROL_DATABASE_URL?.trim()
+/* --origem-env=<arquivo>: o endereco do lwncontrol sai do .env dele, sem
+   passar pela tela */
+const ORIGEM_ENV = args.find((a) => a.startsWith('--origem-env='))?.slice(13)
+let doArquivo = null
+if (ORIGEM_ENV) {
+  if (!fs.existsSync(ORIGEM_ENV)) {
+    console.error(`\nNao achei o arquivo ${ORIGEM_ENV}.\n`)
+    process.exit(1)
+  }
+  const lido = dotenv.parse(fs.readFileSync(ORIGEM_ENV))
+  doArquivo = lido.LWNCONTROL_DATABASE_URL || lido.DATABASE_URL || null
+}
+const URL_ORIGEM = (process.env.LWNCONTROL_DATABASE_URL || doArquivo)?.trim()
 if (!URL_ORIGEM) {
   console.error('\nFalta o endereco do banco do lwncontrol na variavel LWNCONTROL_DATABASE_URL.\n')
   console.error('  PowerShell:  $env:LWNCONTROL_DATABASE_URL="postgres://..."; npm run db:almoxarife -- --preparar')
@@ -426,6 +444,9 @@ async function passoImportar() {
 }
 
 try {
+  /* em qual banco do main vai mexer: o de producao ou o local */
+  const { rows: [qual] } = await pool.query('SELECT current_database() AS banco')
+  console.log(`\nBanco do main: ${qual.banco} — ${process.env.DATABASE_URL?.trim() ? 'o do DATABASE_URL (producao)' : 'o local, do .env'}`)
   if (preparar) await passoPreparar()
   else await passoImportar()
 } catch (erro) {

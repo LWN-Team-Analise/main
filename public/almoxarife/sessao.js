@@ -61,6 +61,43 @@
     if (pedido.status === 403) { location.replace(INICIO); return; }
     if (pedido.status === 200) {
         try { sessionStorage.setItem('lwn_user', pedido.responseText); } catch (e) { /* segue */ }
+    } else {
+        /* Sem o colaborador a tela abria vazia, sem a foto e dizendo "Você
+           não tem permissão para acessar nenhum módulo" — que não era o
+           caso: quem falhou foi o servidor (o banco sem as atualizações do
+           Almoxarife, a rede, a API fora do ar). O que ficou de uma visita
+           anterior sai, para não valer permissão velha, e um aviso por
+           cima da tela diz o que houve. */
+        var motivo = '';
+        try { motivo = (JSON.parse(pedido.responseText || '{}') || {}).erro || ''; } catch (e) { motivo = ''; }
+        if (!motivo) {
+            motivo = pedido.status
+                ? 'O servidor respondeu com erro (' + pedido.status + ').'
+                : 'O servidor não respondeu. Confira a conexão.';
+        }
+        try { sessionStorage.removeItem('lwn_user'); } catch (e) { /* segue */ }
+        document.addEventListener('DOMContentLoaded', function () { mostrarFalha(motivo); });
+    }
+
+    function mostrarFalha(motivo) {
+        var caixa = document.createElement('div');
+        caixa.className = 'am-modal';
+        caixa.id = 'almox-falha';
+        caixa.style.zIndex = '2147483000';
+        caixa.innerHTML =
+            '<div class="am-modal__caixa" role="alertdialog" aria-modal="true" aria-labelledby="almox-falha-titulo" style="max-width: 460px;">' +
+                '<div class="am-modal__topo"><h2 class="am-modal__titulo" id="almox-falha-titulo">Não foi possível abrir o Almoxarife</h2></div>' +
+                '<div class="am-modal__corpo"><div class="confirma">' +
+                    '<p class="confirma__texto" data-falha="motivo"></p>' +
+                    '<footer class="confirma__acoes">' +
+                        '<a class="formobra__cancelar" href="' + INICIO + '">Voltar ao Atmosfera</a>' +
+                        '<button type="button" class="confirma__ok confirma__ok--acao" data-falha="de-novo">Tentar de novo</button>' +
+                    '</footer>' +
+                '</div></div>' +
+            '</div>';
+        caixa.querySelector('[data-falha="motivo"]').textContent = motivo;
+        caixa.querySelector('[data-falha="de-novo"]').addEventListener('click', function () { location.reload(); });
+        document.body.appendChild(caixa);
     }
 
     /* O TEMA e o do main: o botao do modo noturno do lwncontrol saiu, e a

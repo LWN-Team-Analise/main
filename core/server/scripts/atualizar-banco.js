@@ -15,6 +15,12 @@
  *
  * Todos sao idempotentes: rodar de novo nao quebra nada, e e assim que
  * se descobre se falta algum.
+ *
+ * So alguns, pelo numero (o banco de producao, que ja tem os outros):
+ *
+ *   npm run db:atualizar -- 38 39
+ *
+ * A conferencia do fim continua olhando tudo.
  */
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -223,13 +229,23 @@ function nulavel(tabela, coluna) {
             WHERE table_schema='public' AND table_name='${tabela}' AND column_name='${coluna}'), false) AS ok`
 }
 
+/* os numeros pedidos na linha de comando (nenhum = todos) */
+const PEDIDOS = process.argv.slice(2).filter((a) => /^\d+$/.test(a))
+const numeroDe = (arquivo) => (arquivo.match(/atualizacao-(\d+)\.sql\.txt$/) || [])[1]
+const AQUI = PEDIDOS.length ? ARQUIVOS.filter((a) => PEDIDOS.includes(numeroDe(a))) : ARQUIVOS
+if (AQUI.length < PEDIDOS.length) {
+  const faltam = PEDIDOS.filter((n) => !AQUI.some((a) => numeroDe(a) === n))
+  console.error(`\nNao achei na lista a atualizacao ${faltam.join(', ')}.\n`)
+  process.exit(1)
+}
+
 let falhou = false
 
 try {
   const { rows } = await query('SELECT current_database() AS banco')
   console.log(`\nBanco: ${rows[0].banco}\n`)
 
-  for (const arquivo of ARQUIVOS) {
+  for (const arquivo of AQUI) {
     if (!fs.existsSync(naPasta(arquivo))) {
       console.log(`  pulado  ${arquivo} (arquivo nao encontrado)`)
       continue
