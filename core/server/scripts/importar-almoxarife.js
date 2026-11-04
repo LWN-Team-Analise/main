@@ -70,11 +70,34 @@ import pg from 'pg'
    frente, o pg le o texto como um servidor chamado "base" e a conexao
    morre em "getaddrinfo ENOTFOUND base". Aqui o endereco e tirado de
    dentro do embrulho, ou a explicacao sai clara. Por isso server/db.js
-   so e carregado depois (import dinamico). */
+   so e carregado depois (import dinamico).
+
+   Ou, sem copiar nada: --destino-env=<arquivo> le o DATABASE_URL de um
+   .env — o que `vercel env pull` baixa da Vercel:
+
+     vercel env pull .env.producao --environment=production --yes
+     npm run db:almoxarife -- --origem-env=...\lwncontrol\.env --destino-env=.env.producao --gravar
+     Remove-Item .env.producao
+*/
+const DESTINO_ENV = process.argv.slice(2).find((a) => a.startsWith('--destino-env='))?.slice(14)
+if (DESTINO_ENV) {
+  if (!fs.existsSync(DESTINO_ENV)) {
+    console.error(`\nNao achei o arquivo ${DESTINO_ENV}. Rode antes: vercel env pull ${DESTINO_ENV} --environment=production --yes\n`)
+    process.exit(1)
+  }
+  const lido = dotenv.parse(fs.readFileSync(DESTINO_ENV))
+  const doArquivo = lido.DATABASE_URL || lido.POSTGRES_URL || lido.DATABASE_URL_UNPOOLED
+  if (!doArquivo?.trim()) {
+    console.error(`\nO arquivo ${DESTINO_ENV} nao tem o DATABASE_URL (na Vercel ele pode estar marcado como "Sensitive", e ai nao desce).\n`)
+    process.exit(1)
+  }
+  process.env.DATABASE_URL = doArquivo
+}
 const enderecoBruto = process.env.DATABASE_URL
 if (enderecoBruto?.trim()) {
   const achado = enderecoBruto.match(/postgres(?:ql)?:\/\/[^\s'"]+/)
-  if (!achado) {
+  /* sem usuario@servidor e o exemplo da instrucao (postgresql://...), nao um endereco */
+  if (!achado || !achado[0].includes('@')) {
     console.error('\nO DATABASE_URL nao e o endereco de um banco: ele precisa comecar com postgresql://')
     console.error('No Neon: projeto costumers > Connect > copie o endereco que comeca com postgresql:// (com a senha)')
     console.error('e rode de novo:  $env:DATABASE_URL = "postgresql://..."\n')
