@@ -9,10 +9,22 @@
 //   - com UMA obra: ela ja vem escolhida;
 //   - com MAIS de uma: escolher é obrigatório.
 //
-// A OS fica ligada à obra, e é ela que marca o check "Enviar OS" (3a etapa
-// do roteiro) quando a OS for APROVADA. O servidor confere a mesma regra
-// (lerClienteEObra, em core/server/almoxarife).
+// A OS fica ligada à obra, e é ela que marca o check "Solicitar OS" (2a
+// etapa do roteiro) quando a OS for APROVADA. O servidor confere a mesma
+// regra (lerClienteEObra, em core/server/almoxarife).
+//
+// Escolhida a obra, o "Responsável pela Obra" vem do Atmosfera LWN: o
+// membro da obra que o setor deixa ser responsável, quando é um só.
+//
+// O check "Solicitar OS" da obra abre esta tela já com o cliente e a
+// obra escolhidos: /core/app/control/solicitar?obra=ID.
 // ============================================================
+
+// lido AQUI, e nao no load: endereco.js limpa o ?obra= do endereco
+const ALMOX_OBRA_PEDIDA = (() => {
+    const id = new URLSearchParams(location.search).get('obra');
+    return /^\d{1,18}$/.test(id || '') ? id : null;
+})();
 
 let almoxObrasDoCliente = [];
 let almoxObrasPedido = 0;
@@ -67,10 +79,26 @@ async function almoxCarregarObrasDoCliente(escolher) {
     if (ajuda) {
         ajuda.textContent = varias
             ? 'Este cliente tem mais de uma obra: escolha a obra desta OS.'
-            : 'A OS fica ligada a esta obra. Aprovada, ela marca o check "Enviar OS" da obra.';
+            : 'A OS fica ligada a esta obra. Aprovada, ela marca o check "Solicitar OS" da obra.';
     }
     grupo.style.display = '';
+    almoxResponsavelDaObra();
 }
+
+// O responsável da obra escolhida: o membro dela que pode ser responsável
+// (vem pronto de GET /clientes/:id/obras). Só preenche quando é UM, e só
+// se ninguém foi escolhido ainda — a escolha da pessoa não é trocada.
+function almoxResponsavelDaObra() {
+    const select = document.getElementById('os-obra-id');
+    const responsavel = document.getElementById('os-supervisor');
+    if (!select || !responsavel || responsavel.value) return;
+    const obra = almoxObrasDoCliente.find(o => String(o.id) === String(select.value));
+    const ids = obra && Array.isArray(obra.responsaveis) ? obra.responsaveis : [];
+    if (ids.length !== 1) return;
+    const opcao = [...responsavel.options].find(o => String(o.dataset.userId) === String(ids[0]));
+    if (opcao) responsavel.value = opcao.value;
+}
+window.almoxResponsavelDaObra = almoxResponsavelDaObra;
 window.almoxCarregarObrasDoCliente = almoxCarregarObrasDoCliente;
 
 // { cliente_id, obra_id } para o corpo da OS — ou { erro } quando falta a obra
@@ -89,4 +117,44 @@ window.almoxObraDaOS = almoxObraDaOS;
 document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('os-client');
     if (select) select.addEventListener('change', () => almoxCarregarObrasDoCliente());
+    const obra = document.getElementById('os-obra-id');
+    if (obra) obra.addEventListener('change', almoxResponsavelDaObra);
 });
+
+// Vindo do check "Solicitar OS" da obra: escolhe o cliente e a obra. A
+// lista de clientes chega depois da tela (initApp), entao espera por ela
+// — no maximo 15 segundos.
+async function almoxAbrirComObraPedida() {
+    if (!ALMOX_OBRA_PEDIDA) return;
+    let obra = null;
+    try {
+        const r = await fetch(`${API_URL}/obras/${ALMOX_OBRA_PEDIDA}`, { cache: 'no-cache' });
+        obra = r.ok ? await r.json() : null;
+    } catch (e) {
+        obra = null;
+    }
+    if (!obra || !obra.cliente_id) return;
+    if (obra.concluida && typeof showToast === 'function') {
+        showToast('Esta obra já foi concluída no Atmosfera LWN.', 'warning');
+        return;
+    }
+    const limite = Date.now() + 15000;
+    const tentar = () => {
+        const select = document.getElementById('os-client');
+        if (!select) return;
+        if (select.options.length <= 1 && typeof clients !== 'undefined' && Array.isArray(clients) && clients.length
+            && typeof initSolicitarForm === 'function') {
+            initSolicitarForm();
+        }
+        const opcao = [...select.options].find(o => String(o.dataset.clienteId) === String(obra.cliente_id));
+        if (!opcao) {
+            if (Date.now() < limite) setTimeout(tentar, 250);
+            return;
+        }
+        select.value = opcao.value;
+        almoxCarregarObrasDoCliente(obra.id);
+    };
+    tentar();
+}
+
+window.addEventListener('load', () => { almoxAbrirComObraPedida(); });

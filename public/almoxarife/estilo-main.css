@@ -2479,6 +2479,65 @@ button.menulado__item {
   cursor: pointer;
 }
 
+/* ---- os selects: com a cara do Seletor do main ----
+   O main nao usa o <select> do navegador: a escolha e o componente Seletor
+   (src/components/Seletor), uma pilula de vidro com a setinha. Aqui os
+   selects continuam os do navegador (a lista aberta e a do sistema), mas
+   fechados tem o desenho dele: a mesma borda, o mesmo vidro, o mesmo
+   anel azul no foco. Vale para TODOS — os do HTML e os que as telas
+   montam —, e o !important passa por cima do estilo escrito direto em
+   varios deles. */
+select:not([multiple]):not([size]) {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  min-height: 42px;
+  padding: 9px 38px 9px 15px !important;
+  border: 1px solid var(--am-vidro-borda) !important;
+  border-radius: var(--am-radius-pill) !important;
+  background-color: var(--am-vidro-fundo) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  background-size: 14px 14px !important;
+  box-shadow: var(--am-vidro-realce) !important;
+  backdrop-filter: blur(var(--am-glass-blur)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--am-glass-blur)) saturate(150%);
+  color: var(--am-text-strong) !important;
+  font-family: inherit;
+  font-size: 0.84rem !important;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: border-color var(--am-dur-fast) var(--am-ease-out),
+    background-color var(--am-dur-fast) var(--am-ease-out), box-shadow var(--am-dur-fast) var(--am-ease-out);
+}
+
+body.dark-mode select:not([multiple]):not([size]) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+}
+
+select:not([multiple]):not([size]):hover:not(:disabled) {
+  border-color: var(--am-control-border) !important;
+  background-color: var(--am-vidro-fundo-forte) !important;
+}
+
+select:not([multiple]):not([size]):focus {
+  outline: none !important;
+  border-color: var(--am-accent) !important;
+  box-shadow: var(--am-vidro-realce), 0 0 0 3px color-mix(in srgb, var(--am-accent) 22%, transparent) !important;
+}
+
+select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* a lista aberta (a do sistema) legivel nos dois temas */
+select option {
+  background: var(--am-surface);
+  color: var(--am-text-strong);
+}
+
 /* a aba Configurações: a tela do main num iframe que vai ate o pe da
    janela (menu-main.js mede a altura) e rola por dentro */
 .almox-config {

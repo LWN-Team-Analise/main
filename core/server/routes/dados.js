@@ -377,6 +377,7 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     horarios,
     horarioMembros,
     chats,
+    ordens,
   ] = await Promise.all([
     lerClientes(imagens),
     /* os setores vem junto: sao poucos e a tela de Clientes precisa
@@ -470,6 +471,14 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
        nao contam): a bolinha do botao "Abrir chat" */
     query(`SELECT obra_id, count(*)::int AS n FROM obra_chat
             WHERE apagada_em IS NULL GROUP BY obra_id`).catch(semTabelaVazia),
+    /* as O.S. do LWN Control ligadas a cada obra (atualizacao 38): o check
+       "Solicitar OS" diz em que pe esta ("aguardando aprovação") e o botao
+       Ferramentas da obra aparece com a primeira aprovada. Sem o schema
+       almox, nenhuma */
+    query(`SELECT id, obra_id, numero_os, status, aprovado_em IS NOT NULL AS aprovada
+             FROM almox.solicitacoes
+            WHERE obra_id IS NOT NULL
+            ORDER BY id`).catch(semTabelaVazia),
   ])
 
   const junta = (linhas, chave, monta) => {
@@ -481,6 +490,13 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     })
     return mapa
   }
+
+  const osDaObra = junta(ordens.rows, 'obra_id', (l) => ({
+    id: String(l.id),
+    numero: l.numero_os ?? null,
+    status: l.status,
+    aprovada: l.aprovada === true,
+  }))
 
   const checksDaObra = {}
   marcados.rows.forEach((l) => {
@@ -735,6 +751,7 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
       reserva: reservaDaObra[o.id] ?? null,
       notas: notasDaObra[o.id] ?? [],
       avaliacao: media(notasDaObra[o.id]),
+      ordensServico: osDaObra[o.id] ?? [],
     })),
     observacoesQuadro: quadro.rows.map((l) => ({
       id: String(l.id),
@@ -751,6 +768,116 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     })),
   }
 }
+
+/* ============================================================
+   As FERRAMENTAS da obra (o botao "Ferramentas" ao lado do Editar)
+
+   Tudo o que as O.S. do LWN Control ligadas a obra levaram: cada
+   ferramenta com o nome e a TAG, a retirada e a devolucao — quando
+   (data e hora), em que baia, quem fez e se havia avaria — e se a
+   devolucao veio antes ou depois do prazo. So as O.S. aprovadas.
+
+   As horas: os JSON da O.S. (conferencia, devolutiva...) guardam ISO
+   com o fuso; as colunas "timestamp" sem fuso do schema almox guardam o
+   horario de Greenwich — dai o AT TIME ZONE 'UTC'.
+   ============================================================ */
+router.get('/obras/:id/ferramentas', exigeSessao, async (req, res) => {
+  if (!/^\d{1,18}$/.test(req.params.id)) return res.status(400).json({ erro: 'Obra inválida.' })
+  try {
+    const { rows } = await query(
+      `SELECT s.id, s.numero_os, s.status, s.instrumentos, s.conferencia, s.devolutiva,
+              s.devolucoes_parciais, s.retiradas_parciais,
+              s.data_inicio::text AS data_inicio, s.data_fim::text AS data_fim,
+              s.data_fim_original::text AS data_fim_original,
+              s.devolvida_antecipada, s.motivo_antecipacao,
+              s.solicitado_por, s.responsavel, s.aprovado_por, s.aprovado_em,
+              s.created_at AT TIME ZONE 'UTC' AS solicitada_em
+         FROM almox.solicitacoes s
+        WHERE s.obra_id = $1 AND s.aprovado_em IS NOT NULL
+        ORDER BY s.id`,
+      [req.params.id],
+    ).catch(semTabelaVazia)
+
+    const lista = (v) => (Array.isArray(v) ? v : [])
+    const chave = (x) => String(x?.ferramenta_id ?? x?.id ?? '') || String(x?.tag ?? '').toUpperCase()
+    /* o dia da devolucao em Brasilia, para comparar com o prazo (AAAA-MM-DD) */
+    const diaEmBrasilia = (iso) => {
+      if (!iso) return null
+      const d = new Date(iso)
+      if (Number.isNaN(d.getTime())) return null
+      return new Date(d.getTime() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    }
+    const avaria = (condicao) => (condicao === 'avariado' || condicao === 'avariado_utilizavel' ? condicao : null)
+
+    const ordens = rows.map((os) => {
+      /* a devolucao antecipada troca o fim da O.S. pelo dia em que voltou
+         e guarda o contratado em data_fim_original: o prazo e o contratado */
+      const fimDoPrazo = os.devolvida_antecipada && os.data_fim_original ? os.data_fim_original : os.data_fim
+      const ferramentas = new Map()
+      const pegar = (x) => {
+        const k = chave(x)
+        if (!k) return null
+        if (!ferramentas.has(k)) {
+          ferramentas.set(k, { id: x?.ferramenta_id ?? x?.id ?? null, tag: x?.tag ?? null, nome: x?.tipo ?? null, retirada: null, devolucao: null })
+        }
+        const f = ferramentas.get(k)
+        f.tag ??= x?.tag ?? null
+        f.nome ??= x?.tipo ?? null
+        return f
+      }
+      lista(os.instrumentos).forEach(pegar)
+      lista(os.conferencia).forEach((c) => {
+        const f = pegar(c)
+        if (!f) return
+        f.retirada = {
+          em: c.conferido_em ?? null,
+          por: c.conferido_por ?? null,
+          baia: c.baia ?? null,
+          avaria: c.avaria ?? null,
+        }
+      })
+      /* a devolucao parcial (antes do fim) e a devolutiva (a final) */
+      ;[...lista(os.devolucoes_parciais), ...lista(os.devolutiva)].forEach((d) => {
+        const f = pegar(d)
+        if (!f) return
+        const dia = diaEmBrasilia(d.devolvido_em)
+        f.devolucao = {
+          em: d.devolvido_em ?? null,
+          por: d.devolvido_por ?? null,
+          baia: d.baia ?? null,
+          condicao: d.condicao ?? null,
+          avaria: avaria(d.condicao),
+          observacao: d.observacao ?? null,
+          prazo: !dia || !fimDoPrazo ? null : dia < fimDoPrazo ? 'antecipada' : dia > fimDoPrazo ? 'atrasada' : 'no_prazo',
+        }
+      })
+      /* a que saiu da O.S. antes de ir para campo (retirada parcial) */
+      lista(os.retiradas_parciais).forEach((r) => {
+        const f = pegar(r)
+        if (f) f.saiuDaOS = { em: r.retirado_em ?? r.registrado_em ?? null, por: r.retirado_por ?? r.registrado_por ?? null, motivo: r.motivo ?? null }
+      })
+      return {
+        id: String(os.id),
+        numero: os.numero_os ?? null,
+        status: os.status,
+        solicitadaEm: os.solicitada_em,
+        solicitadaPor: os.solicitado_por ?? null,
+        responsavel: os.responsavel ?? null,
+        aprovadaEm: os.aprovado_em,
+        aprovadaPor: os.aprovado_por ?? null,
+        dataInicio: os.data_inicio,
+        dataFim: os.data_fim,
+        dataFimOriginal: os.data_fim_original ?? null,
+        devolvidaAntecipada: os.devolvida_antecipada === true,
+        motivoAntecipacao: os.motivo_antecipacao ?? null,
+        ferramentas: [...ferramentas.values()].sort((a, b) => String(a.nome ?? '').localeCompare(String(b.nome ?? ''), 'pt-BR')),
+      }
+    })
+    return res.json({ ordens })
+  } catch (erro) {
+    return tratar(erro, res, 'dados/obra-ferramentas')
+  }
+})
 
 router.get('/', exigeSessao, async (req, res) => {
   try {
@@ -2810,12 +2937,13 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
     const resposta = req.body?.resposta
     const semInformacao = req.body?.semInformacao === true
 
-    /* O "Enviar OS" (3a etapa, atualizacao 38) e o unico check que ninguem
-       marca na mao — nem concluindo sem a informacao: quem marca e o
-       Almoxarife, quando uma OS desta obra e aprovada (server/almoxarife) */
+    /* O "Solicitar OS" (2a etapa, atualizacoes 38 e 40) e o unico check
+       que ninguem marca na mao — nem concluindo sem a informacao: quem
+       marca e o LWN Control, quando uma OS desta obra e aprovada
+       (server/almoxarife) */
     if (regra.tipo === 'enviar_os') {
       return res.status(409).json({
-        erro: 'Este check é marcado pelo sistema quando uma OS desta obra é aprovada no Almoxarife.',
+        erro: 'Este check é marcado pelo sistema quando a OS desta obra é aprovada no LWN Control.',
       })
     }
 
@@ -2916,11 +3044,11 @@ router.delete('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req,
        O concluido SEM a informacao (atualizacao 36) nao acompanha nada —
        nem o prazo, nem a reserva, nem a saida —, e desmarca como os outros */
     const { tipo } = await regraDoCheck(req.params.checkId)
-    /* o "Enviar OS" acompanha a OS aprovada no Almoxarife: sai sozinho se
-       a OS for excluida */
+    /* o "Solicitar OS" acompanha a OS aprovada no LWN Control: sai sozinho
+       se a OS for excluida */
     if (tipo === 'enviar_os') {
       return res.status(409).json({
-        erro: 'Este check acompanha a OS aprovada no Almoxarife e não se desmarca por aqui.',
+        erro: 'Este check acompanha a OS aprovada no LWN Control: ele só sai se a OS for excluída lá.',
       })
     }
     const semInformacao = await concluidoSemInformacao(req.params.id, req.params.checkId)

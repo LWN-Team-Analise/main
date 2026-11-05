@@ -10,6 +10,10 @@ import {
   CHECK_RETIRADA,
   CHECK_ENVIAR_OS,
   DICA_ENVIAR_OS,
+  enderecoSolicitarOS,
+  estadoDoSolicitarOS,
+  numeroDaOSAprovada,
+  podeFazer,
   checksExigidos,
   checkTemDonoProprio,
   anexoDaProposta,
@@ -262,13 +266,24 @@ export default function CardSetor({
               : check.opcional
                 ? 'Opcional: esta obra não tem ensaio de GASES.'
                 : `Obrigatório: esta obra tem ensaio de GASES atribuído (${check.exigidoPor.join(', ')}).`
-          /* o "Enviar OS" (atualizacao 38): marcado pelo Almoxarife, nunca no clique */
+          /* o "Solicitar OS" (atualizacoes 38 e 40): marcado pelo LWN Control
+             quando a OS e aprovada, nunca no clique. O clique, enquanto ele
+             nao esta marcado, leva ao Solicitar OS do Control com a obra —
+             para quem ve o Almoxarife e pode solicitar */
           const enviarOS = check.tipo === CHECK_ENVIAR_OS
+          const estadoOS = enviarOS && !modelo ? estadoDoSolicitarOS(obra) : null
+          const vaiSolicitar =
+            enviarOS &&
+            !modelo &&
+            !feito &&
+            !travado &&
+            podeFazer(usuario, 'ver_almoxarife') &&
+            podeFazer(usuario, 'almox_solicitacoes')
           const dicaDoCheck = [porqueGases, enviarOS ? DICA_ENVIAR_OS : '', check.informacoes].filter(Boolean).join('\n\n')
           /* so o check que ainda vale tem ordem: o que ja saiu do roteiro
              (e uma obra antiga ainda mostra) nao se arrasta */
           const arrastavel = Boolean(arraste) && podeChecks && !check.vigenteAte
-          const travadoAqui = modelo || travado || (!meu && !abreSemPermissao)
+          const travadoAqui = (modelo || travado || (!meu && !abreSemPermissao)) && !vaiSolicitar
           return (
             <Dica
               as="li"
@@ -292,9 +307,16 @@ export default function CardSetor({
               <button
                 type="button"
                 className={`tarefa ${feito ? 'is-feita' : ''} ${resposta === false ? 'is-nao' : ''} ${
-                  !modelo && !meu && !abreSemPermissao ? 'is-deoutro' : ''
+                  !modelo && !meu && !abreSemPermissao && !vaiSolicitar ? 'is-deoutro' : ''
                 } ${doSistema || proposta || doCarro || enviarOS ? 'is-sistema' : ''} ${modelo ? 'is-modelo' : ''}`.trim()}
-                onClick={() => !travadoAqui && aoMarcar(check)}
+                onClick={() => {
+                  if (travadoAqui) return
+                  if (vaiSolicitar) {
+                    window.location.assign(enderecoSolicitarOS(obra.id))
+                    return
+                  }
+                  aoMarcar(check)
+                }}
                 aria-disabled={travadoAqui || undefined}
                 title={
                   modelo || travado || dicaDoCheck
@@ -372,6 +394,21 @@ export default function CardSetor({
                       : (obra.ensaios ?? []).length === 0
                         ? 'escolher'
                         : `${obra.ensaios.length} ensaio${obra.ensaios.length > 1 ? 's' : ''}`}
+                  </span>
+                )}
+                {/* o "Solicitar OS": o convite, a OS esperando o aval, a reprovada
+                    (pedir de novo) ou o numero da OS aprovada */}
+                {enviarOS && !modelo && (
+                  <span className="tarefa__ensaios" data-os={feito ? 'aprovada' : (estadoOS ?? 'nenhuma')}>
+                    {feito
+                      ? (numeroDaOSAprovada(obra) ?? 'aprovada')
+                      : estadoOS === 'aguardando'
+                        ? 'aguardando aprovação'
+                        : estadoOS === 'reprovada'
+                          ? 'reprovada — solicitar de novo'
+                          : vaiSolicitar
+                            ? 'solicitar'
+                            : 'sem OS'}
                   </span>
                 )}
                 {execucaoDosEnsaios && !modelo && !semInformacao && (

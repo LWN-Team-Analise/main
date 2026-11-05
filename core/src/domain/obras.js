@@ -449,18 +449,45 @@ export const CHECK_RESERVA = 'reserva_carro'
 export const CHECK_RETIRADA = 'retirada_carro'
 
 /* ------------------------------------------------------------
-   O "Enviar OS" (atualizacao 38)
+   O "Solicitar OS" (atualizacoes 38 e 40; o tipo continua enviar_os)
 
-   3a etapa, card do Time Tecnico. E o UNICO check que ninguem marca na
-   mao — nem concluindo sem a informacao: quem marca e o Almoxarife,
-   quando uma OS ligada a esta obra e APROVADA (server/almoxarife). A OS
-   aprovada que e excluida leva o check junto.
+   2a etapa, card do Time Tecnico, obrigatorio como os outros. E o UNICO
+   check que ninguem marca na mao — nem concluindo sem a informacao:
+   quem marca e o LWN Control, quando uma OS ligada a esta obra e
+   APROVADA (server/almoxarife). A OS aprovada que e excluida leva o
+   check junto. O clique leva ao Solicitar OS do LWN Control com o
+   cliente e a obra ja escolhidos.
    ------------------------------------------------------------ */
 
 export const CHECK_ENVIAR_OS = 'enviar_os'
 
 export const DICA_ENVIAR_OS =
-  'Marcado pelo sistema: a OS pedida no Almoxarife para esta obra (cliente e obra escolhidos na Solicitação) marca este check quando é aprovada.'
+  'Clique para pedir a OS no LWN Control, com o cliente e a obra já escolhidos. O check se marca sozinho quando o supervisor aprova a OS, e só sai se a OS for excluída.'
+
+/** O endereco do Solicitar OS do LWN Control para esta obra. */
+export const enderecoSolicitarOS = (obraId) => `/core/app/control/solicitar?obra=${encodeURIComponent(obraId)}`
+
+/**
+ * Em que pe esta o "Solicitar OS" da obra, pelas O.S. ligadas a ela
+ * (obra.ordensServico, da carga):
+ *   'aprovada'  alguma foi aprovada (o check marcado);
+ *   'aguardando' alguma espera o aval do supervisor;
+ *   'reprovada' a ultima foi reprovada: e pedir de novo;
+ *   null        nenhuma ainda.
+ */
+export function estadoDoSolicitarOS(obra) {
+  const ordens = obra?.ordensServico ?? []
+  if (ordens.some((o) => o.aprovada)) return 'aprovada'
+  if (ordens.some((o) => o.status === 'aguardando_aprovacao')) return 'aguardando'
+  if (ordens.length && ordens[ordens.length - 1].status === 'reprovada') return 'reprovada'
+  return null
+}
+
+/** O numero da primeira O.S. aprovada da obra ("#0512"), ou null. */
+export function numeroDaOSAprovada(obra) {
+  const os = (obra?.ordensServico ?? []).find((o) => o.aprovada)
+  return os ? `#${String(os.numero ?? os.id).padStart(4, '0')}` : null
+}
 
 /** O roteiro da obra sem o "Retirada do carro" quando ela nao reservou carro. */
 export function aplicarRegraDaReserva(roteiro, obra) {

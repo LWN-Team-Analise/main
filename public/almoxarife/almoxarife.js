@@ -15,14 +15,13 @@ function switchCalibracaoSub(sub) {
 window.switchCalibracaoSub = switchCalibracaoSub;
 
 // Formata o nome do cliente com cidade / estado
+// O nome do cliente e o do Atmosfera LWN (a view almox.clientes): a
+// unidade ja vem com o lugar ("Brainfarma Anápolis", "ABL Sumaré"). A
+// cidade que o lwncontrol juntava no fim repetia o lugar — era o
+// "Brainfarma Anápolis - Anápolis / GO" duplicado da Solicitação.
 function formatarNomeCliente(cliente) {
     if (!cliente) return '';
-    const base = (cliente.nome || '').replace(/\s*[-–]\s*[^-–]+\/[A-Za-z]{2}\s*$/, '').trim() || (cliente.nome || '');
-    const cidade = (cliente.cidade || '').trim();
-    const uf = (cliente.uf || '').trim();
-    if (cidade && uf) return `${base} - ${cidade} / ${uf.toUpperCase()}`;
-    if (cidade) return `${base} - ${cidade}`;
-    return cliente.nome || base;
+    return String(cliente.nome || '').trim();
 }
 window.formatarNomeCliente = formatarNomeCliente;
 

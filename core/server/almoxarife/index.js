@@ -717,8 +717,18 @@ app.get("/clientes", async (req, res) => {
 // concluida ja saiu de campo e nao marca mais check nenhum.
 app.get("/clientes/:id/obras", async (req, res) => {
     try {
+        /* `responsaveis`: os membros da obra (os do check e os incluidos e
+           aceitos) que o setor deixa ser responsavel por obra — a
+           Solicitacao preenche o "Responsável pela Obra" com eles */
         const r = await pool.query(
-            `SELECT o.id, o.proposta, o.descricao, o.execucao_inicio, o.execucao_prazo
+            `SELECT o.id, o.proposta, o.descricao, o.execucao_inicio, o.execucao_prazo,
+                    coalesce((SELECT array_agg(DISTINCT u.id ORDER BY u.id)
+                                FROM (SELECT usuario_id FROM obra_membro WHERE obra_id = o.id
+                                       UNION
+                                      SELECT usuario_id FROM obra_membro_parcial
+                                       WHERE obra_id = o.id AND status = 'aceito') m
+                                JOIN almox.usuarios u ON u.id = m.usuario_id AND u.responsavel_obra AND u.ativo),
+                             '{}') AS responsaveis
                FROM obra o
               WHERE o.cliente_id = $1 AND o.concluida_em IS NULL
               ORDER BY o.criado_em DESC`,
@@ -730,11 +740,36 @@ app.get("/clientes/:id/obras", async (req, res) => {
             descricao: o.descricao || '',
             rotulo: [o.proposta, o.descricao].filter(Boolean).join(' — ') || `Obra ${o.id}`,
             execucao_inicio: o.execucao_inicio,
-            execucao_prazo: o.execucao_prazo
+            execucao_prazo: o.execucao_prazo,
+            responsaveis: (o.responsaveis || []).map(Number)
         })));
     } catch (err) {
         logger.error('almox/clientes-obras', err.message);
         res.status(500).json({ erro: "Erro ao listar as obras do cliente" });
+    }
+});
+
+/* a obra pelo id, com o cliente dela: o check "Solicitar OS" da obra
+   abre a Solicitacao com o cliente e a obra ja escolhidos
+   (/core/app/control/solicitar?obra=ID, ver public/almoxarife/obra-da-os.js) */
+app.get("/obras/:id", async (req, res) => {
+    if (!/^\d{1,18}$/.test(req.params.id)) return res.status(400).json({ erro: "Obra inválida" });
+    try {
+        const r = await pool.query(
+            "SELECT id, cliente_id, proposta, descricao, concluida_em FROM obra WHERE id = $1",
+            [req.params.id]
+        );
+        const o = r.rows[0];
+        if (!o) return res.status(404).json({ erro: "Obra não encontrada" });
+        res.json({
+            id: o.id,
+            cliente_id: o.cliente_id,
+            rotulo: [o.proposta, o.descricao].filter(Boolean).join(' — ') || `Obra ${o.id}`,
+            concluida: Boolean(o.concluida_em)
+        });
+    } catch (err) {
+        logger.error('almox/obra', err.message);
+        res.status(500).json({ erro: "Erro ao ler a obra" });
     }
 });
 
@@ -5704,7 +5739,10 @@ app.put("/solicitacoes/:id/conferencia", async (req, res) => {
                 baia_id: it.baia_id || null,
                 codigo: it.codigo || f.codigo_barras || f.tag,
                 conferido_em: new Date().toISOString(),
-                conferido_por: responsavel || null
+                conferido_por: responsavel || null,
+                // saiu com avaria ("avariada, porém disponível para uso"): fica
+                // na retirada, para o botao Ferramentas da obra mostrar
+                avaria: f.avaria_utilizavel ? (f.avaria_observacao || 'Avariada, porém disponível para uso') : null
             });
         }
 
@@ -5838,6 +5876,7 @@ app.put("/solicitacoes/:id/conferencia", async (req, res) => {
             data_evento: new Date().toISOString().slice(0, 10),
             usuario: responsavel || null
         });
+        await ferramentasNoHistoricoDaObra(req, os, 'retirada', validados);
 
         // Cada ferramenta que ficou para trás vira um evento próprio: é assim
         // que o motivo de ela não ter ido a campo fica rastreável por TAG.
@@ -6082,6 +6121,10 @@ app.put("/solicitacoes/:id/devolutiva", async (req, res) => {
             antecipada ? fimContratado : null,
             antecipada ? hoje : null
         ]);
+        await ferramentasNoHistoricoDaObra(req, os, 'devolucao', devolvidos, {
+            prazoFim: fimContratado,
+            motivo: antecipada ? motivoAntec : null
+        });
 
         for (const d of devolvidos) {
             const destino = d.baia || 'Almoxarifado';
@@ -7701,6 +7744,11 @@ app.post("/solicitacoes/:id/devolucao-parcial", async (req, res) => {
         `, [JSON.stringify(devolucoes), JSON.stringify(devolutiva), os.id]);
 
         cache.invalidar("solicitacoes", "ferramentas", "baias");
+        await ferramentasNoHistoricoDaObra(req, os, 'devolucao', devolvidasAgora, {
+            prazoFim: os.data_fim ? String(os.data_fim).slice(0, 10) : null,
+            motivo: motivoTexto,
+            parcial: true
+        });
         res.json({ os: r.rows[0], devolvidas: devolvidasAgora });
     } catch (err) {
         console.error("ERRO: POST /api/solicitacoes/:id/devolucao-parcial:", err.message);
@@ -7889,6 +7937,62 @@ async function notificacoesDiarias(req, res) {
 // junto, a não ser que a obra tenha outra O.S. aprovada.
 // ============================================================
 
+// ============================================================
+// AS FERRAMENTAS NO HISTORICO DA OBRA
+//
+// A O.S. ligada a uma obra do Atmosfera LWN deixa a retirada e a
+// devolucao no historico da obra: quais ferramentas (nome e TAG), em que
+// baia, quem fez e quando — e, na devolucao, se veio antes ou depois do
+// prazo e com avaria. O botao "Ferramentas" da obra le a mesma coisa da
+// propria O.S. (GET /api/dados/obras/:id/ferramentas). Nunca derruba a
+// retirada nem a devolucao.
+// ============================================================
+const AVARIA_POR_ESTADO = { avariado: 'avariada', avariado_utilizavel: 'avariada, porém disponível para uso' };
+
+async function ferramentasNoHistoricoDaObra(req, os, tipo, itens, { prazoFim = null, motivo = null, parcial = false } = {}) {
+    if (!os?.obra_id || !Array.isArray(itens) || !itens.length) return;
+    try {
+        const numero = '#' + String(os.numero_os || os.id).padStart(4, '0');
+        const nome = (i) => [i.tipo, i.tag ? `(${i.tag})` : ''].filter(Boolean).join(' ');
+        const baias = [...new Set(itens.map((i) => i.baia).filter(Boolean))].join(', ');
+        const avarias = itens
+            .map((i) => {
+                const qual = tipo === 'retirada' ? i.avaria : AVARIA_POR_ESTADO[i.condicao];
+                if (!qual) return null;
+                const obs = tipo === 'devolucao' && i.observacao ? ` — ${i.observacao}` : '';
+                return `${i.tag}: ${qual}${obs}`;
+            })
+            .filter(Boolean)
+            .join('; ');
+        let prazo = null;
+        if (tipo === 'devolucao' && prazoFim) {
+            const hoje = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            const fim = String(prazoFim).slice(0, 10);
+            const br = fim.split('-').reverse().join('/');
+            prazo = hoje < fim ? `antes do prazo (${br})` : hoje > fim ? `depois do prazo (${br})` : `no prazo (${br})`;
+        }
+        await registrarAtividade(req, {
+            acao: tipo === 'retirada' ? 'ferramentas.retiradas' : 'ferramentas.devolvidas',
+            categoria: 'obra',
+            entidade: ['obra', os.obra_id],
+            descricao: tipo === 'retirada'
+                ? `Ferramentas retiradas no LWN Control (OS ${numero})`
+                : `Ferramentas devolvidas${parcial ? ' em parte' : ''} no LWN Control (OS ${numero})`,
+            detalhes: {
+                ...(await descreverObra(os.obra_id)),
+                os: numero,
+                ferramentas: itens.map(nome).join(', '),
+                baia: baias || null,
+                prazo,
+                motivo: motivo || null,
+                avaria: avarias || null
+            }
+        });
+    } catch (e) {
+        logger.error('almox/historico-obra', e.message);
+    }
+}
+
 /** O check do sistema daquele tipo que ESTA obra enxerga (ou null). A mesma conta de routes/frotas.js. */
 async function checkDaObra(obraId, tipo) {
     const { rows } = await pool.query(
@@ -7931,7 +8035,7 @@ async function marcarEnviarOS(os) {
                 descricao: 'Check concluído pelo Almoxarife (OS aprovada)',
                 detalhes: {
                     ...(await descreverObra(os.obra_id)),
-                    check: 'Enviar OS',
+                    check: 'Solicitar OS',
                     os: '#' + String(os.numero_os || os.id).padStart(4, '0'),
                     aprovada_por: os.aprovado_por || null
                 }

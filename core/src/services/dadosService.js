@@ -265,6 +265,9 @@ export const tirarEtiqueta = (obraId, etiquetaId) =>
 
 export const criarAnexo = (obraId, campos) => post(`/dados/obras/${obraId}/anexos`, campos)
 export const baixarAnexo = (id) => get(`/dados/anexos/${id}`)
+
+/** As ferramentas das O.S. do LWN Control ligadas a obra (retirada, devolucao, avaria, prazo). */
+export const ferramentasDaObra = (id) => get(`/dados/obras/${id}/ferramentas`)
 export const apagarAnexo = (id) => del(`/dados/anexos/${id}`)
 
 /* ---------------- Chat da obra ---------------- */

@@ -1,0 +1,200 @@
+/* ============================================================
+   As ferramentas da obra (as O.S. do LWN Control)
+   ============================================================ */
+
+.ferr {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ferr__vazio {
+  margin: 0;
+  padding: 22px 12px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  text-align: center;
+  color: var(--text-faint);
+}
+
+.ferr__erro {
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.ferr__os {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ferr__os + .ferr__os {
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.ferr__cabeca {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ferr__titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.ferr__status {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.ferr__sobre {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.ferr__aviso {
+  align-self: flex-start;
+  margin: 4px 0 0;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.ferr__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ferr__item {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 14px);
+  background: var(--control-bg);
+}
+
+.ferr__nome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--text-strong);
+}
+
+.ferr__tag {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--control-border);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  color: var(--text-base);
+}
+
+.ferr__momentos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 520px) {
+  .ferr__momentos {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ferr__momento {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ferr__rotulo {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.ferr__quando {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.ferr__linha {
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.ferr__momento.is-vazio .ferr__linha {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.ferr__prazo {
+  margin-top: 3px;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.ferr__avaria {
+  margin-top: 3px;
+  padding: 3px 8px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+/* o prazo da devolucao: antes (azul), no prazo (verde), depois (vermelho) */
+.is-antes {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.is-noprazo {
+  background: color-mix(in srgb, #16a34a 14%, transparent);
+  color: #16a34a;
+}
+
+.is-depois {
+  background: var(--danger-bg);
+  color: var(--danger);
+}

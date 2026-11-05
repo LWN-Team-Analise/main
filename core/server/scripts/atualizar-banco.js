@@ -72,6 +72,7 @@ const ARQUIVOS = [
   'db/atualizacao-37.sql.txt',
   'db/atualizacao-38.sql.txt',
   'db/atualizacao-39.sql.txt',
+  'db/atualizacao-40.sql.txt',
 ]
 
 /**
@@ -211,6 +212,13 @@ const CONFERENCIA = [
   ['ver_almoxarife no acesso total', permissaoNoAcessoTotal('ver_almoxarife')],
   ['veiculo_registro.combustivel', col('veiculo_registro', 'combustivel')],
   ['cliente.oferece_alimentacao', col('cliente', 'oferece_alimentacao')],
+  [
+    'check Solicitar OS na 2a etapa',
+    `SELECT EXISTS (SELECT 1 FROM etapa_check k
+                     JOIN etapa_check p ON p.card_id = k.card_id AND p.tipo = 'planejamento_ensaios'
+                                       AND p.vigente_ate IS NULL AND p.obra_id IS NULL
+                    WHERE k.tipo = 'enviar_os' AND k.vigente_ate IS NULL AND k.titulo = 'Solicitar OS') AS ok`,
+  ],
 ]
 
 function col(tabela, coluna) {
