@@ -23,7 +23,9 @@
 //
 // Os checks "Retirada" e "Devolução das ferramentas" (3a etapa) abrem a
 // aba deles com a OS da obra em destaque: /core/app/control/retirada?os=ID
-// e /core/app/control/devolutiva?os=ID.
+// e /core/app/control/devolutiva?os=ID. O "Gestão dos instrumentos" (3a
+// etapa, card do Almoxarife) abre a separação das TAGs da OS:
+// /core/app/control/retirada?os=ID&acao=separar.
 // ============================================================
 
 // lidos AQUI, e nao no load: endereco.js limpa o ?obra= e o ?os= do endereco
@@ -35,6 +37,9 @@ const ALMOX_OS_PEDIDA = (() => {
     const id = new URLSearchParams(location.search).get('os');
     return /^\d{1,18}$/.test(id || '') ? id : null;
 })();
+// ?acao=separar: o check "Gestão dos instrumentos" da obra (3a etapa, card
+// do Almoxarife) abre a separação das TAGs da OS, e nao so o destaque
+const ALMOX_OS_ACAO = new URLSearchParams(location.search).get('acao') === 'separar' ? 'separar' : null;
 
 // a OS pedida pelo check da obra: { obra, comDatas } enquanto a tela esta travada
 let almoxTravaDaObra = null;
@@ -275,8 +280,28 @@ function almoxDestacarOSPedida() {
         card.classList.add('is-pedida');
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
         setTimeout(() => card.classList.remove('is-pedida'), 7000);
+        if (ALMOX_OS_ACAO === 'separar') almoxAbrirSeparacaoPedida();
     };
     tentar();
+}
+
+// O "Separar TAGS" da OS, como o botao do cartao — para quem separa, e so
+// enquanto ela espera a separacao. Concluir marca o check da obra
+// (PUT /solicitacoes/:id/separar).
+function almoxAbrirSeparacaoPedida() {
+    const os = (typeof workOrders !== 'undefined' ? workOrders : []).find(o => String(o.id) === String(ALMOX_OS_PEDIDA));
+    const status = String(os && os.status || '').toLowerCase().trim();
+    const pode = typeof usuarioTemPermissao === 'function' ? usuarioTemPermissao('separar_tags') : false;
+    if (!os || typeof abrirModalConferenciaOS !== 'function') return;
+    if (status !== 'aguardando_conferencia') {
+        if (typeof showToast === 'function') showToast('As TAGs desta OS já foram separadas.', 'info');
+        return;
+    }
+    if (!pode) {
+        if (typeof showToast === 'function') showToast('Seu setor não separa TAGs: a OS está em destaque para quem separa.', 'warning');
+        return;
+    }
+    abrirModalConferenciaOS(os.id);
 }
 
 window.addEventListener('load', () => {

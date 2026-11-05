@@ -9,9 +9,11 @@ import {
   CHECK_RESERVA,
   CHECK_RETIRADA,
   CHECK_ENVIAR_OS,
+  CHECK_SEPARAR_OS,
   CHECK_RETIRADA_OS,
   CHECK_DEVOLUCAO_OS,
   DICA_ENVIAR_OS,
+  DICA_SEPARAR_OS,
   DICA_RETIRADA_OS,
   DICA_DEVOLUCAO_OS,
   ehCheckDaOS,
@@ -95,7 +97,8 @@ export default function CardSetor({
      estes (atualizacao 37). O cadeado diz qual dos tres */
   /* os da O.S. ficam de fora: eles nao abrem para ninguem (so o LWN Control marca) */
   const travas = card.checks.filter((c) => !ehCheckDaOS(c)).map((c) => travaDoCheck(usuario, c, card, obra))
-  /* a Retirada e a Devolucao das ferramentas: em que pe esta cada uma */
+  /* a Gestao dos instrumentos (separacao), a Retirada e a Devolucao das
+     ferramentas: em que pe esta cada uma */
   const ferramentasDaOS = modelo ? null : estadoDasFerramentasDaOS(obra)
   const veControl = podeFazer(usuario, 'ver_almoxarife')
   const semPermissao = travas.length > 0 && travas.every(Boolean)
@@ -289,24 +292,37 @@ export default function CardSetor({
             !travado &&
             podeFazer(usuario, 'ver_almoxarife') &&
             podeFazer(usuario, 'almox_solicitacoes')
-          /* a Retirada e a Devolucao das ferramentas (atualizacao 42): como o
+          /* a Gestao dos instrumentos (a separacao das TAGs, atualizacao 43),
+             a Retirada e a Devolucao das ferramentas (atualizacao 42): como o
              "Solicitar OS", so o LWN Control marca. O clique leva a aba do
-             Control com a OS da obra em destaque — a Devolucao so depois
-             da Retirada */
+             Control com a OS da obra em destaque (a separacao, ja aberta).
+             Um passo so libera depois do outro: separar, retirar, devolver */
+          const separarOS = check.tipo === CHECK_SEPARAR_OS
           const retiradaOS = check.tipo === CHECK_RETIRADA_OS
           const devolucaoOS = check.tipo === CHECK_DEVOLUCAO_OS
+          const retiradaBloqueada = retiradaOS && !feito && ferramentasDaOS?.retirada === 'bloqueada'
           const devolucaoBloqueada = devolucaoOS && !feito && ferramentasDaOS?.devolucao === 'bloqueada'
           const destinoNoControl =
             modelo || feito || travado || !veControl
               ? null
-              : retiradaOS && ferramentasDaOS?.osRetirar && podeFazer(usuario, 'almox_conferencia')
+              : separarOS && ferramentasDaOS?.osSeparar && podeFazer(usuario, 'almox_separar_tags')
+                ? enderecoDaAbaDaOS('retirada', ferramentasDaOS.osSeparar, 'separar')
+                : retiradaOS && ferramentasDaOS?.osRetirar && podeFazer(usuario, 'almox_conferencia')
                 ? enderecoDaAbaDaOS('retirada', ferramentasDaOS.osRetirar)
                 : devolucaoOS && ferramentasDaOS?.osDevolver && podeFazer(usuario, 'almox_devolutiva')
                   ? enderecoDaAbaDaOS('devolutiva', ferramentasDaOS.osDevolver)
                   : null
           const dicaDoCheck = [
             porqueGases,
-            enviarOS ? DICA_ENVIAR_OS : retiradaOS ? DICA_RETIRADA_OS : devolucaoOS ? DICA_DEVOLUCAO_OS : '',
+            enviarOS
+              ? DICA_ENVIAR_OS
+              : separarOS
+                ? DICA_SEPARAR_OS
+                : retiradaOS
+                  ? DICA_RETIRADA_OS
+                  : devolucaoOS
+                    ? DICA_DEVOLUCAO_OS
+                    : '',
             check.informacoes,
           ]
             .filter(Boolean)
@@ -340,8 +356,8 @@ export default function CardSetor({
                 className={`tarefa ${feito ? 'is-feita' : ''} ${resposta === false ? 'is-nao' : ''} ${
                   /* os da O.S. nao sao "de outro setor": ninguem marca, so o sistema */
                   !modelo && !meu && !abreSemPermissao && !ehCheckDaOS(check) ? 'is-deoutro' : ''
-                } ${doSistema || proposta || doCarro || enviarOS || retiradaOS || devolucaoOS ? 'is-sistema' : ''} ${
-                  devolucaoBloqueada ? 'is-bloqueada' : ''
+                } ${doSistema || proposta || doCarro || ehCheckDaOS(check) ? 'is-sistema' : ''} ${
+                  retiradaBloqueada || devolucaoBloqueada ? 'is-bloqueada' : ''
                 } ${modelo ? 'is-modelo' : ''}`.trim()}
                 onClick={() => {
                   if (travadoAqui) return
@@ -449,19 +465,44 @@ export default function CardSetor({
                             : 'sem OS'}
                   </span>
                 )}
-                {/* a Retirada: feita, o convite (ou a espera) ou sem OS aprovada */}
+                {/* a Gestao dos instrumentos: separada, o convite (ou a espera) ou sem OS aprovada */}
+                {separarOS && !modelo && (
+                  <span
+                    className="tarefa__ensaios"
+                    data-os={feito ? 'aprovada' : ferramentasDaOS?.separacao ? 'aguardando' : 'nenhuma'}
+                  >
+                    {feito
+                      ? 'TAGs separadas'
+                      : !ferramentasDaOS?.separacao
+                        ? 'sem OS aprovada'
+                        : destinoNoControl
+                          ? 'separar TAGs'
+                          : 'aguardando separação'}
+                  </span>
+                )}
+                {/* a Retirada: travada ate a separacao, depois o convite (ou a espera) */}
                 {retiradaOS && !modelo && (
                   <span
                     className="tarefa__ensaios"
-                    data-os={feito ? 'aprovada' : ferramentasDaOS?.retirada ? 'aguardando' : 'nenhuma'}
+                    data-os={
+                      feito ? 'aprovada' : retiradaBloqueada ? 'bloqueada' : ferramentasDaOS?.retirada ? 'aguardando' : 'nenhuma'
+                    }
                   >
+                    {retiradaBloqueada && (
+                      <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
+                        <rect x="5" y="10.5" width="14" height="9.5" rx="2" />
+                        <path d="M8.4 10.5V7.8a3.6 3.6 0 0 1 7.2 0v2.7" />
+                      </svg>
+                    )}
                     {feito
                       ? 'retirada'
                       : !ferramentasDaOS?.retirada
                         ? 'sem OS aprovada'
-                        : destinoNoControl
-                          ? 'retirar'
-                          : 'aguardando retirada'}
+                        : retiradaBloqueada
+                          ? 'após a separação'
+                          : destinoNoControl
+                            ? 'retirar'
+                            : 'aguardando retirada'}
                   </span>
                 )}
                 {/* a Devolucao: travada ate a retirada, depois o convite (ou a espera) */}

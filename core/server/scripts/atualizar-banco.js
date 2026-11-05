@@ -75,6 +75,7 @@ const ARQUIVOS = [
   'db/atualizacao-40.sql.txt',
   'db/atualizacao-41.sql.txt',
   'db/atualizacao-42.sql.txt',
+  'db/atualizacao-43.sql.txt',
 ]
 
 /**
@@ -228,6 +229,11 @@ const CONFERENCIA = [
                                   AND ex.vigente_ate IS NULL AND ex.obra_id IS NULL
               WHERE k.tipo IN ('retirada_os', 'devolucao_os')
                 AND k.vigente_ate IS NULL AND k.obra_id IS NULL) = 2 AS ok`,
+  ],
+  [
+    'check Gestao dos instrumentos do sistema (separacao das TAGs)',
+    `SELECT EXISTS (SELECT 1 FROM etapa_check
+                    WHERE tipo = 'separar_os' AND vigente_ate IS NULL AND obra_id IS NULL) AS ok`,
   ],
 ]
 

@@ -473,10 +473,12 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
             WHERE apagada_em IS NULL GROUP BY obra_id`).catch(semTabelaVazia),
     /* as O.S. do LWN Control ligadas a cada obra (atualizacao 38): o check
        "Solicitar OS" diz em que pe esta ("aguardando aprovação"), os da
-       Retirada e da Devolucao das ferramentas (atualizacao 42) tambem, e o
+       Gestao dos instrumentos, da Retirada e da Devolucao das ferramentas
+       (atualizacoes 42 e 43) tambem, e o
        botao Ferramentas da obra aparece com a primeira aprovada. Sem o
        schema almox, nenhuma */
     query(`SELECT id, obra_id, numero_os, status, aprovado_em IS NOT NULL AS aprovada,
+                  separado_em IS NOT NULL AS separada,
                   conferido_em IS NOT NULL AS retirada, devolvido_em IS NOT NULL AS devolvida
              FROM almox.solicitacoes
             WHERE obra_id IS NOT NULL
@@ -498,7 +500,9 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     numero: l.numero_os ?? null,
     status: l.status,
     aprovada: l.aprovada === true,
-    /* a Retirada (conferencia) feita, e a devolutiva que fechou a OS */
+    /* as TAGs separadas pelo Almoxarife, a Retirada (conferencia) feita, e
+       a devolutiva que fechou a OS */
+    separada: l.separada === true,
     retirada: l.retirada === true,
     devolvida: l.devolvida === true,
   }))
@@ -2675,6 +2679,10 @@ const CHECKS_DA_OS = {
     marcar: 'Este check é marcado pelo sistema quando a OS desta obra é aprovada no LWN Control.',
     desmarcar: 'Este check acompanha a OS aprovada no LWN Control: ele só sai se a OS for excluída lá.',
   },
+  separar_os: {
+    marcar: 'Este check é marcado pelo sistema quando o Almoxarife separa as TAGs da OS desta obra no LWN Control.',
+    desmarcar: 'Este check acompanha a separação das TAGs no LWN Control: ele só sai se a OS for excluída lá.',
+  },
   retirada_os: {
     marcar: 'Este check é marcado pelo sistema quando as ferramentas da OS desta obra são retiradas no LWN Control.',
     desmarcar: 'Este check acompanha a retirada feita no LWN Control: ele só sai se a OS for excluída lá.',
@@ -2693,7 +2701,7 @@ const CHECKS_DA_OS = {
  *           nem coluna de resposta, e a marcacao segue como sempre;
  *   tipo    'comum', 'planejamento_ensaios', 'execucao_ensaios',
  *           'material_gases', 'prazo_execucao', 'reserva_carro', 'retirada_carro'
- *           ou os da O.S. — 'enviar_os', 'retirada_os' e 'devolucao_os'
+ *           ou os da O.S. — 'enviar_os', 'separar_os', 'retirada_os' e 'devolucao_os'
  *           (estes so o LWN Control marca: CHECKS_DA_OS);
  *   papel   o papel da etapa dele. Na de 'execucao' nada se marca
  *           sem o prazo da execucao.
@@ -2974,8 +2982,9 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
     const resposta = req.body?.resposta
     const semInformacao = req.body?.semInformacao === true
 
-    /* Os checks da O.S. ("Solicitar OS" da 2a etapa, "Retirada" e
-       "Devolucao das ferramentas" da 3a; atualizacoes 38, 40 e 42) sao os
+    /* Os checks da O.S. ("Solicitar OS" da 2a etapa; "Gestao dos
+       instrumentos", "Retirada" e "Devolucao das ferramentas" da 3a;
+       atualizacoes 38, 40, 42 e 43) sao os
        unicos que ninguem marca na mao — nem concluindo sem a informacao:
        quem marca e o LWN Control, quando a OS desta obra chega la
        (server/almoxarife) */

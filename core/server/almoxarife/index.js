@@ -5664,6 +5664,9 @@ app.put("/solicitacoes/:id/separar", async (req, res) => {
          RETURNING *
         `, [responsavel || null, req.params.id, JSON.stringify(bipagem)]);
 
+        // a OS ligada a uma obra marca o check "Gestao dos instrumentos" dela
+        await marcarSeparacaoOS(r.rows[0], req);
+
         await registrarHistoricoOS({
             solicitacao_id: os.id,
             numero_os: os.numero_os,
@@ -8027,21 +8030,23 @@ async function checkDaObra(obraId, tipo) {
 }
 
 /* ------------------------------------------------------------
-   Os checks da O.S. na obra (atualizacoes 38, 40, 41 e 42)
+   Os checks da O.S. na obra (atualizacoes 38, 40, 41, 42 e 43)
 
-   Tres checks do roteiro que ninguem marca na mao — quem marca e o
+   Quatro checks do roteiro que ninguem marca na mao — quem marca e o
    proprio LWN Control, quando a O.S. ligada a obra chega la:
 
      enviar_os     "Solicitar OS" (2a etapa)        a OS foi APROVADA
+     separar_os    "Gestao dos instrumentos"        o Almoxarife separou
+     (3a etapa, card do Almoxarife)                 as TAGs da OS
      retirada_os   "Retirada das ferramentas"       a Retirada da OS foi
      (3a etapa, Time Tecnico)                       feita (a conferencia,
                                                     bipada na baia)
      devolucao_os  "Devolucao das ferramentas"      a devolutiva fechou a
                                                     OS (tudo voltou)
 
-   A Devolucao vem depois da Retirada: marcar a devolucao marca a
-   retirada antes, se ainda nao estiver (a OS de antes desta atualizacao
-   ja tinha sido retirada sem o check existir).
+   Um vem depois do outro — separar, retirar, devolver: marcar um marca
+   os de antes, se ainda nao estiverem (a OS de antes destas atualizacoes
+   ja tinha passado por eles sem o check existir).
 
    Marcado, nao sai: a API do main recusa desmarcar (routes/dados.js). So
    a OS excluida leva os checks que ela marcou — e so quando nenhuma
@@ -8049,13 +8054,16 @@ async function checkDaObra(obraId, tipo) {
    ------------------------------------------------------------ */
 const CHECKS_DA_OS = {
     enviar_os: { coluna: 'aprovado_em', motivo: 'OS aprovada', nome: 'Solicitar OS' },
+    separar_os: { coluna: 'separado_em', motivo: 'TAGs separadas', nome: 'Gestão dos instrumentos' },
     retirada_os: { coluna: 'conferido_em', motivo: 'ferramentas retiradas', nome: 'Retirada das ferramentas' },
     devolucao_os: { coluna: 'devolvido_em', motivo: 'ferramentas devolvidas', nome: 'Devolução das ferramentas' }
 };
 
-async function marcarCheckDaOS(os, tipo, quem) {
+// `forcar`: o passo de antes, marcado pelo de depois — a OS que ja foi
+// retirada passou pela separacao, mesmo sem a data dela gravada
+async function marcarCheckDaOS(os, tipo, quem, { forcar = false } = {}) {
     const regra = CHECKS_DA_OS[tipo];
-    if (!regra || !os?.obra_id || !os[regra.coluna]) return false;
+    if (!regra || !os?.obra_id || (!forcar && !os[regra.coluna])) return false;
     try {
         const checkId = await checkDaObra(os.obra_id, tipo);
         if (!checkId) return false;
@@ -8096,13 +8104,21 @@ async function marcarCheckDaOS(os, tipo, quem) {
 /* aprovada: o "Solicitar OS" fica com quem pediu a OS */
 const marcarEnviarOS = (os) => marcarCheckDaOS(os, 'enviar_os', os?.solicitado_por_id || os?.aprovado_por_id || null);
 
-/* a Retirada fica com quem bipou (o logado) */
-const marcarRetiradaOS = (os, req) => marcarCheckDaOS(os, 'retirada_os', req?.dono?.sub);
+/* a Separacao (Gestao dos instrumentos) fica com o Almoxarife que separou (o logado) */
+const marcarSeparacaoOS = (os, req) => marcarCheckDaOS(os, 'separar_os', req?.dono?.sub);
 
-/* a Devolucao fecha a OS: a Retirada vem antes, se faltava */
+/* a Retirada fica com quem bipou (o logado); a Separacao vem antes, se faltava */
+async function marcarRetiradaOS(os, req) {
+    if (!os?.conferido_em) return false;
+    await marcarCheckDaOS(os, 'separar_os', req?.dono?.sub, { forcar: true });
+    return marcarCheckDaOS(os, 'retirada_os', req?.dono?.sub);
+}
+
+/* a Devolucao fecha a OS: a Separacao e a Retirada vem antes, se faltavam */
 async function marcarDevolucaoOS(os, req) {
     if (!os?.devolvido_em) return false;
-    await marcarCheckDaOS(os, 'retirada_os', req?.dono?.sub);
+    await marcarCheckDaOS(os, 'separar_os', req?.dono?.sub, { forcar: true });
+    await marcarCheckDaOS(os, 'retirada_os', req?.dono?.sub, { forcar: true });
     return marcarCheckDaOS(os, 'devolucao_os', req?.dono?.sub);
 }
 
