@@ -1790,6 +1790,19 @@ body.arrastando-check * {
   color: #b91c1c !important;
 }
 
+/* a Devolucao das ferramentas antes da Retirada: travada, com o cadeado */
+.tarefa__ensaios[data-os='bloqueada'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: color-mix(in srgb, var(--text-muted) 14%, transparent) !important;
+  color: var(--text-muted) !important;
+}
+
+.tarefa.is-bloqueada .tarefa__texto {
+  opacity: 0.6;
+}
+
 :root[data-theme='dark'] .tarefa__ensaios[data-os='aguardando'] {
   color: #fbbf24 !important;
 }

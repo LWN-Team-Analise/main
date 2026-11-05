@@ -2867,6 +2867,159 @@ select.sel-nativo:not([multiple]):not([size]) {
   cursor: not-allowed;
 }
 
+/* ---- reserva: a lista NATIVA com a cara do Seletor ----
+   Todo select da pagina vira o Seletor (seletor.js). Se algum escapar
+   (a pagina velha guardada pelo navegador, o script que nao carregou), a
+   lista aberta do proprio navegador sai com o mesmo vidro, a mesma
+   fonte e o azul na escolhida, onde o navegador deixa (Chrome e Edge
+   135+). Nos outros, fica a lista do sistema. */
+@supports (appearance: base-select) {
+  select:not(.sel-nativo):not([multiple]):not([size]),
+  select:not(.sel-nativo):not([multiple]):not([size])::picker(select) {
+    appearance: base-select !important;
+  }
+
+  select:not(.sel-nativo):not([multiple]):not([size])::picker-icon {
+    display: none;
+  }
+
+  select:not(.sel-nativo):not([multiple]):not([size])::picker(select) {
+    margin-top: 6px;
+    padding: 6px;
+    max-height: min(320px, 60vh);
+    border: 1px solid var(--am-vidro-borda);
+    border-radius: var(--am-radius-md);
+    background: var(--am-vidro-menu);
+    box-shadow: var(--am-glass-shadow), var(--am-vidro-realce);
+    backdrop-filter: blur(calc(var(--am-glass-blur) * 1.5)) saturate(175%);
+  }
+
+  select:not(.sel-nativo):not([multiple]):not([size]) option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 11px;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--am-text-strong);
+    font-size: 0.84rem;
+    cursor: pointer;
+  }
+
+  select:not(.sel-nativo):not([multiple]):not([size]) option:hover,
+  select:not(.sel-nativo):not([multiple]):not([size]) option:focus-visible {
+    outline: none;
+    background: var(--am-control-bg-hover);
+  }
+
+  select:not(.sel-nativo):not([multiple]):not([size]) option:checked {
+    color: var(--am-accent);
+    font-weight: 600;
+  }
+
+  select:not(.sel-nativo):not([multiple]):not([size]) option::checkmark {
+    order: 1;
+    margin-left: auto;
+    color: var(--am-accent);
+  }
+
+  /* o "Selecione..." vazio, apagado como o texto do botao vazio */
+  select:not(.sel-nativo):not([multiple]):not([size]) option[value=''] {
+    color: var(--am-text-faint);
+  }
+}
+
+/* ---- a Solicitacao pedida pelo check "Solicitar OS" da obra ----
+   (public/almoxarife/obra-da-os.js) o cliente, a obra e as datas vem do
+   Atmosfera LWN e nao se trocam: a faixa no alto diz de onde, e cada
+   campo travado leva o cadeado — preenchido, sem o apagado do desabilitado */
+.almox-da-obra {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 1rem;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--am-accent) 28%, transparent);
+  border-radius: var(--am-radius-md);
+  background: linear-gradient(135deg,
+      color-mix(in srgb, var(--am-accent) 12%, transparent),
+      color-mix(in srgb, #0ea5e9 8%, transparent));
+}
+
+.almox-da-obra__icone {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--am-accent), #0ea5e9);
+  color: #fff;
+  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--am-accent) 70%, transparent);
+}
+
+.almox-da-obra__icone svg {
+  width: 16px;
+  height: 16px;
+}
+
+.almox-da-obra__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 0.8rem;
+  color: var(--am-text-muted);
+  line-height: 1.45;
+}
+
+.almox-da-obra__texto strong {
+  font-size: 0.9rem;
+  color: var(--am-text-strong);
+}
+
+.almox-da-obra__texto b {
+  color: var(--am-accent);
+}
+
+.almox-cadeado {
+  display: inline-flex;
+  margin-left: 6px;
+  vertical-align: -1px;
+  color: var(--am-accent);
+}
+
+.almox-travado .sel__botao:disabled,
+.almox-travado input:disabled {
+  opacity: 1 !important;
+  cursor: not-allowed !important;
+  border-style: dashed !important;
+  border-color: color-mix(in srgb, var(--am-accent) 35%, transparent) !important;
+  background: color-mix(in srgb, var(--am-accent) 6%, var(--am-control-bg)) !important;
+  color: var(--am-text-strong) !important;
+  -webkit-text-fill-color: var(--am-text-strong);
+}
+
+.almox-travado .sel__botao:disabled .sel__seta {
+  display: none;
+}
+
+/* ---- a OS pedida pelos checks "Retirada" e "Devolução das ferramentas"
+   da obra: o cartao dela pulsa na lista da aba ---- */
+.conf-card-os.is-pedida {
+  animation: almox-os-pedida 1.4s var(--am-ease-out) 4;
+  border-color: var(--am-accent) !important;
+}
+
+@keyframes almox-os-pedida {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--am-accent) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 14px color-mix(in srgb, var(--am-accent) 0%, transparent);
+  }
+}
+
 /* a aba Configurações: a tela do main num iframe que vai ate o pe da
    janela (menu-main.js mede a altura) e rola por dentro */
 .almox-config {

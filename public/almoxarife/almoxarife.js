@@ -9279,6 +9279,12 @@ async function initApp() {
         if (typeof manAtualizarBadgeMenu === 'function') manAtualizarBadgeMenu();
         // O badge do Remanejamento precisa existir antes de a aba ser aberta.
         if (typeof remCarregarPendenciasParaBadge === 'function') remCarregarPendenciasParaBadge();
+        // Aberta direto pelo endereço (/core/app/control/retirada ou
+        // /devolutiva — o link dos checks da obra), a aba se desenhou antes
+        // de as OS chegarem e ficava vazia: desenha de novo com elas.
+        const abaAberta = (id) => document.getElementById(id)?.classList.contains('active');
+        if (abaAberta('conferencia-tab') && typeof renderConferencia === 'function') renderConferencia();
+        if (abaAberta('devolutiva-tab') && typeof renderDevolutiva === 'function') renderDevolutiva();
 
         console.log("Aplicação inicializada com sucesso!");
         

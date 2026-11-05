@@ -16,15 +16,28 @@
 // Escolhida a obra, o "Responsável pela Obra" vem do Atmosfera LWN: o
 // membro da obra que o setor deixa ser responsável, quando é um só.
 //
-// O check "Solicitar OS" da obra abre esta tela já com o cliente e a
-// obra escolhidos: /core/app/control/solicitar?obra=ID.
+// O check "Solicitar OS" da obra abre esta tela já preenchida, e TRAVADA:
+// /core/app/control/solicitar?obra=ID. O cliente, a obra e as datas (o
+// "Prazo da execução" da 1a etapa da obra) vêm do Atmosfera LWN e não se
+// trocam — só o responsável. Enviada a OS, a tela destrava.
+//
+// Os checks "Retirada" e "Devolução das ferramentas" (3a etapa) abrem a
+// aba deles com a OS da obra em destaque: /core/app/control/retirada?os=ID
+// e /core/app/control/devolutiva?os=ID.
 // ============================================================
 
-// lido AQUI, e nao no load: endereco.js limpa o ?obra= do endereco
+// lidos AQUI, e nao no load: endereco.js limpa o ?obra= e o ?os= do endereco
 const ALMOX_OBRA_PEDIDA = (() => {
     const id = new URLSearchParams(location.search).get('obra');
     return /^\d{1,18}$/.test(id || '') ? id : null;
 })();
+const ALMOX_OS_PEDIDA = (() => {
+    const id = new URLSearchParams(location.search).get('os');
+    return /^\d{1,18}$/.test(id || '') ? id : null;
+})();
+
+// a OS pedida pelo check da obra: { obra, comDatas } enquanto a tela esta travada
+let almoxTravaDaObra = null;
 
 let almoxObrasDoCliente = [];
 let almoxObrasPedido = 0;
@@ -36,12 +49,18 @@ function almoxClienteIdEscolhido() {
     return id ? Number(id) : null;
 }
 
-function almoxLimparObra() {
+function almoxLimparListaDeObras() {
     almoxObrasDoCliente = [];
     const grupo = document.getElementById('os-obra-grupo');
     const select = document.getElementById('os-obra-id');
     if (select) select.innerHTML = '';
     if (grupo) grupo.style.display = 'none';
+}
+
+// depois de enviar a OS: a tela volta a ser a de qualquer OS
+function almoxLimparObra() {
+    almoxLimparListaDeObras();
+    almoxDestravarObra();
 }
 window.almoxLimparObra = almoxLimparObra;
 
@@ -54,7 +73,7 @@ async function almoxCarregarObrasDoCliente(escolher) {
 
     const clienteId = almoxClienteIdEscolhido();
     const pedido = ++almoxObrasPedido;
-    almoxLimparObra();
+    almoxLimparListaDeObras();
     if (!clienteId) return;
 
     let obras = [];
@@ -121,9 +140,91 @@ document.addEventListener('DOMContentLoaded', () => {
     if (obra) obra.addEventListener('change', almoxResponsavelDaObra);
 });
 
-// Vindo do check "Solicitar OS" da obra: escolhe o cliente e a obra. A
-// lista de clientes chega depois da tela (initApp), entao espera por ela
-// — no maximo 15 segundos.
+// ---------------- a tela travada pela obra ----------------
+
+const ALMOX_CAMPOS_TRAVADOS = ['os-client', 'os-obra-id', 'os-start-date', 'os-end-date'];
+const ALMOX_CADEADO = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8.4 10.5V7.8a3.6 3.6 0 0 1 7.2 0v2.7"/></svg>';
+
+function almoxEscapar(t) {
+    return String(t == null ? '' : t)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function almoxDataBR(iso) {
+    const [a, m, d] = String(iso || '').slice(0, 10).split('-');
+    return a && m && d ? `${d}/${m}/${a}` : '—';
+}
+
+// o cliente, a obra e (com o prazo definido) as datas: preenchidos e sem troca
+function almoxTravarDaObra(obra) {
+    const comDatas = Boolean(obra.execucao_inicio && obra.execucao_prazo);
+    almoxTravaDaObra = { obra, comDatas };
+
+    if (comDatas) {
+        const inicio = document.getElementById('os-start-date');
+        const fim = document.getElementById('os-end-date');
+        if (inicio) inicio.value = obra.execucao_inicio;
+        if (fim) fim.value = obra.execucao_prazo;
+        // a disponibilidade do periodo roda como se a pessoa tivesse escolhido
+        if (fim) fim.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    ALMOX_CAMPOS_TRAVADOS.forEach((id) => {
+        if (!comDatas && (id === 'os-start-date' || id === 'os-end-date')) return;
+        const campo = document.getElementById(id);
+        if (!campo) return;
+        campo.disabled = true;
+        campo.dataset.travadoPelaObra = '1';
+        const grupo = campo.closest('.form-group');
+        if (grupo) grupo.classList.add('almox-travado');
+        const rotulo = grupo ? grupo.querySelector('.form-label') : null;
+        if (rotulo && !rotulo.querySelector('.almox-cadeado')) {
+            rotulo.insertAdjacentHTML('beforeend', `<span class="almox-cadeado" title="Vem da obra no Atmosfera LWN">${ALMOX_CADEADO}</span>`);
+        }
+    });
+    // a obra ja esta escolhida: o "escolha a obra" de quando o cliente tem varias nao vale
+    const ajuda = document.getElementById('os-obra-ajuda');
+    if (ajuda) ajuda.textContent = 'A OS fica ligada a esta obra. Aprovada, ela marca o check "Solicitar OS" da obra.';
+
+    // a faixa no alto da Solicitacao diz de onde veio tudo isso
+    let faixa = document.getElementById('solicitacao-da-obra');
+    if (!faixa) {
+        const antes = document.getElementById('solicitacao-modo-edicao');
+        if (!antes) return;
+        faixa = document.createElement('div');
+        faixa.id = 'solicitacao-da-obra';
+        faixa.className = 'almox-da-obra';
+        antes.insertAdjacentElement('afterend', faixa);
+    }
+    faixa.innerHTML = `
+        <span class="almox-da-obra__icone" aria-hidden="true">${ALMOX_CADEADO}</span>
+        <div class="almox-da-obra__texto">
+            <strong>OS da obra ${almoxEscapar(obra.rotulo)}</strong>
+            <span>${comDatas
+                ? `Cliente, obra e datas vêm do Atmosfera LWN — período do prazo da execução: <b>${almoxDataBR(obra.execucao_inicio)}</b> a <b>${almoxDataBR(obra.execucao_prazo)}</b>.`
+                : 'Cliente e obra vêm do Atmosfera LWN. A obra ainda não tem o prazo da execução (1ª etapa): escolha as datas.'}
+                Só o responsável pode ser trocado.</span>
+        </div>`;
+    faixa.style.display = '';
+}
+
+function almoxDestravarObra() {
+    almoxTravaDaObra = null;
+    document.querySelectorAll('[data-travado-pela-obra]').forEach((campo) => {
+        campo.disabled = false;
+        delete campo.dataset.travadoPelaObra;
+    });
+    document.querySelectorAll('.almox-travado').forEach((g) => g.classList.remove('almox-travado'));
+    document.querySelectorAll('.almox-cadeado').forEach((c) => c.remove());
+    const faixa = document.getElementById('solicitacao-da-obra');
+    if (faixa) faixa.remove();
+}
+window.almoxDestravarObra = almoxDestravarObra;
+
+// Vindo do check "Solicitar OS" da obra: escolhe o cliente e a obra, poe as
+// datas do prazo da execucao e trava tudo menos o responsavel. A lista de
+// clientes chega depois da tela (initApp), entao espera por ela — no
+// maximo 15 segundos.
 async function almoxAbrirComObraPedida() {
     if (!ALMOX_OBRA_PEDIDA) return;
     let obra = null;
@@ -139,7 +240,7 @@ async function almoxAbrirComObraPedida() {
         return;
     }
     const limite = Date.now() + 15000;
-    const tentar = () => {
+    const tentar = async () => {
         const select = document.getElementById('os-client');
         if (!select) return;
         if (select.options.length <= 1 && typeof clients !== 'undefined' && Array.isArray(clients) && clients.length
@@ -152,9 +253,33 @@ async function almoxAbrirComObraPedida() {
             return;
         }
         select.value = opcao.value;
-        almoxCarregarObrasDoCliente(obra.id);
+        await almoxCarregarObrasDoCliente(obra.id);
+        almoxTravarDaObra(obra);
     };
     tentar();
 }
 
-window.addEventListener('load', () => { almoxAbrirComObraPedida(); });
+// Vindo dos checks "Retirada" e "Devolução das ferramentas" da obra: a OS
+// dela em destaque na lista da aba (a lista chega depois da tela).
+function almoxDestacarOSPedida() {
+    if (!ALMOX_OS_PEDIDA) return;
+    const limite = Date.now() + 15000;
+    const tentar = () => {
+        const card = [...document.querySelectorAll(`[data-os-id="${ALMOX_OS_PEDIDA}"]`)]
+            .find((el) => el.offsetParent !== null);
+        if (!card) {
+            if (Date.now() < limite) setTimeout(tentar, 300);
+            else if (typeof showToast === 'function') showToast('A OS desta obra não está nesta lista agora.', 'warning');
+            return;
+        }
+        card.classList.add('is-pedida');
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => card.classList.remove('is-pedida'), 7000);
+    };
+    tentar();
+}
+
+window.addEventListener('load', () => {
+    almoxAbrirComObraPedida();
+    almoxDestacarOSPedida();
+});

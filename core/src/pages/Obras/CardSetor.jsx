@@ -9,8 +9,15 @@ import {
   CHECK_RESERVA,
   CHECK_RETIRADA,
   CHECK_ENVIAR_OS,
+  CHECK_RETIRADA_OS,
+  CHECK_DEVOLUCAO_OS,
   DICA_ENVIAR_OS,
+  DICA_RETIRADA_OS,
+  DICA_DEVOLUCAO_OS,
+  ehCheckDaOS,
+  enderecoDaAbaDaOS,
   enderecoSolicitarOS,
+  estadoDasFerramentasDaOS,
   estadoDoSolicitarOS,
   numeroDaOSAprovada,
   podeFazer,
@@ -86,8 +93,11 @@ export default function CardSetor({
   /* "de outro" e quando NENHUM check do card abre para a pessoa: o card
      e de outro setor, ela nao esta na obra, ou o cargo dela nao marca
      estes (atualizacao 37). O cadeado diz qual dos tres */
-  /* o "Enviar OS" fica de fora: ele nao abre para ninguem (so o Almoxarife marca) */
-  const travas = card.checks.filter((c) => c.tipo !== CHECK_ENVIAR_OS).map((c) => travaDoCheck(usuario, c, card, obra))
+  /* os da O.S. ficam de fora: eles nao abrem para ninguem (so o LWN Control marca) */
+  const travas = card.checks.filter((c) => !ehCheckDaOS(c)).map((c) => travaDoCheck(usuario, c, card, obra))
+  /* a Retirada e a Devolucao das ferramentas: em que pe esta cada uma */
+  const ferramentasDaOS = modelo ? null : estadoDasFerramentasDaOS(obra)
+  const veControl = podeFazer(usuario, 'ver_almoxarife')
   const semPermissao = travas.length > 0 && travas.every(Boolean)
   const motivoDoCard = travas.includes('membro') ? 'membro' : travas.includes('setor') ? 'setor' : 'cargo'
   const cor = corDoSetorDoCard(card, corSuaveDoCargo)
@@ -279,11 +289,32 @@ export default function CardSetor({
             !travado &&
             podeFazer(usuario, 'ver_almoxarife') &&
             podeFazer(usuario, 'almox_solicitacoes')
-          const dicaDoCheck = [porqueGases, enviarOS ? DICA_ENVIAR_OS : '', check.informacoes].filter(Boolean).join('\n\n')
+          /* a Retirada e a Devolucao das ferramentas (atualizacao 42): como o
+             "Solicitar OS", so o LWN Control marca. O clique leva a aba do
+             Control com a OS da obra em destaque — a Devolucao so depois
+             da Retirada */
+          const retiradaOS = check.tipo === CHECK_RETIRADA_OS
+          const devolucaoOS = check.tipo === CHECK_DEVOLUCAO_OS
+          const devolucaoBloqueada = devolucaoOS && !feito && ferramentasDaOS?.devolucao === 'bloqueada'
+          const destinoNoControl =
+            modelo || feito || travado || !veControl
+              ? null
+              : retiradaOS && ferramentasDaOS?.osRetirar && podeFazer(usuario, 'almox_conferencia')
+                ? enderecoDaAbaDaOS('retirada', ferramentasDaOS.osRetirar)
+                : devolucaoOS && ferramentasDaOS?.osDevolver && podeFazer(usuario, 'almox_devolutiva')
+                  ? enderecoDaAbaDaOS('devolutiva', ferramentasDaOS.osDevolver)
+                  : null
+          const dicaDoCheck = [
+            porqueGases,
+            enviarOS ? DICA_ENVIAR_OS : retiradaOS ? DICA_RETIRADA_OS : devolucaoOS ? DICA_DEVOLUCAO_OS : '',
+            check.informacoes,
+          ]
+            .filter(Boolean)
+            .join('\n\n')
           /* so o check que ainda vale tem ordem: o que ja saiu do roteiro
              (e uma obra antiga ainda mostra) nao se arrasta */
           const arrastavel = Boolean(arraste) && podeChecks && !check.vigenteAte
-          const travadoAqui = (modelo || travado || (!meu && !abreSemPermissao)) && !vaiSolicitar
+          const travadoAqui = (modelo || travado || (!meu && !abreSemPermissao)) && !vaiSolicitar && !destinoNoControl
           return (
             <Dica
               as="li"
@@ -307,12 +338,19 @@ export default function CardSetor({
               <button
                 type="button"
                 className={`tarefa ${feito ? 'is-feita' : ''} ${resposta === false ? 'is-nao' : ''} ${
-                  !modelo && !meu && !abreSemPermissao && !vaiSolicitar ? 'is-deoutro' : ''
-                } ${doSistema || proposta || doCarro || enviarOS ? 'is-sistema' : ''} ${modelo ? 'is-modelo' : ''}`.trim()}
+                  /* os da O.S. nao sao "de outro setor": ninguem marca, so o sistema */
+                  !modelo && !meu && !abreSemPermissao && !ehCheckDaOS(check) ? 'is-deoutro' : ''
+                } ${doSistema || proposta || doCarro || enviarOS || retiradaOS || devolucaoOS ? 'is-sistema' : ''} ${
+                  devolucaoBloqueada ? 'is-bloqueada' : ''
+                } ${modelo ? 'is-modelo' : ''}`.trim()}
                 onClick={() => {
                   if (travadoAqui) return
                   if (vaiSolicitar) {
                     window.location.assign(enderecoSolicitarOS(obra.id))
+                    return
+                  }
+                  if (destinoNoControl) {
+                    window.location.assign(destinoNoControl)
                     return
                   }
                   aoMarcar(check)
@@ -409,6 +447,42 @@ export default function CardSetor({
                           : vaiSolicitar
                             ? 'solicitar'
                             : 'sem OS'}
+                  </span>
+                )}
+                {/* a Retirada: feita, o convite (ou a espera) ou sem OS aprovada */}
+                {retiradaOS && !modelo && (
+                  <span
+                    className="tarefa__ensaios"
+                    data-os={feito ? 'aprovada' : ferramentasDaOS?.retirada ? 'aguardando' : 'nenhuma'}
+                  >
+                    {feito
+                      ? 'retirada'
+                      : !ferramentasDaOS?.retirada
+                        ? 'sem OS aprovada'
+                        : destinoNoControl
+                          ? 'retirar'
+                          : 'aguardando retirada'}
+                  </span>
+                )}
+                {/* a Devolucao: travada ate a retirada, depois o convite (ou a espera) */}
+                {devolucaoOS && !modelo && (
+                  <span
+                    className="tarefa__ensaios"
+                    data-os={feito ? 'aprovada' : devolucaoBloqueada ? 'bloqueada' : 'aguardando'}
+                  >
+                    {devolucaoBloqueada && (
+                      <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
+                        <rect x="5" y="10.5" width="14" height="9.5" rx="2" />
+                        <path d="M8.4 10.5V7.8a3.6 3.6 0 0 1 7.2 0v2.7" />
+                      </svg>
+                    )}
+                    {feito
+                      ? 'devolvida'
+                      : devolucaoBloqueada
+                        ? 'após a retirada'
+                        : destinoNoControl
+                          ? 'devolver'
+                          : 'aguardando devolução'}
                   </span>
                 )}
                 {execucaoDosEnsaios && !modelo && !semInformacao && (

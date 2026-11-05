@@ -74,6 +74,7 @@ const ARQUIVOS = [
   'db/atualizacao-39.sql.txt',
   'db/atualizacao-40.sql.txt',
   'db/atualizacao-41.sql.txt',
+  'db/atualizacao-42.sql.txt',
 ]
 
 /**
@@ -219,6 +220,14 @@ const CONFERENCIA = [
                      JOIN etapa_check p ON p.card_id = k.card_id AND p.tipo = 'material_gases'
                                        AND p.vigente_ate IS NULL AND p.obra_id IS NULL
                     WHERE k.tipo = 'enviar_os' AND k.vigente_ate IS NULL AND k.titulo = 'Solicitar OS') AS ok`,
+  ],
+  [
+    'checks Retirada e Devolucao das ferramentas na 3a etapa',
+    `SELECT (SELECT count(DISTINCT k.tipo) FROM etapa_check k
+               JOIN etapa_check ex ON ex.card_id = k.card_id AND ex.tipo = 'execucao_ensaios'
+                                  AND ex.vigente_ate IS NULL AND ex.obra_id IS NULL
+              WHERE k.tipo IN ('retirada_os', 'devolucao_os')
+                AND k.vigente_ate IS NULL AND k.obra_id IS NULL) = 2 AS ok`,
   ],
 ]
 

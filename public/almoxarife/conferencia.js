@@ -670,7 +670,7 @@ function confCardOS(os, etapa) {
     const atrasada = etapa === 'devolutiva' && atraso > 0;
 
     return `
-        <div class="conf-card-os${atrasada ? ' atrasada' : ''}" style="--conf-cor-cliente:${corCliente};">
+        <div class="conf-card-os${atrasada ? ' atrasada' : ''}" data-os-id="${os.id}" style="--conf-cor-cliente:${corCliente};">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;flex-wrap:wrap;">
                 <div>
                     <div style="font-weight:800;font-size:0.95rem;color:var(--text-main);">OS #${os.numero_os || os.id}</div>

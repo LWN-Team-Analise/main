@@ -750,13 +750,19 @@ app.get("/clientes/:id/obras", async (req, res) => {
 });
 
 /* a obra pelo id, com o cliente dela: o check "Solicitar OS" da obra
-   abre a Solicitacao com o cliente e a obra ja escolhidos
-   (/core/app/control/solicitar?obra=ID, ver public/almoxarife/obra-da-os.js) */
+   abre a Solicitacao com o cliente, a obra e as datas ja preenchidos e
+   travados (/core/app/control/solicitar?obra=ID, ver
+   public/almoxarife/obra-da-os.js). As datas sao o "Prazo da execucao"
+   da 1a etapa: do inicio da execucao (sem ele, o inicio da obra) ao
+   prazo dela. Sem o prazo definido, nenhuma das duas vem */
 app.get("/obras/:id", async (req, res) => {
     if (!/^\d{1,18}$/.test(req.params.id)) return res.status(400).json({ erro: "Obra inválida" });
     try {
         const r = await pool.query(
-            "SELECT id, cliente_id, proposta, descricao, concluida_em FROM obra WHERE id = $1",
+            `SELECT id, cliente_id, proposta, descricao, concluida_em,
+                    to_char(coalesce(execucao_inicio, data_inicio), 'YYYY-MM-DD') AS inicio,
+                    to_char(execucao_prazo, 'YYYY-MM-DD') AS prazo
+               FROM obra WHERE id = $1`,
             [req.params.id]
         );
         const o = r.rows[0];
@@ -765,7 +771,9 @@ app.get("/obras/:id", async (req, res) => {
             id: o.id,
             cliente_id: o.cliente_id,
             rotulo: [o.proposta, o.descricao].filter(Boolean).join(' — ') || `Obra ${o.id}`,
-            concluida: Boolean(o.concluida_em)
+            concluida: Boolean(o.concluida_em),
+            execucao_inicio: o.prazo ? (o.inicio && o.inicio <= o.prazo ? o.inicio : o.prazo) : null,
+            execucao_prazo: o.prazo || null
         });
     } catch (err) {
         logger.error('almox/obra', err.message);
@@ -2928,9 +2936,10 @@ app.delete("/solicitacoes/:id", async (req, res) => {
 
         await pool.query("DELETE FROM almox.solicitacoes WHERE id = $1", [id]);
 
-        // a OS aprovada que marcava o "Enviar OS" da obra leva o check junto
-        // (a não ser que a obra tenha outra OS aprovada)
-        if (osCompleta.obra_id && osCompleta.aprovado_em) await desmarcarEnviarOS(osCompleta.obra_id, osCompleta.id);
+        // a OS que marcava os checks da obra (Solicitar OS, Retirada e Devolução
+        // das ferramentas) leva cada um junto — a não ser que outra OS da obra
+        // tenha chegado ao mesmo ponto
+        if (osCompleta.obra_id) await desmarcarChecksDaOS(osCompleta.obra_id, osCompleta.id);
 
         // ---- Devolve as ferramentas ao estado neutro ----
         // A OS não existe mais: nada do que ela causou pode continuar preso à
@@ -5877,6 +5886,8 @@ app.put("/solicitacoes/:id/conferencia", async (req, res) => {
             usuario: responsavel || null
         });
         await ferramentasNoHistoricoDaObra(req, os, 'retirada', validados);
+        // a OS ligada a uma obra marca o check "Retirada das ferramentas" dela
+        await marcarRetiradaOS(r.rows[0], req);
 
         // Cada ferramenta que ficou para trás vira um evento próprio: é assim
         // que o motivo de ela não ter ido a campo fica rastreável por TAG.
@@ -6125,6 +6136,8 @@ app.put("/solicitacoes/:id/devolutiva", async (req, res) => {
             prazoFim: fimContratado,
             motivo: antecipada ? motivoAntec : null
         });
+        // tudo de volta: a OS ligada a uma obra marca o check "Devolucao das ferramentas"
+        if (todosDevolvidos) await marcarDevolucaoOS(r.rows[0], req);
 
         for (const d of devolvidos) {
             const destino = d.baia || 'Almoxarifado';
@@ -8013,56 +8026,102 @@ async function checkDaObra(obraId, tipo) {
     return rows[0]?.id ?? null;
 }
 
-async function marcarEnviarOS(os) {
-    if (!os?.obra_id || !os.aprovado_em) return false;
+/* ------------------------------------------------------------
+   Os checks da O.S. na obra (atualizacoes 38, 40, 41 e 42)
+
+   Tres checks do roteiro que ninguem marca na mao — quem marca e o
+   proprio LWN Control, quando a O.S. ligada a obra chega la:
+
+     enviar_os     "Solicitar OS" (2a etapa)        a OS foi APROVADA
+     retirada_os   "Retirada das ferramentas"       a Retirada da OS foi
+     (3a etapa, Time Tecnico)                       feita (a conferencia,
+                                                    bipada na baia)
+     devolucao_os  "Devolucao das ferramentas"      a devolutiva fechou a
+                                                    OS (tudo voltou)
+
+   A Devolucao vem depois da Retirada: marcar a devolucao marca a
+   retirada antes, se ainda nao estiver (a OS de antes desta atualizacao
+   ja tinha sido retirada sem o check existir).
+
+   Marcado, nao sai: a API do main recusa desmarcar (routes/dados.js). So
+   a OS excluida leva os checks que ela marcou — e so quando nenhuma
+   outra OS da obra chegou ao mesmo ponto.
+   ------------------------------------------------------------ */
+const CHECKS_DA_OS = {
+    enviar_os: { coluna: 'aprovado_em', motivo: 'OS aprovada', nome: 'Solicitar OS' },
+    retirada_os: { coluna: 'conferido_em', motivo: 'ferramentas retiradas', nome: 'Retirada das ferramentas' },
+    devolucao_os: { coluna: 'devolvido_em', motivo: 'ferramentas devolvidas', nome: 'Devolução das ferramentas' }
+};
+
+async function marcarCheckDaOS(os, tipo, quem) {
+    const regra = CHECKS_DA_OS[tipo];
+    if (!regra || !os?.obra_id || !os[regra.coluna]) return false;
     try {
-        const checkId = await checkDaObra(os.obra_id, 'enviar_os');
+        const checkId = await checkDaObra(os.obra_id, tipo);
         if (!checkId) return false;
-        const quem = os.solicitado_por_id || os.aprovado_por_id || null;
+        const autor = /^\d{1,18}$/.test(String(quem ?? '')) ? Number(quem) : null;
         const r = await pool.query(
             `INSERT INTO obra_check (obra_id, check_id, feito_por) VALUES ($1, $2, $3)
              ON CONFLICT (obra_id, check_id) DO NOTHING
              RETURNING check_id`,
-            [os.obra_id, checkId, quem]
+            [os.obra_id, checkId, autor]
         );
         if (!r.rowCount) return false;
         await informacaoChegou(os.obra_id, checkId);
-        if (quem) {
-            await registrarAtividade(quem, {
+        if (autor) {
+            const titulo = await pool.query('SELECT titulo FROM etapa_check WHERE id = $1', [checkId]);
+            await registrarAtividade(autor, {
                 acao: 'check.marcado',
                 categoria: 'check',
                 entidade: ['obra', os.obra_id],
-                descricao: 'Check concluído pelo Almoxarife (OS aprovada)',
+                descricao: `Check concluído pelo LWN Control (${regra.motivo})`,
                 detalhes: {
                     ...(await descreverObra(os.obra_id)),
-                    check: 'Solicitar OS',
+                    check: titulo.rows[0]?.titulo || regra.nome,
                     os: '#' + String(os.numero_os || os.id).padStart(4, '0'),
-                    aprovada_por: os.aprovado_por || null
+                    ...(tipo === 'enviar_os' ? { aprovada_por: os.aprovado_por || null } : {})
                 }
             });
-            /* quem enviou a O.S. entra na obra; a etapa que fechou vai para os membros no Teams */
-            await depoisDeMarcar(quem, os.obra_id);
+            /* quem marcou entra na obra (se o setor marca em todas); a etapa
+               que fechou vai para os membros no Teams */
+            await depoisDeMarcar(autor, os.obra_id);
         }
         return true;
     } catch (e) {
-        logger.error('almox/enviar-os', e.message);
+        logger.error('almox/check-da-os', `${tipo}: ${e.message}`);
         return false;
     }
 }
 
-async function desmarcarEnviarOS(obraId, excetoOsId) {
+/* aprovada: o "Solicitar OS" fica com quem pediu a OS */
+const marcarEnviarOS = (os) => marcarCheckDaOS(os, 'enviar_os', os?.solicitado_por_id || os?.aprovado_por_id || null);
+
+/* a Retirada fica com quem bipou (o logado) */
+const marcarRetiradaOS = (os, req) => marcarCheckDaOS(os, 'retirada_os', req?.dono?.sub);
+
+/* a Devolucao fecha a OS: a Retirada vem antes, se faltava */
+async function marcarDevolucaoOS(os, req) {
+    if (!os?.devolvido_em) return false;
+    await marcarCheckDaOS(os, 'retirada_os', req?.dono?.sub);
+    return marcarCheckDaOS(os, 'devolucao_os', req?.dono?.sub);
+}
+
+/* a OS excluida leva os checks que so ela segurava */
+async function desmarcarChecksDaOS(obraId, excetoOsId) {
     if (!obraId) return;
-    try {
-        const outra = await pool.query(
-            `SELECT 1 FROM almox.solicitacoes
-              WHERE obra_id = $1 AND aprovado_em IS NOT NULL AND id <> $2 LIMIT 1`,
-            [obraId, excetoOsId]
-        );
-        if (outra.rows.length) return;
-        const checkId = await checkDaObra(obraId, 'enviar_os');
-        if (checkId) await pool.query('DELETE FROM obra_check WHERE obra_id = $1 AND check_id = $2', [obraId, checkId]);
-    } catch (e) {
-        logger.error('almox/enviar-os', e.message);
+    for (const [tipo, regra] of Object.entries(CHECKS_DA_OS)) {
+        try {
+            const outra = await pool.query(
+                `SELECT 1 FROM almox.solicitacoes
+                  WHERE obra_id = $1 AND ${regra.coluna} IS NOT NULL AND id <> $2 LIMIT 1`,
+                [obraId, excetoOsId]
+            );
+            if (outra.rows.length) continue;
+            const checkId = await checkDaObra(obraId, tipo);
+            if (checkId) await pool.query('DELETE FROM obra_check WHERE obra_id = $1 AND check_id = $2', [obraId, checkId]);
+        } catch (e) {
+            logger.error('almox/check-da-os', `${tipo}: ${e.message}`);
+        }
     }
 }
 

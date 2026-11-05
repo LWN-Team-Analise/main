@@ -386,6 +386,9 @@ function abrirEdicaoAprovacaoOS(osId) {
 window.abrirEdicaoAprovacaoOS = abrirEdicaoAprovacaoOS;
 
 function aprovPreencherTelaSolicitacao(os) {
+    // a tela pode estar travada por um "Solicitar OS" da obra (obra-da-os.js):
+    // a edicao antes de aprovar e de outra OS, com tudo trocavel
+    if (typeof almoxDestravarObra === 'function') almoxDestravarObra();
     const definir = (id, valor) => {
         const el = document.getElementById(id);
         if (!el || valor === undefined || valor === null) return;

@@ -462,7 +462,58 @@ export const CHECK_RETIRADA = 'retirada_carro'
 export const CHECK_ENVIAR_OS = 'enviar_os'
 
 export const DICA_ENVIAR_OS =
-  'Clique para pedir a OS no LWN Control, com o cliente e a obra já escolhidos. O check se marca sozinho quando o supervisor aprova a OS, e só sai se a OS for excluída.'
+  'Clique para pedir a OS no LWN Control, com o cliente, a obra e as datas do prazo da execução já preenchidos (só o responsável se escolhe). O check se marca sozinho quando o supervisor aprova a OS, e só sai se a OS for excluída.'
+
+/* ------------------------------------------------------------
+   A "Retirada" e a "Devolucao das ferramentas" (atualizacao 42)
+
+   3a etapa, card do Time Tecnico. Como o "Solicitar OS", ninguem marca
+   na mao: o LWN Control marca a Retirada quando as ferramentas da OS
+   desta obra sao retiradas (a aba Retirada) e a Devolucao quando a
+   devolutiva fecha a OS (a aba Devolutiva). A Devolucao fica travada ate
+   a Retirada. Marcados, so saem se a OS for excluida. O clique leva a
+   aba do Control, com a OS da obra em destaque.
+   ------------------------------------------------------------ */
+
+export const CHECK_RETIRADA_OS = 'retirada_os'
+export const CHECK_DEVOLUCAO_OS = 'devolucao_os'
+
+/** Os tres checks que so o LWN Control marca. */
+export const CHECKS_DA_OS = [CHECK_ENVIAR_OS, CHECK_RETIRADA_OS, CHECK_DEVOLUCAO_OS]
+export const ehCheckDaOS = (check) => CHECKS_DA_OS.includes(check?.tipo)
+
+export const DICA_RETIRADA_OS =
+  'Clique para ir à Retirada do LWN Control, com a OS desta obra em destaque. O check se marca sozinho quando as ferramentas são retiradas (bipadas na baia), e só sai se a OS for excluída.'
+
+export const DICA_DEVOLUCAO_OS =
+  'Liberado depois da retirada. Clique para ir à Devolutiva do LWN Control, com a OS desta obra em destaque. O check se marca sozinho quando todas as ferramentas voltam, e só sai se a OS for excluída.'
+
+/**
+ * Em que pe estao a Retirada e a Devolucao da obra, pelas O.S. ligadas a
+ * ela (obra.ordensServico):
+ *   retirada   'feita' | 'pendente' (ha OS aprovada esperando) | null (sem OS aprovada)
+ *   devolucao  'feita' | 'pendente' (retirada, esperando a volta) | 'bloqueada' (falta a retirada)
+ *   osRetirar  a OS que espera a retirada (a primeira); osDevolver, a que espera a devolucao
+ */
+export function estadoDasFerramentasDaOS(obra) {
+  const aprovadas = (obra?.ordensServico ?? []).filter((o) => o.aprovada)
+  const osRetirar = aprovadas.find((o) => !o.retirada) ?? null
+  const osDevolver = aprovadas.find((o) => o.retirada && !o.devolvida) ?? null
+  return {
+    retirada: aprovadas.some((o) => o.retirada) ? 'feita' : aprovadas.length ? 'pendente' : null,
+    devolucao: aprovadas.some((o) => o.devolvida)
+      ? 'feita'
+      : aprovadas.some((o) => o.retirada)
+        ? 'pendente'
+        : 'bloqueada',
+    osRetirar,
+    osDevolver,
+  }
+}
+
+/** O endereco da aba do LWN Control com a OS da obra em destaque. */
+export const enderecoDaAbaDaOS = (aba, os) =>
+  `/core/app/control/${aba}${os ? `?os=${encodeURIComponent(os.id)}` : ''}`
 
 /** O endereco do Solicitar OS do LWN Control para esta obra. */
 export const enderecoSolicitarOS = (obraId) => `/core/app/control/solicitar?obra=${encodeURIComponent(obraId)}`
@@ -925,8 +976,9 @@ export function ehMembroDaObra(usuario, obra) {
  */
 export function travaDoCheck(usuario, check, card, obra) {
   if (!usuario) return 'setor'
-  /* nem o acesso total marca o "Enviar OS": e do Almoxarife */
-  if (check?.tipo === CHECK_ENVIAR_OS) return 'sistema'
+  /* nem o acesso total marca os da O.S. (Solicitar, Retirada e
+     Devolucao): sao do LWN Control */
+  if (ehCheckDaOS(check)) return 'sistema'
   if (temAcessoTotal(usuario)) return null
   if (usuario.checkSoNaObra !== false && !podeFazer(usuario, 'check_todas_obras') && !ehMembroDaObra(usuario, obra)) {
     return 'membro'

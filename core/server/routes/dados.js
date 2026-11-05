@@ -472,10 +472,12 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     query(`SELECT obra_id, count(*)::int AS n FROM obra_chat
             WHERE apagada_em IS NULL GROUP BY obra_id`).catch(semTabelaVazia),
     /* as O.S. do LWN Control ligadas a cada obra (atualizacao 38): o check
-       "Solicitar OS" diz em que pe esta ("aguardando aprovação") e o botao
-       Ferramentas da obra aparece com a primeira aprovada. Sem o schema
-       almox, nenhuma */
-    query(`SELECT id, obra_id, numero_os, status, aprovado_em IS NOT NULL AS aprovada
+       "Solicitar OS" diz em que pe esta ("aguardando aprovação"), os da
+       Retirada e da Devolucao das ferramentas (atualizacao 42) tambem, e o
+       botao Ferramentas da obra aparece com a primeira aprovada. Sem o
+       schema almox, nenhuma */
+    query(`SELECT id, obra_id, numero_os, status, aprovado_em IS NOT NULL AS aprovada,
+                  conferido_em IS NOT NULL AS retirada, devolvido_em IS NOT NULL AS devolvida
              FROM almox.solicitacoes
             WHERE obra_id IS NOT NULL
             ORDER BY id`).catch(semTabelaVazia),
@@ -496,6 +498,9 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     numero: l.numero_os ?? null,
     status: l.status,
     aprovada: l.aprovada === true,
+    /* a Retirada (conferencia) feita, e a devolutiva que fechou a OS */
+    retirada: l.retirada === true,
+    devolvida: l.devolvida === true,
   }))
 
   const checksDaObra = {}
@@ -2663,6 +2668,23 @@ async function recusouMarcar(res, usuarioId, checkId, obraId, deOutro) {
   return true
 }
 
+/* Os checks que so o LWN Control marca (server/almoxarife, CHECKS_DA_OS):
+   a recusa de marcar e de desmarcar na mao */
+const CHECKS_DA_OS = {
+  enviar_os: {
+    marcar: 'Este check é marcado pelo sistema quando a OS desta obra é aprovada no LWN Control.',
+    desmarcar: 'Este check acompanha a OS aprovada no LWN Control: ele só sai se a OS for excluída lá.',
+  },
+  retirada_os: {
+    marcar: 'Este check é marcado pelo sistema quando as ferramentas da OS desta obra são retiradas no LWN Control.',
+    desmarcar: 'Este check acompanha a retirada feita no LWN Control: ele só sai se a OS for excluída lá.',
+  },
+  devolucao_os: {
+    marcar: 'Este check é marcado pelo sistema quando as ferramentas da OS desta obra são devolvidas no LWN Control.',
+    desmarcar: 'Este check acompanha a devolução feita no LWN Control: ele só sai se a OS for excluída lá.',
+  },
+}
+
 /**
  * O que o check exige para ser marcado:
  *
@@ -2671,7 +2693,8 @@ async function recusouMarcar(res, usuarioId, checkId, obraId, deOutro) {
  *           nem coluna de resposta, e a marcacao segue como sempre;
  *   tipo    'comum', 'planejamento_ensaios', 'execucao_ensaios',
  *           'material_gases', 'prazo_execucao', 'reserva_carro', 'retirada_carro'
- *           ou 'enviar_os' (este so o Almoxarife marca);
+ *           ou os da O.S. — 'enviar_os', 'retirada_os' e 'devolucao_os'
+ *           (estes so o LWN Control marca: CHECKS_DA_OS);
  *   papel   o papel da etapa dele. Na de 'execucao' nada se marca
  *           sem o prazo da execucao.
  */
@@ -2951,14 +2974,13 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
     const resposta = req.body?.resposta
     const semInformacao = req.body?.semInformacao === true
 
-    /* O "Solicitar OS" (2a etapa, atualizacoes 38 e 40) e o unico check
-       que ninguem marca na mao — nem concluindo sem a informacao: quem
-       marca e o LWN Control, quando uma OS desta obra e aprovada
+    /* Os checks da O.S. ("Solicitar OS" da 2a etapa, "Retirada" e
+       "Devolucao das ferramentas" da 3a; atualizacoes 38, 40 e 42) sao os
+       unicos que ninguem marca na mao — nem concluindo sem a informacao:
+       quem marca e o LWN Control, quando a OS desta obra chega la
        (server/almoxarife) */
-    if (regra.tipo === 'enviar_os') {
-      return res.status(409).json({
-        erro: 'Este check é marcado pelo sistema quando a OS desta obra é aprovada no LWN Control.',
-      })
+    if (CHECKS_DA_OS[regra.tipo]) {
+      return res.status(409).json({ erro: CHECKS_DA_OS[regra.tipo].marcar })
     }
 
     if (semInformacao && !cargoPode(await meuCargo(req.dono.sub), 'check_sem_informacao')) {
@@ -3058,12 +3080,10 @@ router.delete('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req,
        O concluido SEM a informacao (atualizacao 36) nao acompanha nada —
        nem o prazo, nem a reserva, nem a saida —, e desmarca como os outros */
     const { tipo } = await regraDoCheck(req.params.checkId)
-    /* o "Solicitar OS" acompanha a OS aprovada no LWN Control: sai sozinho
-       se a OS for excluida */
-    if (tipo === 'enviar_os') {
-      return res.status(409).json({
-        erro: 'Este check acompanha a OS aprovada no LWN Control: ele só sai se a OS for excluída lá.',
-      })
+    /* os da O.S. acompanham a OS no LWN Control: saem sozinhos so se a OS
+       for excluida */
+    if (CHECKS_DA_OS[tipo]) {
+      return res.status(409).json({ erro: CHECKS_DA_OS[tipo].desmarcar })
     }
     const semInformacao = await concluidoSemInformacao(req.params.id, req.params.checkId)
     if (tipo === 'prazo_execucao' && !semInformacao) {
