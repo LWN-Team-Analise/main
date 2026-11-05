@@ -1773,6 +1773,35 @@ body.arrastando-check * {
   flex-wrap: wrap;
 }
 
+/* o "Solicitar OS": a cor diz em que pe esta a OS do LWN Control —
+   ambar esperando o aval, verde aprovada, vermelho reprovada */
+.tarefa__ensaios[data-os='aguardando'] {
+  background: color-mix(in srgb, #d97706 17%, transparent) !important;
+  color: #b45309 !important;
+}
+
+.tarefa__ensaios[data-os='aprovada'] {
+  background: color-mix(in srgb, #16a34a 17%, transparent) !important;
+  color: #15803d !important;
+}
+
+.tarefa__ensaios[data-os='reprovada'] {
+  background: color-mix(in srgb, #dc2626 15%, transparent) !important;
+  color: #b91c1c !important;
+}
+
+:root[data-theme='dark'] .tarefa__ensaios[data-os='aguardando'] {
+  color: #fbbf24 !important;
+}
+
+:root[data-theme='dark'] .tarefa__ensaios[data-os='aprovada'] {
+  color: #4ade80 !important;
+}
+
+:root[data-theme='dark'] .tarefa__ensaios[data-os='reprovada'] {
+  color: #f87171 !important;
+}
+
 /* os dois do sistema: quantos ensaios / quanto ja foi executado */
 .tarefa__ensaios {
   flex-shrink: 0;

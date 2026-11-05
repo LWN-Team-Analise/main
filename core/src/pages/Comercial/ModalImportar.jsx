@@ -226,9 +226,6 @@ export default function ModalImportar({ aberto, funilInicial, aoFechar, aoImport
         )}
 
         <footer className="negform__rodape">
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            Cancelar
-          </button>
           <Button onClick={importar} loading={enviando} disabled={!planilha || semTitulo || total === 0}>
             {total ? `Importar ${total} negócio${total === 1 ? '' : 's'}` : 'Importar'}
           </Button>

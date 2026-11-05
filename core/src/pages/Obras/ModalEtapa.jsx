@@ -155,9 +155,6 @@ export default function ModalEtapa({ aberto, etapa = null, obraId = null, aoFech
                   Excluir
                 </button>
               ))}
-            <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-              Cancelar
-            </button>
             <Button type="submit" loading={salvando}>
               {editando ? 'Salvar' : `Adicionar ${termo}`}
             </Button>

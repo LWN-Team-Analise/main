@@ -191,9 +191,6 @@ export default function EditorImagem({
       )}
 
       <footer className="formobra__acoes">
-        <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-          Cancelar
-        </button>
         <Button type="button" onClick={confirmar} loading={salvando} disabled={!medidas}>
           Usar esta imagem
         </Button>

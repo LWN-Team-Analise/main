@@ -224,9 +224,6 @@ function ModalSetor({ aberto, setor = null, emUso = 0, aoFechar }) {
                 Excluir
               </button>
             )}
-            <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-              Cancelar
-            </button>
             <Button type="submit" loading={salvando}>
               Salvar
             </Button>

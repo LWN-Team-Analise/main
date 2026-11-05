@@ -257,9 +257,6 @@ export default function ModalCheck({
                 Excluir
               </button>
             ))}
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            Cancelar
-          </button>
           <Button type="submit" loading={salvando}>
             {editando ? 'Salvar' : 'Adicionar check'}
           </Button>

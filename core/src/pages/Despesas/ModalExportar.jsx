@@ -165,9 +165,6 @@ export default function ModalExportar({ aberto, aoFechar, pessoas = [], aoExport
         )}
 
         <footer className="formobra__acoes">
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            Cancelar
-          </button>
           <Button type="submit" loading={gerando}>
             Exportar
           </Button>

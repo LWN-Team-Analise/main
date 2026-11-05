@@ -317,9 +317,6 @@ function PlanejamentoLista({
               Reabrir o check
             </button>
           )}
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            {podeEditar ? 'Cancelar' : 'Fechar'}
-          </button>
           {podeEditar && (
             <>
               {(mudou || marcado) && (

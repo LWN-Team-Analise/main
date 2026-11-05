@@ -915,9 +915,6 @@ export default function Comercial() {
             maxLength={200}
           />
           <footer className="negform__rodape">
-            <button type="button" className="formobra__cancelar" onClick={() => setPerdendo(null)}>
-              Cancelar
-            </button>
             <Button type="submit">Marcar como perdido</Button>
           </footer>
         </form>
@@ -950,9 +947,6 @@ export default function Comercial() {
             opcoes={(funilPorId(destino.funil)?.etapas ?? []).map((et) => ({ valor: et.id, rotulo: et.rotulo }))}
           />
           <footer className="negform__rodape">
-            <button type="button" className="formobra__cancelar" onClick={() => setMovendo(null)}>
-              Cancelar
-            </button>
             <Button type="submit">Mover</Button>
           </footer>
         </form>

@@ -183,9 +183,6 @@ export default function ModalCard({ aberto, etapa, card = null, obraId = null, a
                 Excluir
               </button>
             ))}
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            Cancelar
-          </button>
           <Button type="submit" loading={salvando}>
             {editando ? 'Salvar' : 'Adicionar card'}
           </Button>

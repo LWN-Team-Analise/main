@@ -445,9 +445,6 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
               Excluir
             </button>
           )}
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            {somenteLeitura ? 'Fechar' : 'Cancelar'}
-          </button>
           {!somenteLeitura && (
             <Button type="submit" loading={salvando}>
               {turno ? 'Salvar' : 'Criar turno'}

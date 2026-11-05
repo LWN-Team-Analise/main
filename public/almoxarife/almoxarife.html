@@ -196,7 +196,6 @@
             <div class="am-modal__corpo">
                 <div class="confirma">
                     <footer class="confirma__acoes">
-                        <button type="button" class="formobra__cancelar" data-acao="fechar">Cancelar</button>
                         <button type="button" class="confirma__ok confirma__ok--acao" data-acao="confirmar">Sair</button>
                     </footer>
                 </div>
@@ -1554,6 +1553,8 @@
     <!-- jsPDF e jsPDF-autoTable NÃO entram aqui: são ~400 KB que só fazem
          sentido para quem gera PDF. Eles são baixados no primeiro clique em
          "Ver" / "Baixar OS" (ver osPdfCarregarBiblioteca em os-pdf.js). -->
+    <!-- a lista de escolha do main (o Seletor) no lugar de cada <select> -->
+    <script src="/almoxarife/seletor.js"></script>
     <script src="/almoxarife/ui-comuns.js"></script>
     <script src="/almoxarife/almoxarife.js"></script>
     <script src="/almoxarife/manutencao.js"></script>
@@ -1567,5 +1568,7 @@
     <script src="/almoxarife/topo-main.js"></script>
     <!-- por ultimo: o endereco de cada aba (/core/app/control/inventario) -->
     <script src="/almoxarife/endereco.js"></script>
+    <!-- sem o "Cancelar" nas janelas que ja tem o X -->
+    <script src="/almoxarife/sem-cancelar.js"></script>
 </body>
 </html>

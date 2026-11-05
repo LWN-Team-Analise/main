@@ -585,9 +585,6 @@ function ModalAvaliar({ obraId, aoFechar }) {
               Remover avaliação
             </button>
           )}
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            {podeAvaliar ? 'Cancelar' : 'Fechar'}
-          </button>
           {podeAvaliar && (
             <Button type="submit" loading={salvando}>
               {obra.avaliacao ? 'Salvar notas' : 'Avaliar obra'}

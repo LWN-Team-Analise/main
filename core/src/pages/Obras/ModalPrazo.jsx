@@ -125,9 +125,6 @@ export default function ModalPrazo({ aberto, alvo, aoSalvar, aoFechar }) {
               Tirar prazo
             </button>
           )}
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            Cancelar
-          </button>
           <Button type="submit" loading={salvando} disabled={!data && !prazoAtual}>
             Salvar prazo
           </Button>

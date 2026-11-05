@@ -790,8 +790,11 @@ router.get('/obras/:id/ferramentas', exigeSessao, async (req, res) => {
               s.data_inicio::text AS data_inicio, s.data_fim::text AS data_fim,
               s.data_fim_original::text AS data_fim_original,
               s.devolvida_antecipada, s.motivo_antecipacao,
-              s.solicitado_por, s.responsavel, s.aprovado_por, s.aprovado_em,
-              s.created_at AT TIME ZONE 'UTC' AS solicitada_em
+              s.solicitado_por, s.responsavel, s.aprovado_por, s.aprovado_em, s.quantidades,
+              s.created_at AT TIME ZONE 'UTC' AS solicitada_em,
+              s.separado_em AT TIME ZONE 'UTC' AS separada_em, s.separado_por,
+              s.conferido_em AT TIME ZONE 'UTC' AS retirada_em, s.conferido_por,
+              s.devolvido_em AT TIME ZONE 'UTC' AS devolvida_em, s.devolvido_por
          FROM almox.solicitacoes s
         WHERE s.obra_id = $1 AND s.aprovado_em IS NOT NULL
         ORDER BY s.id`,
@@ -870,6 +873,17 @@ router.get('/obras/:id/ferramentas', exigeSessao, async (req, res) => {
         dataFimOriginal: os.data_fim_original ?? null,
         devolvidaAntecipada: os.devolvida_antecipada === true,
         motivoAntecipacao: os.motivo_antecipacao ?? null,
+        /* o que foi pedido (tipo e quantidade): e o que a tela mostra antes
+           da separacao, quando ainda nao ha ferramenta com TAG */
+        pedido: Object.entries(os.quantidades && typeof os.quantidades === 'object' ? os.quantidades : {})
+          .filter(([, n]) => Number(n) > 0)
+          .map(([tipo, n]) => ({ tipo, quantidade: Number(n) })),
+        /* os passos da O.S. (a linha do tempo da janela): quando e quem */
+        passos: {
+          separada: os.separada_em ? { em: os.separada_em, por: os.separado_por ?? null } : null,
+          retirada: os.retirada_em ? { em: os.retirada_em, por: os.conferido_por ?? null } : null,
+          devolvida: os.devolvida_em && os.status === 'concluida' ? { em: os.devolvida_em, por: os.devolvido_por ?? null } : null,
+        },
         ferramentas: [...ferramentas.values()].sort((a, b) => String(a.nome ?? '').localeCompare(String(b.nome ?? ''), 'pt-BR')),
       }
     })

@@ -144,9 +144,6 @@ export default function ModalPeriodo({ aberto, obra, aoFechar }) {
         )}
 
         <footer className="formobra__acoes">
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            Cancelar
-          </button>
           <Button type="submit" loading={salvando} disabled={dias.length === 0}>
             Salvar dias
           </Button>

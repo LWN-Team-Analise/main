@@ -24,6 +24,9 @@ const confirma = ler('components/Confirma/Confirma.css')
 const busca = ler('components/Busca/Busca.css')
 const orbe = ler('components/ParticleInterlock/ParticleInterlock.css')
 const pedido = ler('components/PedidoInclusao/PedidoInclusao.css')
+/* o Seletor (a lista de escolha do main): public/almoxarife/seletor.js o
+   poe no lugar de cada <select> do Control */
+const seletor = ler('components/Seletor/Seletor.css')
 const tokens = ler('styles/tokens.css').replace(/\/\*[\s\S]*?\*\//g, '')
 
 /* um bloco do CSS do main pelo seletor de abertura, ate o } que fecha */
@@ -81,7 +84,7 @@ if (!celular.startsWith('@media') || !ham.includes('.ham {') || !menulado.includ
   throw new Error('o celular, o hamburguer ou o menu lateral mudaram de lugar no AppShell.css')
 }
 
-let copiado = [vidro, barra, naColuna, ate1000, topo, sino, busca, orbe, pedido, avatarCss, modalCss, confirmaCss, cancelar, celular, ham, menulado].join('\n\n')
+let copiado = [vidro, barra, naColuna, ate1000, topo, sino, busca, orbe, pedido, avatarCss, modalCss, confirmaCss, cancelar, celular, ham, menulado, seletor].join('\n\n')
 
 /* o pop-up do lwncontrol ja usa .modal: o do main vira .am-modal */
 copiado = copiado.replace(/\.modal(?=[\s_:{,.])/g, '.am-modal')
@@ -89,7 +92,7 @@ copiado = copiado.replace(/\.modal(?=[\s_:{,.])/g, '.am-modal')
 copiado = copiado.split(":root[data-theme='dark']").join('body.dark-mode')
 
 /* ---- as variaveis do main que o CSS copiado usa, renomeadas ---- */
-const internas = new Set(['marca-x', 'marca-y', 'marca-l', 'marca-a', 'ind-x', 'ergue', 'afunda', 'dur-viagem', 'curva-viagem', 'avatar-anel', 'modal-topo', 'i', 'menulado-curva', 'menulado-entra', 'menulado-sai'])
+const internas = new Set(['marca-x', 'marca-y', 'marca-l', 'marca-a', 'ind-x', 'ergue', 'afunda', 'dur-viagem', 'curva-viagem', 'avatar-anel', 'modal-topo', 'i', 'menulado-curva', 'menulado-entra', 'menulado-sai', 'pastilha-cor'])
 /* a cor das estrelas da nota no menu lateral (components/Estrelas): so a
    cola usa */
 const usadas = new Set([
@@ -97,6 +100,7 @@ const usadas = new Set([
   /* os selects com a cara do Seletor do main (a cola, no fim) */
   'vidro-borda', 'vidro-fundo', 'vidro-fundo-forte', 'vidro-realce', 'radius-pill', 'glass-blur',
   'text-strong', 'control-border', 'accent', 'surface', 'dur-fast', 'ease-out',
+  'line', 'control-bg', 'control-bg-hover', 'text-faint',
 ])
 copiado = copiado.replace(/var\(--([a-z0-9-]+)/g, (m, nome) => {
   if (internas.has(nome)) return m
@@ -436,6 +440,91 @@ select:disabled {
 select option {
   background: var(--am-surface);
   color: var(--am-text-strong);
+}
+
+/* ---- o Seletor do main nos selects (public/almoxarife/seletor.js) ----
+   O <select> fica na pagina, escondido, guardando o valor; o botao e a
+   lista sao os do Seletor (o CSS copiado acima). */
+select.sel-nativo:not([multiple]):not([size]) {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  clip-path: inset(50%) !important;
+}
+
+.sel.sel--controle {
+  min-width: 0;
+}
+
+/* dentro das janelas do lwncontrol o botao e solido, como no pop-up do main */
+.modal-container .sel__botao,
+.modal-content .sel__botao {
+  background: var(--am-control-bg);
+  border-color: var(--am-control-border);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* acima das janelas do lwncontrol (que chegam a z-index 9999) */
+.sel__lista {
+  z-index: 100000;
+}
+
+/* a busca das listas compridas (clientes, responsaveis), presa no alto */
+.sel__busca {
+  position: sticky;
+  top: -6px;
+  z-index: 1;
+  margin: -6px -6px 4px;
+  padding: 8px;
+  background: inherit;
+  border-bottom: 1px solid var(--am-line);
+}
+
+.sel__busca input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--am-control-border);
+  border-radius: var(--am-radius-pill);
+  background: var(--am-control-bg);
+  color: var(--am-text-strong);
+  font: inherit;
+  font-size: 0.82rem;
+  outline: none;
+}
+
+.sel__busca input:focus {
+  border-color: var(--am-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--am-accent) 22%, transparent);
+}
+
+/* o titulo do grupo (optgroup) */
+.sel__grupo {
+  padding: 8px 11px 4px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--am-text-faint);
+}
+
+/* a opcao andada pelas setas */
+.sel__item.is-foco {
+  background: var(--am-control-bg-hover);
+  color: var(--am-text-strong);
+}
+
+.sel__item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* a aba Configurações: a tela do main num iframe que vai ate o pe da

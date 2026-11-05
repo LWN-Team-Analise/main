@@ -794,9 +794,6 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
         )}
 
         <footer className="formobra__acoes">
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            Cancelar
-          </button>
           <Button type="submit">
             {cliente ? 'Salvar alterações' : modoUnidade ? 'Cadastrar unidade' : 'Cadastrar cliente'}
           </Button>

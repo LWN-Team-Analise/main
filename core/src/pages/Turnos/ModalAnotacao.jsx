@@ -61,9 +61,6 @@ export default function ModalAnotacao({ aberto, dia, texto = '', aoFechar, aoSal
               Apagar
             </button>
           )}
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            Cancelar
-          </button>
           <Button type="submit" loading={salvando}>
             Salvar
           </Button>

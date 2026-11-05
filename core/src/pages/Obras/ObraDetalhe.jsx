@@ -1186,16 +1186,6 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
           />
 
           <footer className="formobra__acoes">
-            <button
-              type="button"
-              className="formobra__cancelar"
-              onClick={() => {
-                setNovaObs(false)
-                setEditandoObs(null)
-              }}
-            >
-              Cancelar
-            </button>
             <Button type="submit" disabled={!texto.trim()}>
               {editandoObs ? 'Salvar observação' : 'Adicionar observação'}
             </Button>
@@ -1425,9 +1415,6 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
               </p>
             )}
             <footer className="formobra__acoes seminfo__acoes">
-              <button type="button" className="formobra__cancelar" onClick={() => setSemInfo(null)}>
-                Cancelar
-              </button>
               {semInfo.marcado && (
                 <button
                   type="button"
@@ -1613,13 +1600,6 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
           />
 
           <footer className="formobra__acoes">
-            <button
-              type="button"
-              className="formobra__cancelar"
-              onClick={() => setConcluindo(false)}
-            >
-              Cancelar
-            </button>
             <Button type="submit" loading={fechando}>
               Concluir obra
             </Button>

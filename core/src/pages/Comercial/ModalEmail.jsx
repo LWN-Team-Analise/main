@@ -211,9 +211,6 @@ export default function ModalEmail({ aberto, negocio, aoFechar, aoEnviado }) {
         )}
 
         <footer className="negform__rodape">
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            Cancelar
-          </button>
           <Button type="submit" loading={enviando} disabled={info ? !info.email.envio : false}>
             {respondendo ? 'Responder' : 'Enviar'}
           </Button>

@@ -251,9 +251,6 @@ export default function ModalObra({
         )}
 
         <footer className="formobra__acoes">
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            Cancelar
-          </button>
           <Button type="submit" disabled={clientes.length === 0} loading={salvando}>
             {editando ? 'Salvar alterações' : emergencia ? 'Abrir emergência' : 'Adicionar obra'}
           </Button>
