@@ -73,6 +73,7 @@ const ARQUIVOS = [
   'db/atualizacao-38.sql.txt',
   'db/atualizacao-39.sql.txt',
   'db/atualizacao-40.sql.txt',
+  'db/atualizacao-41.sql.txt',
 ]
 
 /**
@@ -213,9 +214,9 @@ const CONFERENCIA = [
   ['veiculo_registro.combustivel', col('veiculo_registro', 'combustivel')],
   ['cliente.oferece_alimentacao', col('cliente', 'oferece_alimentacao')],
   [
-    'check Solicitar OS na 2a etapa',
+    'check Solicitar OS na 2a etapa (card do Material de gases)',
     `SELECT EXISTS (SELECT 1 FROM etapa_check k
-                     JOIN etapa_check p ON p.card_id = k.card_id AND p.tipo = 'planejamento_ensaios'
+                     JOIN etapa_check p ON p.card_id = k.card_id AND p.tipo = 'material_gases'
                                        AND p.vigente_ate IS NULL AND p.obra_id IS NULL
                     WHERE k.tipo = 'enviar_os' AND k.vigente_ate IS NULL AND k.titulo = 'Solicitar OS') AS ok`,
   ],
