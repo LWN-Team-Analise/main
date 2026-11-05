@@ -29,6 +29,7 @@ export default function QuadroFunil({
   podeEditar,
   podeExcluir,
   responderEm,
+  alertasEm,
   vazio,
   aoAbrir,
   aoNovo,
@@ -136,6 +137,7 @@ export default function QuadroFunil({
                     dono={donoDe(n.responsavelId)}
                     arrastavel={podeEditar && n.status === 'aberto'}
                     responder={responderEm(n)}
+                    alertas={alertasEm(n)}
                     aoAbrir={aoAbrir}
                     aoResponder={aoResponder}
                     aoComecarArrasto={setArrastando}

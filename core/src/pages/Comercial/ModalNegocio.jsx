@@ -759,9 +759,6 @@ export default function ModalNegocio({
               )}
             </div>
           )}
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            {somenteLeitura ? 'Fechar' : 'Cancelar'}
-          </button>
           {!somenteLeitura && (
             <Button type="submit" loading={salvando}>
               {negocio ? 'Salvar' : 'Adicionar negócio'}

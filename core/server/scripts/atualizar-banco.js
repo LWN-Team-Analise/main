@@ -15,6 +15,12 @@
  *
  * Todos sao idempotentes: rodar de novo nao quebra nada, e e assim que
  * se descobre se falta algum.
+ *
+ * So alguns, pelo numero (o banco de producao, que ja tem os outros):
+ *
+ *   npm run db:atualizar -- 38 39
+ *
+ * A conferencia do fim continua olhando tudo.
  */
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -64,6 +70,12 @@ const ARQUIVOS = [
   'db/atualizacao-35.sql.txt',
   'db/atualizacao-36.sql.txt',
   'db/atualizacao-37.sql.txt',
+  'db/atualizacao-38.sql.txt',
+  'db/atualizacao-39.sql.txt',
+  'db/atualizacao-40.sql.txt',
+  'db/atualizacao-41.sql.txt',
+  'db/atualizacao-42.sql.txt',
+  'db/atualizacao-43.sql.txt',
 ]
 
 /**
@@ -194,6 +206,35 @@ const CONFERENCIA = [
   ['negocio.compartilhado_em', col('negocio', 'compartilhado_em')],
   ['check_todas_obras no acesso total', permissaoNoAcessoTotal('check_todas_obras')],
   ['criar_obras no acesso total', permissaoNoAcessoTotal('criar_obras')],
+  ['schema almox', "SELECT to_regnamespace('almox') IS NOT NULL AS ok"],
+  ['almox.solicitacoes', "SELECT to_regclass('almox.solicitacoes') IS NOT NULL AS ok"],
+  ['almox.usuarios (view)', "SELECT to_regclass('almox.usuarios') IS NOT NULL AS ok"],
+  ['almox.clientes (view)', "SELECT to_regclass('almox.clientes') IS NOT NULL AS ok"],
+  ['cliente.abreviacao', col('cliente', 'abreviacao')],
+  ['check Enviar OS', "SELECT EXISTS (SELECT 1 FROM etapa_check WHERE tipo = 'enviar_os' AND vigente_ate IS NULL) AS ok"],
+  ['ver_almoxarife no acesso total', permissaoNoAcessoTotal('ver_almoxarife')],
+  ['veiculo_registro.combustivel', col('veiculo_registro', 'combustivel')],
+  ['cliente.oferece_alimentacao', col('cliente', 'oferece_alimentacao')],
+  [
+    'check Solicitar OS na 2a etapa (card do Material de gases)',
+    `SELECT EXISTS (SELECT 1 FROM etapa_check k
+                     JOIN etapa_check p ON p.card_id = k.card_id AND p.tipo = 'material_gases'
+                                       AND p.vigente_ate IS NULL AND p.obra_id IS NULL
+                    WHERE k.tipo = 'enviar_os' AND k.vigente_ate IS NULL AND k.titulo = 'Solicitar OS') AS ok`,
+  ],
+  [
+    'checks Retirada e Devolucao das ferramentas na 3a etapa',
+    `SELECT (SELECT count(DISTINCT k.tipo) FROM etapa_check k
+               JOIN etapa_check ex ON ex.card_id = k.card_id AND ex.tipo = 'execucao_ensaios'
+                                  AND ex.vigente_ate IS NULL AND ex.obra_id IS NULL
+              WHERE k.tipo IN ('retirada_os', 'devolucao_os')
+                AND k.vigente_ate IS NULL AND k.obra_id IS NULL) = 2 AS ok`,
+  ],
+  [
+    'check Gestao dos instrumentos do sistema (separacao das TAGs)',
+    `SELECT EXISTS (SELECT 1 FROM etapa_check
+                    WHERE tipo = 'separar_os' AND vigente_ate IS NULL AND obra_id IS NULL) AS ok`,
+  ],
 ]
 
 function col(tabela, coluna) {
@@ -212,13 +253,23 @@ function nulavel(tabela, coluna) {
             WHERE table_schema='public' AND table_name='${tabela}' AND column_name='${coluna}'), false) AS ok`
 }
 
+/* os numeros pedidos na linha de comando (nenhum = todos) */
+const PEDIDOS = process.argv.slice(2).filter((a) => /^\d+$/.test(a))
+const numeroDe = (arquivo) => (arquivo.match(/atualizacao-(\d+)\.sql\.txt$/) || [])[1]
+const AQUI = PEDIDOS.length ? ARQUIVOS.filter((a) => PEDIDOS.includes(numeroDe(a))) : ARQUIVOS
+if (AQUI.length < PEDIDOS.length) {
+  const faltam = PEDIDOS.filter((n) => !AQUI.some((a) => numeroDe(a) === n))
+  console.error(`\nNao achei na lista a atualizacao ${faltam.join(', ')}.\n`)
+  process.exit(1)
+}
+
 let falhou = false
 
 try {
   const { rows } = await query('SELECT current_database() AS banco')
   console.log(`\nBanco: ${rows[0].banco}\n`)
 
-  for (const arquivo of ARQUIVOS) {
+  for (const arquivo of AQUI) {
     if (!fs.existsSync(naPasta(arquivo))) {
       console.log(`  pulado  ${arquivo} (arquivo nao encontrado)`)
       continue

@@ -218,9 +218,6 @@ export default function ModalVeiculo({ aberto, veiculo, aoFechar, aoSalvo }) {
               {veiculo.ativo ? 'Desativar veículo' : 'Reativar veículo'}
             </button>
           )}
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            Cancelar
-          </button>
           <Button type="submit" loading={salvando}>
             {novo ? 'Cadastrar' : 'Salvar'}
           </Button>

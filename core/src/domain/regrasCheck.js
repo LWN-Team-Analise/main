@@ -65,4 +65,6 @@ export const MOTIVO_DA_TRAVA = {
   membro: 'Você não participa desta obra. Para marcar os checks dela, é preciso ser incluído em Membros e aceitar.',
   cargo: 'O seu cargo não marca este check.',
   setor: 'Este check é de outro setor.',
+  /* o "Enviar OS" (atualizacao 38): so o Almoxarife marca */
+  sistema: 'Este check é marcado pelo sistema quando uma OS desta obra é aprovada no Almoxarife.',
 }

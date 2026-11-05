@@ -11,6 +11,7 @@ import Confirma from '@/components/Confirma/Confirma'
 import Estrelas from '@/components/Estrelas/Estrelas'
 import { ehAplicativo } from '@/utils/dispositivo'
 import useNaoLidasChat from '@/hooks/useNaoLidasChat'
+import { useNotificacoesAutomaticas } from '@/hooks/useNotificacoesCelular'
 import { primeiroNome, saudacao } from '@/utils/pessoa'
 import { dataHora } from '@/utils/formato'
 /* O nome do arquivo diz para QUAL FUNDO a logo foi feita:
@@ -71,6 +72,13 @@ const Icone = {
       <circle cx="7" cy="17" r="2" />
       <path d="M9 17h6" />
       <circle cx="17" cy="17" r="2" />
+    </svg>
+  ),
+  /* Almoxarife: a caixa de ferramentas */
+  almoxarife: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <rect x="3" y="8" width="18" height="12" rx="2" />
+      <path d="M9 8V6a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 6v2M3 13h18M10 13v2h4v-2" />
     </svg>
   ),
   /* o "fi fi-rr-calendar-clock" do Flaticon (UIcons, regular rounded), tirado
@@ -182,6 +190,8 @@ const MENU = [
   { id: 'concluidas', rotulo: 'Concluídas', rota: '/app/concluidas', permissao: 'ver_concluidas' },
   { id: 'despesas', rotulo: 'Reembolso', rota: '/app/despesas', permissao: 'ver_despesas' },
   { id: 'frotas', rotulo: 'Frotas', rota: '/app/frotas', permissao: 'ver_frotas' },
+  /* o Almoxarife (o antigo lwncontrol) abre a tela dele, em /almoxarife */
+  { id: 'almoxarife', rotulo: 'Almoxarife', rota: '/app/control', permissao: 'ver_almoxarife' },
   { id: 'comercial', rotulo: 'Comercial', rota: '/app/comercial', permissao: 'ver_comercial' },
   { id: 'turnos', rotulo: 'Turnos', rota: '/app/turnos', permissao: 'ver_turnos' },
   { id: 'avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes', permissao: 'ver_avaliacoes' },
@@ -893,6 +903,9 @@ export default function AppShell({
   const navegar = useNavigate()
   /* fora da tela do chat, o botao mostra quantas mensagens faltam ler */
   const naoLidas = useNaoLidasChat(!semChat)
+  /* as notificacoes no celular se ligam sozinhas (o aparelho pergunta no
+     primeiro clique, uma vez): nao ha cartao em Configuracoes */
+  useNotificacoesAutomaticas(Boolean(user))
 
   /* o toque numa notificacao do celular com o app ja aberto: o service
      worker manda o endereco, e a tela troca sem recarregar o app */

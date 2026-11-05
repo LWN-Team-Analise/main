@@ -21,6 +21,31 @@ import RetornoOutlook from '@/pages/Login/RetornoOutlook'
 import ChatEquipe from '@/pages/Chat/ChatEquipe'
 import ProtectedRoute from './ProtectedRoute'
 
+/* O LWN Control (o Almoxarife) e a tela do lwncontrol (public/almoxarife),
+   fora do React: o servidor entrega a pagina dele em /core/app/control
+   (vercel.json, vite.config.js). Chegando aqui por um link de dentro do
+   React, basta carregar o endereco de verdade. A sessao vai junto pelo
+   localStorage.
+
+   A marca em sessionStorage evita o laco: a pagina do LWN Control a apaga
+   ao abrir (sessao.js); se ela ainda esta aqui, o servidor devolveu o
+   React de novo e recarregar nao adianta. */
+const MARCA_CONTROL = 'lwn-control-recarga'
+function LwnControl() {
+  const { pathname } = window.location
+  const destino = pathname.startsWith('/core/app/control') ? pathname : '/core/app/control'
+  let tentou = false
+  try {
+    tentou = Date.now() - Number(sessionStorage.getItem(MARCA_CONTROL) || 0) < 10000
+    sessionStorage.setItem(MARCA_CONTROL, String(Date.now()))
+  } catch {
+    tentou = false
+  }
+  if (tentou) return <p style={{ padding: 24 }}>Não foi possível abrir o LWN Control. Recarregue a página.</p>
+  window.location.replace(destino)
+  return null
+}
+
 /**
  * Envolve a rota interna na guarda de sessao — e, quando a tela pede,
  * tambem na de permissao do cargo.
@@ -189,12 +214,32 @@ export default function AppRoutes() {
           </Interna>
         }
       />
+      <Route
+        path="/app/control/*"
+        element={
+          <Interna permissao="ver_almoxarife">
+            <LwnControl />
+          </Interna>
+        }
+      />
+      {/* o endereco antigo */}
+      <Route path="/app/almoxarife" element={<Navigate to="/app/control" replace />} />
       {/* Configuracoes nao tem trava: e onde todo mundo cuida da propria conta */}
       <Route
         path="/app/configuracoes"
         element={
           <Interna>
             <Configuracoes />
+          </Interna>
+        }
+      />
+      {/* a mesma tela sem o menu do Atmosfera: a aba Configurações do LWN
+          Control (public/almoxarife) a mostra num iframe */}
+      <Route
+        path="/app/configuracoes/embutida"
+        element={
+          <Interna>
+            <Configuracoes embutida />
           </Interna>
         }
       />

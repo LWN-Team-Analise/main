@@ -6,6 +6,7 @@ import { Colunas, Linha, Rosca } from './graficos'
 import PainelDespesas from './PainelDespesas'
 import PainelFrota from './PainelFrota'
 import PainelComercial from './PainelComercial'
+import PainelAlmoxarife from './PainelAlmoxarife'
 import Tile from './Tile'
 import {
   diasEntre,
@@ -463,7 +464,7 @@ export default function Painel({ mes, passo = 'mes', secao = 'todos' }) {
  * prontos.
  */
 export function PainelVista({
-  /* o filtro "Gráficos" da barra: 'todos', 'obras', 'despesas', 'frotas'
+  /* o filtro "Gráficos" da barra: 'todos', 'obras', 'despesas', 'frotas', 'almoxarife'
      ou 'comercial' */
   secao = 'todos',
   /* quem nao ve o Comercial nao ve o grupo dele no painel */
@@ -804,6 +805,10 @@ export function PainelVista({
       {ve('despesas') && <PainelDespesas fatias={fatias} passo={passo} rotuloDaFatia={rotuloDaFatia} />}
 
       {ve('frotas') && <PainelFrota fatias={fatias} passo={passo} />}
+
+      {/* o antigo Dashboard PowerBI do lwncontrol (o painel some sozinho para
+          quem nao tem o Almoxarife e o Dashboard dele) */}
+      {ve('almoxarife') && <PainelAlmoxarife fatias={fatias} passo={passo} rotuloDaFatia={rotuloDaFatia} />}
 
       {comercial && ve('comercial') && (
         <PainelComercial fatias={fatias} passo={passo} rotuloDaFatia={rotuloDaFatia} />

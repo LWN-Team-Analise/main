@@ -204,6 +204,10 @@ const paraCliente = (l) => ({
   matrizId: l.matriz_id === null || l.matriz_id === undefined ? null : String(l.matriz_id),
   unidade: l.unidade ?? null,
   servico: l.servico ?? null,
+  /* "Oferece alimentação?" (atualizacao 39): true = o cliente da a
+     refeicao, e o Reembolso nao aceita "Enviar refeição" para ele. A
+     unidade sem resposta propria vale a do cliente */
+  ofereceAlimentacao: typeof l.oferece_alimentacao === 'boolean' ? l.oferece_alimentacao : null,
   criadoEm: l.criado_em,
 })
 
@@ -242,13 +246,19 @@ async function lerTermos() {
    `c` e a linha; `i` e de onde vem a imagem, o setor e a prioridade:
    o proprio cliente, ou — na UNIDADE (atualizacao 33) — o cliente dela,
    para o Einstein Anapolis ter a logo e o setor do Einstein. */
-const COLUNAS_CLIENTE = `c.id, c.nome, i.recorte_logo, i.recorte_capa, i.setor_id, c.endereco, c.bairro,
+const COLUNAS_CLIENTE_38 = `c.id, c.nome, i.recorte_logo, i.recorte_capa, i.setor_id, c.endereco, c.bairro,
   c.cidade, c.estado, c.cep, c.pais, c.criado_em, i.ordem_prioridade, c.proprietario_id, c.proximo_contato,
   c.matriz_id, c.unidade, c.servico,
   md5(coalesce(i.logo, '') || '|' || coalesce(i.capa, '')) AS imagem_versao`
 
+/* com o "Oferece alimentação?" (atualizacao 39) */
+const COLUNAS_CLIENTE = COLUNAS_CLIENTE_38.replace(
+  ' c.servico,',
+  ' c.servico, coalesce(c.oferece_alimentacao, i.oferece_alimentacao) AS oferece_alimentacao,',
+)
+
 /* banco com o servico das unidades e sem o pais (sem a atualizacao 35) */
-const COLUNAS_CLIENTE_34 = COLUNAS_CLIENTE.replace(' c.pais,', '')
+const COLUNAS_CLIENTE_34 = COLUNAS_CLIENTE_38.replace(' c.pais,', '')
 
 /* banco com as unidades e sem o servico delas (sem a atualizacao 34) */
 const COLUNAS_CLIENTE_33 = COLUNAS_CLIENTE_34.replace(' c.servico,', '')
@@ -272,6 +282,16 @@ async function lerClientes(imagens) {
          JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
         ${ORDEM_CLIENTES}`,
     )
+      .catch((erro) => {
+        /* banco sem o "Oferece alimentação?" (atualizacao 39) */
+        if (erro.code !== '42703') throw erro
+        return query(
+          `SELECT ${COLUNAS_CLIENTE_38}${imagens ? ', i.logo, i.capa' : ''}
+             FROM cliente c
+             JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
+            ${ORDEM_CLIENTES}`,
+        )
+      })
       .catch((erro) => {
         /* banco sem o pais: o endereco e todo do Brasil */
         if (erro.code !== '42703') throw erro
@@ -357,6 +377,7 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     horarios,
     horarioMembros,
     chats,
+    ordens,
   ] = await Promise.all([
     lerClientes(imagens),
     /* os setores vem junto: sao poucos e a tela de Clientes precisa
@@ -450,6 +471,18 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
        nao contam): a bolinha do botao "Abrir chat" */
     query(`SELECT obra_id, count(*)::int AS n FROM obra_chat
             WHERE apagada_em IS NULL GROUP BY obra_id`).catch(semTabelaVazia),
+    /* as O.S. do LWN Control ligadas a cada obra (atualizacao 38): o check
+       "Solicitar OS" diz em que pe esta ("aguardando aprovação"), os da
+       Gestao dos instrumentos, da Retirada e da Devolucao das ferramentas
+       (atualizacoes 42 e 43) tambem, e o
+       botao Ferramentas da obra aparece com a primeira aprovada. Sem o
+       schema almox, nenhuma */
+    query(`SELECT id, obra_id, numero_os, status, aprovado_em IS NOT NULL AS aprovada,
+                  separado_em IS NOT NULL AS separada,
+                  conferido_em IS NOT NULL AS retirada, devolvido_em IS NOT NULL AS devolvida
+             FROM almox.solicitacoes
+            WHERE obra_id IS NOT NULL
+            ORDER BY id`).catch(semTabelaVazia),
   ])
 
   const junta = (linhas, chave, monta) => {
@@ -461,6 +494,18 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     })
     return mapa
   }
+
+  const osDaObra = junta(ordens.rows, 'obra_id', (l) => ({
+    id: String(l.id),
+    numero: l.numero_os ?? null,
+    status: l.status,
+    aprovada: l.aprovada === true,
+    /* as TAGs separadas pelo Almoxarife, a Retirada (conferencia) feita, e
+       a devolutiva que fechou a OS */
+    separada: l.separada === true,
+    retirada: l.retirada === true,
+    devolvida: l.devolvida === true,
+  }))
 
   const checksDaObra = {}
   marcados.rows.forEach((l) => {
@@ -715,6 +760,7 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
       reserva: reservaDaObra[o.id] ?? null,
       notas: notasDaObra[o.id] ?? [],
       avaliacao: media(notasDaObra[o.id]),
+      ordensServico: osDaObra[o.id] ?? [],
     })),
     observacoesQuadro: quadro.rows.map((l) => ({
       id: String(l.id),
@@ -731,6 +777,130 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     })),
   }
 }
+
+/* ============================================================
+   As FERRAMENTAS da obra (o botao "Ferramentas" ao lado do Editar)
+
+   Tudo o que as O.S. do LWN Control ligadas a obra levaram: cada
+   ferramenta com o nome e a TAG, a retirada e a devolucao — quando
+   (data e hora), em que baia, quem fez e se havia avaria — e se a
+   devolucao veio antes ou depois do prazo. So as O.S. aprovadas.
+
+   As horas: os JSON da O.S. (conferencia, devolutiva...) guardam ISO
+   com o fuso; as colunas "timestamp" sem fuso do schema almox guardam o
+   horario de Greenwich — dai o AT TIME ZONE 'UTC'.
+   ============================================================ */
+router.get('/obras/:id/ferramentas', exigeSessao, async (req, res) => {
+  if (!/^\d{1,18}$/.test(req.params.id)) return res.status(400).json({ erro: 'Obra inválida.' })
+  try {
+    const { rows } = await query(
+      `SELECT s.id, s.numero_os, s.status, s.instrumentos, s.conferencia, s.devolutiva,
+              s.devolucoes_parciais, s.retiradas_parciais,
+              s.data_inicio::text AS data_inicio, s.data_fim::text AS data_fim,
+              s.data_fim_original::text AS data_fim_original,
+              s.devolvida_antecipada, s.motivo_antecipacao,
+              s.solicitado_por, s.responsavel, s.aprovado_por, s.aprovado_em, s.quantidades,
+              s.created_at AT TIME ZONE 'UTC' AS solicitada_em,
+              s.separado_em AT TIME ZONE 'UTC' AS separada_em, s.separado_por,
+              s.conferido_em AT TIME ZONE 'UTC' AS retirada_em, s.conferido_por,
+              s.devolvido_em AT TIME ZONE 'UTC' AS devolvida_em, s.devolvido_por
+         FROM almox.solicitacoes s
+        WHERE s.obra_id = $1 AND s.aprovado_em IS NOT NULL
+        ORDER BY s.id`,
+      [req.params.id],
+    ).catch(semTabelaVazia)
+
+    const lista = (v) => (Array.isArray(v) ? v : [])
+    const chave = (x) => String(x?.ferramenta_id ?? x?.id ?? '') || String(x?.tag ?? '').toUpperCase()
+    /* o dia da devolucao em Brasilia, para comparar com o prazo (AAAA-MM-DD) */
+    const diaEmBrasilia = (iso) => {
+      if (!iso) return null
+      const d = new Date(iso)
+      if (Number.isNaN(d.getTime())) return null
+      return new Date(d.getTime() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    }
+    const avaria = (condicao) => (condicao === 'avariado' || condicao === 'avariado_utilizavel' ? condicao : null)
+
+    const ordens = rows.map((os) => {
+      /* a devolucao antecipada troca o fim da O.S. pelo dia em que voltou
+         e guarda o contratado em data_fim_original: o prazo e o contratado */
+      const fimDoPrazo = os.devolvida_antecipada && os.data_fim_original ? os.data_fim_original : os.data_fim
+      const ferramentas = new Map()
+      const pegar = (x) => {
+        const k = chave(x)
+        if (!k) return null
+        if (!ferramentas.has(k)) {
+          ferramentas.set(k, { id: x?.ferramenta_id ?? x?.id ?? null, tag: x?.tag ?? null, nome: x?.tipo ?? null, retirada: null, devolucao: null })
+        }
+        const f = ferramentas.get(k)
+        f.tag ??= x?.tag ?? null
+        f.nome ??= x?.tipo ?? null
+        return f
+      }
+      lista(os.instrumentos).forEach(pegar)
+      lista(os.conferencia).forEach((c) => {
+        const f = pegar(c)
+        if (!f) return
+        f.retirada = {
+          em: c.conferido_em ?? null,
+          por: c.conferido_por ?? null,
+          baia: c.baia ?? null,
+          avaria: c.avaria ?? null,
+        }
+      })
+      /* a devolucao parcial (antes do fim) e a devolutiva (a final) */
+      ;[...lista(os.devolucoes_parciais), ...lista(os.devolutiva)].forEach((d) => {
+        const f = pegar(d)
+        if (!f) return
+        const dia = diaEmBrasilia(d.devolvido_em)
+        f.devolucao = {
+          em: d.devolvido_em ?? null,
+          por: d.devolvido_por ?? null,
+          baia: d.baia ?? null,
+          condicao: d.condicao ?? null,
+          avaria: avaria(d.condicao),
+          observacao: d.observacao ?? null,
+          prazo: !dia || !fimDoPrazo ? null : dia < fimDoPrazo ? 'antecipada' : dia > fimDoPrazo ? 'atrasada' : 'no_prazo',
+        }
+      })
+      /* a que saiu da O.S. antes de ir para campo (retirada parcial) */
+      lista(os.retiradas_parciais).forEach((r) => {
+        const f = pegar(r)
+        if (f) f.saiuDaOS = { em: r.retirado_em ?? r.registrado_em ?? null, por: r.retirado_por ?? r.registrado_por ?? null, motivo: r.motivo ?? null }
+      })
+      return {
+        id: String(os.id),
+        numero: os.numero_os ?? null,
+        status: os.status,
+        solicitadaEm: os.solicitada_em,
+        solicitadaPor: os.solicitado_por ?? null,
+        responsavel: os.responsavel ?? null,
+        aprovadaEm: os.aprovado_em,
+        aprovadaPor: os.aprovado_por ?? null,
+        dataInicio: os.data_inicio,
+        dataFim: os.data_fim,
+        dataFimOriginal: os.data_fim_original ?? null,
+        devolvidaAntecipada: os.devolvida_antecipada === true,
+        motivoAntecipacao: os.motivo_antecipacao ?? null,
+        /* o que foi pedido (tipo e quantidade): e o que a tela mostra antes
+           da separacao, quando ainda nao ha ferramenta com TAG */
+        pedido: Object.entries(os.quantidades && typeof os.quantidades === 'object' ? os.quantidades : {})
+          .filter(([, n]) => Number(n) > 0)
+          .map(([tipo, n]) => ({ tipo, quantidade: Number(n) })),
+        /* os passos da O.S. (a linha do tempo da janela): quando e quem */
+        passos: {
+          separada: os.separada_em ? { em: os.separada_em, por: os.separado_por ?? null } : null,
+          retirada: os.retirada_em ? { em: os.retirada_em, por: os.conferido_por ?? null } : null,
+          devolvida: os.devolvida_em && os.status === 'concluida' ? { em: os.devolvida_em, por: os.devolvido_por ?? null } : null,
+        },
+        ferramentas: [...ferramentas.values()].sort((a, b) => String(a.nome ?? '').localeCompare(String(b.nome ?? ''), 'pt-BR')),
+      }
+    })
+    return res.json({ ordens })
+  } catch (erro) {
+    return tratar(erro, res, 'dados/obra-ferramentas')
+  }
+})
 
 router.get('/', exigeSessao, async (req, res) => {
   try {
@@ -1235,7 +1405,22 @@ function lerExtrasDoCliente(corpo) {
     pessoas: pessoas ? limpas : null,
     proximoContato: proximo || null,
     proprietarioId: /^\d{1,15}$/.test(dono) ? dono : null,
+    /* "Oferece alimentação?": sim, nao ou sem resposta (null). Fora do
+       corpo = a tela nao mexeu, e fica como estava */
+    ofereceAlimentacao:
+      corpo && 'ofereceAlimentacao' in corpo
+        ? typeof corpo.ofereceAlimentacao === 'boolean'
+          ? corpo.ofereceAlimentacao
+          : null
+        : undefined,
   }
+}
+
+/* banco sem a atualizacao 39: o resto do cadastro grava, sem a resposta */
+async function gravarAlimentacao(clienteId, valor) {
+  await query('UPDATE cliente SET oferece_alimentacao = $2 WHERE id = $1', [clienteId, valor]).catch((erro) => {
+    if (erro.code !== '42703') throw erro
+  })
 }
 
 async function gravarExtrasDoCliente(clienteId, extras, { novo, usuarioId }) {
@@ -1266,6 +1451,7 @@ async function gravarExtrasDoCliente(clienteId, extras, { novo, usuarioId }) {
         }
       }
     })
+    if (extras.ofereceAlimentacao !== undefined) await gravarAlimentacao(clienteId, extras.ofereceAlimentacao)
   } catch (erro) {
     /* banco ainda sem a atualizacao 27: o cadastro em si ja foi gravado */
     if (erro.code === '42P01' || erro.code === '42703') return
@@ -2486,6 +2672,27 @@ async function recusouMarcar(res, usuarioId, checkId, obraId, deOutro) {
   return true
 }
 
+/* Os checks que so o LWN Control marca (server/almoxarife, CHECKS_DA_OS):
+   a recusa de marcar e de desmarcar na mao */
+const CHECKS_DA_OS = {
+  enviar_os: {
+    marcar: 'Este check é marcado pelo sistema quando a OS desta obra é aprovada no LWN Control.',
+    desmarcar: 'Este check acompanha a OS aprovada no LWN Control: ele só sai se a OS for excluída lá.',
+  },
+  separar_os: {
+    marcar: 'Este check é marcado pelo sistema quando o Almoxarife separa as TAGs da OS desta obra no LWN Control.',
+    desmarcar: 'Este check acompanha a separação das TAGs no LWN Control: ele só sai se a OS for excluída lá.',
+  },
+  retirada_os: {
+    marcar: 'Este check é marcado pelo sistema quando as ferramentas da OS desta obra são retiradas no LWN Control.',
+    desmarcar: 'Este check acompanha a retirada feita no LWN Control: ele só sai se a OS for excluída lá.',
+  },
+  devolucao_os: {
+    marcar: 'Este check é marcado pelo sistema quando as ferramentas da OS desta obra são devolvidas no LWN Control.',
+    desmarcar: 'Este check acompanha a devolução feita no LWN Control: ele só sai se a OS for excluída lá.',
+  },
+}
+
 /**
  * O que o check exige para ser marcado:
  *
@@ -2493,7 +2700,9 @@ async function recusouMarcar(res, usuarioId, checkId, obraId, deOutro) {
  *           ainda nao tem a atualizacao 13 — ai nao existe pergunta
  *           nem coluna de resposta, e a marcacao segue como sempre;
  *   tipo    'comum', 'planejamento_ensaios', 'execucao_ensaios',
- *           'material_gases', 'prazo_execucao', 'reserva_carro' ou 'retirada_carro';
+ *           'material_gases', 'prazo_execucao', 'reserva_carro', 'retirada_carro'
+ *           ou os da O.S. — 'enviar_os', 'separar_os', 'retirada_os' e 'devolucao_os'
+ *           (estes so o LWN Control marca: CHECKS_DA_OS);
  *   papel   o papel da etapa dele. Na de 'execucao' nada se marca
  *           sem o prazo da execucao.
  */
@@ -2773,6 +2982,16 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
     const resposta = req.body?.resposta
     const semInformacao = req.body?.semInformacao === true
 
+    /* Os checks da O.S. ("Solicitar OS" da 2a etapa; "Gestao dos
+       instrumentos", "Retirada" e "Devolucao das ferramentas" da 3a;
+       atualizacoes 38, 40, 42 e 43) sao os
+       unicos que ninguem marca na mao — nem concluindo sem a informacao:
+       quem marca e o LWN Control, quando a OS desta obra chega la
+       (server/almoxarife) */
+    if (CHECKS_DA_OS[regra.tipo]) {
+      return res.status(409).json({ erro: CHECKS_DA_OS[regra.tipo].marcar })
+    }
+
     if (semInformacao && !cargoPode(await meuCargo(req.dono.sub), 'check_sem_informacao')) {
       return res.status(403).json({ erro: 'Seu setor não tem permissão para concluir check sem a informação.' })
     }
@@ -2870,6 +3089,11 @@ router.delete('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req,
        O concluido SEM a informacao (atualizacao 36) nao acompanha nada —
        nem o prazo, nem a reserva, nem a saida —, e desmarca como os outros */
     const { tipo } = await regraDoCheck(req.params.checkId)
+    /* os da O.S. acompanham a OS no LWN Control: saem sozinhos so se a OS
+       for excluida */
+    if (CHECKS_DA_OS[tipo]) {
+      return res.status(409).json({ erro: CHECKS_DA_OS[tipo].desmarcar })
+    }
     const semInformacao = await concluidoSemInformacao(req.params.id, req.params.checkId)
     if (tipo === 'prazo_execucao' && !semInformacao) {
       return res.status(409).json({

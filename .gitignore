@@ -40,3 +40,6 @@ coverage/
 .eslintcache
 .vercel
 .env*
+
+# a planilha de clientes do importar-almoxarife (dados de cliente: fica fora do git)
+almoxarife-clientes.csv

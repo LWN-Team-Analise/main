@@ -111,7 +111,7 @@ function CartaoVeiculo({ veiculo, editavel, aoEditar, rodizio, agora }) {
       {/* o porque do "Rodizio agora" (e o aviso para quem esta com ele na rua) */}
       {horario && (
         <p className="veiculo__rodizio">
-          Placa final {finalDaPlaca(veiculo.placa)}: não pode circular no centro expandido de São Paulo agora, até
+          Placa final {finalDaPlaca(veiculo.placa)}: não pode circular no centro de São Paulo agora, até
           as {horaCurta(horario.ate)}.
         </p>
       )}
@@ -195,12 +195,14 @@ export default function Frotas() {
     carregar()
   }, [carregar])
 
-  const registrado = (registro) => {
+  const registrado = (registro, resposta) => {
     setRetirando(null)
     const qual = TIPOS[registro.tipo]?.rotulo ?? 'Registro'
     setRecado(
       `${qual} do ${registro.veiculoNome} registrada: ${registro.condutorNome}, ${kmLegivel(registro.km)}.` +
-        (registro.alertas?.length ? ` Atenção: ${registro.alertas.length} item(ns) do checklist com "não".` : ''),
+        (registro.alertas?.length ? ` Atenção: ${registro.alertas.length} item(ns) do checklist com "não".` : '') +
+        /* abaixo da metade do tanque (atualizacao 39): o setor responsavel foi avisado no Teams */
+        (resposta?.combustivelBaixo ? ' O combustível ficou abaixo dos 50% obrigatórios: o setor responsável foi avisado.' : ''),
     )
     carregar()
   }

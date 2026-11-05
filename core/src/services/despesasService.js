@@ -46,6 +46,13 @@ export async function salvarValores(valores, periodos) {
 export const enviar = (campos) => post('/despesas/envios', campos)
 
 /**
+ * Os clientes em que quem esta logado pode lancar refeicao (atualizacao
+ * 39): { regra, permitidos: [ids], oferecem: [ids] }. Sem a regra no
+ * banco (regra: false), vale qualquer cliente.
+ */
+export const carregarClientesDaRefeicao = () => get('/despesas/refeicao/clientes')
+
+/**
  * Os envios de um mes ('AAAA-MM'), com os totais do dia, do mes e por
  * pessoa — cada categoria no periodo dela. Sem mes, a API escolhe o de
  * hoje (e devolve qual foi em `mes`).

@@ -789,6 +789,15 @@
   color: var(--com-texto-2);
 }
 
+/* o triangulo dos alertas e o circulo da atividade, juntos a direita */
+.cartaoneg__sinais {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.cartaoneg__alerta,
 .cartaoneg__atividade {
   display: inline-grid;
 }

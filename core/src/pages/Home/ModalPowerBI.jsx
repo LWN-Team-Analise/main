@@ -91,9 +91,6 @@ export default function ModalPowerBI({ aberto, aoFechar, aoExportado }) {
         )}
 
         <footer className="formobra__acoes">
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            Cancelar
-          </button>
           <Button type="submit" loading={gerando}>
             Exportar
           </Button>

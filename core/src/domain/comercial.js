@@ -103,7 +103,8 @@ export const EMAIL_CORPO_MAXIMO = 20_000
  * A situacao da proxima atividade — o icone do canto do cartao, como
  * no Pipedrive:
  *
- *   sem       nenhuma atividade marcada (o triangulo amarelo);
+ *   sem       nenhuma atividade marcada (sem icone: o triangulo
+ *             amarelo agora e so dos alertas, ver alertasDoNegocio);
  *   atrasada  a data ja passou (o circulo vermelho);
  *   hoje      e hoje (o circulo verde);
  *   futura    esta marcada para depois (o circulo cinza).
@@ -120,6 +121,52 @@ export const ROTULO_SITUACAO = {
   atrasada: 'Atividade atrasada',
   hoje: 'Atividade para hoje',
   futura: 'Próxima atividade agendada',
+}
+
+/* Da etapa em que a proposta sai, o negocio tem de ter valor: antes
+   dela o R$ 0 e normal (o valor ainda nao existe). O Funil Prospeccao
+   nao chega a enviar proposta, entao nao cobra. */
+const VALOR_DESDE = { novos: 'proposta_enviada', renovacao: 'proposta_enviada', resgate: 'proposta' }
+
+function cobraValor(funilId, etapaId) {
+  const etapas = funilPorId(funilId)?.etapas ?? []
+  const desde = etapas.findIndex((e) => e.id === VALOR_DESDE[funilId])
+  return desde >= 0 && etapas.findIndex((e) => e.id === etapaId) >= desde
+}
+
+/** 'a', 'a e b', 'a, b e c' */
+const juntar = (itens) => (itens.length < 2 ? itens.join('') : `${itens.slice(0, -1).join(', ')} e ${itens.at(-1)}`)
+
+/**
+ * Os ALERTAS do negocio em aberto, um texto por alerta. O triangulo
+ * amarelo do cartao so aparece com algum — antes ele aparecia so por
+ * nao haver atividade marcada, e estava em quase todo cartao.
+ *
+ *   o fechamento esperado ja passou;
+ *   falta informacao: o cliente cadastrado e o n° da proposta (sem eles
+ *   o negocio pendente de Novos negocios nao vai para Obras), o contato,
+ *   o responsavel e, da etapa da proposta em diante, o valor.
+ *
+ * O atraso da OBRA do negocio entra pela tela (Comercial.jsx), que tem
+ * as obras e o roteiro delas.
+ */
+export function alertasDoNegocio(negocio, hoje) {
+  if (negocio.status !== 'aberto') return []
+  const alertas = []
+  if (negocio.previsaoFechamento && negocio.previsaoFechamento < hoje) {
+    const [a, m, d] = negocio.previsaoFechamento.split('-')
+    alertas.push(`O fechamento esperado (${d}/${m}/${a}) já passou`)
+  }
+  const pendente = negocio.funil === 'novos' && !negocio.obraId
+  const falta = [
+    pendente && !negocio.clienteId && 'o cliente cadastrado',
+    pendente && !String(negocio.proposta ?? '').trim() && 'o n° da proposta',
+    !negocio.contatoNome && !negocio.contatoEmail && !negocio.contatoTelefone && 'o contato',
+    !negocio.responsavelId && 'o responsável',
+    !Number(negocio.valor) && cobraValor(negocio.funil, negocio.etapa) && 'o valor',
+  ].filter(Boolean)
+  if (falta.length) alertas.push(`Falta ${juntar(falta)}`)
+  return alertas
 }
 
 /* As moedas do valor do negocio (negocio.moeda, atualizacao 29). */

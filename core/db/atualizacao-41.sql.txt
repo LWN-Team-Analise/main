@@ -1,0 +1,87 @@
+-- ============================================================
+--  ATUALIZACAO 41 — o "Solicitar OS" no card certo da 2a etapa
+--
+--  A atualizacao 40 achava o card do Time Tecnico da 2a etapa pelo check
+--  "Planejamento de ensaios". So que em producao esse check fica na 1a
+--  etapa: o "Solicitar OS" foi parar la. O card do Time Tecnico da 2a
+--  etapa e o do "Material de gases" — e nele ja havia um "Solicitar OS"
+--  COMUM, criado a mao em 04/11, nunca marcado.
+--
+--  Esta atualizacao:
+--    1. leva o check do sistema (tipo enviar_os) para o card do
+--       "Material de gases", no lugar (ordem) do "Solicitar OS" comum;
+--    2. tira o "Solicitar OS" comum do roteiro (vigente_ate): o do
+--       sistema toma o lugar dele. Obra que ja o tivesse continuaria com
+--       ele — nenhuma tem.
+--
+--  Vale para o roteiro e para a copia das obras com checks proprios (a
+--  mudanca e no proprio registro do check do sistema).
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar de novo nao faz nada.
+-- ============================================================
+
+BEGIN;
+
+UPDATE public.etapa_check k
+   SET card_id = alvo.card_id,
+       titulo = 'Solicitar OS',
+       ordem = alvo.ordem
+  FROM (SELECT g.card_id,
+               coalesce(
+                   (SELECT m.ordem
+                      FROM public.etapa_check m
+                     WHERE m.card_id = g.card_id AND m.tipo = 'comum'
+                       AND lower(btrim(m.titulo)) = 'solicitar os'
+                       AND m.vigente_ate IS NULL AND m.obra_id IS NULL
+                     ORDER BY m.id
+                     LIMIT 1),
+                   (SELECT coalesce(max(x.ordem), 0) + 1
+                      FROM public.etapa_check x
+                     WHERE x.card_id = g.card_id AND x.vigente_ate IS NULL AND x.obra_id IS NULL)
+               ) AS ordem
+          FROM public.etapa_check g
+         WHERE g.tipo = 'material_gases' AND g.vigente_ate IS NULL AND g.obra_id IS NULL
+         ORDER BY g.id
+         LIMIT 1) alvo
+ WHERE k.tipo = 'enviar_os'
+   AND k.vigente_ate IS NULL
+   AND k.card_id <> alvo.card_id;
+
+UPDATE public.etapa_check m
+   SET vigente_ate = now()
+ WHERE m.tipo = 'comum'
+   AND lower(btrim(m.titulo)) = 'solicitar os'
+   AND m.vigente_ate IS NULL
+   AND m.obra_id IS NULL
+   AND m.card_id = (SELECT g.card_id
+                      FROM public.etapa_check g
+                     WHERE g.tipo = 'material_gases' AND g.vigente_ate IS NULL AND g.obra_id IS NULL
+                     ORDER BY g.id
+                     LIMIT 1);
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" nas duas linhas
+-- ============================================================
+
+SELECT 'Solicitar OS no card do Material de gases (2a etapa)' AS item,
+       EXISTS (SELECT 1
+                 FROM public.etapa_check k
+                 JOIN public.etapa_check g ON g.card_id = k.card_id
+                                          AND g.tipo = 'material_gases'
+                                          AND g.vigente_ate IS NULL AND g.obra_id IS NULL
+                WHERE k.tipo = 'enviar_os' AND k.vigente_ate IS NULL AND k.obra_id IS NULL
+                  AND k.titulo = 'Solicitar OS') AS ok
+UNION ALL
+SELECT 'sem o Solicitar OS comum ao lado',
+       NOT EXISTS (SELECT 1
+                     FROM public.etapa_check m
+                     JOIN public.etapa_check g ON g.card_id = m.card_id
+                                              AND g.tipo = 'material_gases'
+                                              AND g.vigente_ate IS NULL AND g.obra_id IS NULL
+                    WHERE m.tipo = 'comum' AND lower(btrim(m.titulo)) = 'solicitar os'
+                      AND m.vigente_ate IS NULL AND m.obra_id IS NULL);

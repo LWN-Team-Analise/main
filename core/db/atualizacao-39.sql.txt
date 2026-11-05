@@ -1,0 +1,56 @@
+-- ============================================================
+--  ATUALIZACAO 39 — COMBUSTIVEL NA DEVOLUCAO E ALIMENTACAO DO CLIENTE
+--
+--  1. veiculo_registro.combustivel
+--     O nivel do tanque na DEVOLUCAO do carro, em % (0 = reserva,
+--     25, 50, 75, 100 = cheio). O carro volta com METADE ou mais. Abaixo
+--     disso a devolucao entra do mesmo jeito, mas vai um aviso no Teams
+--     para quem esta num setor com a permissao nova
+--     `alerta_combustivel_frota` ("Receber alerta no Teams: devolucao
+--     com menos de 50% de combustivel"). Nao e distribuida: quem
+--     administra marca os setores que recebem. NULL = registro de antes
+--     desta atualizacao.
+--
+--     (A SAIDA passou a ter as mesmas perguntas Sim/Nao da devolucao —
+--     pneus, oleo, agua, abastecido, Sem Parar, limpeza, farois. Nao e
+--     coluna nova: sao as de sempre, que agora a saida tambem preenche.)
+--
+--  2. cliente.oferece_alimentacao
+--     "Oferece alimentacao?" no cadastro do cliente. true = o cliente da
+--     a refeicao, e ninguem lanca "Enviar refeicao" (aba Reembolso) para
+--     ele. false = nao oferece: quem esta numa obra dele pode lancar.
+--     NULL = nao informado (vale como "nao oferece" ate alguem marcar).
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao duplica nada.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.veiculo_registro ADD COLUMN IF NOT EXISTS combustivel smallint;
+ALTER TABLE public.veiculo_registro DROP CONSTRAINT IF EXISTS veiculo_registro_combustivel_ok;
+ALTER TABLE public.veiculo_registro ADD CONSTRAINT veiculo_registro_combustivel_ok
+    CHECK (combustivel IS NULL OR combustivel BETWEEN 0 AND 100);
+
+COMMENT ON COLUMN public.veiculo_registro.combustivel IS
+    'Nivel do tanque na devolucao, em % (0 reserva, 25, 50, 75, 100 cheio). Abaixo de 50 avisa no Teams quem tem alerta_combustivel_frota.';
+
+ALTER TABLE public.cliente ADD COLUMN IF NOT EXISTS oferece_alimentacao boolean;
+
+COMMENT ON COLUMN public.cliente.oferece_alimentacao IS
+    'true = o cliente oferece a refeicao (sem "Enviar refeicao" no Reembolso). false/NULL = nao oferece.';
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'veiculo_registro.combustivel' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'veiculo_registro' AND column_name = 'combustivel') AS ok
+UNION ALL SELECT 'cliente.oferece_alimentacao',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'cliente' AND column_name = 'oferece_alimentacao');

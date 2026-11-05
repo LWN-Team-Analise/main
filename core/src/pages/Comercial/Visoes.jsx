@@ -97,7 +97,7 @@ export function ListaNegocios({ negocios, funilDe, hoje, aoAbrir, fechados = fal
  * (previsao no passado) fica na primeira coluna, "Atrasados", e o que
  * nao tem data, na ultima.
  */
-export function PrevisaoNegocios({ negocios, hoje, donoDe, responderEm, aoAbrir, aoResponder }) {
+export function PrevisaoNegocios({ negocios, hoje, donoDe, responderEm, alertasEm, aoAbrir, aoResponder }) {
   const colunas = useMemo(() => {
     const [ano, mes] = hoje.split('-').map(Number)
     const meses = Array.from({ length: 4 }, (_, i) => {
@@ -141,6 +141,7 @@ export function PrevisaoNegocios({ negocios, hoje, donoDe, responderEm, aoAbrir,
                     hoje={hoje}
                     dono={donoDe(n.responsavelId)}
                     responder={responderEm(n)}
+                    alertas={alertasEm(n)}
                     aoAbrir={aoAbrir}
                     aoResponder={aoResponder}
                   />

@@ -1,0 +1,135 @@
+-- ============================================================
+--  ATUALIZACAO 43 — a "Gestao dos instrumentos" vira a separacao das TAGs
+--
+--  O check "Gestão dos instrumentos" (3a etapa, card do Almoxarife) passa a
+--  ser do sistema (tipo separar_os): o LWN Control marca quando o
+--  Almoxarife conclui a separacao das TAGs da OS da obra ("Separar TAGS",
+--  na aba Retirada). O clique leva direto a separacao. Como os outros da
+--  OS, ninguem marca nem desmarca na mao, e so sai se a OS for excluida.
+--  A "Retirada das ferramentas" so libera depois dele.
+--
+--  O nome, o texto e o lugar continuam os mesmos. A troca e por versao:
+--    - a "Gestão dos instrumentos" comum fecha (vigente_ate) no momento em
+--      que o "Solicitar OS" passou a valer; as obras de antes dele (sem OS
+--      para separar) continuam com ela, comum, marcada na mao;
+--    - a nova, do sistema, vale dali em diante. A obra desse periodo que
+--      ja tivesse marcado ou posto prazo na comum leva a marca e o prazo
+--      para a nova.
+--
+--  E tira as marcas dos checks da OS que nao tem OS por tras: a obra cuja
+--  "Retirada das ferramentas" foi marcada na mao no minuto entre a
+--  atualizacao 42 e o codigo novo entrar no ar (o codigo antigo nao
+--  conhecia o tipo e deixava marcar), sem a OS ter sido retirada.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar de novo nao faz nada.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.etapa_check DROP CONSTRAINT IF EXISTS etapa_check_tipo_valido;
+ALTER TABLE public.etapa_check ADD CONSTRAINT etapa_check_tipo_valido
+    CHECK (tipo IN ('comum', 'planejamento_ensaios', 'execucao_ensaios', 'material_gases',
+                    'prazo_execucao', 'reserva_carro', 'retirada_carro', 'enviar_os',
+                    'separar_os', 'retirada_os', 'devolucao_os'));
+
+COMMENT ON COLUMN public.etapa_check.tipo IS
+    'comum, planejamento_ensaios, execucao_ensaios, material_gases, prazo_execucao, reserva_carro, retirada_carro, enviar_os, separar_os, retirada_os ou devolucao_os. Todos menos comum sao do sistema: nao se excluem. enviar_os, separar_os, retirada_os e devolucao_os so o LWN Control marca.';
+
+-- a "Gestao dos instrumentos" comum fecha e nasce a do sistema, no mesmo lugar
+WITH alvo AS (
+    SELECT g.id, g.card_id, g.ordem, g.titulo, g.informacoes,
+           greatest(coalesce((SELECT e.vigente_de
+                                FROM public.etapa_check e
+                               WHERE e.tipo = 'enviar_os' AND e.vigente_ate IS NULL AND e.obra_id IS NULL
+                               ORDER BY e.id
+                               LIMIT 1),
+                             now()),
+                    coalesce(g.vigente_de, '-infinity'::timestamptz)) AS desde
+      FROM public.etapa_check g
+     WHERE g.tipo = 'comum'
+       AND g.vigente_ate IS NULL
+       AND g.obra_id IS NULL
+       AND lower(btrim(g.titulo)) IN ('gestão dos instrumentos', 'gestao dos instrumentos')
+       AND NOT EXISTS (SELECT 1 FROM public.etapa_check y
+                        WHERE y.tipo = 'separar_os' AND y.vigente_ate IS NULL AND y.obra_id IS NULL)
+     ORDER BY g.id
+     LIMIT 1
+),
+fecha AS (
+    UPDATE public.etapa_check k
+       SET vigente_ate = alvo.desde
+      FROM alvo
+     WHERE k.id = alvo.id
+    RETURNING k.id
+),
+novo AS (
+    INSERT INTO public.etapa_check (card_id, ordem, titulo, sim_nao, informacoes, tipo, vigente_de)
+    SELECT card_id, ordem, titulo, false, informacoes, 'separar_os', desde
+      FROM alvo
+    RETURNING id
+),
+donos AS (
+    INSERT INTO public.etapa_check_cargo (check_id, cargo_id, ordem)
+    SELECT novo.id, c.cargo_id, c.ordem
+      FROM novo
+     CROSS JOIN alvo
+      JOIN public.etapa_check_cargo c ON c.check_id = alvo.id
+),
+prazos AS (
+    UPDATE public.obra_prazo_check p
+       SET check_id = novo.id
+      FROM novo, alvo, public.obra o
+     WHERE p.check_id = alvo.id
+       AND o.id = p.obra_id
+       AND NOT o.checks_proprios
+       AND o.criado_em >= alvo.desde
+)
+UPDATE public.obra_check m
+   SET check_id = novo.id
+  FROM novo, alvo, public.obra o
+ WHERE m.check_id = alvo.id
+   AND o.id = m.obra_id
+   AND NOT o.checks_proprios
+   AND o.criado_em >= alvo.desde;
+
+-- os checks da OS marcados sem a OS ter chegado la
+DELETE FROM public.obra_check m
+ USING public.etapa_check k
+ WHERE k.id = m.check_id
+   AND k.tipo IN ('enviar_os', 'separar_os', 'retirada_os', 'devolucao_os')
+   AND NOT EXISTS (SELECT 1
+                     FROM almox.solicitacoes s
+                    WHERE s.obra_id = m.obra_id
+                      AND CASE k.tipo
+                              WHEN 'enviar_os'    THEN s.aprovado_em IS NOT NULL
+                              WHEN 'separar_os'   THEN s.separado_em IS NOT NULL OR s.conferido_em IS NOT NULL
+                              WHEN 'retirada_os'  THEN s.conferido_em IS NOT NULL
+                              ELSE                     s.devolvido_em IS NOT NULL
+                          END);
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" nas tres linhas
+-- ============================================================
+
+SELECT 'Gestao dos instrumentos do sistema (separar_os) no lugar da comum' AS item,
+       EXISTS (SELECT 1 FROM public.etapa_check
+                WHERE tipo = 'separar_os' AND vigente_ate IS NULL AND obra_id IS NULL
+                  AND lower(btrim(titulo)) IN ('gestão dos instrumentos', 'gestao dos instrumentos')) AS ok
+UNION ALL
+SELECT 'sem a Gestao dos instrumentos comum valendo ao lado',
+       NOT EXISTS (SELECT 1 FROM public.etapa_check
+                    WHERE tipo = 'comum' AND vigente_ate IS NULL AND obra_id IS NULL
+                      AND lower(btrim(titulo)) IN ('gestão dos instrumentos', 'gestao dos instrumentos')) AS ok
+UNION ALL
+SELECT 'nenhum check da OS marcado sem a OS por tras',
+       NOT EXISTS (SELECT 1
+                     FROM public.obra_check m
+                     JOIN public.etapa_check k ON k.id = m.check_id
+                    WHERE k.tipo = 'retirada_os'
+                      AND NOT EXISTS (SELECT 1 FROM almox.solicitacoes s
+                                       WHERE s.obra_id = m.obra_id AND s.conferido_em IS NOT NULL)) AS ok;

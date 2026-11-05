@@ -41,6 +41,11 @@ BEGIN;
 
 ALTER TABLE public.cliente ADD COLUMN IF NOT EXISTS pais text NOT NULL DEFAULT 'BR';
 
+-- a view do Almoxarife (almox.clientes, atualizacao 38) le cliente.estado, e
+-- o Postgres nao muda o tipo de coluna que uma view usa. Ela sai aqui e a
+-- atualizacao 38 a cria de novo (o db:atualizar roda a 38 depois desta)
+DROP VIEW IF EXISTS almox.clientes;
+
 ALTER TABLE public.cliente ALTER COLUMN estado TYPE text;
 ALTER TABLE public.cliente ALTER COLUMN cep TYPE text;
 

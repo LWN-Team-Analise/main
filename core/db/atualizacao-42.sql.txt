@@ -1,0 +1,81 @@
+-- ============================================================
+--  ATUALIZACAO 42 — "Retirada" e "Devolucao das ferramentas" na 3a etapa
+--
+--  Dois checks novos no card do Time Tecnico da 3a etapa (o da
+--  "Execucao dos ensaios"), no fim dele:
+--
+--    retirada_os   "Retirada das ferramentas"   o LWN Control marca
+--                  quando as ferramentas da OS da obra sao retiradas
+--                  (a aba Retirada, bipadas na baia)
+--    devolucao_os  "Devolução das ferramentas"  o LWN Control marca
+--                  quando a devolutiva fecha a OS (tudo voltou). Fica
+--                  travado ate a Retirada
+--
+--  Como o "Solicitar OS" (enviar_os): ninguem marca nem desmarca na mao,
+--  e so saem se a OS for excluida no Control.
+--
+--  Valem para as obras que ja enxergam o "Solicitar OS": a vigencia dos
+--  dois comeca junto com a dele (sem OS, nao ha o que retirar).
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar de novo nao faz nada.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.etapa_check DROP CONSTRAINT IF EXISTS etapa_check_tipo_valido;
+ALTER TABLE public.etapa_check ADD CONSTRAINT etapa_check_tipo_valido
+    CHECK (tipo IN ('comum', 'planejamento_ensaios', 'execucao_ensaios', 'material_gases',
+                    'prazo_execucao', 'reserva_carro', 'retirada_carro', 'enviar_os',
+                    'retirada_os', 'devolucao_os'));
+
+COMMENT ON COLUMN public.etapa_check.tipo IS
+    'comum, planejamento_ensaios, execucao_ensaios, material_gases, prazo_execucao, reserva_carro, retirada_carro, enviar_os, retirada_os ou devolucao_os. Todos menos comum sao do sistema: nao se excluem. enviar_os, retirada_os e devolucao_os so o LWN Control marca.';
+
+-- os dois, no fim do card da "Execucao dos ensaios" (Time Tecnico, 3a etapa)
+INSERT INTO public.etapa_check (card_id, ordem, titulo, tipo, vigente_de)
+SELECT ex.card_id,
+       (SELECT coalesce(max(x.ordem), 0) + novo.n
+          FROM public.etapa_check x
+         WHERE x.card_id = ex.card_id AND x.vigente_ate IS NULL AND x.obra_id IS NULL),
+       novo.titulo, novo.tipo,
+       coalesce((SELECT e.vigente_de
+                   FROM public.etapa_check e
+                  WHERE e.tipo = 'enviar_os' AND e.vigente_ate IS NULL AND e.obra_id IS NULL
+                  ORDER BY e.id
+                  LIMIT 1),
+                now())
+  FROM (SELECT card_id
+          FROM public.etapa_check
+         WHERE tipo = 'execucao_ensaios' AND vigente_ate IS NULL AND obra_id IS NULL
+         ORDER BY id
+         LIMIT 1) ex
+ CROSS JOIN (VALUES (1, 'Retirada das ferramentas', 'retirada_os'),
+                    (2, 'Devolução das ferramentas', 'devolucao_os')) AS novo (n, titulo, tipo)
+ WHERE NOT EXISTS (SELECT 1 FROM public.etapa_check y
+                    WHERE y.tipo = novo.tipo AND y.vigente_ate IS NULL AND y.obra_id IS NULL);
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" nas duas linhas
+-- ============================================================
+
+SELECT 'Retirada das ferramentas no card da Execucao dos ensaios (3a etapa)' AS item,
+       EXISTS (SELECT 1
+                 FROM public.etapa_check k
+                 JOIN public.etapa_check ex ON ex.card_id = k.card_id
+                                           AND ex.tipo = 'execucao_ensaios'
+                                           AND ex.vigente_ate IS NULL AND ex.obra_id IS NULL
+                WHERE k.tipo = 'retirada_os' AND k.vigente_ate IS NULL AND k.obra_id IS NULL) AS ok
+UNION ALL
+SELECT 'Devolucao das ferramentas logo depois dela',
+       EXISTS (SELECT 1
+                 FROM public.etapa_check d
+                 JOIN public.etapa_check r ON r.card_id = d.card_id
+                                          AND r.tipo = 'retirada_os'
+                                          AND r.vigente_ate IS NULL AND r.obra_id IS NULL
+                WHERE d.tipo = 'devolucao_os' AND d.vigente_ate IS NULL AND d.obra_id IS NULL
+                  AND d.ordem > r.ordem) AS ok;

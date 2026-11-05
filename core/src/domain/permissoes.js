@@ -31,6 +31,41 @@
    (diretoria), que passa por tudo sem depender da lista.
    ============================================================ */
 
+/**
+ * As abas e os poderes de dentro do Almoxarife, com a chave que o
+ * lwncontrol usava (PERMISSOES_MODULOS, em public/almoxarife). No main
+ * cada uma vira `almox_<chave>`, embaixo de "Almoxarife".
+ *
+ * "manutencao_somente_leitura" e uma RESTRICAO, nao um acesso: o setor
+ * ve a Manutencao inteira, mas nao mexe. Por isso o acesso total nao a
+ * ganha (ver db/atualizacao-38.sql.txt, a view almox.usuarios).
+ * "responsavel_obra" era uma marca do CARGO no lwncontrol (quem pode ser
+ * escolhido como responsavel da O.S. e receber remanejamento).
+ */
+export const ALMOXARIFE_MODULOS = [
+  ['dashboard', 'Painel'],
+  ['solicitacoes', 'Solicitação de OS'],
+  ['gerenciar_os', 'Editar OS (ver todas, editar e excluir)'],
+  ['aprovar_todas_os', 'Aprovar / editar qualquer OS'],
+  ['conferencia', 'Retirada de OS'],
+  ['separar_tags', 'Separar TAGs / bipagem de OS'],
+  ['devolutiva', 'Devolutiva de OS'],
+  ['conferir_devolucao', 'Conferir devolução (checar o que voltou da obra)'],
+  ['prorrogar_os', 'Solicitar prorrogação de OS'],
+  ['aceitar_prorrogacao', 'Aceitar prorrogação (aprovar, editar ou rejeitar)'],
+  ['aprovar_remanejamento', 'Aprovar remanejamento'],
+  ['concluidos', 'OS concluídas'],
+  ['certificados', 'Certificados'],
+  ['baias', 'Localização'],
+  ['instrumentos', 'Inventário'],
+  ['remanejamento', 'Remanejamento'],
+  ['calibracao', 'Calibração'],
+  ['relatorios', 'Dashboard do Almoxarife (página inicial)'],
+  ['manutencao', 'Manutenção'],
+  ['manutencao_somente_leitura', 'Manutenção — apenas visualizar'],
+  ['responsavel_obra', 'Pode ser responsável por obra (OS e remanejamento)'],
+]
+
 /** Toda permissao de visualizacao. A ordem e a que aparece na tela. */
 export const VISUALIZACAO = [
   { chave: 'ver_inicio', rotulo: 'Página inicial', rota: '/app' },
@@ -39,6 +74,9 @@ export const VISUALIZACAO = [
   { chave: 'ver_concluidas', rotulo: 'Concluídas', rota: '/app/concluidas' },
   { chave: 'ver_despesas', rotulo: 'Reembolso', rota: '/app/despesas' },
   { chave: 'ver_frotas', rotulo: 'Frotas', rota: '/app/frotas' },
+  /* o Almoxarife (o antigo lwncontrol, atualizacao 38): a aba abre a tela
+     dele, em /almoxarife. As abas de dentro dele sao as almox_* de baixo */
+  { chave: 'ver_almoxarife', rotulo: 'Almoxarife', rota: '/app/control' },
   { chave: 'ver_comercial', rotulo: 'Comercial', rota: '/app/comercial' },
   { chave: 'ver_turnos', rotulo: 'Turnos', rota: '/app/turnos' },
   { chave: 'ver_avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes' },
@@ -128,6 +166,16 @@ export const ALTERACAO = [
   { chave: 'editar_veiculos', rotulo: 'Adicionar / editar veículos', dependeDe: 'ver_frotas' },
   /* apagar uma saida, troca ou devolucao registrada (Saidas e devolucoes) */
   { chave: 'excluir_registro_frota', rotulo: 'Excluir saída e devolução', dependeDe: 'ver_frotas' },
+  /* quem RECEBE no Teams o aviso da devolucao com o tanque abaixo da
+     metade (atualizacao 39). E aviso, e nao acesso: vale so para o setor
+     que tem a chave marcada — o acesso total nao entra sozinho */
+  { chave: 'alerta_combustivel_frota', rotulo: 'Receber alerta no Teams: devolução com menos de 50% de combustível', dependeDe: 'ver_frotas' },
+  /* Almoxarife (atualizacao 38): as abas e os poderes de dentro dele, os
+     mesmos do lwncontrol. A chave do lwncontrol e o que vem depois de
+     "almox_" — e assim que a view almox.usuarios entrega para a tela
+     dele (ALMOXARIFE, mais abaixo). "Usuarios", "Alterar cargo", "Criar
+     cargos" e "Cadastrar facial" nao vieram: quem cuida disso e o main. */
+  ...ALMOXARIFE_MODULOS.map(([chave, rotulo]) => ({ chave: `almox_${chave}`, rotulo, dependeDe: 'ver_almoxarife' })),
   /* Comercial: ver a aba e os funis e `ver_comercial`; criar, editar e
      mover negocio (e marcar ganho ou perdido) e `editar_negocios`;
      apagar de vez e `excluir_negocios`; mandar e-mail ao contato pela

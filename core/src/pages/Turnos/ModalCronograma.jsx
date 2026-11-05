@@ -116,9 +116,6 @@ export default function ModalCronograma({ aberto, cronograma = null, aoFechar, a
               Excluir
             </button>
           )}
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            Cancelar
-          </button>
           <Button type="submit" loading={salvando}>
             {cronograma ? 'Salvar' : 'Criar cronograma'}
           </Button>

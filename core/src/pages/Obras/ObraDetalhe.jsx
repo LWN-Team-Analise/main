@@ -62,6 +62,7 @@ import PedidoInclusao from '@/components/PedidoInclusao/PedidoInclusao'
 import Rastreabilidade from './Rastreabilidade'
 import ModalEtiquetas from './ModalEtiquetas'
 import ModalAnexos from './ModalAnexos'
+import ModalFerramentas from './ModalFerramentas'
 import ModalObra from './ModalObra'
 import CardSetor from './CardSetor'
 import { useArrasteDeChecks } from './arrasteChecks'
@@ -181,6 +182,8 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   const [horario, setHorario] = useState(null)
   const [etiquetas, setEtiquetas] = useState(false)
   const [anexos, setAnexos] = useState(false)
+  /* as ferramentas das O.S. do LWN Control (o botao ao lado do Editar) */
+  const [ferramentas, setFerramentas] = useState(false)
   const [editandoObra, setEditandoObra] = useState(false)
   /* a exclusao da obra concluida — o "sim" que abre a caixa de
      confirmacao, que por sua vez pede o segundo */
@@ -642,6 +645,22 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                 >
                   <Icone.lapis />
                   Editar
+                </button>
+              )}
+
+              {/* Ferramentas: aparece com a primeira OS do LWN Control
+                  aprovada para esta obra. Mostra o que foi levado — nome e
+                  TAG, retirada e devolução com data, hora, baia e quem fez,
+                  avaria e o prazo. Aberta ou concluída: é registro. */}
+              {(obra.ordensServico ?? []).some((os) => os.aprovada) && (
+                <button
+                  type="button"
+                  className="capa__acao"
+                  onClick={() => setFerramentas(true)}
+                  title="As ferramentas que as OS do LWN Control levaram para esta obra"
+                >
+                  <Icone.ferramenta />
+                  Ferramentas
                 </button>
               )}
             </span>
@@ -1167,16 +1186,6 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
           />
 
           <footer className="formobra__acoes">
-            <button
-              type="button"
-              className="formobra__cancelar"
-              onClick={() => {
-                setNovaObs(false)
-                setEditandoObs(null)
-              }}
-            >
-              Cancelar
-            </button>
             <Button type="submit" disabled={!texto.trim()}>
               {editandoObs ? 'Salvar observação' : 'Adicionar observação'}
             </Button>
@@ -1406,9 +1415,6 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
               </p>
             )}
             <footer className="formobra__acoes seminfo__acoes">
-              <button type="button" className="formobra__cancelar" onClick={() => setSemInfo(null)}>
-                Cancelar
-              </button>
               {semInfo.marcado && (
                 <button
                   type="button"
@@ -1559,6 +1565,8 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
         aoFechar={() => setAnexos(false)}
       />
 
+      <ModalFerramentas aberto={ferramentas} obra={obra} aoFechar={() => setFerramentas(false)} />
+
       {/* ---------------- concluir a obra ----------------
           Passo 1: a observação (opcional).
           Passo 2: a confirmação, que é onde a obra fecha de verdade. */}
@@ -1592,13 +1600,6 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
           />
 
           <footer className="formobra__acoes">
-            <button
-              type="button"
-              className="formobra__cancelar"
-              onClick={() => setConcluindo(false)}
-            >
-              Cancelar
-            </button>
             <Button type="submit" loading={fechando}>
               Concluir obra
             </Button>

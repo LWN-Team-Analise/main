@@ -448,6 +448,131 @@ export const nomeDaProposta = (anexo) => String(anexo?.nome ?? '').slice(PREFIXO
 export const CHECK_RESERVA = 'reserva_carro'
 export const CHECK_RETIRADA = 'retirada_carro'
 
+/* ------------------------------------------------------------
+   O "Solicitar OS" (atualizacoes 38 e 40; o tipo continua enviar_os)
+
+   2a etapa, card do Time Tecnico, obrigatorio como os outros. E o UNICO
+   check que ninguem marca na mao — nem concluindo sem a informacao:
+   quem marca e o LWN Control, quando uma OS ligada a esta obra e
+   APROVADA (server/almoxarife). A OS aprovada que e excluida leva o
+   check junto. O clique leva ao Solicitar OS do LWN Control com o
+   cliente e a obra ja escolhidos.
+   ------------------------------------------------------------ */
+
+export const CHECK_ENVIAR_OS = 'enviar_os'
+
+export const DICA_ENVIAR_OS =
+  'Clique para pedir a OS no LWN Control, com o cliente, a obra e as datas do prazo da execução já preenchidos (só o responsável se escolhe). O check se marca sozinho quando o supervisor aprova a OS, e só sai se a OS for excluída.'
+
+/* ------------------------------------------------------------
+   A "Retirada" e a "Devolucao das ferramentas" (atualizacao 42)
+
+   3a etapa, card do Time Tecnico. Como o "Solicitar OS", ninguem marca
+   na mao: o LWN Control marca a Retirada quando as ferramentas da OS
+   desta obra sao retiradas (a aba Retirada) e a Devolucao quando a
+   devolutiva fecha a OS (a aba Devolutiva). A Devolucao fica travada ate
+   a Retirada. Marcados, so saem se a OS for excluida. O clique leva a
+   aba do Control, com a OS da obra em destaque.
+   ------------------------------------------------------------ */
+
+export const CHECK_RETIRADA_OS = 'retirada_os'
+export const CHECK_DEVOLUCAO_OS = 'devolucao_os'
+
+/* ------------------------------------------------------------
+   A "Gestao dos instrumentos" (atualizacao 43)
+
+   3a etapa, card do Almoxarife: e a separacao das TAGs da OS. O LWN
+   Control marca quando o Almoxarife conclui a separacao (o "Separar
+   TAGS" da aba Retirada). O clique leva direto a separacao da OS da
+   obra. A Retirada das ferramentas so libera depois dela: e a separacao
+   que poe as ferramentas na baia para o tecnico bipar.
+   ------------------------------------------------------------ */
+
+export const CHECK_SEPARAR_OS = 'separar_os'
+
+/** Os quatro checks que so o LWN Control marca. */
+export const CHECKS_DA_OS = [CHECK_ENVIAR_OS, CHECK_SEPARAR_OS, CHECK_RETIRADA_OS, CHECK_DEVOLUCAO_OS]
+export const ehCheckDaOS = (check) => CHECKS_DA_OS.includes(check?.tipo)
+
+export const DICA_SEPARAR_OS =
+  'Clique para separar as TAGs da OS desta obra no LWN Control. O check se marca sozinho quando a separação é concluída (por aqui ou direto no Control), e só sai se a OS for excluída.'
+
+export const DICA_RETIRADA_OS =
+  'Liberado depois que o Almoxarife separa as TAGs (Gestão dos instrumentos). Clique para ir à Retirada do LWN Control, com a OS desta obra em destaque. O check se marca sozinho quando as ferramentas são retiradas (bipadas na baia), e só sai se a OS for excluída.'
+
+export const DICA_DEVOLUCAO_OS =
+  'Liberado depois da retirada. Clique para ir à Devolutiva do LWN Control, com a OS desta obra em destaque. O check se marca sozinho quando todas as ferramentas voltam, e só sai se a OS for excluída.'
+
+/**
+ * Em que pe estao a Separacao, a Retirada e a Devolucao da obra, pelas
+ * O.S. ligadas a ela (obra.ordensServico). Um passo so abre depois do
+ * outro — separar, retirar, devolver:
+ *   separacao  'feita' | 'pendente' (ha OS aprovada esperando) | null (sem OS aprovada)
+ *   retirada   'feita' | 'pendente' (TAGs separadas) | 'bloqueada' (falta a separacao) | null
+ *   devolucao  'feita' | 'pendente' (retirada, esperando a volta) | 'bloqueada' (falta a retirada)
+ *   osSeparar, osRetirar, osDevolver  a OS que espera cada passo (a primeira)
+ */
+export function estadoDasFerramentasDaOS(obra) {
+  const aprovadas = (obra?.ordensServico ?? []).filter((o) => o.aprovada)
+  /* a OS ja retirada passou pela separacao, mesmo sem a data dela */
+  const separada = (o) => o.separada || o.retirada || o.devolvida
+  const osSeparar = aprovadas.find((o) => !separada(o)) ?? null
+  const osRetirar = aprovadas.find((o) => separada(o) && !o.retirada) ?? null
+  const osDevolver = aprovadas.find((o) => o.retirada && !o.devolvida) ?? null
+  return {
+    separacao: aprovadas.some(separada) ? 'feita' : aprovadas.length ? 'pendente' : null,
+    retirada: aprovadas.some((o) => o.retirada)
+      ? 'feita'
+      : aprovadas.some(separada)
+        ? 'pendente'
+        : aprovadas.length
+          ? 'bloqueada'
+          : null,
+    devolucao: aprovadas.some((o) => o.devolvida)
+      ? 'feita'
+      : aprovadas.some((o) => o.retirada)
+        ? 'pendente'
+        : 'bloqueada',
+    osSeparar,
+    osRetirar,
+    osDevolver,
+  }
+}
+
+/** O endereco da aba do LWN Control com a OS da obra em destaque (e, com `acao`, ja aberta nela). */
+export const enderecoDaAbaDaOS = (aba, os, acao) => {
+  const busca = new URLSearchParams()
+  if (os) busca.set('os', os.id)
+  if (os && acao) busca.set('acao', acao)
+  const texto = busca.toString()
+  return `/core/app/control/${aba}${texto ? `?${texto}` : ''}`
+}
+
+/** O endereco do Solicitar OS do LWN Control para esta obra. */
+export const enderecoSolicitarOS = (obraId) => `/core/app/control/solicitar?obra=${encodeURIComponent(obraId)}`
+
+/**
+ * Em que pe esta o "Solicitar OS" da obra, pelas O.S. ligadas a ela
+ * (obra.ordensServico, da carga):
+ *   'aprovada'  alguma foi aprovada (o check marcado);
+ *   'aguardando' alguma espera o aval do supervisor;
+ *   'reprovada' a ultima foi reprovada: e pedir de novo;
+ *   null        nenhuma ainda.
+ */
+export function estadoDoSolicitarOS(obra) {
+  const ordens = obra?.ordensServico ?? []
+  if (ordens.some((o) => o.aprovada)) return 'aprovada'
+  if (ordens.some((o) => o.status === 'aguardando_aprovacao')) return 'aguardando'
+  if (ordens.length && ordens[ordens.length - 1].status === 'reprovada') return 'reprovada'
+  return null
+}
+
+/** O numero da primeira O.S. aprovada da obra ("#0512"), ou null. */
+export function numeroDaOSAprovada(obra) {
+  const os = (obra?.ordensServico ?? []).find((o) => o.aprovada)
+  return os ? `#${String(os.numero ?? os.id).padStart(4, '0')}` : null
+}
+
 /** O roteiro da obra sem o "Retirada do carro" quando ela nao reservou carro. */
 export function aplicarRegraDaReserva(roteiro, obra) {
   if (obra?.reserva?.veiculoId) return roteiro
@@ -884,6 +1009,9 @@ export function ehMembroDaObra(usuario, obra) {
  */
 export function travaDoCheck(usuario, check, card, obra) {
   if (!usuario) return 'setor'
+  /* nem o acesso total marca os da O.S. (Solicitar, Gestao dos
+     instrumentos, Retirada e Devolucao): sao do LWN Control */
+  if (ehCheckDaOS(check)) return 'sistema'
   if (temAcessoTotal(usuario)) return null
   if (usuario.checkSoNaObra !== false && !podeFazer(usuario, 'check_todas_obras') && !ehMembroDaObra(usuario, obra)) {
     return 'membro'

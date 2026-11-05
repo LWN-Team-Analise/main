@@ -5,7 +5,7 @@ import Modal from '@/components/Modal/Modal'
 import Confirma from '@/components/Confirma/Confirma'
 import Seletor from '@/components/Seletor/Seletor'
 import { useDados } from '@/context/DadosContext'
-import { CHECKLIST, POSICOES, TIPOS, kmLegivel } from '@/domain/frotas'
+import { CHECKLIST, COMBUSTIVEL_MINIMO, PERGUNTA_COMBUSTIVEL, POSICOES, TIPOS, kmLegivel, rotuloDoCombustivel } from '@/domain/frotas'
 import * as frotasApi from '@/services/frotasService'
 import { dataBR } from '@/utils/formato'
 import { IconeAlerta, IconeSeta, IconeVoltar } from './icones'
@@ -149,8 +149,18 @@ function Detalhe({ registro, aoExcluir }) {
         </div>
       </dl>
 
-      {devolucao && registro.checklist && (
+      {/* a saida responde as mesmas perguntas desde a atualizacao 39 (a antiga
+          nao tem checklist); o tanque e so da devolucao */}
+      {registro.checklist && (
         <ul className="reg__checklist">
+          {devolucao && registro.combustivel !== null && (
+            <li className={registro.combustivel < COMBUSTIVEL_MINIMO ? 'is-ruim' : undefined}>
+              <span>{PERGUNTA_COMBUSTIVEL}</span>
+              <span className={`resp ${registro.combustivel < COMBUSTIVEL_MINIMO ? 'resp--nao' : 'resp--sim'}`}>
+                {rotuloDoCombustivel(registro.combustivel)}
+              </span>
+            </li>
+          )}
           {CHECKLIST.map((c) => {
             const valor = registro.checklist[c.chave]
             const ruim = c.importante && valor === false
@@ -218,7 +228,7 @@ function Registro({ registro, aoExcluir }) {
         </span>
         <span className="reg__km">{kmLegivel(registro.km)}</span>
         {pendencias > 0 ? (
-          <span className="reg__alerta" title="Respostas NÃO no checklist da devolução">
+          <span className="reg__alerta" title="Respostas NÃO no checklist">
             <IconeAlerta />
             {pendencias} {pendencias === 1 ? 'pendência' : 'pendências'}
           </span>

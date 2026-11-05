@@ -7,10 +7,14 @@ import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
 import {
   CHECKLIST,
+  COMBUSTIVEL_MINIMO,
+  NIVEIS_COMBUSTIVEL,
   OBSERVACAO_MAXIMA,
+  PERGUNTA_COMBUSTIVEL,
   PERGUNTA_POSTO,
   POSTO_MAXIMO,
   kmLegivel,
+  lerCombustivel,
   lerHora,
 } from '@/domain/frotas'
 import * as frotasApi from '@/services/frotasService'
@@ -61,7 +65,11 @@ const VAZIO = {
   observacao: '',
   checklist: {},
   posto: '',
+  combustivel: '',
 }
+
+/* o nivel do tanque (so na devolucao): '0', '25'... como o select guarda */
+const OPCOES_COMBUSTIVEL = NIVEIS_COMBUSTIVEL.map((n) => ({ valor: String(n.valor), rotulo: n.rotulo }))
 
 function agoraHHMM() {
   const d = new Date()
@@ -251,14 +259,15 @@ export default function ModalRegistro({ modo, veiculos, aoFechar, aoRegistrado, 
 
     if (!devolucao && !form.obraId) novos.obraId = 'Escolha a obra de destino.'
 
-    if (devolucao) {
-      CHECKLIST.forEach((c) => {
-        if (!form.checklist[c.chave]) novos[`checklist.${c.chave}`] = 'Responda sim ou não.'
-      })
-      if (form.checklist.semParar === 'sim' && !form.posto.trim()) {
-        novos.posto = 'Informe o posto e o valor aproximado.'
-      }
+    /* as perguntas Sim/Nao valem para a saida e para a devolucao (a saida
+       passou a responder as mesmas na atualizacao 39) */
+    CHECKLIST.forEach((c) => {
+      if (!form.checklist[c.chave]) novos[`checklist.${c.chave}`] = 'Responda sim ou não.'
+    })
+    if (form.checklist.semParar === 'sim' && !form.posto.trim()) {
+      novos.posto = 'Informe o posto e o valor aproximado.'
     }
+    if (devolucao && lerCombustivel(form.combustivel) === null) novos.combustivel = 'Informe o nível do combustível.'
 
     if (!form.observacao.trim()) novos.observacao = 'Escreva a observação (se não houver nada, escreva "Nenhuma").'
     if (!fotosCompletas(fotos)) novos.fotos = 'Tire as cinco fotos: os quatro lados e o painel.'
@@ -292,13 +301,13 @@ export default function ModalRegistro({ modo, veiculos, aoFechar, aoRegistrado, 
         observacao: form.observacao.trim(),
         fotos,
       }
+      const respostas = {
+        checklist: form.checklist,
+        posto: form.checklist.semParar === 'sim' ? form.posto.trim() : '',
+      }
       const resposta = devolucao
-        ? await frotasApi.registrarDevolucao({
-            ...comum,
-            checklist: form.checklist,
-            posto: form.checklist.semParar === 'sim' ? form.posto.trim() : '',
-          })
-        : await frotasApi.registrarSaida({ ...comum, obraId: form.obraId })
+        ? await frotasApi.registrarDevolucao({ ...comum, ...respostas, combustivel: lerCombustivel(form.combustivel) })
+        : await frotasApi.registrarSaida({ ...comum, ...respostas, obraId: form.obraId })
       await aoRegistrado?.(resposta.registro, resposta)
       aoFechar()
     } catch (e) {
@@ -387,7 +396,7 @@ export default function ModalRegistro({ modo, veiculos, aoFechar, aoRegistrado, 
 
         {noRodizio && (
           <p className="frota-form__aviso is-rodizio" role="note">
-            <strong>Rodízio:</strong> placa final {finalPlaca} não circula no Centro Expandido de São Paulo{' '}
+            <strong>Rodízio:</strong> placa final {finalPlaca} não circula no centro de São Paulo{' '}
             {diaRodizio.data === hojeISO() ? 'hoje' : `nesta ${DIAS[diaRodizio.diaSemana]}`} das{' '}
             {horaCurta(horarioRodizio.de)} às {horaCurta(horarioRodizio.ate)}.
           </p>
@@ -441,31 +450,49 @@ export default function ModalRegistro({ modo, veiculos, aoFechar, aoRegistrado, 
         )}
 
         {devolucao && (
-          <div className="frota-form__perguntas">
-            {CHECKLIST.map((c) => (
-              <div key={c.chave} className="frota-form__pergunta">
-                <CampoSelecao
-                  rotulo={c.pergunta}
-                  value={form.checklist[c.chave] ?? ''}
-                  onChange={responder(c.chave)}
-                  opcoes={SIM_NAO}
-                  vazio="Sim/Não"
-                  erro={erros[`checklist.${c.chave}`]}
-                />
-                {c.chave === 'semParar' && form.checklist.semParar === 'sim' && (
-                  <CampoTexto
-                    rotulo={PERGUNTA_POSTO}
-                    maxLength={POSTO_MAXIMO}
-                    placeholder="Posto Ipiranga Barueri, R$ 20,50"
-                    value={form.posto}
-                    onChange={mudar('posto')}
-                    erro={erros.posto}
-                  />
-                )}
-              </div>
-            ))}
+          <div className="frota-form__combustivel">
+            <CampoSelecao
+              rotulo={PERGUNTA_COMBUSTIVEL}
+              value={form.combustivel}
+              onChange={mudar('combustivel')}
+              opcoes={OPCOES_COMBUSTIVEL}
+              vazio="Escolha o nível..."
+              erro={erros.combustivel}
+            />
+            {form.combustivel !== '' && Number(form.combustivel) < COMBUSTIVEL_MINIMO && (
+              <p className="frota-form__aviso is-troca" role="status">
+                O carro deve voltar com metade do tanque ou mais. A devolução será registrada, e o setor responsável é
+                avisado no Teams.
+              </p>
+            )}
           </div>
         )}
+
+        {/* as perguntas Sim/Nao: na saida e na devolucao (atualizacao 39) */}
+        <div className="frota-form__perguntas">
+          {CHECKLIST.map((c) => (
+            <div key={c.chave} className="frota-form__pergunta">
+              <CampoSelecao
+                rotulo={c.pergunta}
+                value={form.checklist[c.chave] ?? ''}
+                onChange={responder(c.chave)}
+                opcoes={SIM_NAO}
+                vazio="Sim/Não"
+                erro={erros[`checklist.${c.chave}`]}
+              />
+              {c.chave === 'semParar' && form.checklist.semParar === 'sim' && (
+                <CampoTexto
+                  rotulo={PERGUNTA_POSTO}
+                  maxLength={POSTO_MAXIMO}
+                  placeholder="Posto Ipiranga Barueri, R$ 20,50"
+                  value={form.posto}
+                  onChange={mudar('posto')}
+                  erro={erros.posto}
+                />
+              )}
+            </div>
+          ))}
+        </div>
 
         <CampoArea
           rotulo={textos.observacao}
@@ -486,9 +513,6 @@ export default function ModalRegistro({ modo, veiculos, aoFechar, aoRegistrado, 
         )}
 
         <footer className="formobra__acoes">
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            Cancelar
-          </button>
           <Button type="submit" loading={salvando} disabled={devolucao && opcoesVeiculo.length === 0}>
             {textos.enviar}
           </Button>

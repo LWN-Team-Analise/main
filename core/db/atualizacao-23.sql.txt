@@ -48,8 +48,10 @@ COMMENT ON COLUMN public.cliente.ordem_prioridade IS
 -- ---- 2. os tipos novos de check ----
 ALTER TABLE public.etapa_check DROP CONSTRAINT IF EXISTS etapa_check_tipo_valido;
 ALTER TABLE public.etapa_check ADD CONSTRAINT etapa_check_tipo_valido
+    -- 'enviar_os' veio na atualizacao 38; ja vai aqui porque o db:atualizar
+    -- roda esta de novo depois dela
     CHECK (tipo IN ('comum', 'planejamento_ensaios', 'execucao_ensaios', 'material_gases',
-                    'prazo_execucao', 'reserva_carro', 'retirada_carro'));
+                    'prazo_execucao', 'reserva_carro', 'retirada_carro', 'enviar_os'));
 
 COMMENT ON COLUMN public.etapa_check.tipo IS
     'comum, planejamento_ensaios, execucao_ensaios, material_gases, prazo_execucao, reserva_carro ou retirada_carro. Todos menos comum sao do sistema: nao se excluem.';

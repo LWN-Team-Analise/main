@@ -207,9 +207,6 @@ export default function ModalHorario({ aberto, obra, check, somenteLeitura = fal
         )}
 
         <footer className="formobra__acoes">
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            {somenteLeitura ? 'Fechar' : 'Cancelar'}
-          </button>
           {!somenteLeitura && (
             <Button type="submit" loading={salvando}>
               Salvar

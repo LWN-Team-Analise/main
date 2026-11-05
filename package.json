@@ -18,7 +18,8 @@
     "db:validar": "node core/server/scripts/validar-sql.js",
     "db:atualizar": "node core/server/scripts/atualizar-banco.js",
     "db:frota": "node core/server/scripts/importar-frota.js",
-    "db:despesas": "node core/server/scripts/importar-despesas.js"
+    "db:despesas": "node core/server/scripts/importar-despesas.js",
+    "db:almoxarife": "node core/server/scripts/importar-almoxarife.js"
   },
   "keywords": [],
   "author": "",

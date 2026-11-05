@@ -74,9 +74,6 @@ export default function Confirma({
         )}
 
         <footer className="confirma__acoes">
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            Cancelar
-          </button>
           <button
             type="button"
             className={`confirma__ok confirma__ok--${tom}`}
