@@ -2552,10 +2552,15 @@ body.dark-mode .rail .menu-item.rail__btn.active,
   font-weight: 600 !important;
 }
 
-.rail .menu-item.rail__btn svg {
+/* o almoxarife.css pinta de azul o icone do Certificados aceso (uma regra
+   so dele, mais forte que esta): no circulo azul do item atual o icone
+   sumia, azul no azul. Aqui o icone segue a cor do texto — branco no
+   circulo, como os outros itens e como no main */
+.rail .menu-item.rail__btn svg,
+.rail .sidebar-menu .menu-item.active[onclick*="certificados"] svg {
   width: 21px;
   height: 21px;
-  opacity: 1;
+  opacity: 1 !important;
   stroke: currentColor !important;
 }
 
