@@ -601,11 +601,20 @@ esconde o botao e a API recusa a chamada usando exatamente as mesmas chaves.
 | Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_turnos`, `ver_avaliacoes`, `ver_usuarios`, `ver_avisos` |
 | Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `criar_obras`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `check_todas_obras`, `check_sem_informacao`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
 
-Alteracao **sempre** depende da visualizacao correspondente: desmarcar "Obras"
-apaga junto tudo o que so faz sentido dentro de Obras, e essas linhas ficam
-travadas ate a visualizacao voltar. Quem tem `acesso_total` (diretoria) passa
-por qualquer uma, marcada ou nao. A lista e normalizada ao gravar **e ao ler**
+Alteracao **sempre** depende da visualizacao correspondente: sem "Obras", o
+setor nao edita nada de Obras, e essas linhas ficam travadas ate a
+visualizacao voltar. Quem tem `acesso_total` (diretoria) passa por qualquer
+uma, marcada ou nao. A lista e normalizada ao gravar **e ao ler**
 (`normalizar()`): alteracao gravada sem a visualizacao dela nao vale.
+
+Desmarcar "Obras" tira **so a aba** (atualizacao 45). O que estava marcado
+dentro dela fica **guardado** em `cargo.permissoes_guardadas`: aparece marcado,
+travado e com a borda tracejada, nao vale (nenhuma trava le essa coluna, so
+`permissoes` vale) e volta a valer do jeito que estava quando a aba for marcada
+de novo. Antes caia tudo junto, e reabrir a aba era marcar uma por uma. A tela
+junta as duas listas e divide na hora de gravar (`separar()`); a API confere as
+guardadas contra a lista nova (`limparGuardadas()`). Sem a atualizacao 45 no
+banco, a tela volta a derrubar tudo junto com a aba.
 
 Na tela do setor, cada aba ocupa uma linha: a visualizacao a esquerda e as
 alteracoes dela ao lado, uma na frente da outra, quebrando a linha no fim

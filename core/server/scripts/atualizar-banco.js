@@ -77,6 +77,7 @@ const ARQUIVOS = [
   'db/atualizacao-42.sql.txt',
   'db/atualizacao-43.sql.txt',
   'db/atualizacao-44.sql.txt',
+  'db/atualizacao-45.sql.txt',
 ]
 
 /**
@@ -237,6 +238,7 @@ const CONFERENCIA = [
                     WHERE tipo = 'separar_os' AND vigente_ate IS NULL AND obra_id IS NULL) AS ok`,
   ],
   ['agenda_evento (agenda da empresa)', "SELECT to_regclass('public.agenda_evento') IS NOT NULL AS ok"],
+  ['cargo.permissoes_guardadas', col('cargo', 'permissoes_guardadas')],
 ]
 
 function col(tabela, coluna) {

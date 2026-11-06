@@ -438,6 +438,13 @@
   cursor: not-allowed;
 }
 
+/* guardada: marcada com a aba desmarcada (atualizacao 45). Continua com
+   o visto, a borda tracejada diz que esta parada, esperando a aba voltar */
+.perm__chip.is-guardada {
+  border-style: dashed;
+  opacity: 0.62;
+}
+
 .perm__trava {
   margin: 0;
   font-size: 0.7rem;

@@ -1,0 +1,46 @@
+-- ============================================================
+--  ATUALIZACAO 45 — tirar a ABA do setor sem perder as permissoes de dentro
+--
+--  Na tela do setor (Usuarios > Setores), desmarcar uma visualizacao
+--  ("Obras", "Frotas"...) apagava junto todas as alteracoes daquela aba.
+--  Para o setor voltar a ver a aba depois, era preciso marcar tudo de
+--  novo, uma a uma.
+--
+--  Agora desmarcar a aba tira so a aba. As alteracoes que estavam
+--  marcadas ficam GUARDADAS, numa coluna a parte:
+--
+--    cargo.permissoes_guardadas   as alteracoes marcadas cuja aba esta
+--                                 desmarcada. NAO valem: nenhuma trava
+--                                 do sistema le esta coluna. Voltam
+--                                 para `permissoes` (e a valer) quando
+--                                 a aba for marcada de novo e o setor
+--                                 for salvo.
+--
+--  `cargo.permissoes` continua sendo a unica lista que vale, do mesmo
+--  jeito de sempre: tudo o que ja confere `permissoes` (a API, a view
+--  almox.usuarios, o alerta de combustivel) segue igual.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao duplica nada.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.cargo
+    ADD COLUMN IF NOT EXISTS permissoes_guardadas text[] NOT NULL DEFAULT '{}'::text[];
+
+COMMENT ON COLUMN public.cargo.permissoes_guardadas IS
+    'Alteracoes marcadas cuja aba (visualizacao) esta desmarcada. Nao valem; voltam para permissoes quando a aba for marcada de novo.';
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" na linha
+-- ============================================================
+
+SELECT 'cargo.permissoes_guardadas' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = 'cargo'
+                  AND column_name = 'permissoes_guardadas') AS ok;

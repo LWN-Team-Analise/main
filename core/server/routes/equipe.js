@@ -2,7 +2,7 @@ import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import { query } from '../db.js'
 import { cargoPode, exige, exigeSessao, meuCargo, tratar } from '../sessao.js'
-import { normalizar } from '../../src/domain/permissoes.js'
+import { limparGuardadas, normalizar } from '../../src/domain/permissoes.js'
 import { lerRegrasCheck } from '../../src/domain/regrasCheck.js'
 import { IMAGEM_INVALIDA, imagemValida } from '../utils/imagem.js'
 import { registrarAtividade } from '../atividade.js'
@@ -91,6 +91,13 @@ const paraCargo = (linha) => ({
   ordem: linha.ordem,
   // cargo novo nasce sem nenhuma; quem administra marca uma a uma
   permissoes: normalizar(linha.permissoes ?? []),
+  /* as alteracoes guardadas (atualizacao 45): marcadas, mas com a aba
+     desmarcada — nao valem, e voltam com a aba. null = o banco ainda
+     nao tem a coluna, e a tela volta a derrubar tudo junto com a aba */
+  permissoesGuardadas:
+    linha.permissoes_guardadas === undefined
+      ? null
+      : limparGuardadas(linha.permissoes_guardadas, normalizar(linha.permissoes ?? [])),
   /* quem do setor marca qual check (atualizacao 37): por cargo e por
      pessoa, a partir de que etapa e os checks de fora. null = o banco
      ainda nao tem a coluna, e a tela de Setores esconde a parte */
@@ -185,6 +192,7 @@ router.patch('/cargos/:id', exigeSessao, exige('editar_cargo'), async (req, res)
     req.body?.acessoTotal === undefined &&
     req.body?.painelTv === undefined &&
     req.body?.permissoes === undefined &&
+    req.body?.permissoesGuardadas === undefined &&
     req.body?.regrasCheck === undefined
   ) {
     return res.status(400).json({ erro: 'Nada para alterar.' })
@@ -222,17 +230,37 @@ router.patch('/cargos/:id', exigeSessao, exige('editar_cargo'), async (req, res)
        As permissoes do PROPRIO setor so mudam por quem tem acesso
        total: senao "editar setor" virava "dar a mim mesmo qualquer
        permissao". Enviar a mesma lista de antes nao conta como troca. */
-    if (req.body?.permissoes !== undefined) {
-      const lista = normalizar(req.body.permissoes)
-      const mudou = lista.join('|') !== normalizar(alvo.rows[0].permissoes ?? []).join('|')
-      if (mudou) {
+    /* As GUARDADAS (atualizacao 45) vao junto: as alteracoes marcadas
+       cuja aba esta desmarcada. Elas nunca valem — so `permissoes`
+       vale — e passam por `limparGuardadas` contra a lista nova: o que
+       a tela mandar como guardada com a aba marcada nao entra. Sem a
+       coluna no banco, elas sao ignoradas e o resto grava igual. */
+    const temGuardadas = alvo.rows[0].permissoes_guardadas !== undefined
+    if (req.body?.permissoes !== undefined || (temGuardadas && req.body?.permissoesGuardadas !== undefined)) {
+      const antes = normalizar(alvo.rows[0].permissoes ?? [])
+      const lista = req.body?.permissoes !== undefined ? normalizar(req.body.permissoes) : antes
+      const guardadasAntes = temGuardadas ? limparGuardadas(alvo.rows[0].permissoes_guardadas, antes) : []
+      const guardadas = temGuardadas
+        ? limparGuardadas(req.body?.permissoesGuardadas ?? alvo.rows[0].permissoes_guardadas, lista)
+        : []
+      const mudou = lista.join('|') !== antes.join('|')
+      const mudouGuardadas = temGuardadas && guardadas.join('|') !== guardadasAntes.join('|')
+      if (mudou || mudouGuardadas) {
         const meuSetor = await query('SELECT cargo_id FROM usuario WHERE id = $1', [req.dono.sub])
         const ehOMeu = String(meuSetor.rows[0]?.cargo_id) === String(req.params.id)
         if (ehOMeu && !req.cargo?.acessoTotal) {
           return res.status(403).json({ erro: 'Você não pode mudar as permissões do seu próprio setor.' })
         }
+      }
+      if (mudou) {
         valores.push(lista)
         campos.push(`permissoes = $${valores.length}`)
+      }
+      /* regrava a coluna tambem quando so a lista mudou: a aba que voltou
+         leva as guardadas dela (a tela ja as mandou em `permissoes`) */
+      if (temGuardadas && (mudou || mudouGuardadas)) {
+        valores.push(guardadas)
+        campos.push(`permissoes_guardadas = $${valores.length}`)
       }
     }
 
