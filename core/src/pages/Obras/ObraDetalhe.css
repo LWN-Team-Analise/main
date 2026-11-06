@@ -897,8 +897,17 @@
     flex-wrap: wrap;
   }
 
+  /* o nome ocupa a linha inteira e o selo e os botoes descem para baixo
+     dele. So com o `flex: 1` (base 0) ele nunca quebrava a linha: os
+     botoes ficavam com a largura toda e o nome com zero, uma letra por
+     linha descendo a tela */
+  .capa__texto {
+    flex-basis: 100%;
+  }
+
   .capa__lado {
     align-items: flex-start;
+    width: 100%;
     max-width: none;
     text-align: left;
   }
