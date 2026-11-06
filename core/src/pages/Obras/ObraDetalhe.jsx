@@ -200,6 +200,29 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
     aoRecusar: setAvisoRoteiro,
   })
 
+  /* As etapas ficam lado a lado, e no celular so cabe uma na tela: a obra
+     abria na 1a e era preciso arrastar ate a atual. Agora ela abre ja
+     rolada ate a etapa em que esta — so quando a atual nao esta inteira
+     a vista (no computador, com tres ou quatro na tela, quase nunca
+     mexe). Uma vez por obra: depois de arrastar, ou com a etapa fechando
+     enquanto a pessoa esta ali, a tela fica onde ela deixou. */
+  const trilhoRef = useRef(null)
+  const rolouNaObra = useRef(null)
+  const obraId = obra?.id ?? null
+  const etapasNaTela = obra ? roteiroDaObra(obra).length : 0
+  useEffect(() => {
+    const trilho = trilhoRef.current
+    if (!trilho || !obraId || rolouNaObra.current === obraId) return
+    const atual = trilho.querySelector('.etapa[data-atual]')
+    if (!atual) return
+    rolouNaObra.current = obraId
+    const caixa = trilho.getBoundingClientRect()
+    const dela = atual.getBoundingClientRect()
+    if (dela.left >= caixa.left - 1 && dela.right <= caixa.right + 1) return
+    const recuo = parseFloat(getComputedStyle(trilho).paddingLeft) || 0
+    trilho.scrollLeft += dela.left - caixa.left - recuo
+  }, [obraId, etapasNaTela])
+
   if (carregando && !obra) {
     return (
       <AppShell>
@@ -871,7 +894,7 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
 
         {/* ---------------- etapas + observacoes ---------------- */}
         <div className="tabuleiro">
-          <div className="trilho">
+          <div className="trilho" ref={trilhoRef}>
             {roteiro.map((etapa) => {
               const estado = estadoEtapa(obra, etapa.numero)
               /* o placar conta so os cards que ja tem check: card recem-criado,
@@ -893,7 +916,13 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
               )
 
               return (
-                <section key={etapa.id} className="etapa vidro" data-estado={estado}>
+                <section
+                  key={etapa.id}
+                  className="etapa vidro"
+                  data-estado={estado}
+                  /* a etapa em que a obra esta: a tela abre rolada ate ela */
+                  data-atual={etapa.numero === numeroAtual ? '' : undefined}
+                >
                   <header className="etapa__topo">
                     {/* O NOME da etapa é o título ("1° Etapa"); etapa sem
                         nome cai no rótulo automático ("1ª Etapa") */}
