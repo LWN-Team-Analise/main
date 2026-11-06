@@ -500,6 +500,13 @@ const paraUsuario = (l) => ({
   telefone: l.telefone,
   cpf: l.cpf,
   nascimento: l.data_nascimento,
+  /* so o DIA e o MES ('MM-DD'), sem o ano: e o que os Aniversariantes do
+     Mes (aba Panorama da pagina inicial) precisam, e vai para todo mundo.
+     A data inteira continua cortada para quem nao edita usuario
+     (recortarPessoal) — a idade de cada um nao e assunto da equipe */
+  aniversario: /^\d{4}-\d{2}-\d{2}/.test(String(l.data_nascimento ?? ''))
+    ? String(l.data_nascimento).slice(5, 10)
+    : null,
   /* sem a coluna (carga leve) a chave nem vai: a tela entende que a
      foto e a mesma de antes quando a `fotoVersao` bate */
   ...('foto' in l ? { foto: l.foto } : {}),

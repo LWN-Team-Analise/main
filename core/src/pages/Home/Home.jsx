@@ -18,9 +18,19 @@ import useModoTv from './useModoTv'
 import Painel from './Painel'
 import Historico from './Historico'
 import ModalPowerBI from './ModalPowerBI'
+import Panorama from './Panorama'
 import './Home.css'
 
 const Icone = {
+  /* os quatro cards de tamanhos diferentes da aba Panorama */
+  panorama: () => (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="3.5" y="3.5" width="9" height="8" rx="1.6" />
+      <rect x="15.5" y="3.5" width="5" height="8" rx="1.4" />
+      <rect x="3.5" y="14.5" width="5" height="6" rx="1.4" />
+      <rect x="11.5" y="14.5" width="9" height="6" rx="1.6" />
+    </svg>
+  ),
   grade: () => (
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8">
       <rect x="3.5" y="3.5" width="7" height="7" rx="1.4" />
@@ -211,8 +221,13 @@ const COLUNAS = [
 /**
  * Pagina inicial — o "meu dia" do sistema.
  *
- * Tres modos de olhar a MESMA lista de tarefas, e a tarefa aqui e o
- * CHECK de uma obra (ver `useTarefas`):
+ * Abre no PANORAMA, a aba da empresa: avisos, aniversariantes do mes,
+ * a agenda e os destaques das avaliacoes (ver `Panorama`). Ele nao e
+ * lista de tarefa nenhuma, e por isso o mes e o "Para você/Todas" nao
+ * aparecem nele.
+ *
+ * Depois dele, tres modos de olhar a MESMA lista de tarefas, e a
+ * tarefa aqui e o CHECK de uma obra (ver `useTarefas`):
  *
  *   Grade      — a tabela do que precisa ser feito, em ordem de urgencia;
  *   Quadro     — as mesmas tarefas em tres colunas, por estado;
@@ -239,7 +254,9 @@ export default function Home() {
   const tv = Boolean(user?.painelTv)
   const veHistorico = pode('ver_historico') && !tv
 
-  const [abaEscolhida, setAba] = useState('grade')
+  /* a TV continua abrindo na Grade: ela reveza Grade e Quadro sozinha
+     (useModoTv), e o Panorama nem aparece nela */
+  const [abaEscolhida, setAba] = useState(() => (user?.painelTv ? 'grade' : 'panorama'))
   const [powerBI, setPowerBI] = useState(false)
   const [recado, setRecado] = useState('')
   /* o passo do Dashboard mora aqui porque o seletor dele vive na barra
@@ -289,7 +306,12 @@ export default function Home() {
 
   /* quem perde a permissao com a aba aberta volta para a Grade, em vez
      de ficar olhando um painel que nao e mais dele (a TV nem tem o painel) */
-  const aba = abaEscolhida === 'painel' && (!veDashboard || tv) ? 'grade' : abaEscolhida
+  const aba =
+    (abaEscolhida === 'painel' && (!veDashboard || tv)) || (abaEscolhida === 'panorama' && tv)
+      ? 'grade'
+      : abaEscolhida
+  /* o Panorama nao e lista de tarefas: o mes e o escopo nao mexem nele */
+  const naLista = aba === 'grade' || aba === 'quadro'
   const { saindo: tvSaindo } = useModoTv({ ligado: tv, aba, aoTrocar: proximaTela })
 
   const visiveis = useMemo(
@@ -440,6 +462,7 @@ export default function Home() {
         <div className="inicio__barra">
           <nav className="abas" role="tablist" aria-label="Modo de visualização">
             {[
+              ...(tv ? [] : [{ id: 'panorama', rotulo: 'Panorama', Glifo: Icone.panorama }]),
               { id: 'grade', rotulo: 'Grade', Glifo: Icone.grade },
               { id: 'quadro', rotulo: 'Quadro', Glifo: Icone.quadro },
               ...(veDashboard ? [{ id: 'painel', rotulo: 'Dashboard', Glifo: Icone.painel }] : []),
@@ -461,7 +484,9 @@ export default function Home() {
           {/* O mês fica no meio, entre as abas e o Minhas/Todas. Ele
               filtra só o que TEM data: a coluna de concluídas do Quadro
               e os gráficos do Dashboard. */}
-          <SeletorMes mes={mes} aoMudar={setMes} foraDoPainel={aba !== 'painel'} />
+          {aba !== 'panorama' && (
+            <SeletorMes mes={mes} aoMudar={setMes} foraDoPainel={aba !== 'painel'} />
+          )}
 
           {/* o passo do Dashboard entra na MESMA linha das abas: ele é
               um modo de olhar, como elas, e não um controle de dentro
@@ -533,7 +558,7 @@ export default function Home() {
             </div>
           )}
 
-          {aba !== 'painel' && temMinhas && !tv && (
+          {naLista && temMinhas && !tv && (
             <div className="escopo" role="group" aria-label="De quem são as tarefas">
               <button
                 type="button"
@@ -557,7 +582,7 @@ export default function Home() {
             HOJE: pendência não tem mês. Quando o mês escolhido não é o
             corrente, o aviso evita a leitura errada de que a lista
             também voltou no tempo. */}
-        {!mes.atual && aba !== 'painel' && (
+        {!mes.atual && naLista && (
           <p className="inicio__nota" role="status">
             O que está pendente é sempre de hoje — {mes.rotulo.toLowerCase()} filtra apenas o
             que já foi concluído.
@@ -575,6 +600,8 @@ export default function Home() {
           </div>
         ) : (
           <>
+            {aba === 'panorama' && <Panorama />}
+
             {telaGrade}
 
             {/* O Historico mora embaixo da Grade — do globo, quando nao ha

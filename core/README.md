@@ -1825,7 +1825,7 @@ src/
 │   ├── Clientes/           # cadastro de clientes (CEP + IBGE)
 │   ├── Concluidas/         # fechadas, agrupadas por ano e mes
 │   ├── Configuracoes/      # editar a propria conta e o tema
-│   ├── Home/               # o "meu dia": Grade, Quadro e Dashboard
+│   ├── Home/               # o "meu dia": Panorama, Grade, Quadro e Dashboard
 │   ├── Login/              # tela de login (foto + faixas de vidro + cartao)
 │   ├── Obras/              # quadro, card, modais e a tela da obra
 │   ├── Privacy/            # politica de privacidade (texto provisorio)
@@ -1896,14 +1896,33 @@ inferior esquerdo, os dois fora dela. Clicando no avatar abrem-se
 
 ## Pagina inicial
 
-Tres modos de olhar a MESMA lista, e a lista e uma so: **os checks das
-obras abertas**.
+Abre no **Panorama** (a aba da empresa, logo abaixo). Depois dele, tres
+modos de olhar a MESMA lista, e a lista e uma so: **os checks das obras
+abertas**.
 
 | Aba | O que mostra |
 |---|---|
+| **Panorama** | avisos, aniversariantes do mes, agenda da empresa e destaques das avaliacoes |
 | **Grade** | so o que da para fazer AGORA, em ordem de urgencia |
 | **Quadro** | as mesmas tarefas em tres colunas: Nao iniciado / Em andamento / Concluida |
 | **Dashboard** | os numeros de tempo que a lista nao mostra |
+
+### Panorama (atualizacao 44)
+
+Quatro cards de vidro (`src/pages/Home/Panorama.jsx`), duas colunas no
+computador e uma no celular — quem decide e a largura que sobra para os
+cards (consulta de conteiner), e nao a da janela:
+
+| Card | De onde vem |
+|---|---|
+| **Avisos e Comunicados** | os mesmos avisos do sininho (`minhasNotificacoes`: so os do seu setor e os sem setor). O clique abre a obra; nao marca nada como lido |
+| **Aniversariantes do Mes** | o `aniversario` de cada pessoa da equipe: so o dia e o mes (`'MM-DD'`), que a API manda para todos. A data inteira continua so para quem edita usuario. Quem faz aniversario hoje ganha o anel e os confetes |
+| **Agenda da Empresa** | a tabela nova `agenda_evento` (titulo, dia, hora e local opcionais), em `/api/agenda` (`server/routes/agenda.js`). Todos veem os eventos de hoje em diante; quem tem `enviar_avisos` cria, edita e exclui pelo "Ver calendario" |
+| **Destaques e Conquistas** | as avaliacoes: as obras com nota 4 ou mais (ate 5, a melhor primeiro) e um slide com as tres melhores medias da equipe. Carrossel com pontinhos, que anda sozinho e para com o mouse em cima |
+
+Sem a atualizacao 44 no banco, a agenda so sai vazia (o `GET` devolve
+`semTabela: true`); o resto da pagina nao depende dela. A TV continua
+abrindo na Grade e nao tem o Panorama.
 
 ### Tarefa aqui e CHECK de obra
 

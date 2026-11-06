@@ -13,6 +13,7 @@ import pushRouter from './routes/push.js'
 import comercialRouter from './routes/comercial.js'
 import presencaRouter from './routes/presenca.js'
 import turnosRouter from './routes/turnos.js'
+import agendaRouter from './routes/agenda.js'
 import sharepointRouter from './routes/sharepoint.js'
 import almoxarifeRouter, { notificacoesDiarias } from './almoxarife/index.js'
 import cargaRouter, { cargaJunto } from './carga.js'
@@ -97,6 +98,8 @@ app.use('/api/push', pushRouter)
 app.use('/api/comercial', comercialRouter)
 app.use('/api/presenca', presencaRouter)
 app.use('/api/turnos', turnosRouter)
+/* a agenda da empresa, o card da aba Panorama (atualizacao 44) */
+app.use('/api/agenda', agendaRouter)
 app.use('/api/sharepoint', sharepointRouter)
 
 /* O ALMOXARIFE (o antigo lwncontrol, server/almoxarife). Os avisos do dia

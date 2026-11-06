@@ -167,6 +167,28 @@
   color: var(--accent);
 }
 
+/* No celular as quatro abas (Panorama, Grade, Quadro, Dashboard) nao
+   cabem lado a lado: a fileira rola de lado com o dedo, em vez de
+   quebrar em duas linhas ou espremer os rotulos */
+@media (max-width: 620px) {
+  .abas {
+    max-width: 100%;
+    margin: -2px;
+    padding: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .abas::-webkit-scrollbar {
+    display: none;
+  }
+
+  .abas__aba {
+    flex: none;
+    padding: 8px 13px;
+  }
+}
+
 /* ---- O mês, no meio da barra ----
 
    Entre as abas (esquerda) e o Minhas/Todas (direita). As margens
