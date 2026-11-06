@@ -8,7 +8,7 @@ import Seletor from '@/components/Seletor/Seletor'
 import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
 import { useTheme } from '@/context/ThemeContext'
-import { rotuloPrioridadeObra, tomPrioridadeObra } from '@/domain/obras'
+import { rotuloPrioridadeObra, temAcessoTotal, tomPrioridadeObra } from '@/domain/obras'
 import { coordenadaDaUF } from '@/domain/geo'
 import { ehBrasil } from '@/domain/paises'
 import useClima, { familiaDoTempo, nomeDoTempo } from '@/hooks/useClima'
@@ -268,8 +268,14 @@ export default function Home() {
   })
   /* "minhas" = so o que e do meu setor. Quem nao tem setor, ou quem nao
      tem tarefa nenhuma no dele, ve tudo — senao a tela abre vazia e
-     parece quebrada. */
-  const [escopo, setEscopo] = useState('minhas')
+     parece quebrada.
+
+     Quem tem ACESSO TOTAL abre em "Todas", com as tarefas de todos os
+     setores, como a Diretoria (que nao tem check proprio no roteiro e
+     por isso sempre caiu em todas). A Excelencia tambem tem acesso
+     total, mas tem checks proprios — abria em "Para você" e so via os
+     do proprio setor. O botao continua la para trocar. */
+  const [escopo, setEscopo] = useState(() => (temAcessoTotal(user) ? 'todas' : 'minhas'))
 
   const temMinhas = useMemo(() => tarefas.some((t) => t.minha), [tarefas])
   const soMinhas = escopo === 'minhas' && temMinhas && !tv
