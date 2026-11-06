@@ -8,6 +8,7 @@ import useCorDaLogo from '@/hooks/useCorDaLogo'
 import ModalAvisoGeral, { ModalLerAviso } from '@/components/AvisoGeral/ModalAvisoGeral'
 import * as agendaApi from '@/services/agendaService'
 import * as avisosApi from '@/services/avisosService'
+import GloboClientes from './GloboClientes'
 import { Evento, ModalAgenda, ModalEvento } from './ModalAgenda'
 import './Panorama.css'
 
@@ -119,6 +120,8 @@ export default function Panorama() {
         <CardAgenda />
         <CardDestaques />
       </div>
+      {/* embaixo da Agenda e dos Destaques, no meio: onde estao os clientes */}
+      <GloboClientes />
     </div>
   )
 }

@@ -1929,6 +1929,12 @@ cards (consulta de conteiner), e nao a da janela:
 | **Agenda da Empresa** | a tabela nova `agenda_evento` (titulo, dia, hora e local opcionais), em `/api/agenda` (`server/routes/agenda.js`). Todos veem os eventos de hoje em diante; quem tem `enviar_avisos` cria, edita e exclui pelo "Ver calendario" |
 | **Destaques e Conquistas** | as avaliacoes: as obras com nota 4 ou mais (ate 5, a melhor primeiro) e um slide com as tres melhores medias da equipe. Carrossel com pontinhos, que anda sozinho e para com o mouse em cima |
 
+Embaixo dos quatro cards, no meio, fica o **globo dos clientes**
+(`src/pages/Home/GloboClientes.jsx`): um pingo azul por estado com cliente e o
+total de clientes embaixo. Ele morava no vazio da Grade ("Nada pendente por
+aqui", que agora mostra so o sol). Como anima sem parar e fica abaixo da
+dobra, so e desenhado quando esta perto da tela.
+
 Sem a atualizacao 44 no banco, a agenda so sai vazia (o `GET` devolve
 `semTabela: true`); o resto da pagina nao depende dela. Sem a 46, o card de
 avisos mostra so os de obra. A TV continua abrindo na Grade e nao tem o
