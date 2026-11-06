@@ -6,8 +6,9 @@ import { registrarAtividade } from '../atividade.js'
 /* ============================================================
    /api/avisos — o AVISO GERAL (db/atualizacao-46.sql.txt)
 
-     GET    /       { avisos } — os mais novos primeiro. Todo mundo
-                    logado ve
+     GET    /       { avisos } — os importantes primeiro, e em cada
+                    grupo os mais novos primeiro (o teto da resposta
+                    nunca corta um importante). Todo mundo logado ve
      POST   /       { titulo, mensagem?, importante? } envia
      DELETE /:id    apaga
 
@@ -61,7 +62,7 @@ router.get('/', exigeSessao, async (_req, res) => {
       `SELECT ${CAMPOS}
          FROM aviso_geral a
          LEFT JOIN usuario u ON u.id = a.enviado_por
-        ORDER BY a.enviado_em DESC, a.id DESC
+        ORDER BY a.importante DESC, a.enviado_em DESC, a.id DESC
         LIMIT ${LIMITE}`,
     )
     return res.json({ avisos: rows.map(paraAviso) })

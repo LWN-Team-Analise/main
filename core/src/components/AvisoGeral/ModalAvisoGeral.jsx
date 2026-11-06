@@ -54,7 +54,8 @@ export function ModalLerAviso({ aviso, podeApagar, aoFechar }) {
                 Importante
               </span>
             )}
-            <p className="avisogeral__texto">{aviso.mensagem || <em>Sem texto: o título já diz tudo.</em>}</p>
+            {/* sem texto, so o titulo (no alto do pop-up) */}
+            {aviso.mensagem && <p className="avisogeral__texto">{aviso.mensagem}</p>}
 
             {erro && (
               <p className="avisogeral__erro" role="alert">
@@ -93,7 +94,8 @@ export function ModalLerAviso({ aviso, podeApagar, aoFechar }) {
  * pagina inicial (atualizacao 46).
  *
  * Titulo obrigatorio; o texto e opcional ("Ponto facultativo — 14/11"
- * ja diz tudo). "Importante" so muda o pingo do card para laranja.
+ * ja diz tudo). "Importante" pinta o pingo do card de laranja e deixa
+ * o aviso sempre no topo do card.
  * Depois de enviar, o pop-up confirma e oferece abrir o Panorama.
  *
  * Quem ve o botao e quem tem `enviar_avisos`; a API confere de novo.
@@ -138,7 +140,6 @@ export default function ModalAvisoGeral({ aberto, aoFechar }) {
       aberto={aberto}
       aoFechar={aoFechar}
       titulo={enviado ? 'Aviso enviado' : 'Enviar aviso'}
-      subtitulo={enviado ? undefined : 'Aparece para todos em Avisos e Comunicados, na página inicial'}
       largura={480}
     >
       {enviado ? (
@@ -193,9 +194,7 @@ export default function ModalAvisoGeral({ aberto, aoFechar }) {
               onChange={(e) => mudar('importante', e.target.checked)}
             />
             <span className="avisogeral__pingo" aria-hidden="true" />
-            <span>
-              <strong>Importante</strong> — sai em destaque, com o pingo laranja
-            </span>
+            <strong>Importante</strong>
           </label>
 
           {erro.geral && (

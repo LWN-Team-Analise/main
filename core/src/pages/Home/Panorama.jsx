@@ -182,7 +182,8 @@ function Vazio({ Icone, titulo, texto, children }) {
 /* ============================================================
    1. AVISOS E COMUNICADOS
 
-   Dois tipos de aviso numa lista so, do mais novo ao mais antigo:
+   Dois tipos de aviso numa lista so, do mais novo ao mais antigo — com
+   os gerais marcados como importantes sempre no topo:
 
      o GERAL     o "Enviar aviso" do botao + (atualizacao 46, /api/avisos):
                  um recado para a empresa inteira. O clique abre ele
@@ -225,12 +226,19 @@ function CardAvisos() {
     }
   }, [])
 
+  /* o IMPORTANTE (o aviso geral laranja) fica sempre em cima, do mais
+     novo ao mais antigo entre eles; depois vem o resto, por data. So a
+     data deixava o importante descer assim que outro aviso chegava */
   const avisos = useMemo(
     () =>
       [
         ...gerais.map((a) => ({ ...a, geral: true, chave: `geral-${a.id}` })),
         ...minhasNotificacoes.map((a) => ({ ...a, chave: `obra-${a.id}` })),
-      ].sort((a, b) => String(b.enviadoEm).localeCompare(String(a.enviadoEm))),
+      ].sort(
+        (a, b) =>
+          Number(Boolean(b.importante)) - Number(Boolean(a.importante)) ||
+          String(b.enviadoEm).localeCompare(String(a.enviadoEm)),
+      ),
     [gerais, minhasNotificacoes],
   )
 
