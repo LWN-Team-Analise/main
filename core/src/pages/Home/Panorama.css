@@ -321,7 +321,10 @@
   background: var(--control-bg);
 }
 
-.paviso[data-tipo='emergencia'] {
+/* o pingo laranja: a obra de emergencia e o aviso geral marcado como
+   importante */
+.paviso[data-tipo='emergencia'],
+.paviso[data-importante='sim'] {
   --ponto: var(--obra-emerg);
 }
 

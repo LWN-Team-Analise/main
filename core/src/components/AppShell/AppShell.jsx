@@ -9,6 +9,7 @@ import IlhaAviso from '@/components/IlhaAviso/IlhaAviso'
 import PedidoInclusao from '@/components/PedidoInclusao/PedidoInclusao'
 import Confirma from '@/components/Confirma/Confirma'
 import Estrelas from '@/components/Estrelas/Estrelas'
+import ModalAvisoGeral from '@/components/AvisoGeral/ModalAvisoGeral'
 import { ehAplicativo } from '@/utils/dispositivo'
 import useNaoLidasChat from '@/hooks/useNaoLidasChat'
 import { useNotificacoesAutomaticas } from '@/hooks/useNotificacoesCelular'
@@ -121,9 +122,11 @@ const Icone = {
       <path d="M6 6l12 12M18 6 6 18" />
     </svg>
   ),
-  chat: () => (
-    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
-      <path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z" />
+  /* o "Enviar aviso" do menu do botao + */
+  megafone: () => (
+    <svg viewBox="0 0 24 24" width="17" height="17" {...traco}>
+      <path d="M4 10.2v3.6a1.2 1.2 0 0 0 1.2 1.2H7l5.6 3.6a.8.8 0 0 0 1.2-.7V6.1a.8.8 0 0 0-1.2-.7L7 9H5.2A1.2 1.2 0 0 0 4 10.2Z" />
+      <path d="M17.2 9.2a4 4 0 0 1 0 5.6M19.6 6.8a7.4 7.4 0 0 1 0 10.4" />
     </svg>
   ),
   mais: () => (
@@ -677,9 +680,11 @@ function dentroDaTela({ x, y }, larg, alt) {
 /**
  * O botao redondo do canto inferior direito.
  *
- * Sem opcoes extras ele e o atalho direto do chat da equipe (o balao).
- * Com elas — a observacao do quadro, na tela de Obras — ele vira um "+"
- * com menu, porque um botao que faz duas coisas precisa perguntar qual.
+ * E SEMPRE o "+" com menu, em todas as abas: o chat da equipe e uma das
+ * opcoes, e as outras dependem da tela e de quem esta nela — a
+ * observacao do quadro em Obras, o "Enviar aviso" para quem tem
+ * `enviar_avisos`. Antes, sem opcao extra, ele era o atalho direto do
+ * chat (o balao), e o mesmo botao mudava de cara de uma aba para outra.
  *
  * O Chat LWN (o bot) saiu do menu: o componente e a rota /api/bot
  * continuam no codigo, so nao ha mais por onde abri-lo.
@@ -689,8 +694,6 @@ function dentroDaTela({ x, y }, larg, alt) {
  */
 function BotaoChat({ acoes = [], aoAbrirChat, naoLidas = 0 }) {
   const [aberto, setAberto] = useState(false)
-  /* com opcoes extras o botao vira menu; sem elas, atalho direto */
-  const temMenu = acoes.length > 0
   const caixa = useRef(null)
   const [canto, setCanto] = useState(lerCanto)
   /* o arrasto em curso; enquanto vale, o clique nao conta */
@@ -825,7 +828,7 @@ function BotaoChat({ acoes = [], aoAbrirChat, naoLidas = 0 }) {
       ref={caixa}
       style={canto ? { left: canto.x, top: canto.y, right: 'auto', bottom: 'auto' } : undefined}
     >
-      {temMenu && aberto && (
+      {aberto && (
         <div className="bolhachat__menu" role="menu">
           {itens.map(({ id, rotulo, Glifo, aoClicar }) => (
             <button
@@ -855,21 +858,16 @@ function BotaoChat({ acoes = [], aoAbrirChat, naoLidas = 0 }) {
              arrasto cai nele mesmo — e abriria o menu a cada vez que
              alguem so quis mudar o botao de lugar */
           if (Date.now() - fimDoArrasto.current < 300) return
-          if (temMenu) setAberto((v) => !v)
-          else aoAbrirChat()
+          setAberto((v) => !v)
         }}
-        aria-haspopup={temMenu ? 'menu' : undefined}
-        aria-expanded={temMenu ? aberto : undefined}
-        aria-label={`${temMenu ? 'Adicionar observação ou abrir o chat da equipe' : 'Abrir o chat da equipe'}${
+        aria-haspopup="menu"
+        aria-expanded={aberto}
+        aria-label={`Abrir o menu: ${itens.map((i) => i.rotulo.replace(/ \(\d+\+?\)$/, '').toLowerCase()).join(', ')}${
           naoLidas > 0 ? ` — ${naoLidas} ${naoLidas === 1 ? 'mensagem não lida' : 'mensagens não lidas'}` : ''
         }`}
-        title={
-          temMenu
-            ? 'Adicionar — arraste para mudar de lugar, dois cliques voltam ao canto'
-            : 'Chat da equipe — arraste para mudar de lugar, dois cliques voltam ao canto'
-        }
+        title="Adicionar — arraste para mudar de lugar, dois cliques voltam ao canto"
       >
-        {temMenu ? <Icone.mais /> : <Icone.chat />}
+        <Icone.mais />
         {/* as mensagens do chat da equipe que a pessoa ainda nao leu */}
         {naoLidas > 0 && (
           <span className="bolhachat__selo" aria-hidden="true">
@@ -884,10 +882,12 @@ function BotaoChat({ acoes = [], aoAbrirChat, naoLidas = 0 }) {
 /**
  * `semChat` tira o botao flutuante da tela — e o que a tela da obra usa,
  * porque la o chat que vale e o da obra, e a propria tela do chat da
- * equipe. Fora delas, o botao leva para a tela do chat (/app/chat).
+ * equipe. Fora delas, o botao e o "+" com menu: o chat da equipe
+ * (/app/chat), o "Enviar aviso" para quem tem `enviar_avisos`
+ * (atualizacao 46) e o que a tela acrescentar.
  *
- * `acoesFlutuantes` acrescenta opcoes ao botao; com elas ele vira um "+"
- * com menu, sem elas continua sendo o atalho do chat.
+ * `acoesFlutuantes` acrescenta opcoes da propria tela ao menu do botao
+ * (a observacao do quadro, em Obras).
  */
 export default function AppShell({
   children,
@@ -903,6 +903,9 @@ export default function AppShell({
   const navegar = useNavigate()
   /* fora da tela do chat, o botao mostra quantas mensagens faltam ler */
   const naoLidas = useNaoLidasChat(!semChat)
+  /* o pop-up do "Enviar aviso", aberto pelo menu do botao + */
+  const [enviandoAviso, setEnviandoAviso] = useState(false)
+  const podeAvisar = pode('enviar_avisos')
   /* as notificacoes no celular se ligam sozinhas (o aparelho pergunta no
      primeiro clique, uma vez): nao ha cartao em Configuracoes */
   useNotificacoesAutomaticas(Boolean(user))
@@ -1240,11 +1243,19 @@ export default function AppShell({
 
       {!semChat && (
         <BotaoChat
-          acoes={acoesFlutuantes}
+          acoes={[
+            ...acoesFlutuantes,
+            /* o aviso para a empresa inteira, que cai no Panorama */
+            ...(podeAvisar
+              ? [{ id: 'aviso', rotulo: 'Enviar aviso', Glifo: Icone.megafone, aoClicar: () => setEnviandoAviso(true) }]
+              : []),
+          ]}
           aoAbrirChat={() => navegar('/app/chat')}
           naoLidas={naoLidas}
         />
       )}
+
+      {podeAvisar && <ModalAvisoGeral aberto={enviandoAviso} aoFechar={() => setEnviandoAviso(false)} />}
 
       {/* ---------------- a senha ainda e a padrao ----------------
 

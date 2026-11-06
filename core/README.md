@@ -1924,14 +1924,20 @@ cards (consulta de conteiner), e nao a da janela:
 
 | Card | De onde vem |
 |---|---|
-| **Avisos e Comunicados** | os mesmos avisos do sininho (`minhasNotificacoes`: so os do seu setor e os sem setor). O clique abre a obra; nao marca nada como lido |
+| **Avisos e Comunicados** | o **aviso geral** (atualizacao 46, `aviso_geral` em `/api/avisos`): o "Enviar aviso" do botao **+**, para a empresa inteira, com titulo, texto opcional e "importante" (pingo laranja); o clique abre ele inteiro e quem tem `enviar_avisos` exclui por la. Junto, por data, os avisos de obra do sininho (`minhasNotificacoes`: so os do seu setor e os sem setor); o clique abre a obra e nao marca nada como lido |
 | **Aniversariantes do Mes** | o `aniversario` de cada pessoa da equipe: so o dia e o mes (`'MM-DD'`), que a API manda para todos. A data inteira continua so para quem edita usuario. Quem faz aniversario hoje ganha o anel e os confetes |
 | **Agenda da Empresa** | a tabela nova `agenda_evento` (titulo, dia, hora e local opcionais), em `/api/agenda` (`server/routes/agenda.js`). Todos veem os eventos de hoje em diante; quem tem `enviar_avisos` cria, edita e exclui pelo "Ver calendario" |
 | **Destaques e Conquistas** | as avaliacoes: as obras com nota 4 ou mais (ate 5, a melhor primeiro) e um slide com as tres melhores medias da equipe. Carrossel com pontinhos, que anda sozinho e para com o mouse em cima |
 
 Sem a atualizacao 44 no banco, a agenda so sai vazia (o `GET` devolve
-`semTabela: true`); o resto da pagina nao depende dela. A TV continua
-abrindo na Grade e nao tem o Panorama.
+`semTabela: true`); o resto da pagina nao depende dela. Sem a 46, o card de
+avisos mostra so os de obra. A TV continua abrindo na Grade e nao tem o
+Panorama.
+
+O botao flutuante do canto (AppShell) e sempre o **+** com menu, em todas as
+abas: "Chat da equipe", "Enviar aviso" para quem tem `enviar_avisos` e o que a
+tela acrescentar (a observacao do quadro, em Obras). Antes, sem opcao extra,
+ele era so o balao do chat. Dentro da obra continua o + proprio dela.
 
 ### Tarefa aqui e CHECK de obra
 

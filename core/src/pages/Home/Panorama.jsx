@@ -5,7 +5,9 @@ import Estrelas from '@/components/Estrelas/Estrelas'
 import { useDados } from '@/context/DadosContext'
 import { tituloDaObra } from '@/domain/obras'
 import useCorDaLogo from '@/hooks/useCorDaLogo'
+import ModalAvisoGeral, { ModalLerAviso } from '@/components/AvisoGeral/ModalAvisoGeral'
 import * as agendaApi from '@/services/agendaService'
+import * as avisosApi from '@/services/avisosService'
 import { Evento, ModalAgenda, ModalEvento } from './ModalAgenda'
 import './Panorama.css'
 
@@ -180,22 +182,60 @@ function Vazio({ Icone, titulo, texto, children }) {
 /* ============================================================
    1. AVISOS E COMUNICADOS
 
-   Os mesmos avisos do sininho, com a mesma regra: so o que foi
-   enderecado ao SEU setor, mais os recados sem setor (para a empresa
-   toda). Quem decide e `minhasNotificacoes`, no contexto — aqui so se
-   mostra. O clique abre a obra do aviso; abrir o card nao marca nada
-   como lido (quem zera o selo continua sendo o sininho).
+   Dois tipos de aviso numa lista so, do mais novo ao mais antigo:
+
+     o GERAL     o "Enviar aviso" do botao + (atualizacao 46, /api/avisos):
+                 um recado para a empresa inteira. O clique abre ele
+                 inteiro; quem tem `enviar_avisos` exclui por la;
+     o de OBRA   os mesmos do sininho, com a mesma regra: so o que foi
+                 enderecado ao SEU setor, mais os sem setor. Quem decide
+                 e `minhasNotificacoes`, no contexto. O clique abre a
+                 obra; abrir o card nao marca nada como lido (quem zera o
+                 selo continua sendo o sininho).
+
+   O card le os gerais de novo quando um e enviado ou excluido, em
+   qualquer parte da tela (o evento AVISOS_MUDARAM do servico).
    ============================================================ */
 
 const AVISOS_NO_CARD = 3
 
 function CardAvisos() {
-  const { minhasNotificacoes, clientePorId, rotuloEtapa } = useDados()
+  const { minhasNotificacoes, clientePorId, rotuloEtapa, pode } = useDados()
   const navigate = useNavigate()
+  const podeAvisar = pode('enviar_avisos')
   const [todos, setTodos] = useState(false)
+  const [gerais, setGerais] = useState([])
+  const [lendo, setLendo] = useState(null)
+  const [enviando, setEnviando] = useState(false)
 
-  const lista = todos ? minhasNotificacoes : minhasNotificacoes.slice(0, AVISOS_NO_CARD)
-  const sobra = minhasNotificacoes.length > AVISOS_NO_CARD
+  useEffect(() => {
+    let vivo = true
+    const ler = () =>
+      avisosApi
+        .carregarAvisos()
+        .then((lista) => vivo && setGerais(lista))
+        /* sem os gerais o card continua com os de obra: um aviso que
+           nao chegou nao pode derrubar a pagina inicial */
+        .catch(() => {})
+    ler()
+    window.addEventListener(avisosApi.AVISOS_MUDARAM, ler)
+    return () => {
+      vivo = false
+      window.removeEventListener(avisosApi.AVISOS_MUDARAM, ler)
+    }
+  }, [])
+
+  const avisos = useMemo(
+    () =>
+      [
+        ...gerais.map((a) => ({ ...a, geral: true, chave: `geral-${a.id}` })),
+        ...minhasNotificacoes.map((a) => ({ ...a, chave: `obra-${a.id}` })),
+      ].sort((a, b) => String(b.enviadoEm).localeCompare(String(a.enviadoEm))),
+    [gerais, minhasNotificacoes],
+  )
+
+  const lista = todos ? avisos : avisos.slice(0, AVISOS_NO_CARD)
+  const sobra = avisos.length > AVISOS_NO_CARD
 
   return (
     <Cartao
@@ -211,40 +251,73 @@ function CardAvisos() {
         />
       }
     >
-      {minhasNotificacoes.length === 0 ? (
+      {avisos.length === 0 ? (
         <Vazio
           Icone={Glifo.megafone}
           titulo="Nenhum aviso por aqui"
-          texto="Quando um aviso for enviado para o seu setor, ele aparece neste card."
-        />
+          texto="Quando um aviso for enviado para a empresa ou para o seu setor, ele aparece neste card."
+        >
+          {podeAvisar && (
+            <button type="button" className="pvazio__acao" onClick={() => setEnviando(true)}>
+              <Glifo.mais />
+              Enviar aviso
+            </button>
+          )}
+        </Vazio>
       ) : (
         <ul className={`pavisos ${todos ? 'is-todos' : ''}`.trim()}>
-          {lista.map((aviso) => (
-            <li key={aviso.id}>
-              <button
-                type="button"
-                className="paviso"
-                data-tipo={aviso.obraTipo}
-                data-novo={aviso.lido ? undefined : 'sim'}
-                onClick={() => navigate(`/app/obras/${aviso.obraId}`)}
-                title="Abrir a obra deste aviso"
-              >
-                <span className="paviso__ponto" aria-hidden="true" />
-                <span className="paviso__texto">
-                  <strong>
-                    {tituloDaObra({ proposta: aviso.proposta }, clientePorId(aviso.clienteId))}
-                    {!aviso.lido && <span className="paviso__novo">Novo</span>}
-                  </strong>
-                  <span>{aviso.mensagem || `Pendência na ${rotuloEtapa(aviso.etapa)}.`}</span>
-                </span>
-                <time className="paviso__data" dateTime={aviso.enviadoEm}>
-                  {diaMes(aviso.enviadoEm)}
-                </time>
-              </button>
-            </li>
-          ))}
+          {lista.map((aviso) =>
+            aviso.geral ? (
+              <li key={aviso.chave}>
+                <button
+                  type="button"
+                  className="paviso"
+                  data-importante={aviso.importante ? 'sim' : undefined}
+                  onClick={() => setLendo(aviso)}
+                  title="Ler o aviso inteiro"
+                >
+                  <span className="paviso__ponto" aria-hidden="true" />
+                  <span className="paviso__texto">
+                    <strong>{aviso.titulo}</strong>
+                    <span>
+                      {aviso.mensagem || (aviso.enviadoPorNome ? `Enviado por ${aviso.enviadoPorNome}.` : 'Aviso para toda a empresa.')}
+                    </span>
+                  </span>
+                  <time className="paviso__data" dateTime={aviso.enviadoEm}>
+                    {diaMes(aviso.enviadoEm)}
+                  </time>
+                </button>
+              </li>
+            ) : (
+              <li key={aviso.chave}>
+                <button
+                  type="button"
+                  className="paviso"
+                  data-tipo={aviso.obraTipo}
+                  data-novo={aviso.lido ? undefined : 'sim'}
+                  onClick={() => navigate(`/app/obras/${aviso.obraId}`)}
+                  title="Abrir a obra deste aviso"
+                >
+                  <span className="paviso__ponto" aria-hidden="true" />
+                  <span className="paviso__texto">
+                    <strong>
+                      {tituloDaObra({ proposta: aviso.proposta }, clientePorId(aviso.clienteId))}
+                      {!aviso.lido && <span className="paviso__novo">Novo</span>}
+                    </strong>
+                    <span>{aviso.mensagem || `Pendência na ${rotuloEtapa(aviso.etapa)}.`}</span>
+                  </span>
+                  <time className="paviso__data" dateTime={aviso.enviadoEm}>
+                    {diaMes(aviso.enviadoEm)}
+                  </time>
+                </button>
+              </li>
+            ),
+          )}
         </ul>
       )}
+
+      <ModalLerAviso aviso={lendo} podeApagar={podeAvisar} aoFechar={() => setLendo(null)} />
+      {podeAvisar && <ModalAvisoGeral aberto={enviando} aoFechar={() => setEnviando(false)} />}
     </Cartao>
   )
 }
