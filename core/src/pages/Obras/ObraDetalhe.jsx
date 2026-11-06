@@ -584,6 +584,15 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                 é procurada no resto da empresa */}
             <h1 className="capa__titulo">{nomeDaObra}</h1>
 
+            {/* A descricao mora embaixo do nome, na mesma largura dele.
+                Antes ficava no canto direito, numa coluna de 320px: um
+                paragrafo de contrato virava oito linhas espremidas e
+                empurrava os botoes para baixo. A descricao e opcional;
+                sem ela a capa diz isso, em letra apagada. */}
+            <p className="capa__desc">
+              {obra.descricao || <em className="capa__semdesc">sem descrição</em>}
+            </p>
+
             {marcas.length > 0 && (
               <span className="capa__etiquetas">
                 {marcas.map((e) => (
@@ -601,11 +610,6 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
 
           <div className="capa__lado">
             <span className="capa__selo">{obra.tipo === 'emergencia' ? 'Emergência' : 'Padrão'}</span>
-            {/* a descrição é opcional; sem ela a capa diz isso em vez de
-                deixar um vazio entre o selo e os botões */}
-            <p className="capa__desc">
-              {obra.descricao || <em className="capa__semdesc">sem descrição</em>}
-            </p>
 
             {/* Etiquetas e Anexos ficam na obra FECHADA também — só que
                 em modo consulta. Antes os dois botões sumiam junto com o
