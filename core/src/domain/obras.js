@@ -494,6 +494,14 @@ export const CHECK_SEPARAR_OS = 'separar_os'
 export const CHECKS_DA_OS = [CHECK_ENVIAR_OS, CHECK_SEPARAR_OS, CHECK_RETIRADA_OS, CHECK_DEVOLUCAO_OS]
 export const ehCheckDaOS = (check) => CHECKS_DA_OS.includes(check?.tipo)
 
+/* A excecao a regra de cima: a Retirada e a Devolucao das ferramentas o
+   setor com `check_sem_informacao` tambem conclui, na obra, sem a OS —
+   como conclui qualquer check que pede informacao. Ficam com o selo "sem
+   informacao" ate o LWN Control registrar a retirada ou a devolucao de
+   verdade. O Solicitar OS e a Gestao dos instrumentos seguem so do Control. */
+export const CHECKS_DE_FERRAMENTA = [CHECK_RETIRADA_OS, CHECK_DEVOLUCAO_OS]
+export const ehCheckDeFerramenta = (check) => CHECKS_DE_FERRAMENTA.includes(check?.tipo)
+
 export const DICA_SEPARAR_OS =
   'Clique para separar as TAGs da OS desta obra no LWN Control. O check se marca sozinho quando a separação é concluída (por aqui ou direto no Control), e só sai se a OS for excluída.'
 
@@ -546,6 +554,26 @@ export const enderecoDaAbaDaOS = (aba, os, acao) => {
   if (os && acao) busca.set('acao', acao)
   const texto = busca.toString()
   return `/core/app/control/${aba}${texto ? `?${texto}` : ''}`
+}
+
+/**
+ * Para onde a Gestao dos instrumentos, a Retirada ou a Devolucao levam no
+ * LWN Control, com a OS da obra em destaque — ou null quando nao ha OS
+ * esperando aquele passo ou a pessoa nao abre aquela aba.
+ */
+export function destinoDoCheckNoControl(usuario, check, obra) {
+  if (!podeFazer(usuario, 'ver_almoxarife')) return null
+  const { osSeparar, osRetirar, osDevolver } = estadoDasFerramentasDaOS(obra)
+  if (check?.tipo === CHECK_SEPARAR_OS && osSeparar && podeFazer(usuario, 'almox_separar_tags')) {
+    return enderecoDaAbaDaOS('retirada', osSeparar, 'separar')
+  }
+  if (check?.tipo === CHECK_RETIRADA_OS && osRetirar && podeFazer(usuario, 'almox_conferencia')) {
+    return enderecoDaAbaDaOS('retirada', osRetirar)
+  }
+  if (check?.tipo === CHECK_DEVOLUCAO_OS && osDevolver && podeFazer(usuario, 'almox_devolutiva')) {
+    return enderecoDaAbaDaOS('devolutiva', osDevolver)
+  }
+  return null
 }
 
 /** O endereco do Solicitar OS do LWN Control para esta obra. */
@@ -1010,8 +1038,12 @@ export function ehMembroDaObra(usuario, obra) {
 export function travaDoCheck(usuario, check, card, obra) {
   if (!usuario) return 'setor'
   /* nem o acesso total marca os da O.S. (Solicitar, Gestao dos
-     instrumentos, Retirada e Devolucao): sao do LWN Control */
-  if (ehCheckDaOS(check)) return 'sistema'
+     instrumentos, Retirada e Devolucao): sao do LWN Control. A excecao e
+     a Retirada e a Devolucao para quem conclui check sem a informacao:
+     dali em diante valem as travas de sempre, abaixo */
+  if (ehCheckDaOS(check) && !(ehCheckDeFerramenta(check) && podeFazer(usuario, 'check_sem_informacao'))) {
+    return 'sistema'
+  }
   if (temAcessoTotal(usuario)) return null
   if (usuario.checkSoNaObra !== false && !podeFazer(usuario, 'check_todas_obras') && !ehMembroDaObra(usuario, obra)) {
     return 'membro'
@@ -1051,6 +1083,8 @@ export function podeEditarCheck(usuario, check, card, obra) {
  */
 export function oQueOCheckPede(etapa, check, obra) {
   if (!check || !obra) return null
+  if (check.tipo === CHECK_RETIRADA_OS) return 'a retirada das ferramentas no LWN Control'
+  if (check.tipo === CHECK_DEVOLUCAO_OS) return 'a devolução das ferramentas no LWN Control'
   if (check.tipo === CHECK_RESERVA) return obra.reserva ? null : 'a reserva do carro'
   if (check.tipo === CHECK_RETIRADA) return obra.reserva?.retirada ? null : 'o registro da retirada do carro'
   if (check.tipo === CHECK_PRAZO_EXECUCAO) return obra.execucaoPrazo ? null : 'o prazo da execução'

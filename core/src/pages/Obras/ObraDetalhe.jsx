@@ -23,8 +23,10 @@ import {
   checkAbrePopup,
   checkDoPrazoDaExecucao,
   corDoSetorDoCard,
+  destinoDoCheckNoControl,
   diasAte,
   diasDaExecucao,
+  ehCheckDeFerramenta,
   ehMembroDaObra,
   ehPropostaTecnica,
   nomeDoCard,
@@ -297,6 +299,12 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   }
 
   const abrirCheck = (etapa, card, check) => {
+    /* a Retirada e a Devolucao das ferramentas se preenchem no LWN Control */
+    if (ehCheckDeFerramenta(check)) {
+      const destino = destinoDoCheckNoControl(user, check, obra)
+      if (destino) window.location.assign(destino)
+      return
+    }
     if (check.tipo === CHECK_RESERVA) {
       /* a reserva e por periodo: sem o prazo da execucao nao ha dias
          para saber quais carros estao livres (a reserva que ja existe
@@ -373,6 +381,11 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
     }
     abrirCheck(etapa, card, check)
   }
+
+  /* a Retirada e a Devolucao se preenchem no LWN Control, e so quando ha
+     uma OS esperando aquele passo que a pessoa possa abrir */
+  const temOndePreencher = ({ etapa, check }) =>
+    ehCheckDeFerramenta(check) ? Boolean(destinoDoCheckNoControl(user, check, obra)) : checkAbrePopup(etapa, check)
 
   /* concluir sem a informacao tambem pode fechar a sua parte da etapa: o
      anuncio e o mesmo da marcacao comum */
@@ -1437,7 +1450,7 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                   ? `, por ${pessoaPorId(obra.checks[semInfo.check.id].feitoPor).nome}`
                   : ''}
                 {obra.checks[semInfo.check.id]?.feitoEm ? `, em ${dataHora(obra.checks[semInfo.check.id].feitoEm)}` : ''}.{' '}
-                {checkAbrePopup(semInfo.etapa, semInfo.check)
+                {temOndePreencher(semInfo)
                   ? 'Preencha agora pelo caminho de sempre ou desmarque o check.'
                   : 'Para desfazer, desmarque o check.'}
               </p>
@@ -1460,7 +1473,7 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                   Desmarcar
                 </button>
               )}
-              {(!semInfo.marcado || checkAbrePopup(semInfo.etapa, semInfo.check)) && (
+              {(ehCheckDeFerramenta(semInfo.check) ? temOndePreencher(semInfo) : !semInfo.marcado || temOndePreencher(semInfo)) && (
                 <Button
                   type="button"
                   variant={semInfo.marcado ? 'primary' : 'ghost'}

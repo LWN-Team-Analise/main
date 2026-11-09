@@ -16,8 +16,9 @@ import {
   DICA_SEPARAR_OS,
   DICA_RETIRADA_OS,
   DICA_DEVOLUCAO_OS,
+  destinoDoCheckNoControl,
   ehCheckDaOS,
-  enderecoDaAbaDaOS,
+  ehCheckDeFerramenta,
   enderecoSolicitarOS,
   estadoDasFerramentasDaOS,
   estadoDoSolicitarOS,
@@ -100,7 +101,6 @@ export default function CardSetor({
   /* a Gestao dos instrumentos (separacao), a Retirada e a Devolucao das
      ferramentas: em que pe esta cada uma */
   const ferramentasDaOS = modelo ? null : estadoDasFerramentasDaOS(obra)
-  const veControl = podeFazer(usuario, 'ver_almoxarife')
   const semPermissao = travas.length > 0 && travas.every(Boolean)
   const motivoDoCard = travas.includes('membro') ? 'membro' : travas.includes('setor') ? 'setor' : 'cargo'
   const cor = corDoSetorDoCard(card, corSuaveDoCargo)
@@ -303,15 +303,11 @@ export default function CardSetor({
           const retiradaBloqueada = retiradaOS && !feito && ferramentasDaOS?.retirada === 'bloqueada'
           const devolucaoBloqueada = devolucaoOS && !feito && ferramentasDaOS?.devolucao === 'bloqueada'
           const destinoNoControl =
-            modelo || feito || travado || !veControl
-              ? null
-              : separarOS && ferramentasDaOS?.osSeparar && podeFazer(usuario, 'almox_separar_tags')
-                ? enderecoDaAbaDaOS('retirada', ferramentasDaOS.osSeparar, 'separar')
-                : retiradaOS && ferramentasDaOS?.osRetirar && podeFazer(usuario, 'almox_conferencia')
-                ? enderecoDaAbaDaOS('retirada', ferramentasDaOS.osRetirar)
-                : devolucaoOS && ferramentasDaOS?.osDevolver && podeFazer(usuario, 'almox_devolutiva')
-                  ? enderecoDaAbaDaOS('devolutiva', ferramentasDaOS.osDevolver)
-                  : null
+            modelo || feito || travado ? null : destinoDoCheckNoControl(usuario, check, obra)
+          /* Quem conclui check sem a informacao (`meu`, nestes dois) nao vai
+             direto ao Control: o clique abre a escolha entre ir para la e
+             concluir aqui. Para os outros, segue o atalho de sempre */
+          const vaiAoControl = Boolean(destinoNoControl) && !(ehCheckDeFerramenta(check) && meu)
           const dicaDoCheck = [
             porqueGases,
             enviarOS
@@ -330,7 +326,11 @@ export default function CardSetor({
           /* so o check que ainda vale tem ordem: o que ja saiu do roteiro
              (e uma obra antiga ainda mostra) nao se arrasta */
           const arrastavel = Boolean(arraste) && podeChecks && !check.vigenteAte
-          const travadoAqui = (modelo || travado || (!meu && !abreSemPermissao)) && !vaiSolicitar && !destinoNoControl
+          /* o da O.S. marcado de verdade nao tem o que abrir: so sai com a OS */
+          const travadoAqui =
+            (modelo || travado || (!meu && !abreSemPermissao) || (ehCheckDaOS(check) && feito && !semInformacao)) &&
+            !vaiSolicitar &&
+            !destinoNoControl
           return (
             <Dica
               as="li"
@@ -357,7 +357,7 @@ export default function CardSetor({
                   /* os da O.S. nao sao "de outro setor": ninguem marca, so o sistema */
                   !modelo && !meu && !abreSemPermissao && !ehCheckDaOS(check) ? 'is-deoutro' : ''
                 } ${doSistema || proposta || doCarro || ehCheckDaOS(check) ? 'is-sistema' : ''} ${
-                  retiradaBloqueada || devolucaoBloqueada ? 'is-bloqueada' : ''
+                  (retiradaBloqueada || devolucaoBloqueada) && !meu ? 'is-bloqueada' : ''
                 } ${modelo ? 'is-modelo' : ''}`.trim()}
                 onClick={() => {
                   if (travadoAqui) return
@@ -365,7 +365,7 @@ export default function CardSetor({
                     window.location.assign(enderecoSolicitarOS(obra.id))
                     return
                   }
-                  if (destinoNoControl) {
+                  if (vaiAoControl) {
                     window.location.assign(destinoNoControl)
                     return
                   }
@@ -481,7 +481,7 @@ export default function CardSetor({
                   </span>
                 )}
                 {/* a Retirada: travada ate a separacao, depois o convite (ou a espera) */}
-                {retiradaOS && !modelo && (
+                {retiradaOS && !modelo && !semInformacao && (
                   <span
                     className="tarefa__ensaios"
                     data-os={
@@ -506,7 +506,7 @@ export default function CardSetor({
                   </span>
                 )}
                 {/* a Devolucao: travada ate a retirada, depois o convite (ou a espera) */}
-                {devolucaoOS && !modelo && (
+                {devolucaoOS && !modelo && !semInformacao && (
                   <span
                     className="tarefa__ensaios"
                     data-os={feito ? 'aprovada' : devolucaoBloqueada ? 'bloqueada' : 'aguardando'}

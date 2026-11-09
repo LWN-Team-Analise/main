@@ -671,6 +671,10 @@ Tres chaves valem uma nota:
   se desmarcam. NAO abre check de outro setor: `podeMarcar` e
   `podeEditarCheck` continuam valendo. A API confere em
   `PUT /api/dados/obras/:id/checks/:checkId` com `{ semInformacao: true }`.
+  Vale tambem para a **Retirada** e a **Devolucao das ferramentas** (3a etapa),
+  mesmo sem OS: "Preencher agora" leva ao LWN Control, quando ha OS esperando
+  aquele passo, e o selo sai quando o Control registra o passo de verdade. O
+  Solicitar OS e a Gestao dos instrumentos continuam so do Control.
   Precisa de `db/atualizacao-36.sql.txt` (sem ela, so o "Concluir sem
   informação" e recusado, com o recado de rodar `npm run db:atualizar`).
 - **`criar_obras`** ("Criar obra") separou CRIAR a obra de editar: so o

@@ -2693,6 +2693,12 @@ const CHECKS_DA_OS = {
   },
 }
 
+/* A excecao: a Retirada e a Devolucao das ferramentas o setor com
+   `check_sem_informacao` tambem conclui na obra, sem a OS. O check fica
+   com a marca "sem informacao" ate o LWN Control registrar o passo de
+   verdade (marcarCheckDaOS, em server/almoxarife). */
+const DA_OS_SEM_INFORMACAO = new Set(['retirada_os', 'devolucao_os'])
+
 /**
  * O que o check exige para ser marcado:
  *
@@ -2869,6 +2875,16 @@ const rotuloResposta = (resposta) => (resposta === true ? 'Sim' : resposta === f
  * src/domain/obras.js), na mesma ordem.
  */
 async function faltaNoCheck(obraId, checkId, regra, resposta) {
+  /* a retirada e a devolucao acontecem no LWN Control: aqui so chega
+     quem esta concluindo sem a informacao */
+  if (DA_OS_SEM_INFORMACAO.has(regra.tipo)) {
+    return {
+      status: 409,
+      erro: CHECKS_DA_OS[regra.tipo].marcar,
+      falta: regra.tipo === 'retirada_os' ? 'a retirada das ferramentas' : 'a devolução das ferramentas',
+    }
+  }
+
   /* o check com horario (atualizacao 31) marca no pop-up dele, com as
      datas e os horarios; sem horario nenhum definido, nao fecha */
   const { rows: comHorario } = await query(
@@ -2984,11 +3000,10 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
 
     /* Os checks da O.S. ("Solicitar OS" da 2a etapa; "Gestao dos
        instrumentos", "Retirada" e "Devolucao das ferramentas" da 3a;
-       atualizacoes 38, 40, 42 e 43) sao os
-       unicos que ninguem marca na mao — nem concluindo sem a informacao:
-       quem marca e o LWN Control, quando a OS desta obra chega la
-       (server/almoxarife) */
-    if (CHECKS_DA_OS[regra.tipo]) {
+       atualizacoes 38, 40, 42 e 43) ninguem marca na mao: quem marca e o
+       LWN Control, quando a OS desta obra chega la (server/almoxarife).
+       So a Retirada e a Devolucao se concluem sem a informacao */
+    if (CHECKS_DA_OS[regra.tipo] && !(semInformacao && DA_OS_SEM_INFORMACAO.has(regra.tipo))) {
       return res.status(409).json({ erro: CHECKS_DA_OS[regra.tipo].marcar })
     }
 
@@ -3089,12 +3104,16 @@ router.delete('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req,
        O concluido SEM a informacao (atualizacao 36) nao acompanha nada —
        nem o prazo, nem a reserva, nem a saida —, e desmarca como os outros */
     const { tipo } = await regraDoCheck(req.params.checkId)
+    const semInformacao = await concluidoSemInformacao(req.params.id, req.params.checkId)
     /* os da O.S. acompanham a OS no LWN Control: saem sozinhos so se a OS
-       for excluida */
-    if (CHECKS_DA_OS[tipo]) {
+       for excluida. So a Retirada e a Devolucao concluidas sem a informacao
+       desmarcam, e so por quem pode concluir assim */
+    if (
+      CHECKS_DA_OS[tipo] &&
+      !(semInformacao && DA_OS_SEM_INFORMACAO.has(tipo) && cargoPode(await meuCargo(req.dono.sub), 'check_sem_informacao'))
+    ) {
       return res.status(409).json({ erro: CHECKS_DA_OS[tipo].desmarcar })
     }
-    const semInformacao = await concluidoSemInformacao(req.params.id, req.params.checkId)
     if (tipo === 'prazo_execucao' && !semInformacao) {
       return res.status(409).json({
         erro: 'Este check acompanha o prazo da execução. Para mudar, altere a data no período de execução.',
