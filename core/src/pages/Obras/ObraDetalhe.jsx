@@ -26,7 +26,7 @@ import {
   destinoDoCheckNoControl,
   diasAte,
   diasDaExecucao,
-  ehCheckDeFerramenta,
+  ehCheckDaOS,
   ehMembroDaObra,
   ehPropostaTecnica,
   estadoDaEtapaPara,
@@ -300,8 +300,8 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   }
 
   const abrirCheck = (etapa, card, check) => {
-    /* a Retirada e a Devolucao das ferramentas se preenchem no LWN Control */
-    if (ehCheckDeFerramenta(check)) {
+    /* os checks da O.S. se preenchem no LWN Control */
+    if (ehCheckDaOS(check)) {
       const destino = destinoDoCheckNoControl(user, check, obra)
       if (destino) window.location.assign(destino)
       return
@@ -383,10 +383,10 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
     abrirCheck(etapa, card, check)
   }
 
-  /* a Retirada e a Devolucao se preenchem no LWN Control, e so quando ha
-     uma OS esperando aquele passo que a pessoa possa abrir */
+  /* os da O.S. se preenchem no LWN Control, e so quando ha uma OS
+     esperando aquele passo que a pessoa possa abrir */
   const temOndePreencher = ({ etapa, check }) =>
-    ehCheckDeFerramenta(check) ? Boolean(destinoDoCheckNoControl(user, check, obra)) : checkAbrePopup(etapa, check)
+    ehCheckDaOS(check) ? Boolean(destinoDoCheckNoControl(user, check, obra)) : checkAbrePopup(etapa, check)
 
   /* concluir sem a informacao tambem pode fechar a sua parte da etapa: o
      anuncio e o mesmo da marcacao comum */
@@ -1475,7 +1475,7 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                   Desmarcar
                 </button>
               )}
-              {(ehCheckDeFerramenta(semInfo.check) ? temOndePreencher(semInfo) : !semInfo.marcado || temOndePreencher(semInfo)) && (
+              {(ehCheckDaOS(semInfo.check) ? temOndePreencher(semInfo) : !semInfo.marcado || temOndePreencher(semInfo)) && (
                 <Button
                   type="button"
                   variant={semInfo.marcado ? 'primary' : 'ghost'}

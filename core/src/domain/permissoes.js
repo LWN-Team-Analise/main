@@ -133,8 +133,8 @@ export const ALTERACAO = [
      os ensaios, o prazo da execucao, o documento da proposta, a reserva
      e a retirada do carro) sem preencher a informacao (atualizacao 36).
      Nao abre o check de outro setor: quem marca o que continua sendo a
-     regra de sempre (podeEditarCheck). Vale tambem para a Retirada e a
-     Devolucao das ferramentas, que fora daqui so o LWN Control marca */
+     regra de sempre (podeEditarCheck). Vale tambem para os quatro checks
+     da O.S., que fora daqui so o LWN Control marca */
   { chave: 'check_sem_informacao', rotulo: 'Concluir check sem preencher a informação', dependeDe: 'ver_obras' },
   { chave: 'editar_etapa', rotulo: 'Adicionar / alterar etapa', dependeDe: 'ver_obras' },
   { chave: 'editar_cards', rotulo: 'Adicionar / alterar cards', dependeDe: 'ver_obras' },

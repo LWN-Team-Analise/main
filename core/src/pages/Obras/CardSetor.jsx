@@ -18,7 +18,6 @@ import {
   DICA_DEVOLUCAO_OS,
   destinoDoCheckNoControl,
   ehCheckDaOS,
-  ehCheckDeFerramenta,
   enderecoSolicitarOS,
   estadoDasFerramentasDaOS,
   estadoDoSolicitarOS,
@@ -286,6 +285,7 @@ export default function CardSetor({
           const enviarOS = check.tipo === CHECK_ENVIAR_OS
           const estadoOS = enviarOS && !modelo ? estadoDoSolicitarOS(obra) : null
           const vaiSolicitar =
+            !meu &&
             enviarOS &&
             !modelo &&
             !feito &&
@@ -304,10 +304,10 @@ export default function CardSetor({
           const devolucaoBloqueada = devolucaoOS && !feito && ferramentasDaOS?.devolucao === 'bloqueada'
           const destinoNoControl =
             modelo || feito || travado ? null : destinoDoCheckNoControl(usuario, check, obra)
-          /* Quem conclui check sem a informacao (`meu`, nestes dois) nao vai
+          /* Quem conclui check sem a informacao (`meu`, nestes checks) nao vai
              direto ao Control: o clique abre a escolha entre ir para la e
              concluir aqui. Para os outros, segue o atalho de sempre */
-          const vaiAoControl = Boolean(destinoNoControl) && !(ehCheckDeFerramenta(check) && meu)
+          const vaiAoControl = Boolean(destinoNoControl) && !(ehCheckDaOS(check) && meu)
           const dicaDoCheck = [
             porqueGases,
             enviarOS
@@ -452,7 +452,7 @@ export default function CardSetor({
                 )}
                 {/* o "Solicitar OS": o convite, a OS esperando o aval, a reprovada
                     (pedir de novo) ou o numero da OS aprovada */}
-                {enviarOS && !modelo && (
+                {enviarOS && !modelo && !semInformacao && (
                   <span className="tarefa__ensaios" data-os={feito ? 'aprovada' : (estadoOS ?? 'nenhuma')}>
                     {feito
                       ? (numeroDaOSAprovada(obra) ?? 'aprovada')
@@ -460,13 +460,13 @@ export default function CardSetor({
                         ? 'aguardando aprovação'
                         : estadoOS === 'reprovada'
                           ? 'reprovada — solicitar de novo'
-                          : vaiSolicitar
+                          : destinoNoControl
                             ? 'solicitar'
                             : 'sem OS'}
                   </span>
                 )}
                 {/* a Gestao dos instrumentos: separada, o convite (ou a espera) ou sem OS aprovada */}
-                {separarOS && !modelo && (
+                {separarOS && !modelo && !semInformacao && (
                   <span
                     className="tarefa__ensaios"
                     data-os={feito ? 'aprovada' : ferramentasDaOS?.separacao ? 'aguardando' : 'nenhuma'}

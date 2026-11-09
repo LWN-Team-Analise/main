@@ -671,10 +671,10 @@ Tres chaves valem uma nota:
   se desmarcam. NAO abre check de outro setor: `podeMarcar` e
   `podeEditarCheck` continuam valendo. A API confere em
   `PUT /api/dados/obras/:id/checks/:checkId` com `{ semInformacao: true }`.
-  Vale tambem para a **Retirada** e a **Devolucao das ferramentas** (3a etapa),
-  mesmo sem OS: "Preencher agora" leva ao LWN Control, quando ha OS esperando
-  aquele passo, e o selo sai quando o Control registra o passo de verdade. O
-  Solicitar OS e a Gestao dos instrumentos continuam so do Control.
+  Vale tambem para os checks da O.S. (**Solicitar OS**, **Gestao dos
+  instrumentos**, **Retirada** e **Devolucao das ferramentas**), mesmo sem OS:
+  "Preencher agora" leva ao LWN Control, quando ha OS esperando aquele passo,
+  e o selo sai quando o Control registra o passo de verdade.
   Precisa de `db/atualizacao-36.sql.txt` (sem ela, so o "Concluir sem
   informação" e recusado, com o recado de rodar `npm run db:atualizar`).
 - **`criar_obras`** ("Criar obra") separou CRIAR a obra de editar: so o
@@ -701,8 +701,7 @@ com o motivo):
    pessoa. `check_todas_etapas` e a obra de emergencia passam por esta. Os
    dois tambem nao esperam a fila: com eles, a etapa seguinte ja abre antes de
    a anterior fechar (`estadoDaEtapaPara`, so na tela da obra; a API nao trava
-   por etapa). O Solicitar OS e a Gestao dos instrumentos continuam so do
-   LWN Control.
+   por etapa).
 3. **Cargo.** Na tela do setor, o bloco **Checks por cargo** aperta o que
    cada cargo (cargo_titulo) marca: **a partir de que etapa** e os checks
    **de fora** ("menos Determinar Focal Point"). Em **Exceção por pessoa** a

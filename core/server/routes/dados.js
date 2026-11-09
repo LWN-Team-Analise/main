@@ -2680,28 +2680,26 @@ async function recusouMarcar(res, usuarioId, checkId, obraId, deOutro) {
    a recusa de marcar e de desmarcar na mao */
 const CHECKS_DA_OS = {
   enviar_os: {
+    falta: 'a OS aprovada',
     marcar: 'Este check é marcado pelo sistema quando a OS desta obra é aprovada no LWN Control.',
     desmarcar: 'Este check acompanha a OS aprovada no LWN Control: ele só sai se a OS for excluída lá.',
   },
   separar_os: {
+    falta: 'a separação das TAGs',
     marcar: 'Este check é marcado pelo sistema quando o Almoxarife separa as TAGs da OS desta obra no LWN Control.',
     desmarcar: 'Este check acompanha a separação das TAGs no LWN Control: ele só sai se a OS for excluída lá.',
   },
   retirada_os: {
+    falta: 'a retirada das ferramentas',
     marcar: 'Este check é marcado pelo sistema quando as ferramentas da OS desta obra são retiradas no LWN Control.',
     desmarcar: 'Este check acompanha a retirada feita no LWN Control: ele só sai se a OS for excluída lá.',
   },
   devolucao_os: {
+    falta: 'a devolução das ferramentas',
     marcar: 'Este check é marcado pelo sistema quando as ferramentas da OS desta obra são devolvidas no LWN Control.',
     desmarcar: 'Este check acompanha a devolução feita no LWN Control: ele só sai se a OS for excluída lá.',
   },
 }
-
-/* A excecao: a Retirada e a Devolucao das ferramentas o setor com
-   `check_sem_informacao` tambem conclui na obra, sem a OS. O check fica
-   com a marca "sem informacao" ate o LWN Control registrar o passo de
-   verdade (marcarCheckDaOS, em server/almoxarife). */
-const DA_OS_SEM_INFORMACAO = new Set(['retirada_os', 'devolucao_os'])
 
 /**
  * O que o check exige para ser marcado:
@@ -2879,14 +2877,10 @@ const rotuloResposta = (resposta) => (resposta === true ? 'Sim' : resposta === f
  * src/domain/obras.js), na mesma ordem.
  */
 async function faltaNoCheck(obraId, checkId, regra, resposta) {
-  /* a retirada e a devolucao acontecem no LWN Control: aqui so chega
-     quem esta concluindo sem a informacao */
-  if (DA_OS_SEM_INFORMACAO.has(regra.tipo)) {
-    return {
-      status: 409,
-      erro: CHECKS_DA_OS[regra.tipo].marcar,
-      falta: regra.tipo === 'retirada_os' ? 'a retirada das ferramentas' : 'a devolução das ferramentas',
-    }
+  /* os da O.S. acontecem no LWN Control: aqui so chega quem esta
+     concluindo sem a informacao */
+  if (CHECKS_DA_OS[regra.tipo]) {
+    return { status: 409, erro: CHECKS_DA_OS[regra.tipo].marcar, falta: CHECKS_DA_OS[regra.tipo].falta }
   }
 
   /* o check com horario (atualizacao 31) marca no pop-up dele, com as
@@ -3004,10 +2998,11 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
 
     /* Os checks da O.S. ("Solicitar OS" da 2a etapa; "Gestao dos
        instrumentos", "Retirada" e "Devolucao das ferramentas" da 3a;
-       atualizacoes 38, 40, 42 e 43) ninguem marca na mao: quem marca e o
-       LWN Control, quando a OS desta obra chega la (server/almoxarife).
-       So a Retirada e a Devolucao se concluem sem a informacao */
-    if (CHECKS_DA_OS[regra.tipo] && !(semInformacao && DA_OS_SEM_INFORMACAO.has(regra.tipo))) {
+       atualizacoes 38, 40, 42 e 43) quem marca e o LWN Control, quando a
+       OS desta obra chega la (server/almoxarife). Na mao, so concluindo
+       sem a informacao: a marca "sem informacao" sai quando o passo
+       acontece de verdade (marcarCheckDaOS) */
+    if (CHECKS_DA_OS[regra.tipo] && !semInformacao) {
       return res.status(409).json({ erro: CHECKS_DA_OS[regra.tipo].marcar })
     }
 
@@ -3110,11 +3105,11 @@ router.delete('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req,
     const { tipo } = await regraDoCheck(req.params.checkId)
     const semInformacao = await concluidoSemInformacao(req.params.id, req.params.checkId)
     /* os da O.S. acompanham a OS no LWN Control: saem sozinhos so se a OS
-       for excluida. So a Retirada e a Devolucao concluidas sem a informacao
-       desmarcam, e so por quem pode concluir assim */
+       for excluida. So os concluidos sem a informacao desmarcam, e so por
+       quem pode concluir assim */
     if (
       CHECKS_DA_OS[tipo] &&
-      !(semInformacao && DA_OS_SEM_INFORMACAO.has(tipo) && cargoPode(await meuCargo(req.dono.sub), 'check_sem_informacao'))
+      !(semInformacao && cargoPode(await meuCargo(req.dono.sub), 'check_sem_informacao'))
     ) {
       return res.status(409).json({ erro: CHECKS_DA_OS[tipo].desmarcar })
     }
