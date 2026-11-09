@@ -5,7 +5,7 @@ import Estrelas from '@/components/Estrelas/Estrelas'
 import { useDados } from '@/context/DadosContext'
 import { tituloDaObra } from '@/domain/obras'
 import useCorDaLogo from '@/hooks/useCorDaLogo'
-import ModalAvisoGeral, { ModalLerAviso } from '@/components/AvisoGeral/ModalAvisoGeral'
+import ModalAvisoGeral, { ModalHistoricoAvisos, ModalLerAviso } from '@/components/AvisoGeral/ModalAvisoGeral'
 import * as agendaApi from '@/services/agendaService'
 import * as avisosApi from '@/services/avisosService'
 import GloboClientes from './GloboClientes'
@@ -188,9 +188,12 @@ function Vazio({ Icone, titulo, texto, children }) {
    Dois tipos de aviso numa lista so, do mais novo ao mais antigo — com
    os gerais marcados como importantes sempre no topo:
 
-     o GERAL     o "Enviar aviso" do botao + (atualizacao 46, /api/avisos):
-                 um recado para a empresa inteira. O clique abre ele
-                 inteiro; quem tem `enviar_avisos` exclui por la;
+     o GERAL     o "Enviar aviso" do botao + (atualizacoes 46 e 47,
+                 /api/avisos): um recado para a empresa inteira ou para o
+                 SEU setor, enquanto nao expira nem e encerrado. O clique
+                 abre ele inteiro; quem tem `enviar_avisos` encerra e
+                 exclui por la. Terminado, ele fica no historico (o link
+                 no pe do card);
      o de OBRA   os mesmos do sininho, com a mesma regra: so o que foi
                  enderecado ao SEU setor, mais os sem setor. Quem decide
                  e `minhasNotificacoes`, no contexto. O clique abre a
@@ -211,6 +214,7 @@ function CardAvisos() {
   const [gerais, setGerais] = useState([])
   const [lendo, setLendo] = useState(null)
   const [enviando, setEnviando] = useState(false)
+  const [historico, setHistorico] = useState(false)
 
   useEffect(() => {
     let vivo = true
@@ -327,7 +331,13 @@ function CardAvisos() {
         </ul>
       )}
 
+      <button type="button" className="pavisos__historico" onClick={() => setHistorico(true)}>
+        Histórico de avisos
+        <Glifo.seta />
+      </button>
+
       <ModalLerAviso aviso={lendo} podeApagar={podeAvisar} aoFechar={() => setLendo(null)} />
+      <ModalHistoricoAvisos aberto={historico} podeApagar={podeAvisar} aoFechar={() => setHistorico(false)} />
       {podeAvisar && <ModalAvisoGeral aberto={enviando} aoFechar={() => setEnviando(false)} />}
     </Cartao>
   )

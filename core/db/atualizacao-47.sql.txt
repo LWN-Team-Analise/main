@@ -1,0 +1,50 @@
+-- ============================================================
+--  ATUALIZACAO 47 — o aviso geral com SETOR, EXPIRACAO e HISTORICO
+--
+--  O "Enviar aviso" do botao + (atualizacao 46) ganha:
+--
+--    setor_chave    o setor que recebe (cargo.chave). NULL = todos.
+--                   Texto, e nao chave estrangeira: o setor excluido
+--                   nao pode transformar o aviso dele em aviso para a
+--                   empresa inteira, nem levar o historico junto;
+--    expira_em      o ultimo dia do aviso. NULL = sem expiracao;
+--    encerrado_em   quando alguem encerrou o aviso antes da hora (ou o
+--    encerrado_por  aviso sem expiracao, que so sai assim) e quem foi.
+--
+--  Enquanto nao expira nem e encerrado, o aviso fica no card "Avisos e
+--  Comunicados" do Panorama, so para o setor dele. Depois vai para o
+--  historico de avisos. So o aviso EXCLUIDO some de vez.
+--
+--  Nada muda nos avisos que ja existem: continuam para todos os setores
+--  e sem expiracao.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar uma vez. Rodar de novo nao quebra nada e nao duplica nada.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.aviso_geral ADD COLUMN IF NOT EXISTS setor_chave   text;
+ALTER TABLE public.aviso_geral ADD COLUMN IF NOT EXISTS expira_em     date;
+ALTER TABLE public.aviso_geral ADD COLUMN IF NOT EXISTS encerrado_em  timestamptz;
+ALTER TABLE public.aviso_geral ADD COLUMN IF NOT EXISTS encerrado_por bigint REFERENCES public.usuario (id) ON DELETE SET NULL;
+
+COMMENT ON COLUMN public.aviso_geral.setor_chave IS
+    'cargo.chave do setor que recebe o aviso. NULL = todos os setores.';
+COMMENT ON COLUMN public.aviso_geral.expira_em IS
+    'Ultimo dia em que o aviso aparece no Panorama. NULL = sem expiracao (sai so encerrando).';
+COMMENT ON COLUMN public.aviso_geral.encerrado_em IS
+    'Quando o aviso foi encerrado a mao. Encerrado ou expirado, ele fica so no historico.';
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" na linha
+-- ============================================================
+
+SELECT 'aviso_geral com setor, expiracao e encerramento' AS item,
+       (SELECT count(*) FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = 'aviso_geral'
+           AND column_name IN ('setor_chave', 'expira_em', 'encerrado_em', 'encerrado_por')) = 4 AS ok;

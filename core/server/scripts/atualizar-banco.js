@@ -79,6 +79,7 @@ const ARQUIVOS = [
   'db/atualizacao-44.sql.txt',
   'db/atualizacao-45.sql.txt',
   'db/atualizacao-46.sql.txt',
+  'db/atualizacao-47.sql.txt',
 ]
 
 /**
@@ -241,6 +242,9 @@ const CONFERENCIA = [
   ['agenda_evento (agenda da empresa)', "SELECT to_regclass('public.agenda_evento') IS NOT NULL AS ok"],
   ['cargo.permissoes_guardadas', col('cargo', 'permissoes_guardadas')],
   ['aviso_geral (o Enviar aviso do botao +)', "SELECT to_regclass('public.aviso_geral') IS NOT NULL AS ok"],
+  ['aviso_geral.setor_chave', col('aviso_geral', 'setor_chave')],
+  ['aviso_geral.expira_em', col('aviso_geral', 'expira_em')],
+  ['aviso_geral.encerrado_em', col('aviso_geral', 'encerrado_em')],
 ]
 
 function col(tabela, coluna) {

@@ -322,9 +322,6 @@ export function ModalEvento({ evento, nivel = 0, aoFechar, aoSalvo }) {
         )}
 
         <footer className="formobra__acoes">
-          <button type="button" className="formobra__cancelar" onClick={aoFechar}>
-            Cancelar
-          </button>
           <Button type="submit" loading={salvando}>
             {novo ? 'Adicionar' : 'Salvar'}
           </Button>

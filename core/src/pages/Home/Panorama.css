@@ -390,6 +390,30 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* o link do historico, no pe do card */
+.pavisos__historico {
+  display: inline-flex;
+  align-self: flex-end;
+  align-items: center;
+  gap: 5px;
+  margin: auto -8px -6px 0;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--panorama-azul);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.pavisos__historico:hover {
+  background: var(--panorama-azul-suave);
+}
+
 /* ============================================================
    2. Aniversariantes
    ============================================================ */
