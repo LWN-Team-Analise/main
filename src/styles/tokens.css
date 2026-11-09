@@ -14,7 +14,7 @@
   --c-navy-800: #0d1f45;
   --c-ink: #0b1324;
   --c-text: #3a475c;
-  --c-muted: #69768b;
+  --c-muted: #647187; /* 4,5:1 tambem sobre --c-bg-soft (WCAG AA) */
   --c-line: rgba(13, 31, 69, 0.1);
   --c-line-strong: rgba(13, 31, 69, 0.16);
   --c-bg: #ffffff;

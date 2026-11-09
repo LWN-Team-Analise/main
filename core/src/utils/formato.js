@@ -64,7 +64,7 @@ export function corDoNome(nome) {
   return `hsl(${soma} 62% 46%)`
 }
 
-/** '30586894896' -> '305.868.948-96' (aceita texto pela metade). */
+/** '12345678909' -> '123.456.789-09' (aceita texto pela metade). */
 export function formatarCPF(valor) {
   const d = String(valor ?? '').replace(/\D/g, '').slice(0, 11)
   if (d.length <= 3) return d

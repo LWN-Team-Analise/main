@@ -1,4 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { Pause, Play } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useStrings } from '../../i18n/strings';
 import { clamp, damp } from '../../lib/math';
 import './Marquee.css';
 
@@ -15,11 +17,15 @@ const WHEEL_IDLE_MS = 120; // a trackpad swipe counts as released after this lon
  * 1:1. Let go and it keeps travelling in the direction of the drag — the
  * release speed carries on as momentum and eases into the cruising speed, now
  * in that direction. It pauses off-screen, eases down while it holds keyboard
- * focus, and with reduced motion it only moves when dragged.
+ * focus, and with reduced motion it only moves when dragged. O botao ao lado
+ * pausa e retoma (WCAG 2.2.2: o que se move sozinho precisa de como parar).
  */
 export default function Marquee({ children, speed = 40, reverse = false, className = '', label }) {
   const rootRef = useRef(null);
   const trackRef = useRef(null);
+  const pausedRef = useRef(false);
+  const [paused, setPaused] = useState(false);
+  const t = useStrings();
 
   useEffect(() => {
     const root = rootRef.current;
@@ -57,8 +63,10 @@ export default function Marquee({ children, speed = 40, reverse = false, classNa
       last = now;
       if (grab) return; // the pointer owns the position
       slow += (slowTarget - slow) * damp(4, dt);
-      const cruise = reduceMotion ? 0 : direction * speed * slow;
-      velocity += (cruise - velocity) * damp(2.2, dt);
+      const cruise = reduceMotion || pausedRef.current ? 0 : direction * speed * slow;
+      // Pausado, para de vez em menos de meio segundo.
+      velocity += (cruise - velocity) * damp(pausedRef.current ? 14 : 2.2, dt);
+      if (pausedRef.current && Math.abs(velocity) < 0.5) velocity = 0;
       offset += velocity * dt;
       apply();
     };
@@ -195,14 +203,29 @@ export default function Marquee({ children, speed = 40, reverse = false, classNa
     };
   }, [speed, reverse]);
 
+  const togglePause = () => {
+    pausedRef.current = !pausedRef.current;
+    setPaused(pausedRef.current);
+  };
+
   return (
-    <div ref={rootRef} className={`marquee ${className}`.trim()} role={label ? 'region' : undefined} aria-label={label}>
-      <div ref={trackRef} className="marquee__track">
-        <div className="marquee__group">{children}</div>
-        <div className="marquee__group" aria-hidden="true" inert>
-          {children}
+    <div className={`marquee-wrap ${className}`.trim()}>
+      <div ref={rootRef} className="marquee" role={label ? 'region' : undefined} aria-label={label}>
+        <div ref={trackRef} className="marquee__track">
+          <div className="marquee__group">{children}</div>
+          <div className="marquee__group" aria-hidden="true" inert>
+            {children}
+          </div>
         </div>
       </div>
+      <button
+        type="button"
+        className="marquee__pause"
+        onClick={togglePause}
+        aria-label={paused ? t.site.playCarousel : t.site.pauseCarousel}
+      >
+        {paused ? <Play size={14} aria-hidden="true" /> : <Pause size={14} aria-hidden="true" />}
+      </button>
     </div>
   );
 }

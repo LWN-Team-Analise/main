@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { Pause, Play } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useMediaQuery, usePrefersReducedMotion } from '../../hooks/useMediaQuery';
 import { useStrings } from '../../i18n/strings';
 import HeroText from './HeroText';
@@ -15,10 +16,13 @@ const WIDE = '(min-width: 900px)';
 /**
  * The background video: plays on its own, muted, in a loop — it never depends
  * on the scroll — and pauses only while the hero is off screen. With reduced
- * motion it stays on its first frame.
+ * motion it stays on its first frame. O botao no canto pausa e retoma.
  */
 function HeroVideo({ play }) {
   const ref = useRef(null);
+  const pausedRef = useRef(false);
+  const [paused, setPaused] = useState(false);
+  const t = useStrings();
 
   useEffect(() => {
     const video = ref.current;
@@ -26,29 +30,48 @@ function HeroVideo({ play }) {
     video.muted = true;
     if (!play) return undefined;
     const visibility = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) video.play().catch(() => {});
+      if (entry.isIntersecting && !pausedRef.current) video.play().catch(() => {});
       else video.pause();
     });
     visibility.observe(video);
     return () => visibility.disconnect();
   }, [play]);
 
+  const togglePause = () => {
+    pausedRef.current = !pausedRef.current;
+    setPaused(pausedRef.current);
+    if (pausedRef.current) ref.current.pause();
+    else ref.current.play().catch(() => {});
+  };
+
   return (
-    <video
-      ref={ref}
-      className="hero__video"
-      src={VIDEO.src}
-      poster={VIDEO.poster}
-      autoPlay={play}
-      muted
-      loop
-      playsInline
-      preload={play ? 'auto' : 'none'}
-      disablePictureInPicture
-      disableRemotePlayback
-      aria-hidden="true"
-      tabIndex={-1}
-    />
+    <>
+      <video
+        ref={ref}
+        className="hero__video"
+        src={VIDEO.src}
+        poster={VIDEO.poster}
+        autoPlay={play}
+        muted
+        loop
+        playsInline
+        preload={play ? 'auto' : 'none'}
+        disablePictureInPicture
+        disableRemotePlayback
+        aria-hidden="true"
+        tabIndex={-1}
+      />
+      {play && (
+        <button
+          type="button"
+          className="hero__pause"
+          onClick={togglePause}
+          aria-label={paused ? t.site.playVideo : t.site.pauseVideo}
+        >
+          {paused ? <Play size={15} aria-hidden="true" /> : <Pause size={15} aria-hidden="true" />}
+        </button>
+      )}
+    </>
   );
 }
 

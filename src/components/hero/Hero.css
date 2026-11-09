@@ -135,3 +135,25 @@
 .hero--compact .hero-text__secondary {
   animation: none;
 }
+
+/* Pausar o video de fundo (WCAG 2.2.2): no canto, sem competir com o texto. */
+.hero__pause {
+  position: absolute;
+  right: var(--gutter);
+  bottom: 1rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  background: rgba(4, 11, 28, 0.55);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.2s var(--ease-out);
+}
+
+.hero__pause:hover {
+  background: rgba(4, 11, 28, 0.85);
+}

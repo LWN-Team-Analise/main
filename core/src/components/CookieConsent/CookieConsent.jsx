@@ -4,67 +4,48 @@ import './CookieConsent.css'
 
 const STORAGE_KEY = 'customers.cookies'
 
+function jaViu() {
+  try {
+    return Boolean(localStorage.getItem(STORAGE_KEY))
+  } catch {
+    return false
+  }
+}
+
 /**
- * Escolha do usuario sobre cookies.
- * 'essential' = so o necessario para o login funcionar.
- * 'all'       = essenciais + analise.
+ * Aviso de armazenamento do sistema.
+ *
+ * E um aviso, nao um pedido de consentimento: o sistema nao usa cookie de
+ * analise nem de publicidade, e a sessao fica no armazenamento local. Antes
+ * o texto falava em "cookies de analise" que nao existem e oferecia uma
+ * escolha que nao mudava nada. Se um dia entrar analytics, ele so pode
+ * carregar depois de um aceite de verdade, e este aviso precisa dessa escolha.
  */
-export function readCookieConsent() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw)
-    return parsed?.value === 'all' || parsed?.value === 'essential' ? parsed : null
-  } catch {
-    return null
-  }
-}
-
-/** Use antes de disparar analytics: `if (hasAnalyticsConsent()) { ... }`. */
-export function hasAnalyticsConsent() {
-  return readCookieConsent()?.value === 'all'
-}
-
-export function clearCookieConsent() {
-  try {
-    localStorage.removeItem(STORAGE_KEY)
-  } catch {
-    /* storage bloqueado */
-  }
-}
-
 export default function CookieConsent() {
-  const [consent, setConsent] = useState(readCookieConsent)
+  const [visto, setVisto] = useState(jaViu)
 
-  const decide = (value) => {
-    const record = { value, date: new Date().toISOString() }
+  const fechar = () => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(record))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ value: 'ciente', date: new Date().toISOString() }))
     } catch {
+      /* storage bloqueado: o aviso volta na proxima visita */
     }
-    setConsent(record)
+    setVisto(true)
   }
 
-  if (consent) return null
+  if (visto) return null
 
   return (
-    <aside className="cookie" role="dialog" aria-label="Aviso de cookies">
+    <aside className="cookie" aria-label="Aviso de cookies">
       <p className="cookie__text">
-        Usamos cookies essenciais para manter você conectado. Com sua permissão, também
-        usamos cookies de análise para entender o uso e melhorar o produto.{' '}
+        Este sistema não usa cookies de publicidade nem de análise. Guardamos no seu navegador só o necessário para
+        manter você conectado e lembrar as suas preferências.{' '}
         <Link to="/politica-de-privacidade">Política de privacidade</Link>
       </p>
 
       <div className="cookie__actions">
-        <button type="button" className="cookie__btn" onClick={() => decide('essential')}>
-          Apenas essenciais
-        </button>
-        <button
-          type="button"
-          className="cookie__btn cookie__btn--primary"
-          onClick={() => decide('all')}
-        >
-          Aceitar todos
+        <button type="button" className="cookie__btn cookie__btn--primary" onClick={fechar}>
+          Entendi
         </button>
       </div>
     </aside>

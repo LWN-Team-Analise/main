@@ -1,5 +1,4 @@
 import { Star } from 'lucide-react';
-import { useState } from 'react';
 import { FcGoogle } from 'react-icons/fc';
 import { reviews } from '../../data/site';
 import { LOCALES } from '../../i18n/content';
@@ -17,26 +16,13 @@ const initials = (name) =>
     .map((part) => part[0])
     .join('');
 
-function Avatar({ name, src }) {
-  const [failed, setFailed] = useState(false);
-  if (!src || failed) {
-    return (
-      <span className="review__avatar review__avatar--initials" aria-hidden="true">
-        {initials(name)}
-      </span>
-    );
-  }
+// So as iniciais: a foto do Google e imagem de pessoa fisica em uso comercial,
+// e carrega-la mandaria o IP de quem visita para o Google antes de qualquer aviso.
+function Avatar({ name }) {
   return (
-    <img
-      className="review__avatar"
-      src={src}
-      alt=""
-      width="40"
-      height="40"
-      loading="lazy"
-      referrerPolicy="no-referrer"
-      onError={() => setFailed(true)}
-    />
+    <span className="review__avatar review__avatar--initials" aria-hidden="true">
+      {initials(name)}
+    </span>
   );
 }
 
@@ -55,7 +41,7 @@ function ReviewCard({ review }) {
   return (
     <article className="review">
       <div className="review__head">
-        <Avatar name={review.name} src={review.avatar} />
+        <Avatar name={review.name} />
         <div className="review__who">
           <span className="review__name">{review.name}</span>
           <time className="review__date" dateTime={isoDate(review.date)}>

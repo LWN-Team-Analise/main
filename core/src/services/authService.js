@@ -34,7 +34,7 @@ export function validateIdentifier(value = '') {
   return validateEmail(value) || validateCPF(value)
 }
 
-/** CPF mascarado para exibicao: 305.868.948-96 */
+/** CPF mascarado para exibicao: 123.456.789-09 */
 export function formatCPF(value) {
   const cpf = onlyDigits(value)
   if (cpf.length !== 11) return value

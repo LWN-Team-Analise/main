@@ -1,6 +1,7 @@
-import { Star, Users } from 'lucide-react';
+import { Accessibility, Star, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { company, credit, corePath, offices, privacyPath } from '../../data/site';
+import { identificacaoDaEmpresa } from '../../data/legal';
+import { accessibilityPath, company, credit, corePath, offices, privacyPath, termsPath } from '../../data/site';
 import { useSite } from '../../i18n/content';
 import { useStrings } from '../../i18n/strings';
 import NavItem from '../header/NavItem';
@@ -104,9 +105,19 @@ export default function Footer() {
           <p>
             © {year} {company.fullName}. {t.footer.rights}
           </p>
-          <Link to={privacyPath} className="footer__legal">
-            {t.footer.privacy}
-          </Link>
+          <nav className="footer__legal-links" aria-label={t.footer.legal}>
+            <Link to={privacyPath} className="footer__legal">
+              {t.footer.privacy}
+            </Link>
+            <Link to={termsPath} className="footer__legal">
+              {t.footer.terms}
+            </Link>
+            {/* O simbolo de acessibilidade em destaque: Lei 13.146/2015, art. 63, par. 1 */}
+            <Link to={accessibilityPath} className="footer__legal footer__legal--icon">
+              <Accessibility size={16} aria-hidden="true" />
+              {t.footer.accessibility}
+            </Link>
+          </nav>
           <p className="footer__credit">
             created by{' '}
             <a href={credit.href} target="_blank" rel="noopener noreferrer">
@@ -114,6 +125,11 @@ export default function Footer() {
             </a>
           </p>
         </div>
+        <p className="footer__note">
+          {identificacaoDaEmpresa && `${identificacaoDaEmpresa}. `}
+          {!identificacaoDaEmpresa && import.meta.env.DEV && <mark>[PREENCHER: razão social e CNPJ] </mark>}
+          {t.footer.trademarks}
+        </p>
       </div>
     </footer>
   );
