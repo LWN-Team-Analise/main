@@ -29,6 +29,7 @@ import {
   ehCheckDeFerramenta,
   ehMembroDaObra,
   ehPropostaTecnica,
+  estadoDaEtapaPara,
   nomeDoCard,
   oQueOCheckPede,
   podeEditarCheck,
@@ -913,7 +914,8 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
         <div className="tabuleiro">
           <div className="trilho" ref={trilhoRef}>
             {roteiro.map((etapa) => {
-              const estado = estadoEtapa(obra, etapa.numero)
+              /* quem tem "Check em todas as etapas" nao espera a anterior fechar */
+              const estado = estadoDaEtapaPara(user, estadoEtapa(obra, etapa.numero))
               /* o placar conta so os cards que ja tem check: card recem-criado,
                  ainda vazio, nao entra na conta nem trava a etapa */
               const valem = cardsQueValem(etapa)

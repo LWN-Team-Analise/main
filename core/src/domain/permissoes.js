@@ -123,6 +123,7 @@ export const ALTERACAO = [
   { chave: 'criar_obras', rotulo: 'Criar obra', dependeDe: 'ver_obras' },
   { chave: 'editar_obras', rotulo: 'Editar obras', dependeDe: 'ver_obras' },
   { chave: 'excluir_concluidas', rotulo: 'Excluir obra concluída', dependeDe: 'ver_concluidas' },
+  /* marca os checks de qualquer setor e nao espera a etapa anterior fechar */
   { chave: 'check_todas_etapas', rotulo: 'Check em todas as etapas', dependeDe: 'ver_obras' },
   /* o check e de quem esta NA OBRA (Membros > Incluir membro; quem ja
      marcou check nela tambem conta). Com esta, o setor marca os checks

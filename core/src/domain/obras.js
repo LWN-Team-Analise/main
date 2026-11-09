@@ -353,6 +353,19 @@ export function estadoDaEtapa(roteiro, obra, numero) {
   return anteriores.every((e) => etapaConcluida(e, marcados)) ? 'atual' : 'bloqueada'
 }
 
+/**
+ * A etapa como ELA aparece para esta pessoa, dentro da obra.
+ *
+ * Quem tem "Check em todas as etapas" nao espera a fila: a etapa com
+ * cadeado ja esta aberta para ela, como numa obra de emergencia. Para
+ * o resto da empresa (o Quadro, o "falta na etapa tal", a etapa em que a
+ * obra esta) a fila continua a mesma: por isso aqui, e nao em
+ * `estadoDaEtapa`. A API nao trava por etapa.
+ */
+export function estadoDaEtapaPara(usuario, estado) {
+  return estado === 'bloqueada' && podeFazer(usuario, 'check_todas_etapas') ? 'atual' : estado
+}
+
 /* ------------------------------------------------------------
    As etapas do FLUXO
 

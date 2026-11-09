@@ -698,7 +698,11 @@ com o motivo):
    tela, quem nao esta na obra ve "você não está na obra" ao lado de Membros
    e o cadeado dos cards diz por que.
 2. **Setor**, como sempre: o card (ou o dono proprio do check) e do setor da
-   pessoa. `check_todas_etapas` e a obra de emergencia passam por esta.
+   pessoa. `check_todas_etapas` e a obra de emergencia passam por esta. Os
+   dois tambem nao esperam a fila: com eles, a etapa seguinte ja abre antes de
+   a anterior fechar (`estadoDaEtapaPara`, so na tela da obra; a API nao trava
+   por etapa). O Solicitar OS e a Gestao dos instrumentos continuam so do
+   LWN Control.
 3. **Cargo.** Na tela do setor, o bloco **Checks por cargo** aperta o que
    cada cargo (cargo_titulo) marca: **a partir de que etapa** e os checks
    **de fora** ("menos Determinar Focal Point"). Em **Exceção por pessoa** a
