@@ -147,10 +147,12 @@
   gap: 4px;
   min-width: 240px;
   padding: 10px;
-  border: 1px solid var(--modal-borda, var(--line));
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  background: var(--modal-bg);
-  box-shadow: var(--modal-sombra);
+  background: var(--vidro-menu);
+  box-shadow: var(--modal-sombra), var(--vidro-aro);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
 }
 
 .turnos__painel--largo {
@@ -770,10 +772,12 @@ button.turnos__celula:hover {
   gap: 4px;
   max-width: calc(100% - 16px);
   padding: 6px 6px 6px 16px;
-  border: 1px solid var(--modal-borda, var(--line));
+  border: 1px solid var(--glass-border);
   border-radius: 22px;
-  background: var(--modal-bg);
-  box-shadow: var(--modal-sombra);
+  background: var(--vidro-menu);
+  box-shadow: var(--modal-sombra), var(--vidro-aro);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
 }
 
 .turnos__escolhatexto {

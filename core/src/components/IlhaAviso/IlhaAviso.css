@@ -43,11 +43,14 @@
   width: min(88vw, 244px);
   padding: 5px;
   border-radius: 999px;
-  background: #000;
+  /* vidro escuro: continua preta nos dois temas, deixando o fundo passar */
+  background: rgba(0, 0, 0, 0.78);
   /* a borda clara e o que separa a ilha do fundo escuro no modo noturno,
      onde preto sobre preto sumiria */
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
   transition: width 0.46s cubic-bezier(0.2, 0.9, 0.2, 1),
     padding 0.46s cubic-bezier(0.2, 0.9, 0.2, 1),
     border-radius 0.46s cubic-bezier(0.2, 0.9, 0.2, 1);
@@ -144,7 +147,7 @@
 
 .ilha__sub {
   margin: 4px 2px 16px;
-  color: #8d8d92;
+  color: #b9b9be;
   font-size: 0.88rem;
   line-height: 1.45;
 }

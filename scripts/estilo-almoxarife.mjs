@@ -48,11 +48,13 @@ const ate1000 = (() => {
   return bloco.replace(/  \.shell \{[\s\S]*?\n  \}\n\n/, '')
 })()
 
-/* na ordem em que o main carrega: o vidro (comum.css), o ajuste do menu
-   e da barra de cima em comum.css e so depois o AppShell.css — e o .rail
-   e o .topbar de la que valem */
-const vidro =
-  regra(comum, '.vidro') + '\n\n' + regra(comum, '.vidro > *') + '\n\n' + regra(comum, '.rail,\n.topbar')
+/* na ordem em que o main carrega: o vidro (comum.css), o vidro do que
+   flutua (o bloco inteiro de comum.css, entre as duas marcas) e so depois
+   o AppShell.css — e o .rail e o .topbar de la que valem */
+const flutuaIni = comum.indexOf('/* ---- o que flutua: inicio ---- */')
+const flutuaFim = comum.indexOf('/* ---- o que flutua: fim ---- */')
+if (flutuaIni < 0 || flutuaFim < 0) throw new Error('as marcas do vidro flutuante sumiram do comum.css')
+const vidro = regra(comum, '.vidro') + '\n\n' + regra(comum, '.vidro > *') + '\n\n' + comum.slice(flutuaIni, flutuaFim)
 
 /* a barra de cima (a saudacao, o campo com o orbe e o sino) e o painel do sino */
 const topo = appshell.slice(
@@ -103,7 +105,14 @@ const usadas = new Set([
   'line', 'control-bg', 'control-bg-hover', 'text-faint',
   /* a lista nativa de reserva e a Solicitacao travada pela obra */
   'vidro-menu', 'radius-md', 'glass-shadow', 'text-muted',
+  /* o vidro nas janelas do lwncontrol (a cola) */
+  'vidro-janela', 'vidro-aro', 'vidro-filtro', 'vidro-texto-suave', 'glass-border', 'modal-sombra', 'modal-veu',
 ])
+/* quem o CSS copiado DECLARA tambem muda de nome: e o vidro trocando
+   --text-muted e cia. so dentro das superficies dele */
+copiado = copiado.replace(/(^|[\s;{])--([a-z0-9-]+)(?=\s*:)/g, (m, antes, nome) =>
+  internas.has(nome) ? m : `${antes}--am-${nome}`,
+)
 copiado = copiado.replace(/var\(--([a-z0-9-]+)/g, (m, nome) => {
   if (internas.has(nome)) return m
   usadas.add(nome)
@@ -252,6 +261,17 @@ body.dark-mode .rail .menu-item.rail__btn.active,
   display: none !important;
 }
 
+/* A barra de cima flutua sobre o conteudo, como no main (.topbar e
+   position: sticky). O almoxarife.css e o responsivo.css poem
+   overflow-x: hidden no html e no body, e hidden transforma o body numa
+   caixa de rolagem que nunca rola: o sticky se prendia a ela e a barra
+   subia junto com a pagina. clip corta do mesmo jeito sem criar a caixa
+   (e o que o global.css do main faz). */
+html,
+body {
+  overflow-x: clip;
+}
+
 /* a barra de cima no lugar do header do lwncontrol, com a folga da coluna
    do main (.shell__coluna: 18px) e o respiro ate o conteudo
    (.shell__conteudo: 18px) */
@@ -378,6 +398,13 @@ body.dark-mode .marca .logo-escuro {
   }
 }
 
+/* o almoxarife.css pinta todo link de azul no tema escuro: a linha
+   Atmosfera, a unica que e link, destoava das outras */
+body.dark-mode a.menulado__item:not(.is-atual),
+body.dark-mode a.menulado__item:not(.is-atual):hover {
+  color: var(--am-text-strong);
+}
+
 /* no main as linhas do menu lateral sao links (NavLink); aqui as abas sao
    botoes (o switchTab): sem a cara de botao do navegador */
 button.menulado__item {
@@ -470,6 +497,52 @@ select.sel-nativo:not([multiple]):not([size]) {
   min-width: 0;
 }
 
+/* ---- o vidro nas janelas do lwncontrol ----
+   As mesmas tintas do pop-up do main. Com !important porque boa parte das
+   janelas traz o fundo escrito direto no HTML que o JS monta.
+
+   O veu perde o desfoque dele: com backdrop-filter no veu, a janela (filha
+   dele) nao enxerga a pagina, e o desfoque da janela nao teria o que borrar. */
+.modal-overlay {
+  background-color: var(--am-modal-veu) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.modal-container,
+.modal-content,
+#rem-termo-aviso-almox > div,
+.gantt-tooltip,
+.convite-notif,
+.toast {
+  --text-muted: var(--am-vidro-texto-suave);
+  background: var(--am-vidro-janela) !important;
+  box-shadow: var(--am-modal-sombra), var(--am-vidro-aro) !important;
+  -webkit-backdrop-filter: var(--am-vidro-filtro) !important;
+  backdrop-filter: var(--am-vidro-filtro) !important;
+}
+
+/* a borda do aviso (.toast) fica de fora: o fio colorido dela diz o tipo */
+.modal-container,
+.modal-content,
+#rem-termo-aviso-almox > div,
+.gantt-tooltip,
+.convite-notif {
+  border: 1px solid var(--am-glass-border) !important;
+}
+
+.toast {
+  border-top-color: var(--am-glass-border);
+  border-right-color: var(--am-glass-border);
+  border-bottom-color: var(--am-glass-border);
+}
+
+/* o cabecalho e o rodape eram faixas de cor cheia dentro da janela */
+.modal-header,
+.modal-footer {
+  background: transparent !important;
+}
+
 /* dentro das janelas do lwncontrol o botao e solido, como no pop-up do main */
 .modal-container .sel__botao,
 .modal-content .sel__botao {
@@ -493,6 +566,9 @@ select.sel-nativo:not([multiple]):not([size]) {
   margin: -6px -6px 4px;
   padding: 8px;
   background: inherit;
+  /* a lista e de vidro: sem isto as opcoes passariam nitidas por tras */
+  -webkit-backdrop-filter: var(--am-vidro-filtro);
+  backdrop-filter: var(--am-vidro-filtro);
   border-bottom: 1px solid var(--am-line);
 }
 
@@ -557,8 +633,8 @@ select.sel-nativo:not([multiple]):not([size]) {
     border: 1px solid var(--am-vidro-borda);
     border-radius: var(--am-radius-md);
     background: var(--am-vidro-menu);
-    box-shadow: var(--am-glass-shadow), var(--am-vidro-realce);
-    backdrop-filter: blur(calc(var(--am-glass-blur) * 1.5)) saturate(175%);
+    box-shadow: var(--am-glass-shadow), var(--am-vidro-aro);
+    backdrop-filter: var(--am-vidro-filtro);
   }
 
   select:not(.sel-nativo):not([multiple]):not([size]) option {

@@ -28,7 +28,6 @@
   --am-anel-4: #a5d2ff;
   --am-anel-cova: rgba(13, 13, 13, 0.09);
   --am-anel-miolo: rgba(255, 255, 255, 0.94);
-  --am-barra-cor: #ffffff;
   --am-btn-bg: #1a56c4;
   --am-btn-fg: #ffffff;
   --am-btn-shadow: 0 14px 30px -18px rgba(9, 30, 74, 0.75);
@@ -42,13 +41,12 @@
   --am-dur-fast: 180ms;
   --am-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --am-glass-blur: 18px;
+  --am-glass-border: rgba(13, 13, 13, 0.09);
   --am-glass-edge-a: rgba(255, 255, 255, 0.95);
   --am-glass-fallback: #f7f7f7;
   --am-glass-shadow: 0 30px 60px -32px rgba(0, 0, 0, 0.38), 0 4px 18px -12px rgba(0, 0, 0, 0.18);
   --am-grad-b: #1b4386;
   --am-line: rgba(13, 13, 13, 0.14);
-  --am-modal-bg: #ffffff;
-  --am-modal-borda: rgba(13, 13, 13, 0.12);
   --am-modal-sombra: 0 30px 70px -28px rgba(0, 0, 0, 0.4), 0 6px 20px -10px rgba(0, 0, 0, 0.16);
   --am-modal-veu: rgba(20, 22, 28, 0.42);
   --am-obra-emerg: #d9542a;
@@ -65,13 +63,20 @@
   --am-text-faint: rgba(13, 13, 13, 0.38);
   --am-text-muted: rgba(13, 13, 13, 0.55);
   --am-text-strong: #0d0d0d;
+  --am-vidro-aro: inset 0 1px 0 0 rgba(255, 255, 255, 0.85), inset 0 -1px 0 0 rgba(255, 255, 255, 0.35), inset 1px 0 0 0 rgba(255, 255, 255, 0.3), inset -1px 0 0 0 rgba(255, 255, 255, 0.3), inset 0 0 18px -4px rgba(255, 255, 255, 0.55);
+  --am-vidro-barra: rgba(255, 255, 255, 0.62);
   --am-vidro-borda: rgba(255, 255, 255, 0.55);
   --am-vidro-borda-forte: rgba(13, 13, 13, 0.12);
+  --am-vidro-filtro: blur(calc(var(--am-glass-blur) * 1.6)) saturate(180%);
   --am-vidro-fundo: rgba(255, 255, 255, 0.5);
   --am-vidro-fundo-forte: rgba(255, 255, 255, 0.72);
-  --am-vidro-menu: rgba(255, 255, 255, 0.88);
+  --am-vidro-janela: rgba(255, 255, 255, 0.8);
+  --am-vidro-menu: rgba(255, 255, 255, 0.74);
+  --am-vidro-perigo: #931b15;
   --am-vidro-realce: inset 0 1px 0 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 0 rgba(13, 13, 13, 0.05), 0 1px 2px -1px rgba(13, 13, 13, 0.1);
   --am-vidro-sombra: 0 18px 40px -24px rgba(9, 22, 52, 0.42), 0 3px 12px -8px rgba(9, 22, 52, 0.18);
+  --am-vidro-texto-fraco: rgba(13, 13, 13, 0.72);
+  --am-vidro-texto-suave: rgba(13, 13, 13, 0.74);
 }
 
 body.dark-mode {
@@ -82,7 +87,6 @@ body.dark-mode {
   --am-anel-4: #a5d2ff;
   --am-anel-cova: rgba(0, 0, 0, 0.55);
   --am-anel-miolo: rgba(14, 18, 28, 0.94);
-  --am-barra-cor: #1b1f27;
   --am-btn-bg: #2f6ee0;
   --am-btn-fg: #ffffff;
   --am-btn-shadow: 0 14px 30px -18px rgba(120, 170, 240, 0.45);
@@ -96,13 +100,12 @@ body.dark-mode {
   --am-dur-fast: 180ms;
   --am-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --am-glass-blur: 18px;
+  --am-glass-border: rgba(255, 255, 255, 0.1);
   --am-glass-edge-a: rgba(255, 255, 255, 0.16);
   --am-glass-fallback: #121214;
   --am-glass-shadow: 0 34px 70px -34px rgba(0, 0, 0, 1), 0 4px 18px -10px rgba(0, 0, 0, 0.85);
   --am-grad-b: #a5d2ff;
   --am-line: rgba(255, 255, 255, 0.16);
-  --am-modal-bg: #14161c;
-  --am-modal-borda: rgba(255, 255, 255, 0.12);
   --am-modal-sombra: 0 34px 74px -30px rgba(0, 0, 0, 1), 0 6px 20px -10px rgba(0, 0, 0, 0.7);
   --am-modal-veu: rgba(0, 0, 0, 0.62);
   --am-obra-emerg: #e0602c;
@@ -119,13 +122,20 @@ body.dark-mode {
   --am-text-faint: rgba(255, 255, 255, 0.36);
   --am-text-muted: rgba(255, 255, 255, 0.55);
   --am-text-strong: #ffffff;
+  --am-vidro-aro: inset 0 1px 0 0 rgba(255, 255, 255, 0.22), inset 0 -1px 0 0 rgba(255, 255, 255, 0.07), inset 1px 0 0 0 rgba(255, 255, 255, 0.07), inset -1px 0 0 0 rgba(255, 255, 255, 0.07), inset 0 0 18px -6px rgba(255, 255, 255, 0.12);
+  --am-vidro-barra: rgba(20, 23, 31, 0.72);
   --am-vidro-borda: rgba(255, 255, 255, 0.16);
   --am-vidro-borda-forte: rgba(255, 255, 255, 0.24);
+  --am-vidro-filtro: blur(calc(var(--am-glass-blur) * 1.6)) saturate(180%);
   --am-vidro-fundo: rgba(255, 255, 255, 0.08);
   --am-vidro-fundo-forte: rgba(255, 255, 255, 0.14);
-  --am-vidro-menu: rgba(22, 25, 34, 0.92);
+  --am-vidro-janela: rgba(20, 23, 31, 0.82);
+  --am-vidro-menu: rgba(20, 23, 31, 0.8);
+  --am-vidro-perigo: #ff8a9c;
   --am-vidro-realce: inset 0 1px 0 0 rgba(255, 255, 255, 0.18), inset 0 -1px 0 0 rgba(0, 0, 0, 0.35), 0 1px 2px -1px rgba(0, 0, 0, 0.6);
   --am-vidro-sombra: 0 20px 44px -24px rgba(0, 0, 0, 0.9), 0 3px 12px -8px rgba(0, 0, 0, 0.7);
+  --am-vidro-texto-fraco: rgba(255, 255, 255, 0.72);
+  --am-vidro-texto-suave: rgba(255, 255, 255, 0.74);
 }
 
 .vidro {
@@ -142,11 +152,87 @@ body.dark-mode {
   z-index: 1;
 }
 
+/* ---- o que flutua: inicio ---- */
+
+/* A tinta e o desfoque das duas barras moram num ::before, e nao nelas.
+
+   Um elemento com `backdrop-filter` isola o que esta dentro dele: um
+   filho so enxerga o que foi pintado dentro do pai, e nao a pagina. Com
+   o filtro na propria barra, o painel do sino e a lista da busca (que
+   sao filhos dela) nao conseguiam desfocar nada, e o texto da tela
+   aparecia nitido por tras deles. No ::before ele nao isola ninguem. */
 .rail,
 .topbar {
-  background: var(--am-vidro-fundo);
-  box-shadow: var(--am-vidro-sombra);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: var(--am-glass-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
+
+.rail::before,
+.topbar::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: 0;
+  border: 1px solid var(--am-glass-border);
+  border-radius: inherit;
+  background: var(--am-vidro-barra);
+  box-shadow: var(--am-vidro-aro);
+  -webkit-backdrop-filter: var(--am-vidro-filtro);
+  backdrop-filter: var(--am-vidro-filtro);
+  pointer-events: none;
+}
+
+/* Os textos fracos da pagina foram escolhidos para fundo liso. Sobre o
+   vidro passa de tudo por tras, entao aqui eles escurecem (ou clareiam,
+   no tema escuro). So as variaveis: a ordem das folhas nao interfere. */
+.rail,
+.topbar,
+.menulado__painel,
+.am-modal__caixa,
+.euzinho__menu,
+.sininho__painel,
+.busca__caixa,
+.sel__lista,
+.datahora__painel,
+.bolhachat__menu,
+.flutua__menu,
+.dica,
+.cookie,
+.commenu__lista,
+.turnos__painel,
+.turnos__escolha,
+.chat__mencoes,
+.chat__apagarcaixa {
+  --am-text-muted: var(--am-vidro-texto-suave);
+  --am-text-faint: var(--am-vidro-texto-fraco);
+  --am-danger: var(--am-vidro-perigo);
+}
+
+/* Sem desfoque (navegador antigo) ou com "reduzir transparencia" ligado
+   no aparelho: a mesma peca, com a tinta cheia. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root,
+  body.dark-mode {
+    --am-vidro-barra: var(--am-glass-fallback);
+    --am-vidro-menu: var(--am-glass-fallback);
+    --am-vidro-janela: var(--am-glass-fallback);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  body.dark-mode {
+    --am-vidro-barra: var(--am-glass-fallback);
+    --am-vidro-menu: var(--am-glass-fallback);
+    --am-vidro-janela: var(--am-glass-fallback);
+    --am-vidro-filtro: none;
+  }
+}
+
+
 
 /* ---------------- Logo ----------------
    Solta no canto superior esquerdo do site, fora da bolha. */
@@ -207,11 +293,8 @@ body.dark-mode {
   align-items: center;
   gap: 6px;
   padding: 8px 5px;
+  /* o vidro e o .rail::before do comum.css */
   border-radius: 26px;
-  /* o vidro vem da classe .vidro; aqui so o desfoque mais forte, que e
-     o que faz a bolha do menu parecer mais grossa que o resto */
-  backdrop-filter: blur(calc(var(--am-glass-blur) * 1.7)) saturate(175%);
-  -webkit-backdrop-filter: blur(calc(var(--am-glass-blur) * 1.7)) saturate(175%);
 }
 
 /* A camada liquida e a bolha sao do celular. No computador a bolha e
@@ -465,8 +548,8 @@ body.dark-mode .rail__btn.is-atual .rail__glifo {
   border-radius: 50%;
   background: var(--am-vidro-fundo);
   box-shadow: var(--am-vidro-realce), var(--am-vidro-sombra);
-  backdrop-filter: blur(var(--am-glass-blur)) saturate(160%);
   -webkit-backdrop-filter: blur(var(--am-glass-blur)) saturate(160%);
+  backdrop-filter: blur(var(--am-glass-blur)) saturate(160%);
   cursor: pointer;
   transition: box-shadow var(--am-dur-fast) var(--am-ease-out),
     transform var(--am-dur-fast) var(--am-ease-out);
@@ -490,10 +573,10 @@ body.dark-mode .rail__btn.is-atual .rail__glifo {
   padding: 7px;
   border-radius: var(--am-radius-md);
   background: var(--am-vidro-menu);
-  border: 1px solid var(--am-vidro-borda);
-  box-shadow: var(--am-glass-shadow), var(--am-vidro-realce);
-  backdrop-filter: blur(calc(var(--am-glass-blur) * 1.5)) saturate(175%);
-  -webkit-backdrop-filter: blur(calc(var(--am-glass-blur) * 1.5)) saturate(175%);
+  border: 1px solid var(--am-glass-border);
+  box-shadow: var(--am-glass-shadow), var(--am-vidro-aro);
+  -webkit-backdrop-filter: var(--am-vidro-filtro);
+  backdrop-filter: var(--am-vidro-filtro);
   animation: menu-sobe var(--am-dur-fast) var(--am-ease-out);
 }
 
@@ -589,11 +672,8 @@ body.dark-mode .rail__btn.is-atual .rail__glifo {
   align-items: center;
   gap: 14px;
   padding: 9px 10px 9px 18px;
+  /* o vidro e o .topbar::before do comum.css */
   border-radius: var(--am-radius-pill);
-  /* o vidro vem da classe .vidro; o desfoque forte e o que deixa o
-     conteudo passar por baixo da barra sem atrapalhar a leitura */
-  backdrop-filter: blur(calc(var(--am-glass-blur) * 1.7)) saturate(175%);
-  -webkit-backdrop-filter: blur(calc(var(--am-glass-blur) * 1.7)) saturate(175%);
 }
 
 .topbar__saudacao {
@@ -727,10 +807,10 @@ body.dark-mode .rail__btn.is-atual .rail__glifo {
   flex-direction: column;
   border-radius: var(--am-radius-md);
   background: var(--am-vidro-menu);
-  border: 1px solid var(--am-vidro-borda);
-  box-shadow: var(--am-glass-shadow), var(--am-vidro-realce);
-  backdrop-filter: blur(calc(var(--am-glass-blur) * 1.5)) saturate(175%);
-  -webkit-backdrop-filter: blur(calc(var(--am-glass-blur) * 1.5)) saturate(175%);
+  border: 1px solid var(--am-glass-border);
+  box-shadow: var(--am-glass-shadow), var(--am-vidro-aro);
+  -webkit-backdrop-filter: var(--am-vidro-filtro);
+  backdrop-filter: var(--am-vidro-filtro);
   animation: menu-sobe var(--am-dur-fast) var(--am-ease-out);
   overflow: hidden;
 }
@@ -950,10 +1030,10 @@ body.dark-mode .rail__btn.is-atual .rail__glifo {
      conteúdo da tela, e com 50% de transparência o texto dela caía em
      cima de outro texto — dois alfabetos disputando o mesmo pixel. */
   background: var(--am-vidro-menu);
-  border: 1px solid var(--am-vidro-borda);
-  backdrop-filter: blur(calc(var(--am-glass-blur) * 1.4)) saturate(170%);
-  -webkit-backdrop-filter: blur(calc(var(--am-glass-blur) * 1.4)) saturate(170%);
-  box-shadow: var(--am-vidro-realce), 0 18px 40px rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--am-glass-border);
+  -webkit-backdrop-filter: var(--am-vidro-filtro);
+  backdrop-filter: var(--am-vidro-filtro);
+  box-shadow: var(--am-glass-shadow), var(--am-vidro-aro);
   overflow-y: auto;
   animation: busca-desce var(--am-dur-fast) var(--am-ease-out);
 }
@@ -1004,8 +1084,8 @@ body.dark-mode .rail__btn.is-atual .rail__glifo {
   border-radius: var(--am-radius-sm);
   background: var(--am-vidro-fundo);
   box-shadow: var(--am-vidro-realce);
-  backdrop-filter: blur(calc(var(--am-glass-blur) * 0.7)) saturate(150%);
   -webkit-backdrop-filter: blur(calc(var(--am-glass-blur) * 0.7)) saturate(150%);
+  backdrop-filter: blur(calc(var(--am-glass-blur) * 0.7)) saturate(150%);
   color: var(--am-text-base);
   font: inherit;
   text-align: left;
@@ -1026,8 +1106,8 @@ body.dark-mode .rail__btn.is-atual .rail__glifo {
   z-index: -1;
   opacity: 0.3;
   pointer-events: none;
-  backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
 }
 
 @supports (filter: url("#lg-refraction")) {
@@ -1340,9 +1420,11 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
   display: flex;
   flex-direction: column;
   border-radius: var(--am-radius-lg);
-  background: var(--am-modal-bg);
-  border: 1px solid var(--am-modal-borda);
-  box-shadow: var(--am-modal-sombra);
+  background: var(--am-vidro-janela);
+  border: 1px solid var(--am-glass-border);
+  box-shadow: var(--am-modal-sombra), var(--am-vidro-aro);
+  -webkit-backdrop-filter: var(--am-vidro-filtro);
+  backdrop-filter: var(--am-vidro-filtro);
   animation: modal-sobe var(--am-dur-base) var(--am-ease-out);
 }
 
@@ -1392,7 +1474,7 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
 
 @keyframes modal-entra {
   from {
-    opacity: 0;
+    background-color: transparent;
   }
 }
 
@@ -1571,17 +1653,21 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
      deslocada para dentro do vinco. Sombra de circulo e circulo, e
      e a borda dele que faz a curva.
 
-     Por isso a faixa deixa de ser vidro no celular: as pecas sao
-     pintadas com uma cor chapada, e cor chapada nao casa com
-     superficie translucida. Ela vira uma superficie propria — que
-     de quebra e mais legivel sobre qualquer tela.
+     A faixa e de vidro, e a bolha tambem. Para as duas tintas nao se
+     somarem onde o circulo cruza a faixa, ele e cortado na linha da
+     borda (`clip-path`, abaixo): so a parte que aflora e pintada, com a
+     mesma tinta e o mesmo desfoque, e as duas pecas viram uma silhueta.
+     Pelo mesmo motivo a faixa nao tem fio nem aro no celular: um risco
+     na borda de cima atravessaria a base da bolha.
      ============================================================ */
   .rail {
-    background: var(--am-barra-cor);
-    border: 1px solid var(--am-vidro-borda);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
     overflow: visible;
+  }
+
+  .rail::before {
+    inset: 0;
+    border: 0;
+    box-shadow: none;
   }
 
   /* ---- a geometria da bolha ----
@@ -1604,7 +1690,12 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: var(--am-barra-cor);
+    background: var(--am-vidro-barra);
+    -webkit-backdrop-filter: var(--am-vidro-filtro);
+    backdrop-filter: var(--am-vidro-filtro);
+    /* o de baixo e a parte do circulo que fica dentro da faixa; os laterais
+       negativos deixam as duas curvas de fora do corte */
+    clip-path: inset(-1px -6px calc(100% - (28px - var(--afunda))) -6px);
     pointer-events: none;
   }
 
@@ -1630,7 +1721,7 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
     background: radial-gradient(
       circle 12px at 0 -8.1px,
       transparent 11.5px,
-      var(--am-barra-cor) 12px
+      var(--am-vidro-barra) 12px
     );
   }
 
@@ -1639,7 +1730,7 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
     background: radial-gradient(
       circle 12px at 100% -8.1px,
       transparent 11.5px,
-      var(--am-barra-cor) 12px
+      var(--am-vidro-barra) 12px
     );
   }
 
@@ -1756,12 +1847,6 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
-    opacity: 0.62;
-    transition: opacity 0.24s var(--am-ease-out);
-  }
-
-  .rail__btn.is-atual .rail__rotulo {
-    opacity: 1;
   }
 
   /* com o menu lateral aberto o botao flutuante do chat sai de cena */
@@ -2042,8 +2127,8 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
     padding: 0;
     border: 0;
     background: var(--am-modal-veu);
-    backdrop-filter: blur(3px);
     -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
     opacity: 0;
     transition: opacity var(--menulado-sai) var(--am-ease-out);
   }
@@ -2062,10 +2147,12 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
     flex-direction: column;
     width: min(300px, 82vw);
     padding: calc(env(safe-area-inset-top, 0px) + 20px) 20px calc(env(safe-area-inset-bottom, 0px) + 14px);
-    border-left: 1px solid var(--am-vidro-borda);
+    border-left: 1px solid var(--am-glass-border);
     border-radius: 24px 0 0 24px;
-    background: var(--am-barra-cor);
-    box-shadow: -24px 0 48px -20px rgba(0, 0, 0, 0.5);
+    background: var(--am-vidro-menu);
+    box-shadow: -24px 0 48px -20px rgba(0, 0, 0, 0.5), var(--am-vidro-aro);
+    -webkit-backdrop-filter: var(--am-vidro-filtro);
+    backdrop-filter: var(--am-vidro-filtro);
     overflow-y: auto;
     overscroll-behavior: contain;
     outline: none;
@@ -2227,6 +2314,12 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
     font-weight: 700;
   }
 
+  /* o azul do sistema nao se le sobre o vidro escuro: o mesmo tom claro
+     do icone aceso da barra */
+  body.dark-mode .menulado__item.is-atual {
+    color: var(--am-grad-b);
+  }
+
   .menulado__item.is-atual .menulado__glifo {
     color: inherit;
   }
@@ -2385,10 +2478,10 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
   list-style: none;
   border-radius: var(--am-radius-md);
   background: var(--am-vidro-menu);
-  border: 1px solid var(--am-vidro-borda);
-  box-shadow: var(--am-glass-shadow), var(--am-vidro-realce);
-  backdrop-filter: blur(calc(var(--am-glass-blur) * 1.5)) saturate(175%);
-  -webkit-backdrop-filter: blur(calc(var(--am-glass-blur) * 1.5)) saturate(175%);
+  border: 1px solid var(--am-glass-border);
+  box-shadow: var(--am-glass-shadow), var(--am-vidro-aro);
+  -webkit-backdrop-filter: var(--am-vidro-filtro);
+  backdrop-filter: var(--am-vidro-filtro);
   animation: sel-abre var(--am-dur-fast) var(--am-ease-out);
 }
 
@@ -2458,9 +2551,10 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
   border-color: var(--am-accent);
 }
 
-/* pop-up nao leva vidro: dentro dele o seletor fica solido.
+/* Dentro do pop-up o botao e so um campo: o vidro e a janela.
    A lista vai no <body>, fora do .am-modal__caixa — por isso ela se marca
-   sozinha com .is-solida em vez de herdar pelo seletor de ancestral. */
+   sozinha com .is-solida em vez de herdar pelo seletor de ancestral. Ela
+   abre por cima dos campos do formulario, entao leva a tinta da janela. */
 .am-modal__caixa .sel__botao {
   background: var(--am-control-bg);
   border-color: var(--am-control-border);
@@ -2470,11 +2564,8 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
 }
 
 .sel__lista.is-solida {
-  background: var(--am-modal-bg);
-  border-color: var(--am-modal-borda);
-  box-shadow: var(--am-modal-sombra);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background: var(--am-vidro-janela);
+  box-shadow: var(--am-modal-sombra), var(--am-vidro-aro);
 }
 
 /* centralizado: o valor escolhido e as opcoes no meio da largura. A seta
@@ -2588,6 +2679,17 @@ body.dark-mode .rail .menu-item.rail__btn.active,
 .sininho__painel[hidden],
 .sininho__selo[hidden] {
   display: none !important;
+}
+
+/* A barra de cima flutua sobre o conteudo, como no main (.topbar e
+   position: sticky). O almoxarife.css e o responsivo.css poem
+   overflow-x: hidden no html e no body, e hidden transforma o body numa
+   caixa de rolagem que nunca rola: o sticky se prendia a ela e a barra
+   subia junto com a pagina. clip corta do mesmo jeito sem criar a caixa
+   (e o que o global.css do main faz). */
+html,
+body {
+  overflow-x: clip;
 }
 
 /* a barra de cima no lugar do header do lwncontrol, com a folga da coluna
@@ -2716,6 +2818,13 @@ body.dark-mode .marca .logo-escuro {
   }
 }
 
+/* o almoxarife.css pinta todo link de azul no tema escuro: a linha
+   Atmosfera, a unica que e link, destoava das outras */
+body.dark-mode a.menulado__item:not(.is-atual),
+body.dark-mode a.menulado__item:not(.is-atual):hover {
+  color: var(--am-text-strong);
+}
+
 /* no main as linhas do menu lateral sao links (NavLink); aqui as abas sao
    botoes (o switchTab): sem a cara de botao do navegador */
 button.menulado__item {
@@ -2808,6 +2917,52 @@ select.sel-nativo:not([multiple]):not([size]) {
   min-width: 0;
 }
 
+/* ---- o vidro nas janelas do lwncontrol ----
+   As mesmas tintas do pop-up do main. Com !important porque boa parte das
+   janelas traz o fundo escrito direto no HTML que o JS monta.
+
+   O veu perde o desfoque dele: com backdrop-filter no veu, a janela (filha
+   dele) nao enxerga a pagina, e o desfoque da janela nao teria o que borrar. */
+.modal-overlay {
+  background-color: var(--am-modal-veu) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.modal-container,
+.modal-content,
+#rem-termo-aviso-almox > div,
+.gantt-tooltip,
+.convite-notif,
+.toast {
+  --text-muted: var(--am-vidro-texto-suave);
+  background: var(--am-vidro-janela) !important;
+  box-shadow: var(--am-modal-sombra), var(--am-vidro-aro) !important;
+  -webkit-backdrop-filter: var(--am-vidro-filtro) !important;
+  backdrop-filter: var(--am-vidro-filtro) !important;
+}
+
+/* a borda do aviso (.toast) fica de fora: o fio colorido dela diz o tipo */
+.modal-container,
+.modal-content,
+#rem-termo-aviso-almox > div,
+.gantt-tooltip,
+.convite-notif {
+  border: 1px solid var(--am-glass-border) !important;
+}
+
+.toast {
+  border-top-color: var(--am-glass-border);
+  border-right-color: var(--am-glass-border);
+  border-bottom-color: var(--am-glass-border);
+}
+
+/* o cabecalho e o rodape eram faixas de cor cheia dentro da janela */
+.modal-header,
+.modal-footer {
+  background: transparent !important;
+}
+
 /* dentro das janelas do lwncontrol o botao e solido, como no pop-up do main */
 .modal-container .sel__botao,
 .modal-content .sel__botao {
@@ -2831,6 +2986,9 @@ select.sel-nativo:not([multiple]):not([size]) {
   margin: -6px -6px 4px;
   padding: 8px;
   background: inherit;
+  /* a lista e de vidro: sem isto as opcoes passariam nitidas por tras */
+  -webkit-backdrop-filter: var(--am-vidro-filtro);
+  backdrop-filter: var(--am-vidro-filtro);
   border-bottom: 1px solid var(--am-line);
 }
 
@@ -2895,8 +3053,8 @@ select.sel-nativo:not([multiple]):not([size]) {
     border: 1px solid var(--am-vidro-borda);
     border-radius: var(--am-radius-md);
     background: var(--am-vidro-menu);
-    box-shadow: var(--am-glass-shadow), var(--am-vidro-realce);
-    backdrop-filter: blur(calc(var(--am-glass-blur) * 1.5)) saturate(175%);
+    box-shadow: var(--am-glass-shadow), var(--am-vidro-aro);
+    backdrop-filter: var(--am-vidro-filtro);
   }
 
   select:not(.sel-nativo):not([multiple]):not([size]) option {

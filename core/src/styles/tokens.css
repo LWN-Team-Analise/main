@@ -364,7 +364,6 @@
    bolhas azuis embaixo (uma a esquerda, outra a direita).
    Fica BEM leve de proposito — e o que passa por tras do
    vidro; se pesar, o efeito bolha some.
-   --modal-* nao usa nada disso: pop-up e superficie opaca.
    ========================================================= */
 
 :root {
@@ -373,7 +372,9 @@
   --mesh-c: rgba(96, 165, 250, 0.07);
   --mesh-topo: rgba(15, 23, 42, 0.03);
 
-  /* pop-up: opaco, sem desfoque e sem brilho */
+  /* A cor CHEIA do pop-up. A caixa dele agora e de vidro (--vidro-janela);
+     esta fica para o que precisa cobrir o que rola por baixo dentro dele:
+     cabecalho de tabela preso, anel do avatar. */
   --modal-bg: #ffffff;
   --modal-borda: rgba(13, 13, 13, 0.12);
   --modal-sombra: 0 30px 70px -28px rgba(0, 0, 0, 0.4),
@@ -396,8 +397,7 @@
 /* =========================================================
    LIQUID GLASS
    O vidro que veste o site inteiro — header, menu, botoes,
-   filtros, cards. Pop-up NAO usa: la a superficie e opaca,
-   senao o texto do formulario briga com o que passa por tras.
+   filtros, cards e tudo que flutua sobre a tela.
 
    Sao quatro camadas, e e a soma delas que da o efeito:
      1. --vidro-fundo   translucido, para o fundo aparecer
@@ -412,9 +412,33 @@
      por cima. Era o degrade que deixava a mancha diagonal nos cards. */
   --vidro-fundo: rgba(255, 255, 255, 0.5);
   --vidro-fundo-forte: rgba(255, 255, 255, 0.72);
-  --vidro-menu: rgba(255, 255, 255, 0.88);
   --vidro-borda: rgba(255, 255, 255, 0.55);
   --vidro-borda-forte: rgba(13, 13, 13, 0.12);
+
+  /* O VIDRO DO QUE FLUTUA (a aparencia do Liquid Glass do iOS 26).
+
+     As tres tintas sao o minimo que garante contraste AA mesmo com o
+     pior fundo passando por tras (uma foto preta, um card marinho):
+     quanto mais texto a superficie tem, mais tinta ela leva.
+       barra   barra de cima, menu da esquerda, barra do celular
+       menu    listas, painel do sino, dicas, avisos
+       janela  pop-ups: formulario tem que ser facil de ler */
+  --vidro-barra: rgba(255, 255, 255, 0.62);
+  --vidro-menu: rgba(255, 255, 255, 0.74);
+  --vidro-janela: rgba(255, 255, 255, 0.8);
+  --vidro-filtro: blur(calc(var(--glass-blur) * 1.6)) saturate(180%);
+  /* o aro: a luz que corre na borda e o brilho difuso da espessura */
+  --vidro-aro: inset 0 1px 0 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.35),
+    inset 1px 0 0 0 rgba(255, 255, 255, 0.3),
+    inset -1px 0 0 0 rgba(255, 255, 255, 0.3),
+    inset 0 0 18px -4px rgba(255, 255, 255, 0.55);
+  /* os textos fracos sobre o vidro: os da pagina somem sobre um fundo escuro */
+  --vidro-texto-suave: rgba(13, 13, 13, 0.74);
+  --vidro-texto-fraco: rgba(13, 13, 13, 0.72);
+  --vidro-perigo: #931b15;
+  /* botao redondo flutuante: a cor dele, deixando passar um pouco do fundo */
+  --vidro-acao: color-mix(in srgb, var(--btn-bg) 78%, transparent);
 
   /* a luz de cima e a sombra de baixo, que dao a espessura do vidro */
   --vidro-realce: inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
@@ -443,9 +467,20 @@
 :root[data-theme='dark'] {
   --vidro-fundo: rgba(255, 255, 255, 0.08);
   --vidro-fundo-forte: rgba(255, 255, 255, 0.14);
-  --vidro-menu: rgba(22, 25, 34, 0.92);
   --vidro-borda: rgba(255, 255, 255, 0.16);
   --vidro-borda-forte: rgba(255, 255, 255, 0.24);
+
+  --vidro-barra: rgba(20, 23, 31, 0.72);
+  --vidro-menu: rgba(20, 23, 31, 0.8);
+  --vidro-janela: rgba(20, 23, 31, 0.82);
+  --vidro-aro: inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.07),
+    inset 1px 0 0 0 rgba(255, 255, 255, 0.07),
+    inset -1px 0 0 0 rgba(255, 255, 255, 0.07),
+    inset 0 0 18px -6px rgba(255, 255, 255, 0.12);
+  --vidro-texto-suave: rgba(255, 255, 255, 0.74);
+  --vidro-texto-fraco: rgba(255, 255, 255, 0.72);
+  --vidro-perigo: #ff8a9c;
 
   --vidro-realce: inset 0 1px 0 0 rgba(255, 255, 255, 0.18),
     inset 0 -1px 0 0 rgba(0, 0, 0, 0.35),
@@ -489,15 +524,4 @@
   --aviso-de-padrao: linear-gradient(135deg, #17406f 0%, #17406f 46%, #33689f 68%, #f5bb12 100%);
   --aviso-de-emerg: linear-gradient(135deg, #e0602c 0%, #e0602c 46%, #f2892a 70%, #ffd93d 100%);
   --aviso-veu: linear-gradient(135deg, rgba(0, 0, 0, 0) 62%, rgba(40, 28, 0, 0.44) 100%);
-}
-
-/* A cor da barra do celular. É uma superfície própria, e não o vidro:
-   dentro do filtro que a deixa líquida (ver AppShell.css) o
-   `backdrop-filter` não sobrevive. */
-:root {
-  --barra-cor: #ffffff;
-}
-
-:root[data-theme='dark'] {
-  --barra-cor: #1b1f27;
 }

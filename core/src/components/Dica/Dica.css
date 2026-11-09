@@ -1,17 +1,18 @@
-/* A bolha da dica: mora no <body>, por cima de tudo menos dos pop-ups.
-   Fundo do proprio pop-up do tema, para ler igual no claro e no escuro. */
+/* A bolha da dica: mora no <body>, por cima de tudo menos dos pop-ups. */
 .dica {
   position: fixed;
   z-index: 80;
   max-width: 300px;
   padding: 9px 12px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  background: var(--modal-bg);
+  background: var(--vidro-menu);
   color: var(--text-base);
   font-size: 0.76rem;
   line-height: 1.45;
-  box-shadow: 0 14px 30px -14px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 14px 30px -14px rgba(0, 0, 0, 0.45), var(--vidro-aro);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
   pointer-events: none;
   animation: dica-entra var(--dur-fast) var(--ease-out);
 }
