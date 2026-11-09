@@ -157,13 +157,6 @@
   color: var(--text-strong);
 }
 
-.pcard__titulos p {
-  margin: 3px 0 0;
-  font-size: 0.8rem;
-  line-height: 1.4;
-  color: var(--text-muted);
-}
-
 .pcard__link {
   align-self: flex-start;
   display: inline-flex;

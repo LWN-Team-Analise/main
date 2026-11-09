@@ -10,6 +10,7 @@ import PedidoInclusao from '@/components/PedidoInclusao/PedidoInclusao'
 import Confirma from '@/components/Confirma/Confirma'
 import Estrelas from '@/components/Estrelas/Estrelas'
 import ModalAvisoGeral from '@/components/AvisoGeral/ModalAvisoGeral'
+import { ModalEvento } from '@/pages/Home/ModalAgenda'
 import { ehAplicativo } from '@/utils/dispositivo'
 import useNaoLidasChat from '@/hooks/useNaoLidasChat'
 import { useNotificacoesAutomaticas } from '@/hooks/useNotificacoesCelular'
@@ -127,6 +128,13 @@ const Icone = {
     <svg viewBox="0 0 24 24" width="17" height="17" {...traco}>
       <path d="M4 10.2v3.6a1.2 1.2 0 0 0 1.2 1.2H7l5.6 3.6a.8.8 0 0 0 1.2-.7V6.1a.8.8 0 0 0-1.2-.7L7 9H5.2A1.2 1.2 0 0 0 4 10.2Z" />
       <path d="M17.2 9.2a4 4 0 0 1 0 5.6M19.6 6.8a7.4 7.4 0 0 1 0 10.4" />
+    </svg>
+  ),
+  /* o "Marcar evento" do menu do botao + */
+  calendario: () => (
+    <svg viewBox="0 0 24 24" width="17" height="17" {...traco}>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2.6" />
+      <path d="M3.5 9.8h17M8 3.2v3.4M16 3.2v3.4" />
     </svg>
   ),
   mais: () => (
@@ -883,8 +891,8 @@ function BotaoChat({ acoes = [], aoAbrirChat, naoLidas = 0 }) {
  * `semChat` tira o botao flutuante da tela — e o que a tela da obra usa,
  * porque la o chat que vale e o da obra, e a propria tela do chat da
  * equipe. Fora delas, o botao e o "+" com menu: o chat da equipe
- * (/app/chat), o "Enviar aviso" para quem tem `enviar_avisos`
- * (atualizacao 46) e o que a tela acrescentar.
+ * (/app/chat), o "Enviar aviso" e o "Marcar evento" para quem tem
+ * `enviar_avisos` e o que a tela acrescentar.
  *
  * `acoesFlutuantes` acrescenta opcoes da propria tela ao menu do botao
  * (a observacao do quadro, em Obras).
@@ -905,6 +913,9 @@ export default function AppShell({
   const naoLidas = useNaoLidasChat(!semChat)
   /* o pop-up do "Enviar aviso", aberto pelo menu do botao + */
   const [enviandoAviso, setEnviandoAviso] = useState(false)
+  /* o "Marcar evento": null fechado, {} evento novo. Fica no estado para o
+     objeto ser o mesmo a cada render (uma recarga nao limpa o formulario) */
+  const [eventoNovo, setEventoNovo] = useState(null)
   const podeAvisar = pode('enviar_avisos')
   /* as notificacoes no celular se ligam sozinhas (o aparelho pergunta no
      primeiro clique, uma vez): nao ha cartao em Configuracoes */
@@ -1247,7 +1258,10 @@ export default function AppShell({
             ...acoesFlutuantes,
             /* o aviso para a empresa inteira, que cai no Panorama */
             ...(podeAvisar
-              ? [{ id: 'aviso', rotulo: 'Enviar aviso', Glifo: Icone.megafone, aoClicar: () => setEnviandoAviso(true) }]
+              ? [
+                  { id: 'aviso', rotulo: 'Enviar aviso', Glifo: Icone.megafone, aoClicar: () => setEnviandoAviso(true) },
+                  { id: 'evento', rotulo: 'Marcar evento', Glifo: Icone.calendario, aoClicar: () => setEventoNovo({}) },
+                ]
               : []),
           ]}
           aoAbrirChat={() => navegar('/app/chat')}
@@ -1256,6 +1270,7 @@ export default function AppShell({
       )}
 
       {podeAvisar && <ModalAvisoGeral aberto={enviandoAviso} aoFechar={() => setEnviandoAviso(false)} />}
+      {podeAvisar && <ModalEvento evento={eventoNovo} aoFechar={() => setEventoNovo(null)} />}
 
       {/* ---------------- a senha ainda e a padrao ----------------
 

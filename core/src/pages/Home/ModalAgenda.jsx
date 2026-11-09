@@ -5,6 +5,8 @@ import Confirma from '@/components/Confirma/Confirma'
 import { CampoTexto } from '@/components/Campo/Campo'
 import { CampoData, CampoHora } from '@/components/CampoData/CampoData'
 import * as agendaApi from '@/services/agendaService'
+/* o formulario tambem abre pelo "Marcar evento" do +, em qualquer aba */
+import './Panorama.css'
 
 /* ============================================================
    A AGENDA INTEIRA e o cadastro de evento (aba Panorama)
@@ -102,7 +104,7 @@ export function Evento({ evento, children }) {
   )
 }
 
-export function ModalAgenda({ aberto, eventos, podeEditar, aoFechar, aoMudar }) {
+export function ModalAgenda({ aberto, eventos, podeEditar, aoFechar }) {
   const [editando, setEditando] = useState(null)
   const [apagando, setApagando] = useState(null)
   const [erro, setErro] = useState('')
@@ -132,7 +134,6 @@ export function ModalAgenda({ aberto, eventos, podeEditar, aoFechar, aoMudar }) 
     setApagando(null)
     try {
       await agendaApi.apagarEvento(alvo.id)
-      await aoMudar()
     } catch (e) {
       setErro(e.message)
     }
@@ -200,7 +201,7 @@ export function ModalAgenda({ aberto, eventos, podeEditar, aoFechar, aoMudar }) 
         </div>
       </Modal>
 
-      <ModalEvento evento={editando} nivel={1} aoFechar={() => setEditando(null)} aoSalvo={aoMudar} />
+      <ModalEvento evento={editando} nivel={1} aoFechar={() => setEditando(null)} />
 
       <Confirma
         aberto={Boolean(apagando)}
@@ -219,7 +220,7 @@ export function ModalAgenda({ aberto, eventos, podeEditar, aoFechar, aoMudar }) 
  * O formulario do evento. `evento` = null fecha; {} e um evento novo;
  * com `id`, edita aquele.
  */
-export function ModalEvento({ evento, nivel = 0, aoFechar, aoSalvo }) {
+export function ModalEvento({ evento, nivel = 0, aoFechar }) {
   const aberto = Boolean(evento)
   const novo = aberto && !evento.id
   const [campos, setCampos] = useState({ titulo: '', dia: '', hora: '', local: '' })
@@ -253,7 +254,6 @@ export function ModalEvento({ evento, nivel = 0, aoFechar, aoSalvo }) {
       const corpo = { ...campos, titulo, local: campos.local.trim() }
       if (novo) await agendaApi.criarEvento(corpo)
       else await agendaApi.editarEvento(evento.id, corpo)
-      await aoSalvo()
       aoFechar()
     } catch (falha) {
       setErro({ geral: falha.message })

@@ -1260,7 +1260,14 @@ alguem clica em **Compartilhar com a equipe** no rodape do negocio
 negocio guarda o n° da proposta em `negocio.proposta` (o n° sugerido pula os
 reservados pelos pendentes) e da para corrigir o n° e o cliente; o
 compartilhamento fica carimbado em `negocio.compartilhado_em` e
-`compartilhado_por`. O cadastro manual em Obras continua do mesmo jeito.
+`compartilhado_por`.
+
+O caminho contrario tambem existe: toda obra criada na mao em Obras entra
+sozinha no Comercial, no funil **Novos negocios**, em **Demanda Recebida**,
+ja ligada a obra (`server/negocioDaObra.js`; titulo = n° da proposta, a
+descricao na observacao, responsavel = quem criou). As obras abertas que ja
+estavam na 1a etapa vieram pela atualizacao 48. A obra excluida leva o negocio
+que ainda esta como nasceu; o que o Comercial ja fez andar continua la.
 
 - No formulario aparece o bloco da obra com o **N° da proposta**, ja sugerido
   como no "Nova obra" (o da ultima, mais um; `GET /api/comercial/proxima-proposta`,
@@ -1450,6 +1457,14 @@ ou a API fora do ar: o estado e a cidade viram campo livre.
   rodar `npm run db:atualizar`.
 - Nas listas de escolha, digitar as primeiras letras pula para a opcao ("par"
   acha o Paraguai), como no `<select>` do navegador.
+
+## Frotas: a ultima devolucao, na saida
+
+Ao escolher o carro no formulario de saida (e na retirada do carro de uma obra)
+aparece como ele voltou da ultima vez: quem devolveu, quando, o KM, o tanque, as
+respostas e a observacao (`veiculo.ultimaDevolucao`, em `GET /api/frotas/veiculos`).
+Em vermelho, o "Não" das perguntas marcadas como `importante` e o tanque abaixo da
+metade; o "Sem Parar" nao conta, porque "Não" ali nao e problema.
 
 ## Frotas: excluir saida ou devolucao
 
@@ -1949,7 +1964,7 @@ avisos mostra so os de obra. A TV continua abrindo na Grade e nao tem o
 Panorama.
 
 O botao flutuante do canto (AppShell) e sempre o **+** com menu, em todas as
-abas: "Chat da equipe", "Enviar aviso" para quem tem `enviar_avisos` e o que a
+abas: "Chat da equipe", "Enviar aviso" e "Marcar evento" para quem tem `enviar_avisos` e o que a
 tela acrescentar (a observacao do quadro, em Obras). Antes, sem opcao extra,
 ele era so o balao do chat. Dentro da obra continua o + proprio dela.
 

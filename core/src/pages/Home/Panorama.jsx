@@ -127,11 +127,11 @@ export default function Panorama() {
 }
 
 /**
- * A moldura dos quatro cards: o icone no quadrado colorido, o titulo,
- * a frase de baixo e o link do canto. `marca` e o desenho grande e
- * apagado do fundo (o calendario da agenda, o trofeu dos destaques).
+ * A moldura dos quatro cards: o icone no quadrado colorido, o titulo
+ * e o link do canto. `marca` e o desenho grande e apagado do fundo (o
+ * calendario da agenda, o trofeu dos destaques).
  */
-function Cartao({ tom, Icone, titulo, subtitulo, acao, marca, children }) {
+function Cartao({ tom, Icone, titulo, acao, marca, children }) {
   const id = useId()
   return (
     <section className="pcard vidro" data-tom={tom} aria-labelledby={id}>
@@ -146,7 +146,6 @@ function Cartao({ tom, Icone, titulo, subtitulo, acao, marca, children }) {
         </span>
         <div className="pcard__titulos">
           <h2 id={id}>{titulo}</h2>
-          <p>{subtitulo}</p>
         </div>
         {acao}
       </header>
@@ -257,7 +256,6 @@ function CardAvisos() {
       tom="azul"
       Icone={Glifo.megafone}
       titulo="Avisos e Comunicados"
-      subtitulo="Fique por dentro das informações importantes."
       acao={
         <Link
           rotulo={todos ? 'Ver menos' : 'Ver todos'}
@@ -387,7 +385,6 @@ function CardAniversarios() {
       tom="rosa"
       Icone={Glifo.bolo}
       titulo="Aniversariantes do Mês"
-      subtitulo="Vamos celebrar quem faz a LWN acontecer!"
       acao={
         <Link
           rotulo={todos ? 'Ver menos' : 'Ver todos'}
@@ -473,8 +470,11 @@ function CardAgenda() {
     }
   }, [])
 
+  /* le de novo quando a agenda muda, inclusive pelo "Marcar evento" do + */
   useEffect(() => {
     carregar()
+    window.addEventListener(agendaApi.AGENDA_MUDOU, carregar)
+    return () => window.removeEventListener(agendaApi.AGENDA_MUDOU, carregar)
   }, [carregar])
 
   const proximos = (eventos ?? []).slice(0, EVENTOS_NO_CARD)
@@ -484,7 +484,6 @@ function CardAgenda() {
       tom="marinho"
       Icone={Glifo.calendario}
       titulo="Agenda da Empresa"
-      subtitulo="Confira os próximos eventos e compromissos."
       marca={<Glifo.calendario tamanho={150} traco={1.1} />}
       acao={
         <Link
@@ -525,13 +524,8 @@ function CardAgenda() {
         eventos={eventos ?? []}
         podeEditar={podeEditar}
         aoFechar={() => setLista(false)}
-        aoMudar={carregar}
       />
-      <ModalEvento
-        evento={editando}
-        aoFechar={() => setEditando(null)}
-        aoSalvo={carregar}
-      />
+      <ModalEvento evento={editando} aoFechar={() => setEditando(null)} />
     </Cartao>
   )
 }
@@ -581,7 +575,6 @@ function CardDestaques() {
       tom="ambar"
       Icone={Glifo.trofeu}
       titulo="Destaques e Conquistas"
-      subtitulo="Juntos, alcançamos grandes resultados!"
       marca={<Glifo.trofeu tamanho={150} traco={1.1} />}
       acao={
         <Link

@@ -168,6 +168,35 @@ function paraVeiculo(l) {
           km: l.ult_km ?? null,
         }
       : null,
+    ultimaDevolucao: paraUltimaDevolucao(l.ult_devolucao),
+  }
+}
+
+/**
+ * Como o carro voltou da ultima vez: quem devolveu, quando, o tanque e as
+ * respostas. A saida mostra isso antes de registrar. Null = o carro
+ * nunca foi devolvido. Vem como JSON (`to_jsonb`): data e 'AAAA-MM-DD'.
+ */
+function paraUltimaDevolucao(d) {
+  if (!d) return null
+  return {
+    condutorNome: d.condutor_nome,
+    data: d.data,
+    hora: d.hora ? String(d.hora).slice(0, 5) : null,
+    km: d.km ?? null,
+    combustivel: d.combustivel ?? null,
+    posto: d.posto ?? '',
+    observacao: d.observacao ?? '',
+    checklist: {
+      pneus: d.pneus,
+      oleo: d.oleo,
+      agua: d.agua,
+      abastecido: d.abastecido,
+      semParar: d.sem_parar,
+      limpoInterno: d.limpo_interno,
+      limpoExterno: d.limpo_externo,
+      farois: d.farois,
+    },
   }
 }
 
@@ -228,6 +257,7 @@ const CONSULTA_VEICULOS = `
   SELECT v.*,
          u.tipo AS ult_tipo, u.condutor_id AS ult_condutor_id, u.condutor_nome AS ult_condutor_nome,
          u.data AS ult_data, to_char(u.hora, 'HH24:MI') AS ult_hora, u.destino AS ult_destino, u.km AS ult_km,
+         to_jsonb(d) AS ult_devolucao,
          (SELECT count(*) FROM veiculo_registro x WHERE x.veiculo_id = v.id) AS registros
     FROM veiculo v
     LEFT JOIN LATERAL (
@@ -236,6 +266,12 @@ const CONSULTA_VEICULOS = `
        ORDER BY ${ORDEM_DESC}
        LIMIT 1
     ) u ON true
+    LEFT JOIN LATERAL (
+      SELECT r.* FROM veiculo_registro r
+       WHERE r.veiculo_id = v.id AND r.tipo = 'devolucao'
+       ORDER BY ${ORDEM_DESC}
+       LIMIT 1
+    ) d ON true
 `
 
 router.get('/veiculos', exigeSessao, exige(VER), async (_req, res) => {

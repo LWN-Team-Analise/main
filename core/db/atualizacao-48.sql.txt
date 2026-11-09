@@ -1,0 +1,75 @@
+-- ============================================================
+--  ATUALIZACAO 48 — as obras da 1a ETAPA entram no Comercial
+--
+--  Toda obra criada na mao em Obras passa a entrar sozinha no Comercial,
+--  no funil Novos negocios, em Demanda Recebida (server/negocioDaObra.js).
+--  Esta atualizacao faz o mesmo com as que JA EXISTEM: as obras abertas que
+--  ainda estao na 1a etapa e nao tem negocio ligado.
+--
+--  "Na 1a etapa" e a mesma conta da tela: a primeira etapa do roteiro
+--  daquela obra (o que valia quando ela nasceu, ou os checks proprios
+--  dela) ainda tem check por marcar, ou nao tem check nenhum.
+--
+--  Cada negocio fica igual ao que nasce de uma obra nova: titulo = n° da
+--  proposta, a descricao na observacao, o responsavel = quem criou a obra.
+--
+--  So acrescenta. Rodar de novo nao duplica: quem ja tem negocio fica de fora.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+-- ============================================================
+
+BEGIN;
+
+WITH abertas AS (
+    SELECT o.id, o.criado_em, o.checks_proprios, o.proposta, o.descricao, o.cliente_id, o.criado_por,
+           (SELECT et.id
+              FROM public.etapa et
+             WHERE coalesce(et.vigente_de, '-infinity') <= o.criado_em
+               AND (et.vigente_ate IS NULL OR o.criado_em < et.vigente_ate)
+             ORDER BY et.ordem, et.id
+             LIMIT 1) AS etapa_id
+      FROM public.obra o
+     WHERE o.concluida_em IS NULL
+       AND NOT EXISTS (SELECT 1 FROM public.negocio n WHERE n.obra_id = o.id)
+),
+checks AS (
+    SELECT a.id AS obra_id,
+           EXISTS (SELECT 1 FROM public.obra_check m WHERE m.obra_id = a.id AND m.check_id = ck.id) AS feito
+      FROM abertas a
+      JOIN public.etapa_card kd
+        ON kd.etapa_id = a.etapa_id
+       AND coalesce(kd.vigente_de, '-infinity') <= a.criado_em
+       AND (kd.vigente_ate IS NULL OR a.criado_em < kd.vigente_ate)
+      JOIN public.etapa_check ck
+        ON ck.card_id = kd.id
+       AND CASE WHEN a.checks_proprios
+                THEN ck.obra_id = a.id AND ck.vigente_ate IS NULL
+                ELSE ck.obra_id IS NULL
+                     AND coalesce(ck.vigente_de, '-infinity') <= a.criado_em
+                     AND (ck.vigente_ate IS NULL OR a.criado_em < ck.vigente_ate)
+           END
+),
+na_primeira AS (
+    SELECT a.*
+      FROM abertas a
+      LEFT JOIN checks c ON c.obra_id = a.id
+     GROUP BY a.id, a.criado_em, a.checks_proprios, a.proposta, a.descricao, a.cliente_id, a.criado_por, a.etapa_id
+    HAVING count(c.obra_id) = 0 OR bool_or(NOT c.feito)
+)
+INSERT INTO public.negocio (funil, etapa, titulo, cliente_id, responsavel_id, observacao, proposta, obra_id, criado_por, criado_em)
+SELECT 'novos', 'demanda_recebida', left(btrim(p.proposta), 200), p.cliente_id, p.criado_por,
+       nullif(btrim(p.descricao), ''), btrim(p.proposta), p.id, p.criado_por, p.criado_em
+  FROM na_primeira p
+ WHERE btrim(coalesce(p.proposta, '')) <> '';
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — quantos negocios ligados a obra estao em Demanda Recebida
+-- ============================================================
+
+SELECT 'negocios de obra em Novos negocios > Demanda Recebida' AS item,
+       count(*) AS quantos
+  FROM public.negocio
+ WHERE funil = 'novos' AND etapa = 'demanda_recebida' AND obra_id IS NOT NULL;

@@ -80,6 +80,9 @@ const ARQUIVOS = [
   'db/atualizacao-45.sql.txt',
   'db/atualizacao-46.sql.txt',
   'db/atualizacao-47.sql.txt',
+  /* so dados (as obras da 1a etapa viram negocio): sem linha na CONFERENCIA,
+     porque um negocio apagado depois nao e falha da atualizacao */
+  'db/atualizacao-48.sql.txt',
 ]
 
 /**
