@@ -21,9 +21,7 @@ function aprovUsuario() {
 }
 
 function aprovEscapar(texto) {
-    return String(texto ?? '')
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+    return escH(texto ?? '');
 }
 
 function aprovData(valor) {
@@ -108,22 +106,22 @@ function aprovCardAcompanhamento(os) {
         <div class="aprov-card aprov-card-leitura">
             <div class="aprov-card-topo">
                 <span style="font-weight:800;font-size:1rem;color:var(--primary);font-family:monospace;">
-                    #OS-${String(os.numero_os || 0).padStart(4, '0')}
+                    #OS-${escH(String(os.numero_os || 0).padStart(4, '0'))}
                 </span>
                 <span class="badge ${aprovada ? 'badge-success' : 'badge-warning'}" style="font-size:0.7rem;">
                     ${aprovada ? 'Aprovada' : 'Pendente de Aprovação'}
                 </span>
-                <span style="font-size:0.72rem;color:var(--text-muted);">${total} instrumento${total !== 1 ? 's' : ''}</span>
+                <span style="font-size:0.72rem;color:var(--text-muted);">${escH(total)} instrumento${total !== 1 ? 's' : ''}</span>
                 <button class="btn btn-outline btn-sm" style="margin-left:auto;padding:0.2rem 0.65rem;font-size:0.7rem;"
-                        onclick="previewPDFOS('${os.numero_os}')" title="Abrir a OS em PDF">Ver</button>
+                        onclick="previewPDFOS('${escJ(os.numero_os)}')" title="Abrir a OS em PDF">Ver</button>
             </div>
             <div class="aprov-card-grid">
                 <div><strong>Cliente:</strong> ${aprovEscapar(os.cliente || '—')}</div>
                 <div><strong>Obra:</strong> ${aprovEscapar(os.obra || os.cliente || '—')}</div>
                 <div><strong>Responsável pela obra:</strong> ${aprovEscapar(os.responsavel || '—')}</div>
                 <div><strong>Enviado por:</strong> ${aprovEscapar(os.solicitado_por || '—')}</div>
-                <div><strong>Período:</strong> ${aprovData(os.data_inicio)} até ${aprovData(os.data_fim)}</div>
-                ${os.aprovado_por ? `<div><strong>${os.editada_por ? 'Editada e Aprovada por:' : 'Aprovada por:'}</strong> ${aprovEscapar(os.aprovado_por)}${os.aprovado_em ? ` · ${aprovData(os.aprovado_em)}` : ''}</div>` : ''}
+                <div><strong>Período:</strong> ${escH(aprovData(os.data_inicio))} até ${escH(aprovData(os.data_fim))}</div>
+                ${os.aprovado_por ? `<div><strong>${os.editada_por ? 'Editada e Aprovada por:' : 'Aprovada por:'}</strong> ${aprovEscapar(os.aprovado_por)}${os.aprovado_em ? ` · ${escH(aprovData(os.aprovado_em))}` : ''}</div>` : ''}
             </div>
             <div style="padding:0 0.9rem 0.8rem;font-size:0.74rem;color:var(--text-muted);">
                 ${aprovada
@@ -236,20 +234,20 @@ function aprovCardOS(os, somenteLeitura) {
         ? itens.map(i => `
             <div style="display:flex;justify-content:space-between;gap:0.75rem;padding:0.25rem 0;border-bottom:1px solid var(--border-color);font-size:0.8rem;">
                 <span style="font-weight:600;color:var(--text-main);">${aprovEscapar(i.ativo)}</span>
-                <span style="color:var(--text-muted);font-family:monospace;">${i.quantidade}x</span>
+                <span style="color:var(--text-muted);font-family:monospace;">${escH(i.quantidade)}x</span>
             </div>`).join('')
         : `<div style="font-size:0.8rem;color:var(--text-muted);padding:0.25rem 0;">Nenhum instrumento informado.</div>`;
 
     return `
-        <div class="aprov-card" id="aprov-card-${os.id}">
+        <div class="aprov-card" id="aprov-card-${escH(os.id)}">
             <div class="aprov-card-topo">
                 <span style="font-weight:800;font-size:1rem;color:var(--primary);font-family:monospace;">
-                    #OS-${String(os.numero_os || 0).padStart(4, '0')}
+                    #OS-${escH(String(os.numero_os || 0).padStart(4, '0'))}
                 </span>
-                <span class="badge ${statusInfo.class}" style="font-size:0.7rem;">${statusInfo.label}</span>
-                <span style="font-size:0.72rem;color:var(--text-muted);">${total} instrumento${total !== 1 ? 's' : ''}</span>
+                <span class="badge ${escH(statusInfo.class)}" style="font-size:0.7rem;">${escH(statusInfo.label)}</span>
+                <span style="font-size:0.72rem;color:var(--text-muted);">${escH(total)} instrumento${total !== 1 ? 's' : ''}</span>
                 <button class="btn btn-outline btn-sm" style="margin-left:auto;padding:0.2rem 0.65rem;font-size:0.7rem;"
-                        onclick="previewPDFOS('${os.numero_os}')" title="Abrir a OS em PDF">Ver</button>
+                        onclick="previewPDFOS('${escJ(os.numero_os)}')" title="Abrir a OS em PDF">Ver</button>
             </div>
 
             <div class="aprov-card-grid">
@@ -257,9 +255,9 @@ function aprovCardOS(os, somenteLeitura) {
                 <div><strong>Obra:</strong> ${aprovEscapar(os.obra || os.cliente || '—')}</div>
                 <div><strong>Responsável pela obra:</strong> ${aprovEscapar(os.responsavel || '—')}</div>
                 <div><strong>Enviado por:</strong> ${aprovEscapar(os.solicitado_por || '—')}</div>
-                <div><strong>Data de início:</strong> ${aprovData(os.data_inicio)}</div>
-                <div><strong>Previsão de término:</strong> ${aprovData(os.data_fim)}</div>
-                <div><strong>Criada em:</strong> ${aprovData(os.data_criacao || os.created_at)}</div>
+                <div><strong>Data de início:</strong> ${escH(aprovData(os.data_inicio))}</div>
+                <div><strong>Previsão de término:</strong> ${escH(aprovData(os.data_fim))}</div>
+                <div><strong>Criada em:</strong> ${escH(aprovData(os.data_criacao || os.created_at))}</div>
             </div>
 
             ${os.observacoes ? `
@@ -278,15 +276,15 @@ function aprovCardOS(os, somenteLeitura) {
             <div class="aprov-motivo">
                 <strong>Motivo da reprovação:</strong> ${aprovEscapar(os.motivo_reprovacao)}
                 ${os.reprovado_por ? ` — ${aprovEscapar(os.reprovado_por)}` : ''}
-                ${os.reprovado_em ? ` · ${aprovData(os.reprovado_em)}` : ''}
+                ${os.reprovado_em ? ` · ${escH(aprovData(os.reprovado_em))}` : ''}
             </div>` : ''}
 
             ${somenteLeitura ? '' : `
             <div class="aprov-card-rodape">
                 <button class="btn btn-outline" style="border:1px solid var(--warning,#f59e0b);color:var(--warning,#f59e0b);"
                         title="Corrigir a lista desta OS e aprovar em seguida"
-                        onclick="abrirEdicaoAprovacaoOS(${os.id})">Editar</button>
-                <button class="btn btn-primary" onclick="abrirAprovacaoOS(${os.id})">Aprovar</button>
+                        onclick="abrirEdicaoAprovacaoOS(${escL(os.id)})">Editar</button>
+                <button class="btn btn-primary" onclick="abrirAprovacaoOS(${escL(os.id)})">Aprovar</button>
             </div>`}
         </div>`;
 }
@@ -300,7 +298,7 @@ function abrirAprovacaoOS(osId) {
 
     aprovAbrirModal('aprov-modal-aprovar', 'Confirmar aprovação', `
         <p style="font-size:0.88rem;color:var(--text-main);margin-bottom:0.75rem;">
-            Você está aprovando a <strong>#OS-${String(os.numero_os || 0).padStart(4, '0')}</strong>
+            Você está aprovando a <strong>#OS-${escH(String(os.numero_os || 0).padStart(4, '0'))}</strong>
             de <strong>${aprovEscapar(os.cliente || '—')}</strong>.
         </p>
         <p style="font-size:0.82rem;color:var(--text-muted);">
@@ -308,7 +306,7 @@ function abrirAprovacaoOS(osId) {
         </p>
     `, `
         <button class="btn btn-outline" onclick="uiFecharModal(document.getElementById('aprov-modal-aprovar'))">Cancelar</button>
-        <button class="btn btn-primary" id="aprov-btn-confirmar" onclick="confirmarAprovacaoOS(${os.id})">Sim, aprovar</button>
+        <button class="btn btn-primary" id="aprov-btn-confirmar" onclick="confirmarAprovacaoOS(${escL(os.id)})">Sim, aprovar</button>
     `);
 }
 window.abrirAprovacaoOS = abrirAprovacaoOS;
@@ -444,7 +442,7 @@ function aprovAplicarModoEdicao(os) {
                         border-radius:0 0.5rem 0.5rem 0;padding:0.7rem 0.9rem;margin-bottom:1rem;">
                 <div style="min-width:0;flex:1;">
                     <div style="font-size:0.88rem;font-weight:800;color:var(--text-main);">
-                        Editando a #OS-${String(os.numero_os || 0).padStart(4, '0')} antes de aprovar
+                        Editando a #OS-${escH(String(os.numero_os || 0).padStart(4, '0'))} antes de aprovar
                     </div>
                     <div style="font-size:0.76rem;color:var(--text-muted);margin-top:0.15rem;">
                         Enviada por ${aprovEscapar(os.solicitado_por || '—')}. Corrija o que for preciso —
@@ -508,22 +506,22 @@ function abrirConfirmacaoEdicaoAprovacao() {
         return `
             <div style="display:flex;justify-content:space-between;gap:0.75rem;padding:0.25rem 0;border-bottom:1px solid var(--border-color);font-size:0.8rem;">
                 <span style="font-weight:${mudou ? '700' : '500'};color:var(--text-main);">${aprovEscapar(a)}</span>
-                <span style="font-family:monospace;color:${cor};">${de}x → ${para}x${mudou ? '' : ' (sem mudança)'}</span>
+                <span style="font-family:monospace;color:${escH(cor)};">${escH(de)}x → ${escH(para)}x${mudou ? '' : ' (sem mudança)'}</span>
             </div>`;
     }).join('');
 
     aprovAbrirModal('aprov-modal-editar', 'Confirmar edição e aprovação', `
         <p style="font-size:0.88rem;color:var(--text-main);margin:0 0 0.75rem;">
             Você está <strong>editando e aprovando</strong> a
-            <strong>#OS-${String(os.numero_os || 0).padStart(4, '0')}</strong>.
+            <strong>#OS-${escH(String(os.numero_os || 0).padStart(4, '0'))}</strong>.
         </p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.35rem;font-size:0.8rem;margin-bottom:0.75rem;">
             <div><strong>Cliente:</strong> ${aprovEscapar(cliente)}</div>
             <div><strong>Responsável:</strong> ${aprovEscapar(responsavel)}</div>
-            <div><strong>Início:</strong> ${aprovData(inicio)}</div>
-            <div><strong>Término:</strong> ${aprovData(fim)}</div>
+            <div><strong>Início:</strong> ${escH(aprovData(inicio))}</div>
+            <div><strong>Término:</strong> ${escH(aprovData(fim))}</div>
         </div>
-        <div style="font-size:0.78rem;font-weight:700;color:var(--text-main);margin-bottom:0.3rem;">Lista de instrumentos (${total})</div>
+        <div style="font-size:0.78rem;font-weight:700;color:var(--text-main);margin-bottom:0.3rem;">Lista de instrumentos (${escH(total)})</div>
         <div style="border:1px solid var(--border-color);border-radius:0.5rem;padding:0.4rem 0.6rem;max-height:220px;overflow-y:auto;">
             ${linhas || '<div style="font-size:0.8rem;color:var(--text-muted);">Nenhum instrumento.</div>'}
         </div>
@@ -604,7 +602,7 @@ function abrirReprovacaoOS(osId) {
 
     aprovAbrirModal('aprov-modal-reprovar', 'Rejeitar solicitação', `
         <p style="font-size:0.88rem;color:var(--text-main);margin-bottom:0.75rem;">
-            Você está rejeitando a <strong>#OS-${String(os.numero_os || 0).padStart(4, '0')}</strong>
+            Você está rejeitando a <strong>#OS-${escH(String(os.numero_os || 0).padStart(4, '0'))}</strong>
             de <strong>${aprovEscapar(os.cliente || '—')}</strong>.
         </p>
         <label class="form-label" for="aprov-motivo" style="display:block;font-size:0.8rem;font-weight:700;color:var(--text-main);margin-bottom:0.25rem;">
@@ -618,7 +616,7 @@ function abrirReprovacaoOS(osId) {
         <button class="btn btn-outline" onclick="uiFecharModal(document.getElementById('aprov-modal-reprovar'))">Cancelar</button>
         <button class="btn btn-primary" id="aprov-btn-rejeitar" disabled
                 style="background:var(--danger,#ef4444);border-color:var(--danger,#ef4444);"
-                onclick="confirmarReprovacaoOS(${os.id})">Rejeitar OS</button>
+                onclick="confirmarReprovacaoOS(${escL(os.id)})">Rejeitar OS</button>
     `);
 
     setTimeout(() => document.getElementById('aprov-motivo')?.focus(), 60);
@@ -677,8 +675,8 @@ function aprovAbrirModal(id, titulo, corpo, rodape) {
     modal.innerHTML = `
         <div class="modal-container" style="max-width:480px;">
             <div class="modal-header">
-                <span class="modal-title" style="font-size:1rem;font-weight:700;">${titulo}</span>
-                <button class="modal-close" onclick="document.getElementById('${id}')?.remove();">
+                <span class="modal-title" style="font-size:1rem;font-weight:700;">${escH(titulo)}</span>
+                <button class="modal-close" onclick="document.getElementById('${escJ(id)}')?.remove();">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1.25rem;height:1.25rem;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
@@ -774,7 +772,7 @@ function aprovBlocoProrrogacoes() {
     return `
         <div style="margin-bottom:1.75rem;">
             <div style="font-size:0.85rem;font-weight:800;color:var(--text-main);margin-bottom:0.2rem;">
-                Prorrogações de prazo (${pedidos.length})
+                Prorrogações de prazo (${escH(pedidos.length)})
             </div>
             <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.6rem;">
                 Pedidos de mais prazo em OS que estão em campo. Enquanto você não decide, o prazo continua o que era.
@@ -786,17 +784,17 @@ window.aprovBlocoProrrogacoes = aprovBlocoProrrogacoes;
 
 function aprovCardProrrogacao(p) {
     return `
-        <div class="aprov-card" id="aprov-prorrog-card-${p.id}">
+        <div class="aprov-card" id="aprov-prorrog-card-${escH(p.id)}">
             <div class="aprov-card-topo">
                 <span style="font-weight:800;font-size:1rem;color:var(--primary);font-family:monospace;">
-                    ${aprovNumeroOS(p)}
+                    ${escH(aprovNumeroOS(p))}
                 </span>
                 <span class="badge badge-warning" style="font-size:0.7rem;">Prorrogação pendente</span>
                 <span style="font-size:0.72rem;color:var(--text-muted);">
-                    ${aprovData(aprovTerminoAtual(p))} → <strong style="color:var(--warning,#f59e0b);">${aprovData(p.data_fim_solicitada)}</strong>
+                    ${escH(aprovData(aprovTerminoAtual(p)))} → <strong style="color:var(--warning,#f59e0b);">${escH(aprovData(p.data_fim_solicitada))}</strong>
                 </span>
                 <button class="btn btn-outline btn-sm" style="margin-left:auto;padding:0.2rem 0.65rem;font-size:0.7rem;"
-                        onclick="abrirHistoricoOS(${p.solicitacao_id})" title="Ver o histórico desta OS">Histórico</button>
+                        onclick="abrirHistoricoOS(${escL(p.solicitacao_id)})" title="Ver o histórico desta OS">Histórico</button>
             </div>
 
             <div class="aprov-card-grid">
@@ -804,9 +802,9 @@ function aprovCardProrrogacao(p) {
                 <div><strong>Obra:</strong> ${aprovEscapar(p.obra || p.cliente || '—')}</div>
                 <div><strong>Responsável pela obra:</strong> ${aprovEscapar(p.responsavel || '—')}</div>
                 <div><strong>Pedido por:</strong> ${aprovEscapar(p.solicitado_por || '—')}</div>
-                <div><strong>Término atual:</strong> ${aprovData(aprovTerminoAtual(p))}</div>
-                <div><strong>Novo término pedido:</strong> ${aprovData(p.data_fim_solicitada)}</div>
-                <div><strong>Pedido em:</strong> ${aprovData(p.solicitado_em)}</div>
+                <div><strong>Término atual:</strong> ${escH(aprovData(aprovTerminoAtual(p)))}</div>
+                <div><strong>Novo término pedido:</strong> ${escH(aprovData(p.data_fim_solicitada))}</div>
+                <div><strong>Pedido em:</strong> ${escH(aprovData(p.solicitado_em))}</div>
             </div>
 
             <div style="padding:0 0.9rem 0.8rem;">
@@ -825,12 +823,12 @@ function aprovCardProrrogacao(p) {
             <div class="aprov-card-rodape">
                 <button class="btn btn-outline" style="border:1px solid var(--danger,#ef4444);color:var(--danger,#ef4444);"
                         title="Recusar o pedido — a OS mantém o prazo atual"
-                        onclick="abrirRejeicaoProrrogacao(${p.id})">Rejeitar</button>
+                        onclick="abrirRejeicaoProrrogacao(${escL(p.id)})">Rejeitar</button>
                 ${aprovProrrogacaoForaDeCampo(p) ? '' : `
                 <button class="btn btn-outline" style="border:1px solid var(--warning,#f59e0b);color:var(--warning,#f59e0b);"
                         title="Aprovar com outra data de término"
-                        onclick="abrirEdicaoProrrogacao(${p.id})">Editar</button>
-                <button class="btn btn-primary" onclick="abrirAprovacaoProrrogacao(${p.id})">Aprovar</button>`}
+                        onclick="abrirEdicaoProrrogacao(${escL(p.id)})">Editar</button>
+                <button class="btn btn-primary" onclick="abrirAprovacaoProrrogacao(${escL(p.id)})">Aprovar</button>`}
             </div>
         </div>`;
 }
@@ -845,19 +843,19 @@ function abrirAprovacaoProrrogacao(id) {
 
     aprovAbrirModal('aprov-modal-prorrogar', 'Aprovar prorrogação', `
         <p style="font-size:0.88rem;color:var(--text-main);margin-bottom:0.75rem;">
-            Você está aprovando a prorrogação da <strong>${aprovNumeroOS(p)}</strong>
+            Você está aprovando a prorrogação da <strong>${escH(aprovNumeroOS(p))}</strong>
             de <strong>${aprovEscapar(p.cliente || '—')}</strong>.
         </p>
         <p style="font-size:0.85rem;color:var(--text-main);margin-bottom:0.75rem;">
-            O término passa de <strong>${aprovData(aprovTerminoAtual(p))}</strong>
-            para <strong>${aprovData(p.data_fim_solicitada)}</strong>.
+            O término passa de <strong>${escH(aprovData(aprovTerminoAtual(p)))}</strong>
+            para <strong>${escH(aprovData(p.data_fim_solicitada))}</strong>.
         </p>
         <p style="font-size:0.82rem;color:var(--text-muted);">
             Pedido por ${aprovEscapar(p.solicitado_por || '—')} — ${aprovEscapar(p.motivo || '')}
         </p>
     `, `
         <button class="btn btn-outline" onclick="aprovFechar('aprov-modal-prorrogar')">Cancelar</button>
-        <button class="btn btn-primary" id="aprov-btn-prorrogar" onclick="confirmarProrrogacao(${p.id})">Sim, aprovar</button>
+        <button class="btn btn-primary" id="aprov-btn-prorrogar" onclick="confirmarProrrogacao(${escL(p.id)})">Sim, aprovar</button>
     `);
 }
 window.abrirAprovacaoProrrogacao = abrirAprovacaoProrrogacao;
@@ -881,15 +879,15 @@ function abrirEdicaoProrrogacao(id) {
 
     aprovAbrirModal('aprov-modal-prorrogar-editar', 'Editar e aprovar prorrogação', `
         <p style="font-size:0.88rem;color:var(--text-main);margin-bottom:0.75rem;">
-            <strong>${aprovNumeroOS(p)}</strong> — término atual
-            <strong>${aprovData(aprovTerminoAtual(p))}</strong>, pedido para
-            <strong>${aprovData(p.data_fim_solicitada)}</strong>.
+            <strong>${escH(aprovNumeroOS(p))}</strong> — término atual
+            <strong>${escH(aprovData(aprovTerminoAtual(p)))}</strong>, pedido para
+            <strong>${escH(aprovData(p.data_fim_solicitada))}</strong>.
         </p>
 
         <label class="form-label" for="aprov-prorrog-data" style="display:block;font-size:0.8rem;font-weight:700;color:var(--text-main);margin-bottom:0.25rem;">
             Data de término aprovada <span style="color:var(--danger,#ef4444);">*</span>
         </label>
-        <input type="date" id="aprov-prorrog-data" class="form-input" min="${minimo}" value="${pedida}"
+        <input type="date" id="aprov-prorrog-data" class="form-input" min="${escH(minimo)}" value="${escH(pedida)}"
                style="width:100%;font-size:0.85rem;margin-bottom:0.75rem;">
 
         <label class="form-label" for="aprov-prorrog-motivo" style="display:block;font-size:0.8rem;font-weight:700;color:var(--text-main);margin-bottom:0.25rem;">
@@ -905,7 +903,7 @@ function abrirEdicaoProrrogacao(id) {
         <button class="btn btn-outline" onclick="aprovFechar('aprov-modal-prorrogar-editar')">Cancelar</button>
         <button class="btn btn-primary" id="aprov-btn-prorrogar-editar"
                 style="background:var(--warning,#f59e0b);border-color:var(--warning,#f59e0b);"
-                onclick="confirmarEdicaoProrrogacao(${p.id})">Salvar e aprovar</button>
+                onclick="confirmarEdicaoProrrogacao(${escL(p.id)})">Salvar e aprovar</button>
     `);
 
     setTimeout(() => document.getElementById('aprov-prorrog-data')?.focus(), 60);
@@ -921,8 +919,8 @@ function abrirRejeicaoProrrogacao(id) {
 
     aprovAbrirModal('aprov-modal-prorrogar-rejeitar', 'Rejeitar prorrogação', `
         <p style="font-size:0.88rem;color:var(--text-main);margin-bottom:0.75rem;">
-            Você está rejeitando a prorrogação da <strong>${aprovNumeroOS(p)}</strong>.
-            A OS mantém o término de <strong>${aprovData(aprovTerminoAtual(p))}</strong>.
+            Você está rejeitando a prorrogação da <strong>${escH(aprovNumeroOS(p))}</strong>.
+            A OS mantém o término de <strong>${escH(aprovData(aprovTerminoAtual(p)))}</strong>.
         </p>
         <label class="form-label" for="aprov-prorrog-motivo-rejeicao" style="display:block;font-size:0.8rem;font-weight:700;color:var(--text-main);margin-bottom:0.25rem;">
             Motivo da rejeição <span style="color:var(--danger,#ef4444);">*</span>
@@ -935,7 +933,7 @@ function abrirRejeicaoProrrogacao(id) {
         <button class="btn btn-outline" onclick="aprovFechar('aprov-modal-prorrogar-rejeitar')">Cancelar</button>
         <button class="btn btn-primary" id="aprov-btn-prorrogar-rejeitar" disabled
                 style="background:var(--danger,#ef4444);border-color:var(--danger,#ef4444);"
-                onclick="confirmarRejeicaoProrrogacao(${p.id})">Rejeitar prorrogação</button>
+                onclick="confirmarRejeicaoProrrogacao(${escL(p.id)})">Rejeitar prorrogação</button>
     `);
 
     setTimeout(() => document.getElementById('aprov-prorrog-motivo-rejeicao')?.focus(), 60);
@@ -1100,7 +1098,7 @@ function aprovBlocoRemanejamentos() {
     return `
         <div style="margin-bottom:1.75rem;">
             <div style="font-size:0.85rem;font-weight:800;color:var(--text-main);margin-bottom:0.2rem;">
-                Remanejamentos (${grupos.length})
+                Remanejamentos (${escH(grupos.length)})
             </div>
             ${grupos.map(aprovCardRemanejamento).join('')}
         </div>`;
@@ -1121,7 +1119,7 @@ function aprovCardRemanejamento(g) {
                     ${aprovEscapar(g.origem || '—')} → <strong style="color:var(--warning,#f59e0b);">${aprovEscapar(g.destino || '—')}</strong>
                 </span>
                 <span style="margin-left:auto;font-size:0.72rem;color:var(--text-muted);">
-                    ${g.instrumentos.length} ferramenta(s)
+                    ${escH(g.instrumentos.length)} ferramenta(s)
                 </span>
             </div>
 
@@ -1130,7 +1128,7 @@ function aprovCardRemanejamento(g) {
                 <div><strong>Obra de destino:</strong> ${aprovEscapar(g.destino || '—')}</div>
                 <div><strong>Quem está passando:</strong> ${aprovEscapar(g.responsavel || g.solicitado_por || '—')}</div>
                 <div><strong>Quem vai receber:</strong> ${aprovEscapar(g.destinatario || '—')}</div>
-                <div><strong>Pedido em:</strong> ${g.criado_em ? new Date(g.criado_em).toLocaleString('pt-BR') : '—'}</div>
+                <div><strong>Pedido em:</strong> ${g.criado_em ? escH(new Date(g.criado_em).toLocaleString('pt-BR')) : '—'}</div>
             </div>
 
             <div style="padding:0 0.9rem 0.8rem;">
@@ -1146,9 +1144,9 @@ function aprovCardRemanejamento(g) {
             <div class="aprov-card-rodape">
                 <button class="btn btn-outline" style="border:1px solid var(--danger,#ef4444);color:var(--danger,#ef4444);"
                         title="Recusar — a ferramenta continua onde está"
-                        onclick="abrirRejeicaoRemanejamento('${aprovEscapar(g.grupo_id || '')}')">Rejeitar</button>
+                        onclick="abrirRejeicaoRemanejamento('${escJ(g.grupo_id || '')}')">Rejeitar</button>
                 <button class="btn btn-primary"
-                        onclick="abrirAprovacaoRemanejamento('${aprovEscapar(g.grupo_id || '')}')">Aprovar</button>
+                        onclick="abrirAprovacaoRemanejamento('${escJ(g.grupo_id || '')}')">Aprovar</button>
             </div>
         </div>`;
 }
@@ -1160,7 +1158,7 @@ function abrirAprovacaoRemanejamento(grupoId) {
 
     aprovAbrirModal('aprov-modal-remanejar', 'Aprovar remanejamento', `
         <p style="font-size:0.88rem;color:var(--text-main);margin-bottom:0.75rem;">
-            Você está liberando <strong>${g.instrumentos.length} ferramenta(s)</strong> de
+            Você está liberando <strong>${escH(g.instrumentos.length)} ferramenta(s)</strong> de
             <strong>${aprovEscapar(g.origem || '—')}</strong> para
             <strong>${aprovEscapar(g.destino || '—')}</strong>.
         </p>
@@ -1175,7 +1173,7 @@ function abrirAprovacaoRemanejamento(grupoId) {
     `, `
         <button class="btn btn-outline" onclick="aprovFechar('aprov-modal-remanejar')">Cancelar</button>
         <button class="btn btn-primary" id="aprov-btn-remanejar"
-                onclick="confirmarAprovacaoRemanejamento('${aprovEscapar(grupoId)}')">Sim, aprovar</button>
+                onclick="confirmarAprovacaoRemanejamento('${escJ(grupoId)}')">Sim, aprovar</button>
     `);
 }
 window.abrirAprovacaoRemanejamento = abrirAprovacaoRemanejamento;
@@ -1186,7 +1184,7 @@ function abrirRejeicaoRemanejamento(grupoId) {
 
     aprovAbrirModal('aprov-modal-remanejar-rejeitar', 'Rejeitar remanejamento', `
         <p style="font-size:0.88rem;color:var(--text-main);margin-bottom:0.75rem;">
-            As ${g.instrumentos.length} ferramenta(s) continuam em
+            As ${escH(g.instrumentos.length)} ferramenta(s) continuam em
             <strong>${aprovEscapar(g.origem || '—')}</strong> e seguem sendo cobradas na devolutiva de lá.
         </p>
         <label class="form-label" for="aprov-rem-motivo" style="display:block;font-size:0.8rem;font-weight:700;color:var(--text-main);margin-bottom:0.25rem;">
@@ -1200,7 +1198,7 @@ function abrirRejeicaoRemanejamento(grupoId) {
         <button class="btn btn-outline" onclick="aprovFechar('aprov-modal-remanejar-rejeitar')">Cancelar</button>
         <button class="btn btn-primary" id="aprov-btn-remanejar-rejeitar" disabled
                 style="background:var(--danger,#ef4444);border-color:var(--danger,#ef4444);"
-                onclick="confirmarRejeicaoRemanejamento('${aprovEscapar(grupoId)}')">Rejeitar remanejamento</button>
+                onclick="confirmarRejeicaoRemanejamento('${escJ(grupoId)}')">Rejeitar remanejamento</button>
     `);
 
     setTimeout(() => document.getElementById('aprov-rem-motivo')?.focus(), 60);

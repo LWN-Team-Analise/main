@@ -1,49 +1,45 @@
 /**
  * O jeito unico de falar com a API.
  *
- * Cuida do token, do JSON e da mensagem de erro — as telas so recebem o
- * corpo pronto ou uma Error com texto que da para mostrar na tela.
+ * Cuida do JSON e da mensagem de erro — as telas so recebem o corpo
+ * pronto ou uma Error com texto que da para mostrar na tela.
+ *
+ * A sessao viaja num cookie HttpOnly que o navegador manda sozinho: o
+ * JavaScript nao ve o token, entao nada aqui guarda ou le token.
  */
 
 const CHAVE_SESSAO = 'customers.session'
 
-function tokenGuardado() {
-  try {
-    return JSON.parse(localStorage.getItem(CHAVE_SESSAO) ?? 'null')?.token ?? null
-  } catch {
-    return null
-  }
-}
-
 /**
- * O token tambem vive aqui na memoria — e esta copia e a que vale.
- *
- * Quem escreve no localStorage e um efeito do AuthContext, e efeito so
- * roda DEPOIS que a tela pinta. So que o DadosProvider e filho do
- * AuthProvider, e efeito de filho roda ANTES do efeito do pai: no
- * instante em que o login abria a sessao, a primeira carga do quadro ja
- * saia — e saia SEM token, porque o localStorage ainda estava vazio.
- * Voltava 401, a sessao recem-aberta era derrubada, e o login dizia
- * "sua sessao expirou" logo depois de a pessoa acertar a senha.
- *
- * Com a copia em memoria o token existe no mesmo instante em que o
- * login responde, sem depender de quando o efeito roda.
+ * Quem estava logado quando o site passou a usar cookie ainda tem o token
+ * no localStorage. Ele e trocado pelo cookie uma vez, antes de a tela
+ * montar, e sai do armazenamento. Sem rede, fica para a proxima visita.
  */
-let tokenNaMemoria = tokenGuardado()
-
-/** Chamado pelo AuthContext no mesmo passo em que a sessao muda. */
-export function guardarToken(token) {
-  tokenNaMemoria = token ?? null
-}
-
-export function tokenAtual() {
-  return tokenNaMemoria ?? tokenGuardado()
+export async function trocarTokenAntigo() {
+  let guardada
+  try {
+    guardada = JSON.parse(localStorage.getItem(CHAVE_SESSAO) ?? 'null')
+  } catch {
+    return
+  }
+  if (!guardada?.token) return
+  const { token, ...resto } = guardada
+  try {
+    await fetch('/api/auth/migrar', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+  } catch {
+    return
+  }
+  try {
+    localStorage.setItem(CHAVE_SESSAO, JSON.stringify(resto))
+  } catch {
+    /* storage bloqueado: nao ha o que limpar */
+  }
 }
 
 /**
  * O aviso de que a sessao morreu.
  *
- * O token vale 8 horas. Passado esse tempo, TODA chamada volta 401 — mas
+ * A sessao vale 8 horas. Passado esse tempo, TODA chamada volta 401 — mas
  * a sessao continuava guardada aqui, entao a tela seguia com cara de
  * logada, mostrando os dados que ja tinha carregado, e so o primeiro
  * "salvar" e que revelava o problema.
@@ -54,7 +50,6 @@ export function tokenAtual() {
 export const SESSAO_CAIU = 'customers:sessao-caiu'
 
 function derrubarSessao() {
-  tokenNaMemoria = null
   try {
     localStorage.removeItem(CHAVE_SESSAO)
   } catch {
@@ -110,7 +105,6 @@ export async function comCarga(acao) {
  * comum quando o servidor respondeu recusando.
  */
 export async function chamar(caminho, opcoes = {}) {
-  const token = tokenAtual()
   const numero = (numeroDaChamada += 1)
   const metodo = (opcoes.method ?? 'GET').toUpperCase()
   const querCarga = pedindoCarga > 0 && metodo !== 'GET'
@@ -121,7 +115,6 @@ export async function chamar(caminho, opcoes = {}) {
       ...opcoes,
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(querCarga ? { 'X-Carga': 'leve' } : {}),
         ...opcoes.headers,
       },
@@ -136,7 +129,7 @@ export async function chamar(caminho, opcoes = {}) {
   const corpo = await resposta.json().catch(() => null)
 
   if (!resposta.ok) {
-    /* `sessao: false` so vem quando o token morreu de verdade. Um 401 sem
+    /* `sessao: false` so vem quando a sessao morreu de verdade. Um 401 sem
        essa marca e outra coisa — a troca de senha, por exemplo, responde
        401 quando a senha atual esta errada, e ali derrubar a sessao seria
        o pior a fazer. */

@@ -202,6 +202,25 @@ const caminhoDaRegra = (req) => (req.path.replace(/\/+$/, '') || '/').toLowerCas
 const passa = (cargo, exigido) =>
     typeof exigido === 'function' ? exigido(cargo) : exigido.some((chave) => cargoPode(cargo, chave));
 
+/* Segunda trava contra HTML no dado: a tela escapa tudo na hora de mostrar,
+   mas marcação não tem o que fazer em nome de ferramenta ou observação, e
+   parada aqui ela não chega a e-mail, PDF nem a outra tela. "<5mm" passa:
+   só "<" colado em letra, "/", "!" ou "?" abre marcação. */
+const ABRE_MARCACAO = /<\s*[a-zA-Z!/?]/;
+function temMarcacao(valor, profundidade = 0) {
+    if (typeof valor === 'string') return ABRE_MARCACAO.test(valor);
+    if (!valor || typeof valor !== 'object' || profundidade > 8) return false;
+    return Object.entries(valor).some(([chave, item]) => ABRE_MARCACAO.test(chave) || temMarcacao(item, profundidade + 1));
+}
+
+app.use((req, res, next) => {
+    if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
+    if (temMarcacao(req.body)) {
+        return res.status(400).json({ erro: 'Os sinais < e > não podem vir colados em letras. Reescreva o texto sem eles.' });
+    }
+    return next();
+});
+
 app.use(async (req, res, next) => {
     const caminho = caminhoDaRegra(req);
     const leitura = req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS';
@@ -2835,7 +2854,55 @@ app.post("/solicitacoes", async (req, res) => {
     }
 });
 
-app.get("/solicitacoes", async (req, res) => {
+/* Quem só pede OS e prorroga (nenhuma aba de operação) vê as OS de que
+   participou, como a tela já mostrava: a lista inteira não pode sair pela
+   API só porque a tela escondia o resto. */
+const QUEM_VE_TODAS_AS_OS = almox(
+    'gerenciar_os', 'aprovar_todas_os', 'conferencia', 'separar_tags', 'devolutiva', 'conferir_devolucao',
+    'aceitar_prorrogacao', 'aprovar_remanejamento', 'concluidos', 'dashboard', 'relatorios', 'manutencao',
+    'manutencao_somente_leitura', 'baias', 'remanejamento', 'calibracao', 'instrumentos', 'certificados'
+);
+
+async function veTodasAsOS(req) {
+    const cargo = await meuCargo(req.dono.sub);
+    return QUEM_VE_TODAS_AS_OS.some((chave) => cargoPode(cargo, chave));
+}
+
+const CONDICAO_DE_PARTICIPANTE = `(solicitado_por_id = $1 OR responsavel_id = $1
+    OR lower(trim(solicitado_por)) = lower(trim($2)) OR lower(trim(responsavel)) = lower(trim($2)))`;
+
+async function nomeDaSessao(req) {
+    const { rows } = await pool.query('SELECT name FROM usuario WHERE id = $1', [req.dono.sub]);
+    return rows[0]?.name ?? '';
+}
+
+/* as rotas de uma OS específica seguem a mesma regra da lista */
+const verEstaOS = async (req, res, next) => {
+    try {
+        if (await veTodasAsOS(req)) return next();
+        const { rows } = await pool.query(
+            `SELECT 1 FROM almox.solicitacoes WHERE id = $3 AND ${CONDICAO_DE_PARTICIPANTE}`,
+            [req.dono.sub, await nomeDaSessao(req), req.params.id]
+        );
+        if (!rows[0]) return res.status(404).json({ erro: 'OS não encontrada.' });
+        return next();
+    } catch (erro) {
+        return res.status(400).json({ erro: 'Dados inválidos.' });
+    }
+};
+
+app.get("/solicitacoes", async (req, res, next) => {
+    try {
+        if (await veTodasAsOS(req)) return next();
+        const { rows } = await pool.query(
+            `SELECT * FROM almox.solicitacoes WHERE ${CONDICAO_DE_PARTICIPANTE} ORDER BY id DESC`,
+            [req.dono.sub, await nomeDaSessao(req)]
+        );
+        return res.json(rows);
+    } catch (erro) {
+        return next(erro);
+    }
+}, async (req, res) => {
     return cache.responderComCache(req, res, "solicitacoes", "solicitacoes:lista", async () => {
         // Auto-cura: sem cron/servidor persistente (Vercel serverless), a
         // transição "Conferido -> Em campo" ao chegar a data da obra é feita
@@ -6888,7 +6955,7 @@ app.get("/ativos/disponibilidade", async (req, res) => {
 // ------------------------------------------------------------
 // GET /api/solicitacoes/:id/historico — linha do tempo da OS
 // ------------------------------------------------------------
-app.get("/solicitacoes/:id/historico", async (req, res) => {
+app.get("/solicitacoes/:id/historico", verEstaOS, async (req, res) => {
     try {
         await garantirTabelaOSHistorico();
         const r = await pool.query(
@@ -7386,7 +7453,7 @@ app.put("/prorrogacoes/:id/rejeitar", async (req, res) => {
 // GET /api/solicitacoes/:id/ferramentas — itens da OS com o status de cada
 // TAG (inclusive as parciais). É a fonte dos popups e do grid da OS.
 // ------------------------------------------------------------
-app.get("/solicitacoes/:id/ferramentas", async (req, res) => {
+app.get("/solicitacoes/:id/ferramentas", verEstaOS, async (req, res) => {
     try {
         const osRes = await pool.query("SELECT * FROM almox.solicitacoes WHERE id = $1", [req.params.id]);
         if (!osRes.rows.length) return res.status(404).json({ erro: "OS não encontrada" });

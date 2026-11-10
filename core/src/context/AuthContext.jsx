@@ -1,10 +1,19 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import * as authService from '@/services/authService'
-import { guardarToken, SESSAO_CAIU } from '@/services/api'
+import { SESSAO_CAIU } from '@/services/api'
 
 const STORAGE_KEY = 'customers.session'
 
 const AuthContext = createContext(null)
+
+/* o token nao passa por aqui (cookie HttpOnly), e o que fica guardado no
+   aparelho e so o que a tela precisa para abrir antes de o servidor
+   responder: documento e telefone voltam com o /me e ficam na memoria */
+function semDadosPessoais({ user, ...resto }) {
+  if (!user) return resto
+  const { cpf: _cpf, telefone: _telefone, dataNascimento: _nascimento, ...publico } = user
+  return { ...resto, user: publico }
+}
 
 function readStoredSession() {
   try {
@@ -18,23 +27,17 @@ function readStoredSession() {
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(() => readStoredSession())
   const [loading, setLoading] = useState(false)
-  /* true = a sessao caiu sozinha (token vencido), nao foi a pessoa que saiu.
+  /* true = a sessao caiu sozinha (prazo vencido), nao foi a pessoa que saiu.
      E o que faz o login explicar o motivo em vez de so aparecer do nada. */
   const [expirou, setExpirou] = useState(false)
 
-  /**
-   * Abre/fecha a sessao. O token vai para a memoria do `api` no MESMO
-   * passo — antes de qualquer efeito rodar — porque a primeira carga do
-   * quadro sai logo depois desta chamada e precisa dele na mao.
-   */
   const aplicarSessao = useCallback((proxima) => {
-    guardarToken(proxima?.token ?? null)
     setSession(proxima)
   }, [])
 
   useEffect(() => {
     try {
-      if (session) localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
+      if (session) localStorage.setItem(STORAGE_KEY, JSON.stringify(semDadosPessoais(session)))
       else localStorage.removeItem(STORAGE_KEY)
     } catch {
       /* modo privado / storage bloqueado: sessao fica so em memoria */
@@ -44,7 +47,7 @@ export function AuthProvider({ children }) {
   /**
    * Qualquer chamada que volte "sessao morta" derruba a sessao aqui.
    *
-   * Sem isto, o token vencia depois de 8 horas e a tela continuava com
+   * Sem isto, a sessao vencia depois de 8 horas e a tela continuava com
    * cara de logada: os dados ja carregados seguiam na tela e so o
    * primeiro "salvar" e que mostrava o erro.
    */
@@ -61,20 +64,22 @@ export function AuthProvider({ children }) {
   }, [])
 
   /**
-   * Ao abrir o site, confere se o token guardado ainda vale.
+   * Ao abrir o site, confere se a sessao ainda vale.
    *
-   * So derruba quando o servidor DIZ que o token morreu. Se a API estiver
+   * So derruba quando o servidor DIZ que a sessao morreu. Se a API estiver
    * fora do ar, a sessao fica de pe — senao uma queda de rede deslogaria
    * todo mundo.
    */
   const jaConferiu = useRef(false)
+  const temSessao = Boolean(session?.user)
   useEffect(() => {
-    if (jaConferiu.current || !session?.token) return
+    if (jaConferiu.current || !temSessao) return
     jaConferiu.current = true
 
-    let vivo = true
-    authService.fetchMe(session.token).then((resultado) => {
-      if (!vivo) return
+    /* sem "desligar" a resposta quando o efeito refaz: o provedor vive o app
+       inteiro, e e esta resposta que traz o CPF e o telefone, que nao ficam
+       guardados no aparelho */
+    authService.fetchMe().then((resultado) => {
       if (resultado.expirada) {
         setExpirou(true)
         aplicarSessao(null)
@@ -85,10 +90,7 @@ export function AuthProvider({ children }) {
         setSession((atual) => (atual ? { ...atual, user: resultado.user } : atual))
       }
     })
-    return () => {
-      vivo = false
-    }
-  }, [session?.token, aplicarSessao])
+  }, [temSessao, aplicarSessao])
 
   const login = useCallback(async (credentials) => {
     setLoading(true)
@@ -106,11 +108,11 @@ export function AuthProvider({ children }) {
    * Abre a sessao com o que o servidor ja devolveu pronto.
    *
    * E o caminho do login pelo Outlook: quem conversou com a Microsoft
-   * foi o servidor, e ele volta com { token, user } montado — nao ha
+   * foi o servidor, e ele volta com { user } e o cookie prontos — nao ha
    * senha para o `login` conferir.
    */
   const entrarComSessao = useCallback((resultado) => {
-    if (resultado?.token) {
+    if (resultado?.user) {
       setExpirou(false)
       aplicarSessao(resultado)
     }
@@ -120,16 +122,6 @@ export function AuthProvider({ children }) {
   /** Atualiza o usuario da sessao (foto, nome, telefone...). */
   const atualizarPerfil = useCallback((campos) => {
     setSession((atual) => (atual ? { ...atual, user: { ...atual.user, ...campos } } : atual))
-  }, [])
-
-  /**
-   * Troca o token da sessao aberta. A troca de senha devolve um token
-   * novo: o antigo deixa de valer no servidor junto com a senha antiga.
-   */
-  const renovarToken = useCallback((token) => {
-    if (!token) return
-    guardarToken(token)
-    setSession((atual) => (atual ? { ...atual, token } : atual))
   }, [])
 
   const logout = useCallback(async () => {
@@ -142,16 +134,15 @@ export function AuthProvider({ children }) {
     () => ({
       session,
       user: session?.user ?? null,
-      isAuthenticated: Boolean(session?.token),
+      isAuthenticated: Boolean(session?.user),
       loading,
       expirou,
       login,
       entrarComSessao,
       logout,
       atualizarPerfil,
-      renovarToken,
     }),
-    [session, loading, expirou, login, entrarComSessao, logout, atualizarPerfil, renovarToken],
+    [session, loading, expirou, login, entrarComSessao, logout, atualizarPerfil],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

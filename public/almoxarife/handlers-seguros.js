@@ -430,11 +430,13 @@
     var disparar = EventTarget.prototype.dispatchEvent;
     EventTarget.prototype.dispatchEvent = function () { acertar(); return disparar.apply(this, arguments); };
 
-    /* o que a CSP nao cobre: <meta http-equiv=refresh> injetado leva a pessoa
-       para outro site, e <base> muda para onde os links apontam */
-    var PERIGO = /<\/?(meta|base)\b[^>]*>?/gi;
+    /* o que a CSP nao cobre: <meta http-equiv=refresh> leva a pessoa para
+       outro site, <base> muda para onde os links apontam e <style> redesenha
+       a tela. A tela nao usa nenhum deles em HTML montado, entao se aparecer
+       e dado que escapou: e so a ultima trava, o escape e o de escapes.js */
+    var PERIGO = /<\/?(meta|base|link|style|object|embed|applet)\b[^>]*>?/gi;
     var limpar = function (html) {
-        return typeof html === 'string' && /<(meta|base)\b/i.test(html) ? html.replace(PERIGO, '') : html;
+        return typeof html === 'string' && /<(meta|base|link|style|object|embed|applet)\b/i.test(html) ? html.replace(PERIGO, '') : html;
     };
     ['innerHTML', 'outerHTML'].forEach(function (nome) {
         var d = Object.getOwnPropertyDescriptor(Element.prototype, nome);

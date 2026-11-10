@@ -83,6 +83,7 @@ const ARQUIVOS = [
   /* so dados (as obras da 1a etapa viram negocio): sem linha na CONFERENCIA,
      porque um negocio apagado depois nao e falha da atualizacao */
   'db/atualizacao-48.sql.txt',
+  'db/atualizacao-49.sql.txt',
 ]
 
 /**
@@ -166,6 +167,7 @@ const CONFERENCIA = [
   ],
   ['obra.execucao_dias', col('obra', 'execucao_dias')],
   ['tentativa_acesso', "SELECT to_regclass('public.tentativa_acesso') IS NOT NULL AS ok"],
+  ['sessao_revogada', "SELECT to_regclass('public.sessao_revogada') IS NOT NULL AS ok"],
   ['veiculo', "SELECT to_regclass('public.veiculo') IS NOT NULL AS ok"],
   ['veiculo_registro', "SELECT to_regclass('public.veiculo_registro') IS NOT NULL AS ok"],
   ['veiculo_foto', "SELECT to_regclass('public.veiculo_foto') IS NOT NULL AS ok"],

@@ -171,8 +171,8 @@ function confBotoesObrasHtml() {
     const botao = (valor, rotulo) => `
         <button type="button"
                 class="btn btn-sm ${confFiltroObras === valor ? 'btn-primary' : 'btn-outline'}"
-                aria-pressed="${confFiltroObras === valor}"
-                onclick="confAlternarObras('${valor}')">${rotulo}</button>`;
+                aria-pressed="${escH(confFiltroObras === valor)}"
+                onclick="confAlternarObras('${escJ(valor)}')">${escH(rotulo)}</button>`;
 
     return `<div style="display:flex;gap:0.4rem;margin-bottom:0.7rem;flex-wrap:wrap;">
         ${botao('todas', 'Todas')}
@@ -239,7 +239,7 @@ function confBaiaOptions(selecionada) {
     const lista = (typeof baias !== 'undefined' && Array.isArray(baias)) ? baias.filter(b => b.status !== 'inativa') : [];
     return `<option value="">— Baia —</option>` + lista.map(b => {
         const nome = confNomeBaia(b);
-        return `<option value="${b.id}" data-nome="${nome}"${String(selecionada) === String(b.id) ? 'selected' : ''}>${nome}</option>`;
+        return `<option value="${escH(b.id)}" data-nome="${escH(nome)}"${String(selecionada) === String(b.id) ? 'selected' : ''}>${escH(nome)}</option>`;
     }).join('');
 }
 
@@ -286,7 +286,7 @@ async function renderConferencia() {
     // faria alguém achar que a fila está limpa quando não está.
     const vazio = confFiltroObras === 'minhas'
         ? confVazio(todas.length
-            ? `Nenhuma OS sua aguardando retirada — há ${todas.length} de outros responsáveis em <strong>Todas</strong>.`
+            ? `Nenhuma OS sua aguardando retirada — há ${escH(todas.length)} de outros responsáveis em <strong>Todas</strong>.`
             : 'Nenhuma OS aguardando retirada.')
         : confVazio('Nenhuma OS aguardando retirada.');
 
@@ -321,7 +321,7 @@ async function renderDevolutiva() {
     // o símbolo só somava ruído.
     const alerta = encerradas.length ? `
         <div style="border-left:3px solid var(--danger, #ef4444);background:color-mix(in srgb, var(--danger, #ef4444) 10%, transparent);border-radius:0.5rem;padding:0.7rem 0.9rem;margin-bottom:0.7rem;font-size:0.85rem;font-weight:700;color:var(--danger, #ef4444);">
-            ${encerradas.length} OS com período encerrado${atrasadas.length ? ` · ${atrasadas.length} em atraso` : ''} — realize a devolutiva o quanto antes.
+            ${escH(encerradas.length)} OS com período encerrado${atrasadas.length ? ` · ${escH(atrasadas.length)} em atraso` : ''} — realize a devolutiva o quanto antes.
         </div>` : '';
 
 
@@ -336,7 +336,7 @@ async function renderDevolutiva() {
         <div style="margin-bottom:1.4rem;">
             <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.2rem;">
                 <span style="font-size:0.9rem;font-weight:800;color:var(--text-main);">Conferir devolução</span>
-                <span class="badge ${aConferir.length ? 'badge-warning' : 'badge-success'}">${aConferir.length}</span>
+                <span class="badge ${aConferir.length ? 'badge-warning' : 'badge-success'}">${escH(aConferir.length)}</span>
             </div>
             <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.6rem;">
                 Obras que já voltaram e esperam a sua checagem: bipe o que retornou
@@ -351,7 +351,7 @@ async function renderDevolutiva() {
     const tituloAguardando = podeConferir ? `
         <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.6rem;">
             <span style="font-size:0.9rem;font-weight:800;color:var(--text-main);">Aguardando devolutiva</span>
-            <span class="badge badge-info">${oss.length}</span>
+            <span class="badge badge-info">${escH(oss.length)}</span>
         </div>` : '';
 
     lista.innerHTML = `
@@ -402,7 +402,7 @@ async function confAtualizarLista(qual) {
 window.confAtualizarLista = confAtualizarLista;
 
 function confVazio(msg) {
-    return `<div style="padding:2rem;text-align:center;color:var(--text-muted);font-size:0.9rem;">${msg}</div>`;
+    return `<div style="padding:2rem;text-align:center;color:var(--text-muted);font-size:0.9rem;">${escH(msg)}</div>`;
 }
 
 // Botões da etapa de retirada:
@@ -428,9 +428,9 @@ function confBotoesConferencia(os) {
     const botoes = [];
 
     if (tem('separar_tags') && !jaSeparada) {
-        botoes.push(`<button class="btn btn-primary btn-sm" style="${estiloPrincipal}"
+        botoes.push(`<button class="btn btn-primary btn-sm" style="${escH(estiloPrincipal)}"
                              title="Separar as TAGs e baias desta OS, bipando cada uma"
-                             onclick="abrirModalConferenciaOS(${os.id})">Separar TAGS</button>`);
+                             onclick="abrirModalConferenciaOS(${escL(os.id)})">Separar TAGS</button>`);
     }
 
     if (jaSeparada) {
@@ -440,14 +440,14 @@ function confBotoesConferencia(os) {
         const rotulo = resumo.bipados > 0 && resumo.restam > 0
             ? `Retirada (faltam ${resumo.restam})`
             : 'Retirada';
-        botoes.push(`<button class="btn btn-primary btn-sm" style="${estiloPrincipal}"
+        botoes.push(`<button class="btn btn-primary btn-sm" style="${escH(estiloPrincipal)}"
                              title="Escolher os instrumentos que vão para a obra e bipá-los"
-                             onclick="abrirSelecaoBipagem(${os.id}, 'conferencia')">${rotulo}</button>`);
+                             onclick="abrirSelecaoBipagem(${escL(os.id)}, 'conferencia')">${escH(rotulo)}</button>`);
     }
 
     // Histórico é leitura: aparece para todos, sem permissão nenhuma.
     botoes.push(`<button class="btn btn-outline btn-sm" style="padding:0.35rem 0.8rem;font-size:0.76rem;"
-                         title="Ver o histórico completo desta OS" onclick="abrirHistoricoOS(${os.id})">Histórico</button>`);
+                         title="Ver o histórico completo desta OS" onclick="abrirHistoricoOS(${escL(os.id)})">Histórico</button>`);
 
     return botoes.join('');
 }
@@ -464,25 +464,25 @@ function confBotoesDevolutiva(os) {
     const estilo = 'padding:0.35rem 1rem;font-size:0.8rem;';
     const botoes = [
         // Igual à Retirada: primeiro se escolhe o que volta, depois se bipa.
-        `<button class="btn btn-primary btn-sm" style="${estilo}"
+        `<button class="btn btn-primary btn-sm" style="${escH(estilo)}"
                  title="Escolher as ferramentas que estão voltando e bipá-las"
-                 onclick="abrirSelecaoBipagem(${os.id}, 'devolutiva')">Concluir Devolução</button>`
+                 onclick="abrirSelecaoBipagem(${escL(os.id)}, 'devolutiva')">Concluir Devolução</button>`
     ];
     // Histórico é leitura: aparece para todos.
     botoes.push(`<button class="btn btn-outline btn-sm" style="padding:0.35rem 0.8rem;font-size:0.76rem;"
-                         title="Ver o histórico completo desta OS" onclick="abrirHistoricoOS(${os.id})">Histórico</button>`);
+                         title="Ver o histórico completo desta OS" onclick="abrirHistoricoOS(${escL(os.id)})">Histórico</button>`);
 
     // Com um pedido em aberto, o botão dá lugar ao aviso: um segundo pedido
     // aprovaria duas datas diferentes para a mesma OS.
     const pendente = typeof prorrogacaoPendenteDaOS === 'function' ? prorrogacaoPendenteDaOS(os.id) : null;
     if (pendente) {
         botoes.push(`<span class="badge badge-warning" style="font-size:0.72rem;padding:0.35rem 0.7rem;"
-                           title="Pedido de ${confDataBR(pendente.data_fim_solicitada)} aguardando quem tem a permissão de aceitar prorrogações">
+                           title="Pedido de ${escH(confDataBR(pendente.data_fim_solicitada))} aguardando quem tem a permissão de aceitar prorrogações">
                          Prorrogação aguardando aprovação
                      </span>`);
     } else if (podeOperar('prorrogar')) {
         botoes.push(`<button class="btn btn-outline btn-sm" style="padding:0.35rem 0.8rem;font-size:0.76rem;border-color:var(--warning,#f59e0b);color:var(--warning,#f59e0b);"
-                             title="Pedir mais prazo para esta OS — vai para aprovação" onclick="abrirProrrogacaoOS(${os.id})">Prorrogar</button>`);
+                             title="Pedir mais prazo para esta OS — vai para aprovação" onclick="abrirProrrogacaoOS(${escL(os.id)})">Prorrogar</button>`);
     }
     return botoes.join('');
 }
@@ -531,20 +531,20 @@ function abrirProrrogacaoOS(osId) {
         <div class="modal-container" style="max-width:500px;width:92%;margin:0 auto;background:var(--bg-card);border-radius:0.75rem;box-shadow:0 20px 60px rgba(0,0,0,0.35);">
             <div class="modal-header" style="border-bottom:1px solid var(--border-color);padding:1rem 1.5rem;">
                 <span class="modal-title" style="font-size:1.05rem;font-weight:700;color:var(--text-main);">
-                    Solicitar prorrogação — OS #OS-${String(os.numero_os || os.id).padStart(4, '0')}
+                    Solicitar prorrogação — OS #OS-${escH(String(os.numero_os || os.id).padStart(4, '0'))}
                 </span>
             </div>
             <div class="modal-body" style="padding:1.25rem 1.5rem;">
                 <div style="background:var(--bg-surface);padding:0.6rem 0.8rem;border-radius:0.4rem;margin-bottom:0.9rem;font-size:0.8rem;color:var(--text-muted);">
-                    <strong style="color:var(--text-main);">${os.cliente || '—'}</strong>${os.obra ? ` · ${os.obra}` : ''}<br>
-                    Término atual: <strong style="color:var(--text-main);">${confDataBR(os.data_fim)}</strong>
+                    <strong style="color:var(--text-main);">${escH(os.cliente) || '—'}</strong>${os.obra ? ` · ${escH(os.obra)}` : ''}<br>
+                    Término atual: <strong style="color:var(--text-main);">${escH(confDataBR(os.data_fim))}</strong>
                 </div>
 
                 <div class="form-group" style="margin-bottom:0.85rem;">
                     <label class="form-label" style="display:block;font-size:0.8rem;font-weight:700;margin-bottom:0.3rem;color:var(--text-main);">
                         Nova data de término <span style="color:var(--danger,#ef4444);">*</span>
                     </label>
-                    <input type="date" id="conf-prorrogar-data" class="form-input" min="${minimo}" value="${minimo}"
+                    <input type="date" id="conf-prorrogar-data" class="form-input" min="${escH(minimo)}" value="${escH(minimo)}"
                            style="width:100%;box-sizing:border-box;padding:0.5rem 0.7rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.85rem;">
                 </div>
 
@@ -568,7 +568,7 @@ function abrirProrrogacaoOS(osId) {
             <div class="modal-footer" style="display:flex;gap:0.75rem;justify-content:flex-end;border-top:1px solid var(--border-color);padding:1rem 1.5rem;">
                 <button type="button" class="btn btn-outline" onclick="document.getElementById('conf-prorrogar-modal')?.remove()"
                         style="padding:0.5rem 1.1rem;border:1px solid var(--border-color);border-radius:0.5rem;background:transparent;color:var(--text-main);cursor:pointer;">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="conf-prorrogar-salvar" onclick="salvarProrrogacaoOS(${os.id})"
+                <button type="button" class="btn btn-primary" id="conf-prorrogar-salvar" onclick="salvarProrrogacaoOS(${escL(os.id)})"
                         style="padding:0.5rem 1.1rem;border:none;border-radius:0.5rem;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;">Enviar solicitação</button>
             </div>
         </div>`;
@@ -632,13 +632,13 @@ function confResumoCardHTML(os, etapa) {
     if (etapa === 'conferencia') {
         if (!resumo.restam || !resumo.bipados) return '';
         return `<div style="font-size:0.75rem;font-weight:700;color:var(--warning,#f59e0b);margin-top:0.15rem;">
-                    Bipado ${resumo.bipados} de ${resumo.total}, resta ${resumo.restam}
+                    Bipado ${escH(resumo.bipados)} de ${escH(resumo.total)}, resta ${escH(resumo.restam)}
                 </div>`;
     }
     if (!resumo.restam) return '';
     const tags = confRetiradaPendente(os).map(p => p.tag).filter(Boolean);
     return `<div style="font-size:0.75rem;font-weight:700;color:var(--danger,#ef4444);margin-top:0.15rem;">
-                ${resumo.restam} item(ns) bloqueado(s) — falta bipar na Retirada${tags.length ? `: ${tags.map(confEscapar).join(', ')}` : ''}
+                ${escH(resumo.restam)} item(ns) bloqueado(s) — falta bipar na Retirada${tags.length ? `: ${tags.map(confEscapar).join(', ')}` : ''}
             </div>`;
 }
 window.confResumoCardHTML = confResumoCardHTML;
@@ -670,25 +670,25 @@ function confCardOS(os, etapa) {
     const atrasada = etapa === 'devolutiva' && atraso > 0;
 
     return `
-        <div class="conf-card-os${atrasada ? ' atrasada' : ''}" data-os-id="${os.id}" style="--conf-cor-cliente:${corCliente};">
+        <div class="conf-card-os${atrasada ? ' atrasada' : ''}" data-os-id="${escH(os.id)}" style="--conf-cor-cliente:${escH(corCliente)};">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;flex-wrap:wrap;">
                 <div>
-                    <div style="font-weight:800;font-size:0.95rem;color:var(--text-main);">OS #${os.numero_os || os.id}</div>
+                    <div style="font-weight:800;font-size:0.95rem;color:var(--text-main);">OS #${escH(os.numero_os) || escH(os.id)}</div>
                     <div style="font-size:0.78rem;color:var(--text-muted);display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
-                        <span style="width:0.6rem;height:0.6rem;border-radius:50%;background:${corCliente};display:inline-block;flex-shrink:0;"></span>
-                        ${os.cliente || '—'}${os.obra ? ` · ${os.obra}` : ''}
+                        <span style="width:0.6rem;height:0.6rem;border-radius:50%;background:${escH(corCliente)};display:inline-block;flex-shrink:0;"></span>
+                        ${escH(os.cliente) || '—'}${os.obra ? ` · ${escH(os.obra)}` : ''}
                     </div>
-                    <div style="font-size:0.72rem;color:var(--text-muted);">${total} item(ns) previsto(s)</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">${escH(total)} item(ns) previsto(s)</div>
                     ${confResumoCardHTML(os, etapa)}
                 </div>
-                <span class="badge ${badgeClasse}">${statusTexto}</span>
+                <span class="badge ${escH(badgeClasse)}">${escH(statusTexto)}</span>
             </div>
 
             <div class="conf-card-info">
-                <div><strong>Enviado por:</strong> ${os.solicitado_por || '—'}</div>
-                <div><strong>Responsável pela obra:</strong> ${os.responsavel || '—'}</div>
-                <div><strong>Início:</strong> ${confDataBR(os.data_inicio)}</div>
-                <div><strong>Término:</strong> ${confDataBR(os.data_fim)}</div>
+                <div><strong>Enviado por:</strong> ${escH(os.solicitado_por) || '—'}</div>
+                <div><strong>Responsável pela obra:</strong> ${escH(os.responsavel) || '—'}</div>
+                <div><strong>Início:</strong> ${escH(confDataBR(os.data_inicio))}</div>
+                <div><strong>Término:</strong> ${escH(confDataBR(os.data_fim))}</div>
             </div>
 
             <div style="margin-top:0.7rem;display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
@@ -741,18 +741,18 @@ async function abrirModalConferenciaOS(osId) {
         <div class="modal-container" style="max-width:620px;margin:0 auto;background:var(--bg-card);border-radius:0.75rem;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
             <div class="modal-header" style="border-bottom:1px solid var(--border-color);padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center;">
                 <span class="modal-title" style="font-size:1.1rem;font-weight:700;color:var(--text-main);">
-                    Separação — OS #OS-${String(os.numero_os || os.id).padStart(4, '0')}
+                    Separação — OS #OS-${escH(String(os.numero_os || os.id).padStart(4, '0'))}
                 </span>
                 <button class="modal-close" onclick="fecharModalConferenciaOS()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0.25rem;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1.25rem;height:1.25rem;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
-            <form id="form-conferencia-os" onsubmit="return salvarConferenciaOS(event, ${os.id})">
+            <form id="form-conferencia-os" onsubmit="return salvarConferenciaOS(event, ${escL(os.id)})">
                 <div class="modal-body" style="padding:1.25rem 1.5rem;">
                     <div style="background:var(--bg-surface);padding:0.6rem 0.8rem;border-radius:0.4rem;margin-bottom:0.9rem;font-size:0.8rem;color:var(--text-muted);">
-                        <strong style="color:var(--text-main);">${os.cliente || '—'}</strong>${os.obra ? ` · ${os.obra}` : ''}<br>
-                        Período: ${confDataBR(os.data_inicio)} até ${confDataBR(os.data_fim)}<br>
-                        Status atual: <strong style="color:var(--text-main);">${(os.status || '').replace(/_/g, ' ') || '—'}</strong> (não alterável nesta tela)
+                        <strong style="color:var(--text-main);">${escH(os.cliente) || '—'}</strong>${os.obra ? ` · ${escH(os.obra)}` : ''}<br>
+                        Período: ${escH(confDataBR(os.data_inicio))} até ${escH(confDataBR(os.data_fim))}<br>
+                        Status atual: <strong style="color:var(--text-main);">${escH((os.status || '').replace(/_/g, ' ')) || '—'}</strong> (não alterável nesta tela)
                     </div>
 
                     <!-- O QUE ESTA OS PEDIU
@@ -889,7 +889,7 @@ function confSepRenderPlacar() {
             <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;border:1px solid ${completo ? 'var(--success,#22c55e)' : 'var(--border-color)'};border-radius:0.45rem;padding:0.45rem 0.6rem;background:var(--bg-surface);">
                 <strong style="font-size:0.82rem;color:var(--text-main);">${confEscapar(tipo)}</strong>
                 <span style="margin-left:auto;font-size:0.76rem;font-weight:800;color:${completo ? 'var(--success,#22c55e)' : 'var(--text-muted)'};">
-                    ${bipadas} de ${pedida}
+                    ${escH(bipadas)} de ${escH(pedida)}
                 </span>
                 ${tags ? `<span style="flex-basis:100%;font-family:monospace;font-size:0.72rem;color:var(--text-muted);">${tags}</span>` : ''}
             </div>`;
@@ -916,7 +916,7 @@ function confSepAviso(html, cor) {
     const c = cor || 'var(--danger,#ef4444)';
     box.style.display = 'block';
     box.innerHTML = `
-        <div style="border:1px solid ${c};background:color-mix(in srgb, ${c} 10%, transparent);border-radius:0.5rem;padding:0.6rem 0.75rem;font-size:0.8rem;color:var(--text-main);">
+        <div style="border:1px solid ${escH(c)};background:color-mix(in srgb, ${escH(c)} 10%, transparent);border-radius:0.5rem;padding:0.6rem 0.75rem;font-size:0.8rem;color:var(--text-main);">
             ${html}
         </div>`;
 }
@@ -1019,7 +1019,7 @@ function confSepRenderBaias() {
             <span style="font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:0.03em;color:var(--text-muted);">Baia</span>
             <span style="font-family:monospace;font-weight:700;font-size:0.8rem;color:var(--text-main);">${confEscapar(b.tag)}</span>
             <button type="button" class="btn btn-outline btn-sm" style="margin-left:auto;padding:0.15rem 0.5rem;font-size:0.7rem;"
-                    onclick="confSepRemoverBaia(${idx})">Remover</button>
+                    onclick="confSepRemoverBaia(${escL(idx)})">Remover</button>
         </div>`).join('')
         : '';
 }
@@ -1172,7 +1172,7 @@ function confSepRenderBipados() {
             <span style="font-family:monospace;font-weight:700;font-size:0.8rem;color:var(--text-main);">${confEscapar(b.tag)}</span>
             <span style="font-size:0.72rem;color:var(--text-muted);">${confEscapar(b.tipo || '')}</span>
             <button type="button" class="btn btn-outline btn-sm" style="margin-left:auto;padding:0.15rem 0.5rem;font-size:0.7rem;"
-                    onclick="confSepRemoverBipado(${idx})">Remover</button>
+                    onclick="confSepRemoverBipado(${escL(idx)})">Remover</button>
         </div>`).join('')
         : `<div style="font-size:0.78rem;color:var(--text-muted);">Nenhuma TAG bipada ainda.</div>`;
 }
@@ -1326,7 +1326,7 @@ function confConfirmarSeparacao(qtdTags, qtdBaias) {
                 </div>
                 <div class="modal-body" style="padding:1.25rem 1.5rem;">
                     <p style="font-size:0.88rem;color:var(--text-main);margin:0 0 0.75rem;">
-                        Você está separando <strong>${qtdTags} TAG(s)</strong>${qtdBaias ? ` e <strong>${qtdBaias} baia(s)</strong>` : ''} para esta OS,
+                        Você está separando <strong>${escH(qtdTags)} TAG(s)</strong>${qtdBaias ? ` e <strong>${escH(qtdBaias)} baia(s)</strong>` : ''} para esta OS,
                         todas já bipadas.
                     </p>
                     <div style="border:1px solid var(--warning, #f59e0b);background:color-mix(in srgb, var(--warning, #f59e0b) 12%, transparent);border-radius:0.5rem;padding:0.75rem 0.9rem;">
@@ -1763,18 +1763,18 @@ async function confRecarregarGrid() {
             return `
             <div data-tag="${confEscapar(String(i.tag || '').toUpperCase())}"
                  style="display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;border:1px solid var(--border-color);border-radius:0.4rem;padding:0.4rem 0.55rem;${foraDaRodada ? 'opacity:0.6;' : ''}">
-                <span style="font-family:monospace;font-weight:700;color:var(--text-main);${risco}">${i.tag || '—'}</span>
-                <span style="color:var(--text-muted);${risco}">${i.tipo || ''}</span>
-                ${situacao ? `<span style="font-size:0.72rem;color:${vindaDe ? 'var(--roxo, #7c3aed)' : 'var(--text-muted)'};${risco}">(${confEscapar(situacao)})</span>` : ''}
+                <span style="font-family:monospace;font-weight:700;color:var(--text-main);${escH(risco)}">${escH(i.tag) || '—'}</span>
+                <span style="color:var(--text-muted);${escH(risco)}">${escH(i.tipo) || ''}</span>
+                ${situacao ? `<span style="font-size:0.72rem;color:${vindaDe ? 'var(--roxo, #7c3aed)' : 'var(--text-muted)'};${escH(risco)}">(${confEscapar(situacao)})</span>` : ''}
                 <span style="margin-left:auto;display:flex;gap:0.35rem;align-items:center;flex-wrap:wrap;">
-                    ${info ? `<span class="badge ${info.class}" style="font-size:0.62rem;">${info.label}</span>` : ''}
+                    ${info ? `<span class="badge ${escH(info.class)}" style="font-size:0.62rem;">${escH(info.label)}</span>` : ''}
                 </span>
-                ${extra ? `<div style="flex-basis:100%;font-size:0.7rem;color:var(--text-muted);">${data ? confDataBR(data) + ' · ' : ''}${extra}</div>` : ''}
-                ${trilha ? `<div style="flex-basis:100%;font-size:0.7rem;color:var(--purple, #7c3aed);">${trilha}</div>` : ''}
+                ${extra ? `<div style="flex-basis:100%;font-size:0.7rem;color:var(--text-muted);">${data ? escH(confDataBR(data)) + ' · ' : ''}${extra}</div>` : ''}
+                ${trilha ? `<div style="flex-basis:100%;font-size:0.7rem;color:var(--purple, #7c3aed);">${escH(trilha)}</div>` : ''}
             </div>`;
         }).join('') : '<span>Nenhuma TAG registrada nesta OS.</span>';
     } catch (err) {
-        box.innerHTML = `<span style="color:var(--danger,#ef4444);">Erro ao carregar as TAGs: ${err.message}</span>`;
+        box.innerHTML = `<span style="color:var(--danger,#ef4444);">Erro ao carregar as TAGs: ${escH(err.message)}</span>`;
     }
 }
 window.confRecarregarGrid = confRecarregarGrid;
@@ -1846,13 +1846,13 @@ function confCampoBipagemHTML(idInput, idBotaoCamera, acaoAdicionar, acaoCamera)
     const podeDigitar = confPodeDigitar();
     return `
         <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-            <input type="text" id="${idInput}" class="form-input"
+            <input type="text" id="${escH(idInput)}" class="form-input"
                    placeholder="${podeDigitar ? 'Bipe ou digite o código / TAG da ferramenta' : 'Bipe o código com o leitor'}"
                    autocomplete="off" autocapitalize="characters"
                    style="flex:1;min-width:180px;"
                    ${podeDigitar ? '' : 'title="Digitar o código não é permitido para o seu cargo — bipe com o leitor ou use a câmera"'}>
             ${podeDigitar ? `<button class="btn btn-primary btn-sm" style="padding:0.4rem 1rem;" onclick="${acaoAdicionar}">Adicionar</button>` : ''}
-            <button class="btn btn-outline btn-sm" style="padding:0.4rem 1rem;" onclick="${acaoCamera}" id="${idBotaoCamera}">Usar câmera</button>
+            <button class="btn btn-outline btn-sm" style="padding:0.4rem 1rem;" onclick="${acaoCamera}" id="${escH(idBotaoCamera)}">Usar câmera</button>
         </div>
         `;
 }
@@ -1866,7 +1866,7 @@ function confAvisoPendenciasHTML() {
     return `
         <div style="border:1px solid var(--warning,#f59e0b);background:color-mix(in srgb, var(--warning,#f59e0b) 10%, transparent);border-radius:0.6rem;padding:0.8rem 0.9rem;">
             <strong style="display:block;font-size:0.85rem;color:var(--warning,#f59e0b);margin-bottom:0.35rem;">
-                ${pend.length} ferramenta(s) fora desta bipagem
+                ${escH(pend.length)} ferramenta(s) fora desta bipagem
             </strong>
             <div style="display:flex;flex-direction:column;gap:0.25rem;">
                 ${pend.map(p => `
@@ -1888,7 +1888,7 @@ function confAvisoBloqueadosHTML(os) {
     return `
         <div style="border:1px solid var(--danger,#ef4444);background:color-mix(in srgb, var(--danger,#ef4444) 10%, transparent);border-radius:0.6rem;padding:0.8rem 0.9rem;">
             <strong style="display:block;font-size:0.85rem;color:var(--danger,#ef4444);margin-bottom:0.35rem;">
-                ${pendentes.length} ferramenta(s) bloqueada(s) nesta devolutiva
+                ${escH(pendentes.length)} ferramenta(s) bloqueada(s) nesta devolutiva
             </strong>
             <div style="font-size:0.76rem;color:var(--text-main);margin-bottom:0.45rem;">
                 Elas ainda não foram bipadas no menu <strong>Retirada</strong>. Bipe-as lá para que
@@ -1917,12 +1917,12 @@ function confJaBipadosHTML() {
     const chip = (rotulo, extra) => `
         <span style="display:inline-flex;align-items:center;gap:0.3rem;font-family:monospace;font-weight:700;font-size:0.74rem;
                      background:var(--bg-surface);border:1px solid var(--border-color);border-radius:0.3rem;
-                     padding:0.12rem 0.45rem;color:var(--text-muted);${risco}">${confEscapar(rotulo)}${extra || ''}</span>`;
+                     padding:0.12rem 0.45rem;color:var(--text-muted);${escH(risco)}">${confEscapar(rotulo)}${extra || ''}</span>`;
 
     return `
         <div style="border:1px solid var(--border-color);background:var(--bg-surface);border-radius:0.6rem;padding:0.75rem 0.9rem;">
             <strong style="display:block;font-size:0.82rem;color:var(--text-muted);margin-bottom:0.35rem;">
-                ${titulo} — não precisam ser bipadas de novo
+                ${escH(titulo)} — não precisam ser bipadas de novo
             </strong>
             <div style="display:flex;flex-wrap:wrap;gap:0.3rem;">
                 ${itens.map(i => chip(i.tag)).join('')}
@@ -1950,8 +1950,7 @@ function confMsgJaBipado() {
 window.confMsgJaBipado = confMsgJaBipado;
 
 function confEscapar(texto) {
-    return String(texto === null || texto === undefined ? '' : texto)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return escH(texto === null || texto === undefined ? '' : texto);
 }
 window.confEscapar = confEscapar;
 
@@ -1964,12 +1963,12 @@ function confTelaHTML(os, etapa) {
                     <button class="btn btn-outline btn-sm" onclick="fecharConferenciaOS()">← Voltar</button>
                     <div>
                         <div style="font-weight:800;font-size:1rem;color:var(--text-main);">
-                            ${etapa === 'conferencia' ? 'Retirada' : 'Devolutiva'} — OS #${os.numero_os || os.id}
+                            ${etapa === 'conferencia' ? 'Retirada' : 'Devolutiva'} — OS #${escH(os.numero_os) || escH(os.id)}
                         </div>
-                        <div style="font-size:0.75rem;color:var(--text-muted);">${os.cliente || '—'}${os.obra ? ` · ${os.obra}` : ''}</div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);">${escH(os.cliente) || '—'}${os.obra ? ` · ${escH(os.obra)}` : ''}</div>
                     </div>
                 </div>
-                <span class="badge badge-info">${previstos.length} previsto(s)</span>
+                <span class="badge badge-info">${escH(previstos.length)} previsto(s)</span>
             </div>
 
             <!-- BIPAGEM DE FERRAMENTA (também aceita a baia) -->
@@ -1977,7 +1976,7 @@ function confTelaHTML(os, etapa) {
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.4rem;">
                     <label class="form-label" style="margin:0;">${etapa === 'conferencia' ? 'Bipe a BAIA e depois as ferramentas' : 'Bipagem de ferramenta'}</label>
                     <span style="font-size:0.72rem;color:var(--text-muted);">
-                        ${confBaiasDaOS(os).length ? `Baia(s) desta OS: ${confBaiasDaOS(os).map(confNomeBaia).join(', ')}` : 'Esta OS não possui baia vinculada'}
+                        ${confBaiasDaOS(os).length ? `Baia(s) desta OS: ${escH(confBaiasDaOS(os).map(confNomeBaia).join(', '))}` : 'Esta OS não possui baia vinculada'}
                     </span>
                 </div>
                 ${confCampoBipagemHTML('conf-codigo', 'conf-scanner-btn', 'confBipar()', 'confAlternarScanner()')}
@@ -2004,7 +2003,7 @@ function confTelaHTML(os, etapa) {
             <div style="border:1px solid var(--border-color);border-radius:0.6rem;padding:0.9rem;background:var(--bg-card);">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
                     <strong style="font-size:0.85rem;">Itens bipados</strong>
-                    <span id="conf-contador" style="font-size:0.78rem;color:var(--text-muted);">0 de ${previstos.length}</span>
+                    <span id="conf-contador" style="font-size:0.78rem;color:var(--text-muted);">0 de ${escH(previstos.length)}</span>
                 </div>
                 <div id="conf-itens" style="display:flex;flex-direction:column;gap:0.4rem;"></div>
             </div>
@@ -2408,12 +2407,12 @@ function confRenderItens() {
     // porém disponível para uso" só registra a avaria e a devolve disponível.
     const obsHTML = (condicao, obs, oninput) => (confEstado.etapa === 'devolutiva' && confEhAvaria(condicao)) ? `
         <div style="flex-basis:100%;margin-top:0.45rem;">
-            <label class="form-label" style="display:block;font-size:0.72rem;font-weight:700;color:${confCorAvaria(condicao)};margin-bottom:0.2rem;">
+            <label class="form-label" style="display:block;font-size:0.72rem;font-weight:700;color:${escH(confCorAvaria(condicao))};margin-bottom:0.2rem;">
                 Observações da avaria *
             </label>
             <textarea class="form-input" rows="2" placeholder="Descreva a avaria encontrada..."
-                      style="width:100%;font-size:0.78rem;padding:0.4rem 0.5rem;border:1px solid ${confCorAvaria(condicao)};border-radius:0.4rem;resize:vertical;"
-                      oninput="${oninput}">${(obs || '').replace(/</g, '&lt;')}</textarea>
+                      style="width:100%;font-size:0.78rem;padding:0.4rem 0.5rem;border:1px solid ${escH(confCorAvaria(condicao))};border-radius:0.4rem;resize:vertical;"
+                      oninput="${oninput}">${escH(obs || '')}</textarea>
             <small style="display:block;margin-top:0.2rem;font-size:0.68rem;color:var(--text-muted);">${
                 condicao === 'avariado_utilizavel'
                     ? 'Volta DISPONÍVEL com a avaria registrada — não entra na fila de manutenção pendente.'
@@ -2427,17 +2426,17 @@ function confRenderItens() {
         const rotulo = confRotuloOrigemEntrada(confEstado.os, tag);
         if (!rotulo) return '';
         const cor = rotulo.startsWith('remanejada') ? 'var(--roxo, #7c3aed)' : 'var(--text-muted)';
-        return `<span style="font-size:0.72rem;color:${cor};" title="Entrou nesta OS depois da separação — a bipagem dela é obrigatória">(${confEscapar(rotulo)})</span>`;
+        return `<span style="font-size:0.72rem;color:${escH(cor)};" title="Entrou nesta OS depois da separação — a bipagem dela é obrigatória">(${confEscapar(rotulo)})</span>`;
     };
 
     box.innerHTML = confEstado.itens.length ? confEstado.itens.map((it, idx) => `
-        <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;border:1px solid ${confEhAvaria(it.condicao) ? confCorAvaria(it.condicao) : 'var(--border-color)'};border-radius:0.4rem;padding:0.45rem;">
-            <span style="font-family:monospace;font-weight:700;font-size:0.8rem;color:var(--text-main);">${it.tag || it.codigo}</span>
-            <span style="font-size:0.72rem;color:var(--text-muted);">${it.tipo || ''}</span>
+        <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;border:1px solid ${confEhAvaria(it.condicao) ? escH(confCorAvaria(it.condicao)) : 'var(--border-color)'};border-radius:0.4rem;padding:0.45rem;">
+            <span style="font-family:monospace;font-weight:700;font-size:0.8rem;color:var(--text-main);">${escH(it.tag) || escH(it.codigo)}</span>
+            <span style="font-size:0.72rem;color:var(--text-muted);">${escH(it.tipo) || ''}</span>
             ${seloParcial(it.tag)}
             <div style="margin-left:auto;display:flex;align-items:center;gap:0.4rem;">
                 ${condicaoHTML(it.condicao, `confSetCondicao(${idx}, this.value)`)}
-                <button class="btn btn-outline btn-sm" style="padding:0.15rem 0.5rem;font-size:0.7rem;" onclick="confRemoverItem(${idx})">Remover</button>
+                <button class="btn btn-outline btn-sm" style="padding:0.15rem 0.5rem;font-size:0.7rem;" onclick="confRemoverItem(${escL(idx)})">Remover</button>
             </div>
             ${obsHTML(it.condicao, it.observacoes, `confSetObservacao(${idx}, this.value)`)}
         </div>
@@ -2446,11 +2445,11 @@ function confRenderItens() {
     const boxBaias = document.getElementById('conf-baias');
     if (boxBaias) {
         boxBaias.innerHTML = confEstado.baias.length ? confEstado.baias.map((b, idx) => `
-            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;border:1px solid ${confEhAvaria(b.condicao) ? confCorAvaria(b.condicao) : 'var(--border-color)'};border-radius:0.4rem;padding:0.45rem;">
-                <span style="font-weight:700;font-size:0.8rem;color:var(--text-main);">${b.nome}</span>
+            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;border:1px solid ${confEhAvaria(b.condicao) ? escH(confCorAvaria(b.condicao)) : 'var(--border-color)'};border-radius:0.4rem;padding:0.45rem;">
+                <span style="font-weight:700;font-size:0.8rem;color:var(--text-main);">${escH(b.nome)}</span>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:0.4rem;">
                     ${condicaoHTML(b.condicao, `confSetCondicaoBaia(${idx}, this.value)`)}
-                    <button class="btn btn-outline btn-sm" style="padding:0.15rem 0.5rem;font-size:0.7rem;" onclick="confRemoverBaia(${idx})">Remover</button>
+                    <button class="btn btn-outline btn-sm" style="padding:0.15rem 0.5rem;font-size:0.7rem;" onclick="confRemoverBaia(${escL(idx)})">Remover</button>
                 </div>
                 ${obsHTML(b.condicao, b.observacoes, `confSetObservacaoBaia(${idx}, this.value)`)}
             </div>
@@ -2693,9 +2692,9 @@ function confPerguntarMotivoAntecipacao(os) {
                 </div>
                 <div class="modal-body" style="padding:1.2rem 1.5rem;">
                     <div style="background:var(--bg-surface);padding:0.65rem 0.85rem;border-radius:0.45rem;margin-bottom:0.9rem;font-size:0.8rem;color:var(--text-muted);line-height:1.6;">
-                        Esta OS está sendo devolvida <strong style="color:var(--text-main);">${dias} dia${dias !== 1 ? 's' : ''}</strong> antes do prazo.<br>
-                        Data de término: <strong style="color:var(--text-main);">${confDataBR(os.data_fim)}</strong><br>
-                        Término adiantado: <strong style="color:var(--text-main);">${confDataBR(confHojeISO())}</strong>
+                        Esta OS está sendo devolvida <strong style="color:var(--text-main);">${escH(dias)} dia${dias !== 1 ? 's' : ''}</strong> antes do prazo.<br>
+                        Data de término: <strong style="color:var(--text-main);">${escH(confDataBR(os.data_fim))}</strong><br>
+                        Término adiantado: <strong style="color:var(--text-main);">${escH(confDataBR(confHojeISO()))}</strong>
                     </div>
                     <label class="form-label" style="display:block;font-size:0.8rem;font-weight:700;margin-bottom:0.3rem;color:var(--text-main);">
                         Motivo da antecipação <span style="color:var(--danger,#ef4444);">*</span>
@@ -2922,7 +2921,7 @@ async function abrirSelecaoBipagem(osId, etapa) {
     const bloqueadas = pendentesRetirada.length ? `
         <div style="margin-top:0.8rem;border:1px solid var(--danger,#ef4444);background:color-mix(in srgb, var(--danger,#ef4444) 10%, transparent);border-radius:0.5rem;padding:0.6rem 0.75rem;">
             <strong style="display:block;font-size:0.8rem;color:var(--danger,#ef4444);margin-bottom:0.3rem;">
-                ${pendentesRetirada.length} bloqueada(s) — ainda não foram bipadas na Retirada
+                ${escH(pendentesRetirada.length)} bloqueada(s) — ainda não foram bipadas na Retirada
             </strong>
             <div style="display:flex;flex-wrap:wrap;gap:0.3rem;">
                 ${pendentesRetirada.map(f => `<span style="font-family:monospace;font-weight:700;font-size:0.74rem;background:var(--bg-card);border:1px dashed var(--danger,#ef4444);border-radius:0.3rem;padding:0.12rem 0.45rem;color:var(--text-muted);">${confEscapar(f.tag)} 🔒</span>`).join('')}
@@ -2968,7 +2967,7 @@ async function abrirSelecaoBipagem(osId, etapa) {
             : '';
         return `
             <label class="conf-sel-linha" style="display:flex;align-items:center;gap:0.55rem;border:1px solid var(--border-color);border-radius:0.5rem;padding:0.55rem 0.7rem;background:var(--bg-surface);cursor:pointer;flex-wrap:wrap;">
-                <input type="checkbox" class="conf-sel-check" data-idx="${idx}" checked
+                <input type="checkbox" class="conf-sel-check" data-idx="${escH(idx)}" checked
                        onchange="confSelecaoAtualizarContador()"
                        style="width:1.1rem;height:1.1rem;accent-color:var(--primary);cursor:pointer;flex-shrink:0;">
                 <span style="font-family:monospace;font-weight:800;font-size:0.85rem;color:var(--text-main);">[${confEscapar(p.tag)}]</span>
@@ -3063,7 +3062,7 @@ function confSelecaoContinuar() {
     const blocoFalta = faltando.length ? `
         <div style="border:1px solid var(--warning,#f59e0b);background:color-mix(in srgb, var(--warning,#f59e0b) 12%, transparent);border-radius:0.5rem;padding:0.75rem 0.9rem;margin-bottom:0.85rem;">
             <strong style="display:block;font-size:0.85rem;color:var(--warning,#f59e0b);margin-bottom:0.3rem;">
-                Falta${faltando.length !== 1 ? 'm' : ''} ${faltando.length} ${rotuloFalta}
+                Falta${faltando.length !== 1 ? 'm' : ''} ${escH(faltando.length)} ${escH(rotuloFalta)}
             </strong>
             <div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.6rem;">
                 ${faltando.map(f => `<span style="font-family:monospace;font-weight:700;font-size:0.74rem;background:var(--bg-card);border:1px solid var(--border-color);border-radius:0.3rem;padding:0.12rem 0.45rem;color:var(--text-main);">${confEscapar(f.tag)}</span>`).join('')}
@@ -3144,18 +3143,18 @@ function confConfirmarEnvioBipagem(etapa, quantidade, faltando) {
         const titulo = etapa === 'devolutiva' ? 'Confirmar a devolução' : 'Confirmar a bipagem';
         const corpo = etapa === 'devolutiva'
             ? `<p style="font-size:0.88rem;color:var(--text-main);margin:0 0 0.7rem;">
-                   Você está devolvendo <strong>${quantidade} ferramenta(s)</strong> nesta OS.
+                   Você está devolvendo <strong>${escH(quantidade)} ferramenta(s)</strong> nesta OS.
                </p>
                ${faltando && faltando.length ? `
                <div style="border:1px solid var(--warning,#f59e0b);background:color-mix(in srgb, var(--warning,#f59e0b) 12%, transparent);border-radius:0.5rem;padding:0.7rem 0.85rem;font-size:0.8rem;color:var(--text-main);">
-                   A OS <strong>não será concluída</strong>: ainda faltam ${faltando.length} ferramenta(s)
+                   A OS <strong>não será concluída</strong>: ainda faltam ${escH(faltando.length)} ferramenta(s)
                    (${faltando.map(confEscapar).join(', ')}). Ela continua em campo até tudo ser bipado.
                </div>` : `
                <div style="border:1px solid var(--success,#10b981);background:color-mix(in srgb, var(--success,#10b981) 12%, transparent);border-radius:0.5rem;padding:0.7rem 0.85rem;font-size:0.8rem;color:var(--text-main);">
                    Tudo foi bipado — confirmando, a <strong>OS será concluída</strong> e as baias liberadas.
                </div>`}`
             : `<p style="font-size:0.88rem;color:var(--text-main);margin:0 0 0.7rem;">
-                   Você está retirando <strong>${quantidade} ferramenta(s)</strong> para a obra.
+                   Você está retirando <strong>${escH(quantidade)} ferramenta(s)</strong> para a obra.
                </p>
                <div style="border:1px solid var(--warning,#f59e0b);background:color-mix(in srgb, var(--warning,#f59e0b) 12%, transparent);border-radius:0.5rem;padding:0.7rem 0.85rem;font-size:0.8rem;color:var(--text-main);">
                    Confirmando, elas passam a constar <strong>em campo</strong> no nome desta OS e a devolução
@@ -3163,7 +3162,7 @@ function confConfirmarEnvioBipagem(etapa, quantidade, faltando) {
                </div>
                ${faltando && faltando.length ? `
                <div style="margin-top:0.6rem;border:1px solid var(--danger,#ef4444);background:color-mix(in srgb, var(--danger,#ef4444) 12%, transparent);border-radius:0.5rem;padding:0.7rem 0.85rem;font-size:0.8rem;color:var(--text-main);">
-                   Esta OS <strong>continua na Retirada</strong>: ainda faltam ${faltando.length} ferramenta(s)
+                   Esta OS <strong>continua na Retirada</strong>: ainda faltam ${escH(faltando.length)} ferramenta(s)
                    (${faltando.map(confEscapar).join(', ')}). Elas ficam <strong>bloqueadas na Devolutiva</strong>
                    até serem bipadas aqui.
                </div>` : ''}`;
@@ -3279,34 +3278,34 @@ function confCardConferirDevolucao(os) {
     const dias = confDiasDesde(os.devolvido_em);
 
     return `
-        <div class="conf-card-os" style="--conf-cor-cliente:${corCliente};">
+        <div class="conf-card-os" style="--conf-cor-cliente:${escH(corCliente)};">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;flex-wrap:wrap;">
                 <div>
-                    <div style="font-weight:800;font-size:0.95rem;color:var(--text-main);">OS #${os.numero_os || os.id}</div>
+                    <div style="font-weight:800;font-size:0.95rem;color:var(--text-main);">OS #${escH(os.numero_os) || escH(os.id)}</div>
                     <div style="font-size:0.78rem;color:var(--text-muted);display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
-                        <span style="width:0.6rem;height:0.6rem;border-radius:50%;background:${corCliente};display:inline-block;flex-shrink:0;"></span>
+                        <span style="width:0.6rem;height:0.6rem;border-radius:50%;background:${escH(corCliente)};display:inline-block;flex-shrink:0;"></span>
                         ${confEscapar(os.cliente || '—')}${os.obra ? ` · ${confEscapar(os.obra)}` : ''}
                     </div>
-                    <div style="font-size:0.72rem;color:var(--text-muted);">${itens.length} ferramenta(s) devolvida(s)</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">${escH(itens.length)} ferramenta(s) devolvida(s)</div>
                     ${comAvaria.length ? `
                     <div style="font-size:0.72rem;font-weight:700;color:var(--warning,#f59e0b);margin-top:0.15rem;">
-                        ${comAvaria.length} já voltou com avaria anotada na devolutiva
+                        ${escH(comAvaria.length)} já voltou com avaria anotada na devolutiva
                     </div>` : ''}
                 </div>
-                <span class="badge badge-warning">${dias === null ? 'Aguardando conferência' : (dias <= 0 ? 'Devolvida hoje' : `Devolvida há ${dias} dia${dias !== 1 ? 's' : ''}`)}</span>
+                <span class="badge badge-warning">${dias === null ? 'Aguardando conferência' : (dias <= 0 ? 'Devolvida hoje' : `Devolvida há ${escH(dias)} dia${dias !== 1 ? 's' : ''}`)}</span>
             </div>
 
             <div class="conf-card-info">
                 <div><strong>Devolvida por:</strong> ${confEscapar(os.devolvido_por || '—')}</div>
                 <div><strong>Responsável pela obra:</strong> ${confEscapar(os.responsavel || '—')}</div>
-                <div><strong>Início:</strong> ${confDataBR(os.data_inicio)}</div>
-                <div><strong>Término:</strong> ${confDataBR(os.data_fim)}</div>
+                <div><strong>Início:</strong> ${escH(confDataBR(os.data_inicio))}</div>
+                <div><strong>Término:</strong> ${escH(confDataBR(os.data_fim))}</div>
             </div>
 
             <div style="margin-top:0.7rem;display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
                 <button type="button" class="btn btn-primary btn-sm"
                         title="Bipar o que voltou e conferir se veio com avaria"
-                        onclick="abrirConferenciaDevolucao(${os.id})">Conferir devolução</button>
+                        onclick="abrirConferenciaDevolucao(${escL(os.id)})">Conferir devolução</button>
             </div>
         </div>`;
 }
@@ -3346,7 +3345,7 @@ function abrirConferenciaDevolucao(osId) {
         <div class="modal-container" style="max-width:640px;width:94%;margin:0 auto;background:var(--bg-card);border-radius:0.75rem;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
             <div class="modal-header" style="border-bottom:1px solid var(--border-color);padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center;gap:0.5rem;">
                 <span class="modal-title" style="font-size:1.05rem;font-weight:700;color:var(--text-main);">
-                    Conferir devolução — OS #${os.numero_os || os.id}
+                    Conferir devolução — OS #${escH(os.numero_os) || escH(os.id)}
                 </span>
                 <button class="modal-close" onclick="fecharConferenciaDevolucao()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0.25rem;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1.25rem;height:1.25rem;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -3355,8 +3354,8 @@ function abrirConferenciaDevolucao(osId) {
             <div class="modal-body" style="padding:1.1rem 1.5rem;">
                 <div style="background:var(--bg-surface);padding:0.6rem 0.8rem;border-radius:0.4rem;margin-bottom:0.8rem;font-size:0.8rem;color:var(--text-muted);">
                     <strong style="color:var(--text-main);">${confEscapar(os.cliente || '—')}</strong>${os.obra ? ` · ${confEscapar(os.obra)}` : ''}<br>
-                    Período: ${confDataBR(os.data_inicio)} até ${confDataBR(os.data_fim)}<br>
-                    Devolvida por <strong style="color:var(--text-main);">${confEscapar(os.devolvido_por || '—')}</strong>${os.devolvido_em ? ` em ${confDataBR(os.devolvido_em)}` : ''}
+                    Período: ${escH(confDataBR(os.data_inicio))} até ${escH(confDataBR(os.data_fim))}<br>
+                    Devolvida por <strong style="color:var(--text-main);">${confEscapar(os.devolvido_por || '—')}</strong>${os.devolvido_em ? ` em ${escH(confDataBR(os.devolvido_em))}` : ''}
                 </div>
 
                 <div style="border:1px dashed var(--primary);border-radius:0.5rem;padding:0.55rem 0.75rem;font-size:0.79rem;color:var(--text-main);margin-bottom:0.8rem;">
@@ -3368,7 +3367,7 @@ function abrirConferenciaDevolucao(osId) {
                 <div class="form-group">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.35rem;">
                         <label class="form-label" style="margin:0;">Bipe as ferramentas devolvidas</label>
-                        <span id="conf-dev-contador" style="font-size:0.76rem;font-weight:700;color:var(--primary);">0 de ${previstos.length}</span>
+                        <span id="conf-dev-contador" style="font-size:0.76rem;font-weight:700;color:var(--primary);">0 de ${escH(previstos.length)}</span>
                     </div>
                     ${confCampoBipagemHTML('conf-dev-codigo', 'conf-dev-scanner-btn', 'confDevBipar()', "abrirScannerCampo('conf-dev-codigo', confDevBipar)")}
                     <div id="conf-dev-bipados" style="display:flex;flex-direction:column;gap:0.4rem;margin-top:0.6rem;"></div>
@@ -3468,21 +3467,21 @@ function confDevRender() {
 
     box.innerHTML = confDevEstado.bipados.length
         ? confDevEstado.bipados.map((b, idx) => `
-            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;border:1px solid ${confEhAvaria(b.estado) ? confCorAvaria(b.estado) : 'var(--border-color)'};border-radius:0.4rem;padding:0.45rem;">
+            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;border:1px solid ${confEhAvaria(b.estado) ? escH(confCorAvaria(b.estado)) : 'var(--border-color)'};border-radius:0.4rem;padding:0.45rem;">
                 <span style="font-family:monospace;font-weight:800;font-size:0.8rem;color:var(--text-main);">${confEscapar(b.tag)}</span>
                 <span style="font-size:0.75rem;color:var(--text-muted);">${confEscapar(b.tipo || '')}</span>
-                <select class="form-select" style="margin-left:auto;max-width:215px;padding:0.25rem 0.4rem;font-size:0.75rem;" onchange="confDevSetEstado(${idx}, this.value)">
+                <select class="form-select" style="margin-left:auto;max-width:215px;padding:0.25rem 0.4rem;font-size:0.75rem;" onchange="confDevSetEstado(${escL(idx)}, this.value)">
                     <option value="ok"${b.estado === 'ok' ? ' selected' : ''}>Voltou em ordem</option>
                     <option value="avariado"${b.estado === 'avariado' ? ' selected' : ''}>Avariado</option>
                     <option value="avariado_utilizavel"${b.estado === 'avariado_utilizavel' ? ' selected' : ''}>Avariado, porém disponível para uso</option>
                 </select>
-                <button type="button" class="btn btn-outline btn-sm" style="padding:0.15rem 0.5rem;font-size:0.7rem;" onclick="confDevRemover(${idx})">Remover</button>
+                <button type="button" class="btn btn-outline btn-sm" style="padding:0.15rem 0.5rem;font-size:0.7rem;" onclick="confDevRemover(${escL(idx)})">Remover</button>
                 ${confEhAvaria(b.estado) ? `
                 <div style="flex-basis:100%;margin-top:0.45rem;">
-                    <label class="form-label" style="display:block;font-size:0.72rem;font-weight:700;color:${confCorAvaria(b.estado)};margin-bottom:0.2rem;">Observações da avaria *</label>
+                    <label class="form-label" style="display:block;font-size:0.72rem;font-weight:700;color:${escH(confCorAvaria(b.estado))};margin-bottom:0.2rem;">Observações da avaria *</label>
                     <textarea class="form-input" rows="2" placeholder="Descreva a avaria encontrada..."
-                              style="width:100%;font-size:0.78rem;padding:0.4rem 0.5rem;border:1px solid ${confCorAvaria(b.estado)};border-radius:0.4rem;resize:vertical;"
-                              oninput="confDevSetObservacao(${idx}, this.value)">${String(b.observacoes || '').replace(/</g, '&lt;')}</textarea>
+                              style="width:100%;font-size:0.78rem;padding:0.4rem 0.5rem;border:1px solid ${escH(confCorAvaria(b.estado))};border-radius:0.4rem;resize:vertical;"
+                              oninput="confDevSetObservacao(${escL(idx)}, this.value)">${escH(String(b.observacoes || ''))}</textarea>
                     <small style="display:block;margin-top:0.2rem;font-size:0.68rem;color:var(--text-muted);">${
                         b.estado === 'avariado_utilizavel'
                             ? 'Continua DISPONÍVEL com a avaria registrada — não entra na fila de manutenção.'
@@ -3498,7 +3497,7 @@ function confDevRender() {
         faltam.innerHTML = restantes.length ? `
             <div style="border:1px solid var(--warning,#f59e0b);background:color-mix(in srgb, var(--warning,#f59e0b) 10%, transparent);border-radius:0.5rem;padding:0.55rem 0.75rem;">
                 <strong style="display:block;font-size:0.78rem;color:var(--warning,#f59e0b);margin-bottom:0.25rem;">
-                    Falta${restantes.length !== 1 ? 'm' : ''} bipar ${restantes.length}
+                    Falta${restantes.length !== 1 ? 'm' : ''} bipar ${escH(restantes.length)}
                 </strong>
                 <div style="display:flex;flex-wrap:wrap;gap:0.3rem;">
                     ${restantes.map(r => `<span style="font-family:monospace;font-weight:700;font-size:0.72rem;background:var(--bg-card);border:1px solid var(--border-color);border-radius:0.3rem;padding:0.1rem 0.45rem;color:var(--text-main);">${confEscapar(r.tag)}</span>`).join('')}

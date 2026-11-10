@@ -22,13 +22,12 @@
     'use strict';
 
     const eu = (() => { try { return JSON.parse(sessionStorage.getItem('lwn_user') || '{}') || {}; } catch (e) { return {}; } })();
-    const token = (() => { try { return (JSON.parse(localStorage.getItem('customers.session') || 'null') || {}).token || null; } catch (e) { return null; } })();
 
-    /* as rotas do main (fora de /api/almox) tambem levam o token */
+    /* as rotas do main (fora de /api/almox) levam a sessao no mesmo cookie */
     function chamarMain(caminho, corpo) {
         return fetch(caminho, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(corpo || {})
         }).then(async (r) => {
             const dados = await r.json().catch(() => ({}));
@@ -37,8 +36,7 @@
         });
     }
 
-    const esc = (t) => String(t == null ? '' : t)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const esc = (t) => escH(t == null ? '' : t);
 
     const semAcento = (t) => String(t == null ? '' : t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -319,7 +317,7 @@
                 <section class="busca__grupo">
                     <h3 class="busca__rotulo">${esc(g.nome)}</h3>
                     ${g.itens.map(([r, i]) => `
-                        <button type="button" role="option" data-i="${i}" aria-selected="${ativo === i}" class="busca__item${ativo === i ? ' is-ativo' : ''}">
+                        <button type="button" role="option" data-i="${escH(i)}" aria-selected="${escH(ativo === i)}" class="busca__item${ativo === i ? ' is-ativo' : ''}">
                             <span class="busca__texto"><strong>${esc(r.titulo)}</strong>${r.detalhe ? `<small>${esc(r.detalhe)}</small>` : ''}</span>
                             ${r.etiqueta ? `<span class="busca__marca" data-fechada="${r.fechada ? 'sim' : 'nao'}">${esc(r.etiqueta)}</span>` : ''}
                         </button>`).join('')}
@@ -469,7 +467,7 @@
             painel.innerHTML = `
                 <header class="sininho__topo">
                     <h2>Notificações</h2>
-                    <span>${dados.avisos.length + pedidos.length}</span>
+                    <span>${escH(dados.avisos.length) + escH(pedidos.length)}</span>
                 </header>
                 ${pedidos.length ? `<ul class="sininho__lista sininho__pedidos" aria-label="Solicitações">${pedidos.map(pedidoHtml).join('')}</ul>` : ''}
                 ${lista.length

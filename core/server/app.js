@@ -20,7 +20,7 @@ import sharepointRouter from './routes/sharepoint.js'
 import almoxarifeRouter, { notificacoesDiarias } from './almoxarife/index.js'
 import cargaRouter, { cargaJunto } from './carga.js'
 import { logger } from './logger.js'
-import { donoDoToken, exige, exigeSessao, meuCargo, tokenDo } from './sessao.js'
+import { donoDoToken, exige, exigeSessao, meuCargo, PRODUCAO, tokenAssinado, tokenDo } from './sessao.js'
 
 /**
  * A API — so as rotas, sem servidor nenhum em volta.
@@ -66,14 +66,51 @@ app.use('/api', (_req, res, next) => {
     'Cache-Control': 'no-store',
     'X-Frame-Options': 'DENY',
     'Referrer-Policy': 'no-referrer',
+    'Cross-Origin-Resource-Policy': 'same-origin',
   })
   next()
+})
+
+/* A sessao viaja sozinha no cookie, entao uma gravacao que nasce em outro
+   site nao pode ser atendida. O SameSite=Strict ja segura; isto aqui e a
+   segunda trava, e vale tambem para o login. Fora do navegador nao ha
+   Origin nem cookie da vitima para aproveitar. */
+const LEITURAS = new Set(['GET', 'HEAD', 'OPTIONS'])
+
+function origemConfere(req) {
+  const origem = req.headers.origin
+  if (!origem) return true
+  let endereco
+  try {
+    endereco = new URL(origem)
+  } catch {
+    return false
+  }
+  /* na maquina o Vite repassa o pedido e troca o Host */
+  if (!PRODUCAO) return ['localhost', '127.0.0.1'].includes(endereco.hostname)
+  return [req.headers.host, req.headers['x-forwarded-host']].includes(endereco.host)
+}
+
+app.use('/api', (req, res, next) => {
+  if (LEITURAS.has(req.method)) return next()
+  const site = req.headers['sec-fetch-site']
+  if ((site && site !== 'same-origin') || !origemConfere(req)) {
+    return res.status(403).json({ erro: 'Pedido recusado: ele não veio do próprio site.' })
+  }
+  return next()
 })
 
 /* O login e o "esqueci minha senha" abrem sem sessao: ali o corpo fica
    pequeno, para ninguem fazer o servidor ler 8 MB por tentativa. (O
    parser de baixo ve o corpo ja lido e nao le de novo.) */
 app.use('/api/auth', express.json({ limit: '32kb' }))
+
+/* Fora do /api/auth toda gravacao pede sessao: sem cookie assinado, a
+   resposta sai antes de o servidor ler o corpo de ate 8 MB */
+app.use('/api', (req, res, next) => {
+  if (LEITURAS.has(req.method) || req.path.startsWith('/auth') || tokenAssinado(tokenDo(req))) return next()
+  return res.status(401).json({ erro: 'Sessão expirada. Entre de novo.', sessao: false })
+})
 
 // foto de perfil e logo de cliente viajam como data URL: o limite
 // padrao do express (100kb) barraria qualquer imagem de verdade

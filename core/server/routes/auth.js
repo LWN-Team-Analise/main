@@ -3,7 +3,7 @@ import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { query } from '../db.js'
-import { donoDoToken, marcaDaSenha, SEGREDO, tokenDo } from '../sessao.js'
+import { apagarSessao, donoDoToken, gravarSessao, marcaDaSenha, revogarSessao, SEGREDO, tokenDo } from '../sessao.js'
 import { anotar, chaveDaConta, esquecer, estourou, ipDe } from '../limite.js'
 import { enviarCodigo, temEmail } from '../email.js'
 import { configurado as temOutlook, perfilDoCodigo, urlDeEntrada } from '../outlook.js'
@@ -130,25 +130,14 @@ async function buscarUsuario(condicao, valores) {
   }
 }
 
-/**
- * O token de sessao. O `sh` e a marca da senha (server/sessao.js):
- * trocar a senha derruba todo token emitido com a antiga.
- */
-function tokenDeSessao(id, senhaHash, expira = EXPIRA) {
-  return jwt.sign({ sub: id, sh: marcaDaSenha(senhaHash) }, SEGREDO, {
-    expiresIn: expira,
-    algorithm: 'HS256',
-  })
-}
-
-/** Monta o token e carimba o ultimo acesso. */
-async function abrirSessao(linha) {
+/** Entrega o cookie da sessao e carimba o ultimo acesso. */
+async function abrirSessao(linha, res) {
   const usuario = paraUsuario(linha)
   /* a TV fica ligada dias seguidos, sem ninguem para entrar de novo a
      cada 8 horas; a conta dela so ve a pagina inicial */
-  const token = tokenDeSessao(usuario.id, linha.senha_hash, usuario.painelTv ? EXPIRA_TV : EXPIRA)
+  gravarSessao(res, { sub: usuario.id, senhaHash: linha.senha_hash, expira: usuario.painelTv ? EXPIRA_TV : EXPIRA })
   await query('UPDATE usuario SET ultimo_acesso = now() WHERE id = $1', [usuario.id])
-  return { token, user: usuario }
+  return { user: usuario }
 }
 
 /** POST /api/auth/login — aceita e-mail ou CPF no mesmo campo. */
@@ -209,7 +198,7 @@ router.post('/login', async (req, res) => {
     }
 
     await esquecer(contaChave)
-    return res.json(await abrirSessao(linha))
+    return res.json(await abrirSessao(linha, res))
   } catch (erro) {
     if (erro.code === '42P01') {
       return res
@@ -234,6 +223,83 @@ router.get('/me', async (req, res) => {
     return res.json({ user: paraUsuario(rows[0]) })
   } catch (erro) {
     logger.error('auth/me', erro.message)
+    return res.status(503).json({ erro: 'Não foi possível conferir a sessão agora.' })
+  }
+})
+
+/**
+ * POST /api/auth/sair — encerra a sessao no servidor e apaga o cookie.
+ *
+ * Responde sempre que deu certo: quem chega sem sessao ja esta fora.
+ */
+router.post('/sair', async (req, res) => {
+  const token = tokenDo(req)
+  try {
+    const dono = token ? jwt.verify(token, SEGREDO, { algorithms: ['HS256'] }) : null
+    if (dono?.jti) {
+      await revogarSessao(dono.jti, dono.exp)
+      await query('DELETE FROM presenca WHERE usuario_id = $1', [dono.sub]).catch((erro) => {
+        logger.error('auth/sair', erro.message)
+      })
+    }
+  } catch (erro) {
+    /* token vencido ou forjado nao tem o que encerrar */
+    if (erro.name !== 'JsonWebTokenError' && erro.name !== 'TokenExpiredError' && erro.name !== 'NotBeforeError') {
+      logger.error('auth/sair', erro.message)
+    }
+  }
+  apagarSessao(res)
+  return res.json({ ok: true })
+})
+
+/**
+ * POST /api/auth/migrar — troca o token antigo do localStorage pelo cookie.
+ *
+ * Existe para ninguem cair quando o site atualizar, sobretudo a TV, que
+ * tem sessao de 30 dias e ninguem por perto para entrar de novo. Vale uma
+ * vez por token e so para token sem `jti`, entao a rota morre sozinha
+ * quando o ultimo token antigo vencer.
+ */
+router.post('/migrar', async (req, res) => {
+  const cabecalho = req.headers.authorization ?? ''
+  const antigo = cabecalho.startsWith('Bearer ') ? cabecalho.slice(7) : ''
+  const recusar = () => res.status(401).json({ erro: 'Sessão expirada. Entre de novo.', sessao: false })
+
+  let dono
+  try {
+    dono = jwt.verify(antigo, SEGREDO, { algorithms: ['HS256'] })
+  } catch {
+    return recusar()
+  }
+  if (dono.uso || !dono.sub || dono.jti) return recusar()
+
+  try {
+    const { rows } = await query('SELECT ativo, senha_hash FROM usuario WHERE id = $1', [dono.sub])
+    const conta = rows[0]
+    if (!conta || conta.ativo === false) return recusar()
+    if (dono.sh && dono.sh !== marcaDaSenha(conta.senha_hash)) return recusar()
+
+    /* gasta o token numa conta so: quem tivesse copiado o antigo nao abre
+       uma segunda sessao com ele */
+    const numero = `antigo:${crypto.createHash('sha256').update(antigo).digest('base64url')}`
+    const gasto = await query(
+      `INSERT INTO sessao_revogada (jti, expira_em) VALUES ($1, to_timestamp($2))
+       ON CONFLICT (jti) DO NOTHING RETURNING jti`,
+      [numero, dono.exp],
+    ).catch((erro) => {
+      if (erro.code === '42P01') return { rows: [{ jti: numero }] }
+      throw erro
+    })
+    if (!gasto.rows[0]) return recusar()
+
+    gravarSessao(res, {
+      sub: dono.sub,
+      senhaHash: conta.senha_hash,
+      expira: Math.max(60, dono.exp - Math.floor(Date.now() / 1000)),
+    })
+    return res.json({ ok: true })
+  } catch (erro) {
+    logger.error('auth/migrar', erro.message)
     return res.status(503).json({ erro: 'Não foi possível conferir a sessão agora.' })
   }
 })
@@ -293,8 +359,9 @@ router.post('/senha', async (req, res) => {
       descricao: 'Senha alterada',
     })
     /* a senha nova derruba as sessoes abertas com a antiga — inclusive
-       esta. O token novo volta junto para quem trocou nao cair. */
-    return res.json({ ok: true, token: tokenDeSessao(sub, hash) })
+       esta. O cookie novo volta junto para quem trocou nao cair. */
+    gravarSessao(res, { sub, senhaHash: hash, expira: EXPIRA })
+    return res.json({ ok: true })
   } catch (erro) {
     if (erro.name === 'JsonWebTokenError' || erro.name === 'TokenExpiredError') {
       return res.status(401).json({ erro: 'Sessão expirada. Entre de novo.', sessao: false })
@@ -649,7 +716,7 @@ router.post('/outlook/entrar', async (req, res) => {
       linha.foto = perfil.foto
     }
 
-    const sessao = await abrirSessao(linha)
+    const sessao = await abrirSessao(linha, res)
     /* entrou pelo Outlook e a senha do site ainda e a padrao: o Teams pede
        para trocar (no maximo uma vez por dia) */
     await avisarSenhaPadrao({ usuarioIds: [linha.id] })

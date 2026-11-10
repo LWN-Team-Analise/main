@@ -1,4 +1,4 @@
-import { get, tokenAtual } from './api'
+import { get } from './api'
 
 /**
  * Quem esta no site agora (server/routes/presenca.js).
@@ -11,19 +11,12 @@ import { get, tokenAtual } from './api'
  * aviso e invisivel, e quem cuida da sessao sao as chamadas de verdade.
  */
 
-/* o ultimo token que funcionou: o "sair" do logout sai depois que a
-   sessao ja foi apagada da memoria */
-let ultimoToken = null
-
 function avisar(caminho, corpo, { saindo = false } = {}) {
-  const token = tokenAtual() ?? ultimoToken
-  if (!token) return Promise.resolve()
-  ultimoToken = token
   return fetch(`/api/presenca${caminho}`, {
     method: 'POST',
     /* keepalive: o pedido sai mesmo com a aba fechando */
     keepalive: saindo,
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(corpo),
   }).catch(() => {})
 }
@@ -31,12 +24,8 @@ function avisar(caminho, corpo, { saindo = false } = {}) {
 /** Esta aba esta aberta — visivel ou em segundo plano. */
 export const marcarPresenca = (aba, visivel) => avisar('', { aba, visivel })
 
-/** Esta aba fechou (ou a pessoa saiu da conta). */
-export function sairDaPresenca(aba) {
-  const pedido = avisar('/sair', { aba }, { saindo: true })
-  ultimoToken = null
-  return pedido
-}
+/** Esta aba fechou. Quem sai da conta o /api/auth/sair ja tira da lista. */
+export const sairDaPresenca = (aba) => avisar('/sair', { aba }, { saindo: true })
 
 /** { [usuarioId]: 'ativo' | 'segundo_plano' } — quem nao aparece esta offline. */
 export async function carregarPresenca() {

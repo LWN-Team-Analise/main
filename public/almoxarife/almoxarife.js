@@ -517,8 +517,8 @@ function definirPermissoesCargo(cargo, lista) {
 // cargo, não uma permissão, por isso vem em um bloco separado.
 function renderCargoResponsavelHtml(cargo, prefixo) {
     const marcado = cargo ? cargoEhResponsavelPorObra(cargo) && carregarCargosResponsaveis() !== null : false;
-    return '<label class="cargo-flag-responsavel" for="' + prefixo + 'responsavel_obra">'
-        + '<input type="checkbox" id="' + prefixo + 'responsavel_obra"' + (marcado ? ' checked' : '') + '>'
+    return '<label class="cargo-flag-responsavel" for="' + escH(prefixo) + 'responsavel_obra">'
+        + '<input type="checkbox" id="' + escH(prefixo) + 'responsavel_obra"' + (marcado ? ' checked' : '') + '>'
         + '<span><strong>Responsável por obra</strong></span></label>';
 }
 window.renderCargoResponsavelHtml = renderCargoResponsavelHtml;
@@ -559,8 +559,8 @@ function renderCopiarPermissoesHtml(cargo, prefixo) {
         + '<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:0.4rem;">'
         + 'Marca as caixas abaixo com o que o cargo escolhido tem. Depois é só ajustar.'
         + '</div>'
-        + '<select class="form-select" id="' + prefixo + 'copiar-de"'
-        + ' onchange="copiarPermissoesDeCargo(this.value, \'' + prefixo + '\'); this.value = \'\';"'
+        + '<select class="form-select" id="' + escH(prefixo) + 'copiar-de"'
+        + ' onchange="copiarPermissoesDeCargo(this.value, \'' + escJ(prefixo) + '\'); this.value = \'\';"'
         + ' style="width:100%;padding:0.5rem 0.7rem;font-size:0.82rem;border:2px solid var(--border-color);'
         + 'border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);">'
         + '<option value="">— Selecione um cargo para copiar —</option>'
@@ -604,19 +604,18 @@ window.copiarPermissoesDeCargo = copiarPermissoesDeCargo;
 // Escapes locais: este arquivo tem várias funções de escape espalhadas, e
 // depender de qual delas já foi definida neste ponto do arquivo é frágil.
 function escaparTexto(t) {
-    return String(t == null ? '' : t)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return escH(t == null ? '' : t);
 }
 function escaparAtributo(t) {
-    return escaparTexto(t).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    return escH(t == null ? '' : t);
 }
 
 function renderCargoPermissoesHtml(cargo, prefixo, opcoes) {
     const atuais = (opcoes && opcoes.vazio) ? [] : permissoesDoCargo(cargo);
     const itens = PERMISSOES_MODULOS.map(([chave, rotulo]) => (
         '<label style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;cursor:pointer;color:var(--text-main);">'
-        + '<input type="checkbox" id="' + prefixo + chave + '"' + (atuais.includes(chave) ? ' checked' : '')
-        + ' style="cursor:pointer;width:0.9rem;height:0.9rem;flex-shrink:0;">' + rotulo + '</label>'
+        + '<input type="checkbox" id="' + escH(prefixo) + escH(chave) + '"' + (atuais.includes(chave) ? ' checked' : '')
+        + ' style="cursor:pointer;width:0.9rem;height:0.9rem;flex-shrink:0;">' + escH(rotulo) + '</label>'
     )).join('');
     return renderCargoResponsavelHtml(cargo, prefixo)
         + renderCopiarPermissoesHtml(cargo, prefixo)
@@ -752,7 +751,7 @@ window.getCargoCorExibicao = getCargoCorExibicao;
 function montarOpcoesCargo(selecionado) {
     const atual = selecionado || '';
     const opcoes = listarCargos().map(c =>
-        `<option value="${c}" ${c === atual ? 'selected' : ''}>${c}</option>`
+        `<option value="${escH(c)}" ${c === atual ? 'selected' : ''}>${escH(c)}</option>`
     ).join('');
     return `<option value="" ${atual ? '' : 'selected'}>— Selecione —</option>` + opcoes;
 }
@@ -1398,7 +1397,7 @@ function popularSelectBaiaInventario(selecionada) {
         : [];
     const atual = selecionada !== undefined ? selecionada : campo.value;
     campo.innerHTML = '<option value="">— Sem baia —</option>'
-        + lista.map(b => `<option value="${b.id}"${String(atual || '') === String(b.id) ? ' selected' : ''}>${rotuloBaia(b)}</option>`).join('');
+        + lista.map(b => `<option value="${escH(b.id)}"${String(atual || '') === String(b.id) ? ' selected' : ''}>${escH(rotuloBaia(b))}</option>`).join('');
     if (!lista.length) campo.innerHTML = '<option value="">— Nenhuma baia cadastrada no Inventário —</option>';
 }
 window.popularSelectBaiaInventario = popularSelectBaiaInventario;
@@ -1546,10 +1545,10 @@ function renderInventarioTable() {
         
         // Montar os badges de contagem
         const countBadges = `
-            ${counts.disponivel ? `<span class="badge badge-success"style="font-size:0.6rem;padding:0.1rem 0.4rem;">${counts.disponivel} disp.</span>` : ''}
-            ${counts.em_campo ? `<span class="badge badge-info"style="font-size:0.6rem;padding:0.1rem 0.4rem;">${counts.em_campo} campo</span>` : ''}
-            ${counts.em_calibracao ? `<span class="badge badge-warning"style="font-size:0.6rem;padding:0.1rem 0.4rem;">${counts.em_calibracao} calib.</span>` : ''}
-            ${counts.avariado ? `<span class="badge badge-danger"style="font-size:0.6rem;padding:0.1rem 0.4rem;">${counts.avariado} avaria</span>` : ''}
+            ${counts.disponivel ? `<span class="badge badge-success"style="font-size:0.6rem;padding:0.1rem 0.4rem;">${escH(counts.disponivel)} disp.</span>` : ''}
+            ${counts.em_campo ? `<span class="badge badge-info"style="font-size:0.6rem;padding:0.1rem 0.4rem;">${escH(counts.em_campo)} campo</span>` : ''}
+            ${counts.em_calibracao ? `<span class="badge badge-warning"style="font-size:0.6rem;padding:0.1rem 0.4rem;">${escH(counts.em_calibracao)} calib.</span>` : ''}
+            ${counts.avariado ? `<span class="badge badge-danger"style="font-size:0.6rem;padding:0.1rem 0.4rem;">${escH(counts.avariado)} avaria</span>` : ''}
         `;
         
         // Botões de edição do TIPO - inline com o nome
@@ -1557,8 +1556,8 @@ function renderInventarioTable() {
         if (modoEdicaoInventarioAtivo) {
             tipoEditIcons = `
                 <span class="inv-mini-actions" style="margin-left:0.3rem;">
-                    <button onclick="event.stopPropagation();openEditarAtivoModal('${tipo.replace(/'/g, "\\'")}')"class="inv-mini-btn inv-mini-btn-edit"title="Editar ativo">Editar</button>
-                    <button onclick="event.stopPropagation();excluirTipo('${tipo.replace(/'/g, "\\'")}')"class="inv-mini-btn inv-mini-btn-del"title="Excluir ativo">Excluir</button>
+                    <button onclick="event.stopPropagation();openEditarAtivoModal('${escJ(tipo)}')"class="inv-mini-btn inv-mini-btn-edit"title="Editar ativo">Editar</button>
+                    <button onclick="event.stopPropagation();excluirTipo('${escJ(tipo)}')"class="inv-mini-btn inv-mini-btn-del"title="Excluir ativo">Excluir</button>
                 </span>
             `;
         }
@@ -1583,41 +1582,41 @@ function renderInventarioTable() {
             if (modoEdicaoInventarioAtivo) {
                 ferramentaEditIcons = `
                     <span class="inv-mini-actions">
-                        <button onclick="event.stopPropagation();editarInstrumento(${inst.id})"class="inv-mini-btn inv-mini-btn-edit"title="Editar ferramenta">Editar</button>
-                        <button onclick="event.stopPropagation();excluirInstrumento(${inst.id})"class="inv-mini-btn inv-mini-btn-del"title="Excluir ferramenta">Excluir</button>
+                        <button onclick="event.stopPropagation();editarInstrumento(${escL(inst.id)})"class="inv-mini-btn inv-mini-btn-edit"title="Editar ferramenta">Editar</button>
+                        <button onclick="event.stopPropagation();excluirInstrumento(${escL(inst.id)})"class="inv-mini-btn inv-mini-btn-del"title="Excluir ferramenta">Excluir</button>
                     </span>
                 `;
             }
             
             return `
-                <div class="tag-option-row ${statusClass}"onclick="event.stopPropagation();openInstrumentDetail(${inst.id})"style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0.4rem;border-radius:4px;margin-bottom:0.15rem;cursor:pointer;">
+                <div class="tag-option-row ${escH(statusClass)}"onclick="event.stopPropagation();openInstrumentDetail(${escL(inst.id)})"style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0.4rem;border-radius:4px;margin-bottom:0.15rem;cursor:pointer;">
                     <span style="display:flex;align-items:center;gap:0.3rem;font-weight:700;font-size:0.75rem;color:var(--text-main);">
-                        ${inst.tag || 'Sem TAG'}
+                        ${escH(inst.tag) || 'Sem TAG'}
                         ${ferramentaEditIcons}
                     </span>
                     <span style="display:flex;align-items:center;gap:0.3rem;flex-shrink:0;">
                         ${(() => {
                             const _ens = String(inst.classificacao_lista || '').split(',').map(e => e.trim()).filter(Boolean);
                             if (!_ens.length) return '';
-                            let _out = `<span class="badge badge-purple"style="font-size:0.55rem;padding:0.1rem 0.35rem;max-width:9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_ens[0]}</span>`;
-                            if (_ens.length > 1) _out += `<span class="badge badge-purple"style="font-size:0.55rem;padding:0.1rem 0.35rem;white-space:nowrap;">+${_ens.length - 1}</span>`;
+                            let _out = `<span class="badge badge-purple"style="font-size:0.55rem;padding:0.1rem 0.35rem;max-width:9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(_ens[0])}</span>`;
+                            if (_ens.length > 1) _out += `<span class="badge badge-purple"style="font-size:0.55rem;padding:0.1rem 0.35rem;white-space:nowrap;">+${escH(_ens.length - 1)}</span>`;
                             return _out;
                         })()}
-                        <span style="font-size:0.65rem;color:var(--text-muted);">${statusLabel}</span>
+                        <span style="font-size:0.65rem;color:var(--text-muted);">${escH(statusLabel)}</span>
                     </span>
                 </div>
             `;
         }).join('');
         
         return `
-            <div class="month-card${isOpen ? 'current' : ''}"style="cursor:default;padding:0.8rem 0.9rem;"onclick="toggleInvTypeCard('${tipo.replace(/'/g,"\\'")}')">
+            <div class="month-card${isOpen ? 'current' : ''}"style="cursor:default;padding:0.8rem 0.9rem;"onclick="toggleInvTypeCard('${escJ(tipo)}')">
                 <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
                     <div style="display:flex;align-items:center;gap:0.3rem;flex:1;min-width:0;">
-                        <span style="font-size:0.85rem;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${tipo}${ativoPai ? `<span style="font-weight:600;color:var(--text-muted);"> (${ativoPai})</span>` : ''}</span>
+                        <span style="font-size:0.85rem;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escH(tipo)}${ativoPai ? `<span style="font-weight:600;color:var(--text-muted);"> (${escH(ativoPai)})</span>` : ''}</span>
                         ${tipoEditIcons}
                     </div>
                     <div style="display:flex;align-items:center;gap:0.3rem;flex-shrink:0;">
-                        <span style="font-size:0.65rem;color:var(--text-muted);">${items.length}</span>
+                        <span style="font-size:0.65rem;color:var(--text-muted);">${escH(items.length)}</span>
                         <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:0.9rem;height:0.9rem;flex-shrink:0;transition:transform 0.2s;${isOpen ? 'transform:rotate(180deg);' : ''}"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </div>
                 </div>
@@ -1804,23 +1803,23 @@ function renderCalibracaoTable() {
         
         let summaryBadge = '';
         if (statusCounts.em_calibracao >0) {
-            summaryBadge += `<span class="badge badge-calibracao"style="font-size:0.66rem;">${statusCounts.em_calibracao} em calib.</span>`;
+            summaryBadge += `<span class="badge badge-calibracao"style="font-size:0.66rem;">${escH(statusCounts.em_calibracao)} em calib.</span>`;
 
         }
         if (statusCounts.nao_calibrado > 0) {
-            summaryBadge += `<span class="badge cert-badge-ghost cert-badge-danger">${statusCounts.nao_calibrado} não calibrado${statusCounts.nao_calibrado > 1 ? 's' : ''}</span>`;
+            summaryBadge += `<span class="badge cert-badge-ghost cert-badge-danger">${escH(statusCounts.nao_calibrado)} não calibrado${statusCounts.nao_calibrado > 1 ? 's' : ''}</span>`;
         }
         if (statusCounts.isento > 0) {
-            summaryBadge += `<span class="badge badge-neutral"style="font-size:0.66rem;">${statusCounts.isento} isento${statusCounts.isento > 1 ? 's' : ''}</span>`;
+            summaryBadge += `<span class="badge badge-neutral"style="font-size:0.66rem;">${escH(statusCounts.isento)} isento${statusCounts.isento > 1 ? 's' : ''}</span>`;
         }
         if (statusCounts.vencido >0) {
-            summaryBadge += `<span class="badge cert-badge-ghost cert-badge-danger">${statusCounts.vencido} vencido${statusCounts.vencido >1 ? 's' : ''}</span>`;
+            summaryBadge += `<span class="badge cert-badge-ghost cert-badge-danger">${escH(statusCounts.vencido)} vencido${statusCounts.vencido >1 ? 's' : ''}</span>`;
         }
         if (statusCounts.alerta >0) {
-            summaryBadge += `<span class="badge cert-badge-ghost cert-badge-warning">${statusCounts.alerta} alerta</span>`;
+            summaryBadge += `<span class="badge cert-badge-ghost cert-badge-warning">${escH(statusCounts.alerta)} alerta</span>`;
         }
         if (statusCounts.ok >0 && !summaryBadge) {
-            summaryBadge = `<span class="badge cert-badge-ghost cert-badge-ok">${statusCounts.ok} em dia</span>`;
+            summaryBadge = `<span class="badge cert-badge-ghost cert-badge-ok">${escH(statusCounts.ok)} em dia</span>`;
         }
         
         const tagRows = items.map(inst => {
@@ -1871,38 +1870,38 @@ function renderCalibracaoTable() {
                 // história nenhuma, então vai direto para o formulário.
                 const rotulo = certCal ? 'Recalibrar' : 'Calibrar';
                 btnCalibrar = certCal
-                    ? `<button class="cert-chip-btn cert-chip-add"onclick="event.stopPropagation();abrirHistoricoCalibracao(${inst.id})">${rotulo}</button>`
-                    : `<button class="cert-chip-btn cert-chip-add"onclick="event.stopPropagation();certDefinirOrigem('calibracao');openAdicionarCertificadoModal(${inst.id})">${rotulo}</button>`;
+                    ? `<button class="cert-chip-btn cert-chip-add"onclick="event.stopPropagation();abrirHistoricoCalibracao(${escL(inst.id)})">${escH(rotulo)}</button>`
+                    : `<button class="cert-chip-btn cert-chip-add"onclick="event.stopPropagation();certDefinirOrigem('calibracao');openAdicionarCertificadoModal(${escL(inst.id)})">${escH(rotulo)}</button>`;
                 if (certCal) {
                     btnCertCal = `
-                        <button class="cert-chip-btn cert-chip-edit"title="Editar calibração"onclick="event.stopPropagation();certDefinirOrigem('calibracao');openEditarCertificadoModal(${certCal.id})">Editar</button>
-                        <button class="cert-chip-btn cert-chip-delete"title="Excluir calibração"onclick="event.stopPropagation();excluirCertificado(${certCal.id})">Excluir</button>`;
+                        <button class="cert-chip-btn cert-chip-edit"title="Editar calibração"onclick="event.stopPropagation();certDefinirOrigem('calibracao');openEditarCertificadoModal(${escL(certCal.id)})">Editar</button>
+                        <button class="cert-chip-btn cert-chip-delete"title="Excluir calibração"onclick="event.stopPropagation();excluirCertificado(${escL(certCal.id)})">Excluir</button>`;
                 }
             }
 
             
             return `
-                <div class="tag-option-row ${cls}"onclick="event.stopPropagation();">
+                <div class="tag-option-row ${escH(cls)}"onclick="event.stopPropagation();">
                     <span style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-                        <span>${inst.tag || 'Sem TAG'}</span>
+                        <span>${escH(inst.tag) || 'Sem TAG'}</span>
                         ${btnCalibrar}
                         ${btnCertCal}
                     </span>
                     <span style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-                        <span>${label}</span>
-                        ${statusText ? `<span style="font-size:0.6rem;color:var(--text-muted);">${statusText}</span>` : ''}
+                        <span>${escH(label)}</span>
+                        ${statusText ? `<span style="font-size:0.6rem;color:var(--text-muted);">${escH(statusText)}</span>` : ''}
                     </span>
                 </div>
             `;
         }).join('');
         
         return `
-            <div class="month-card type-card ${isOpen ? 'current' : ''}"data-tipo="${escAttr(tipo)}"style="cursor:pointer;"onclick="toggleCalTypeCard('${tipo.replace(/'/g,"\\'")}', this)">
+            <div class="month-card type-card ${isOpen ? 'current' : ''}"data-tipo="${escAttr(tipo)}"style="cursor:pointer;"onclick="toggleCalTypeCard('${escJ(tipo)}', this)">
                 <div class="type-card-top">
                     <button type="button"class="type-card-header"tabindex="-1">
                         <div>
-                            <div class="month-card-name">${tipo}</div>
-                            <div class="month-card-num">${items.length} unidade${items.length !== 1 ? 's' : ''}</div>
+                            <div class="month-card-name">${escH(tipo)}</div>
+                            <div class="month-card-num">${escH(items.length)} unidade${items.length !== 1 ? 's' : ''}</div>
                         </div>
                         <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:1.1rem;height:1.1rem;flex-shrink:0;transition:transform 0.2s;${isOpen ? 'transform:rotate(180deg);' : ''}"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </button>
@@ -2004,12 +2003,12 @@ function openCalibrarModal(id) {
                     <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:1.25rem;height:1.25rem;"><line x1="18"y1="6"x2="6"y2="18"/><line x1="6"y1="6"x2="18"y2="18"/></svg>
                 </button>
             </div>
-            <form id="form-calibrar"onsubmit="return handleCalibrarInstrumento(event, ${id})">
+            <form id="form-calibrar"onsubmit="return handleCalibrarInstrumento(event, ${escL(id)})">
                 <div class="modal-body"style="padding: 1.5rem;">
                     <div style="background: var(--bg-surface); padding: 0.75rem 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border-left: 3px solid var(--primary);">
-                        <p style="font-weight: 700; margin: 0; color: var(--text-main);">${instrumento.tag}</p>
-                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0;">${instrumento.tipo} - ${instrumento.fabricante}</p>
-                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0;">Vencimento atual: ${instrumento.vencimento_calibracao ? formatarDataBr(instrumento.vencimento_calibracao) : 'Não definido'}</p>
+                        <p style="font-weight: 700; margin: 0; color: var(--text-main);">${escH(instrumento.tag)}</p>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0;">${escH(instrumento.tipo)} - ${escH(instrumento.fabricante)}</p>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0;">Vencimento atual: ${instrumento.vencimento_calibracao ? escH(formatarDataBr(instrumento.vencimento_calibracao)) : 'Não definido'}</p>
                     </div>
                     
                     <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:600;color:var(--text-main);background:var(--bg-surface);border:1px solid var(--border-color);border-radius:0.5rem;padding:0.65rem 0.8rem;margin-bottom:1rem;cursor:pointer;">
@@ -2022,14 +2021,14 @@ function openCalibrarModal(id) {
                         <label class="form-label"for="cal-data-envio"style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
                             Envio para Calibração
                         </label>
-                        <input type="date"id="cal-data-envio"class="form-input"value="${(instrumento.data_envio_calibracao || '').toString().slice(0, 10)}"style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
+                        <input type="date"id="cal-data-envio"class="form-input"value="${escH((instrumento.data_envio_calibracao || '').toString().slice(0, 10))}"style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
                     </div>
 
                     <div class="form-group">
                         <label class="form-label"for="cal-data-retorno"style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
                             Retorno à Empresa
                         </label>
-                        <input type="date"id="cal-data-retorno"class="form-input"value="${(instrumento.data_retorno_calibracao || '').toString().slice(0, 10)}"style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
+                        <input type="date"id="cal-data-retorno"class="form-input"value="${escH((instrumento.data_retorno_calibracao || '').toString().slice(0, 10))}"style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
                         <small style="display:block;margin-top:0.25rem;font-size:0.72rem;color:var(--text-muted);">Esse período aparece na aba Localização enquanto o instrumento estiver fora para calibração.</small>
                     </div>
 
@@ -2044,7 +2043,7 @@ function openCalibrarModal(id) {
                         <label class="form-label"for="cal-valor"style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
                             Valor
                         </label>
-                        <input type="text"id="cal-valor"class="form-input"value="${calFormatarValorBR(instrumento.valor_calibracao || 0)}"placeholder="R$ 0,00"inputmode="numeric"oninput="calMascaraValor(this)"onfocus="calMascaraValor(this)"style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
+                        <input type="text"id="cal-valor"class="form-input"value="${escH(calFormatarValorBR(instrumento.valor_calibracao || 0))}"placeholder="R$ 0,00"inputmode="numeric"oninput="calMascaraValor(this)"onfocus="calMascaraValor(this)"style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
                     </div>
 
                     <div class="form-group">
@@ -2259,9 +2258,7 @@ let baiasAbertas = new Set();
 let baiasCarregando = null;
 
 function baiaEscapar(texto) {
-    return String(texto === null || texto === undefined ? '' : texto)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+    return escH(texto === null || texto === undefined ? '' : texto);
 }
 
 // dd/mm/aaaa a partir de 'YYYY-MM-DD' ou de um carimbo do banco. Nunca usa
@@ -2296,7 +2293,7 @@ function baiaPeriodo(baia) {
     }
     // Cada data em um span próprio: no celular a linha quebra no "até",
     // nunca no meio de uma data.
-    return `<span class="baia-data">${ini}</span> até <span class="baia-data">${fim}</span>`;
+    return `<span class="baia-data">${escH(ini)}</span> até <span class="baia-data">${escH(fim)}</span>`;
 }
 
 function baiaRotulo(baia) {
@@ -2356,7 +2353,7 @@ function baiaFerramentasHtml(baia) {
         <div class="baia-ferramentas">
             <div class="baia-ferramentas-topo">
                 <span>Ferramentas</span>
-                <span class="baia-ferramentas-contagem">${bipadas} de ${lista.length} bipada${lista.length !== 1 ? 's' : ''}</span>
+                <span class="baia-ferramentas-contagem">${escH(bipadas)} de ${escH(lista.length)} bipada${lista.length !== 1 ? 's' : ''}</span>
             </div>
             <ul class="baia-ferramentas-lista">
                 ${lista.map(f => `
@@ -2374,7 +2371,6 @@ function baiaFerramentasHtml(baia) {
 
 function baiaDetalheHtml(baia) {
     const os = baia.os;
-    const idEsc = baiaEscapar(baia.id);
 
     // Baia parada também abre: os mesmos campos, todos com N/A. Assim a linha
     // se comporta igual em qualquer situação.
@@ -2399,7 +2395,7 @@ function baiaDetalheHtml(baia) {
             ${baiaCamposHtml(campos)}
             <div class="baia-detalhe-acoes">
                 <button type="button" class="baia-btn baia-btn-hist"
-                        onclick="event.stopPropagation();abrirHistoricoBaia('${idEsc}')">
+                        onclick="event.stopPropagation();abrirHistoricoBaia('${escJ(baia.id)}')">
                     Histórico
                 </button>
             </div>`;
@@ -2429,11 +2425,11 @@ function baiaDetalheHtml(baia) {
         ${baiaFerramentasHtml(baia)}
         <div class="baia-detalhe-acoes">
             <button type="button" class="baia-btn baia-btn-hist"
-                    onclick="event.stopPropagation();abrirHistoricoBaia('${idEsc}')">
+                    onclick="event.stopPropagation();abrirHistoricoBaia('${escJ(baia.id)}')">
                 Histórico
             </button>
             <button type="button" class="baia-btn baia-btn-ver"
-                    onclick="event.stopPropagation();previewPDFOS('${baiaEscapar(os.numero_os || os.id)}')">
+                    onclick="event.stopPropagation();previewPDFOS('${escJ(os.numero_os || os.id)}')">
                 Ver O.S.
             </button>
         </div>`;
@@ -2480,25 +2476,24 @@ function renderBaiasTabela() {
             : (BAIA_SITUACOES[baia.situacao] || BAIA_SITUACOES.no_almoxarife);
         const obra = baiaObra(baia);
         const aberta = baiasAbertas.has(String(baia.id));
-        const idEsc = baiaEscapar(baia.id);
 
         // TODA baia abre — inclusive a que está no almoxarifado, que mostra os
         // mesmos campos com N/A. A seta fica sempre na mesma coluna, então os
         // chips ficam alinhados um debaixo do outro.
         const seta = `
             <button type="button" class="baia-seta${aberta ? ' aberta' : ''}"
-                    aria-expanded="${aberta}" aria-label="Detalhes da baia"
-                    onclick="event.stopPropagation();alternarDetalheBaia('${idEsc}')">
+                    aria-expanded="${escH(aberta)}" aria-label="Detalhes da baia"
+                    onclick="event.stopPropagation();alternarDetalheBaia('${escJ(baia.id)}')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>`;
 
         return `
-            <tr class="baia-linha clicavel" onclick="alternarDetalheBaia('${idEsc}')">
+            <tr class="baia-linha clicavel" onclick="alternarDetalheBaia('${escJ(baia.id)}')">
                 <td class="baia-id">${baiaEscapar(baiaRotulo(baia))}</td>
                 <td class="baia-obra${obra ? '' : ' vazio'}" title="${baiaEscapar(obra || '')}">${baiaEscapar(obra || 'N/A')}</td>
                 <td class="baia-periodo">${baiaPeriodo(baia)}</td>
                 <td class="baia-status-celula">
-                    <span class="baia-chip ${situacao.chip}">${situacao.rotulo}</span>${seta}
+                    <span class="baia-chip ${escH(situacao.chip)}">${escH(situacao.rotulo)}</span>${seta}
                 </td>
             </tr>
             ${aberta ? `
@@ -2532,24 +2527,24 @@ function baiaHistoricoHtml(dados) {
 
     const blocoOS = movs.length ? `
         <div class="baia-hist-secao">
-            <h4>O.S. que usaram esta baia (${movs.length})</h4>
+            <h4>O.S. que usaram esta baia (${escH(movs.length)})</h4>
             ${movs.map(m => `
                 <div class="baia-hist-item">
-                    <strong>#OS-${String(m.numero_os || m.os_id || '----').padStart(4, '0')}</strong>
+                    <strong>#OS-${escH(String(m.numero_os || m.os_id || '----').padStart(4, '0'))}</strong>
                     <span>${baiaEscapar(m.cliente || '—')}${m.obra ? ' · ' + baiaEscapar(m.obra) : ''}</span>
                     <span class="baia-hist-meta">
                         ${baiaEscapar(String(m.os_status || '—').replace(/_/g, ' '))} ·
-                        ${baiaData(m.data_inicio) || '—'}${m.data_fim ? ' até ' + baiaData(m.data_fim) : ''}
+                        ${escH(baiaData(m.data_inicio)) || '—'}${m.data_fim ? ' até ' + escH(baiaData(m.data_fim)) : ''}
                     </span>
                 </div>`).join('')}
         </div>` : '';
 
     const blocoEventos = eventos.length ? `
         <div class="baia-hist-secao">
-            <h4>Movimentações da baia (${eventos.length})</h4>
+            <h4>Movimentações da baia (${escH(eventos.length)})</h4>
             ${eventos.map(e => `
                 <div class="baia-hist-item">
-                    <span class="baia-hist-data">${e.criado_em ? new Date(e.criado_em).toLocaleString('pt-BR') : '—'}</span>
+                    <span class="baia-hist-data">${e.criado_em ? escH(new Date(e.criado_em).toLocaleString('pt-BR')) : '—'}</span>
                     <strong>${baiaEscapar(BAIA_ROTULOS_EVENTO[e.evento] || e.evento || '—')}</strong>
                     <span class="baia-hist-meta">
                         ${e.tag ? baiaEscapar(e.tag) : ''}
@@ -2707,10 +2702,10 @@ function renderDashboard() {
             return `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color);">
                     <div style="min-width: 0;">
-                        <span class="font-mono"style="font-weight: 750; font-size: 0.8rem; color: var(--text-main);">${inst.tag || 'Sem TAG'}</span>
-                        <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${inst.tipo || ''}</p>
+                        <span class="font-mono"style="font-weight: 750; font-size: 0.8rem; color: var(--text-main);">${escH(inst.tag) || 'Sem TAG'}</span>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escH(inst.tipo) || ''}</p>
                     </div>
-                    <span class="badge ${badgeClass}"style="flex-shrink: 0;">${textAlert}</span>
+                    <span class="badge ${escH(badgeClass)}"style="flex-shrink: 0;">${escH(textAlert)}</span>
                 </div>
             `;
         }).join('');
@@ -2813,18 +2808,18 @@ function renderClientesGrid() {
             : `<span class="badge badge-danger"style="font-size: 0.6rem;padding:0.15rem 0.5rem;border-radius:0.25rem;background:#dc2626;color:white;">Inativo</span>`;
         
         return `
-            <div onclick="openClienteDetail(${cliente.id})"style="display:flex;border-radius:0.5rem;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.1);background:var(--bg-card);border:1px solid var(--border-color);cursor:pointer;transition:box-shadow 0.15s;"onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'"onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,0.1)'">
-                <div style="width:5px;min-width:5px;background:${color};"></div>
+            <div onclick="openClienteDetail(${escL(cliente.id)})"style="display:flex;border-radius:0.5rem;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.1);background:var(--bg-card);border:1px solid var(--border-color);cursor:pointer;transition:box-shadow 0.15s;"onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'"onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,0.1)'">
+                <div style="width:5px;min-width:5px;background:${escH(color)};"></div>
                 <div style="flex:1;padding:0.75rem 0.9rem;">
                     <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-                        <p style="font-weight:800;font-size:0.9rem;color:var(--text-main);margin:0;">${cliente.nome}</p>
+                        <p style="font-weight:800;font-size:0.9rem;color:var(--text-main);margin:0;">${escH(cliente.nome)}</p>
                         ${statusBadge}
                     </div>
-                    <p style="font-size:0.75rem;color:var(--text-muted);margin:0.2rem 0 0;">${cliente.abreviacao || ''}</p>
+                    <p style="font-size:0.75rem;color:var(--text-muted);margin:0.2rem 0 0;">${escH(cliente.abreviacao) || ''}</p>
                 </div>
                 <div style="padding:0.75rem;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:0.15rem;">
-                    <span style="font-size:0.7rem;font-weight:700;color:${color};">${cliente.uf || ''}</span>
-                    <span style="font-size:0.7rem;color:var(--text-muted);">${cliente.cidade || ''}</span>
+                    <span style="font-size:0.7rem;font-weight:700;color:${escH(color)};">${escH(cliente.uf) || ''}</span>
+                    <span style="font-size:0.7rem;color:var(--text-muted);">${escH(cliente.cidade) || ''}</span>
                 </div>
             </div>
         `;
@@ -2961,19 +2956,19 @@ function renderUsuariosTable(targetId) {
     // Colaboradores". Aqui a coluna Face ID só MOSTRA quem tem.
     tbody.innerHTML = listaUsuarios.map(u => {
         // Nome com ícones à esquerda (apenas se modo edição ativo)
-        let nomeHtml = u.nome;
+        let nomeHtml = escH(u.nome);
         if (modoEdicaoUsuariosAtivo) {
             nomeHtml = `
                 <div class="user-row-actions">
-                    <button class="btn-edit-user"onclick="openEditarUsuarioModal(${u.id})"title="Editar colaborador">
+                    <button class="btn-edit-user"onclick="openEditarUsuarioModal(${escL(u.id)})"title="Editar colaborador">
                         <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         <span>Editar</span>
                     </button>
-                    <button class="btn-delete-user"onclick="deletarUsuario(${u.id})"title="Excluir colaborador">
+                    <button class="btn-delete-user"onclick="deletarUsuario(${escL(u.id)})"title="Excluir colaborador">
                         <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                         <span>Excluir</span>
                     </button>
-                    <span class="user-row-name">${u.nome}</span>
+                    <span class="user-row-name">${escH(u.nome)}</span>
                 </div>
             `;
         }
@@ -3042,14 +3037,14 @@ function renderUsuariosTable(targetId) {
                 </td>
                 <td class="font-mono"style="font-size:0.8rem;">
                     <div class="user-contact">
-                        <span class="user-email">${u.email || '—'}</span>
-                        ${u.telefone ? `<span class="user-phone">${formatarTelefone(u.telefone)}</span>` : ''}
+                        <span class="user-email">${escH(u.email) || '—'}</span>
+                        ${u.telefone ? `<span class="user-phone">${escH(formatarTelefone(u.telefone))}</span>` : ''}
                     </div>
                 </td>
-                <td><span class="badge ${badgeClass}"data-cargo="${(u.cargo || '').replace(/"/g, '')}"style="${badgeStyle}">${badgeText}</span></td>
+                <td><span class="badge ${escH(badgeClass)}"data-cargo="${escH((u.cargo || '').replace(/"/g, ''))}"style="${escH(badgeStyle)}">${escH(badgeText)}</span></td>
 
-                <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"title="${permissoesTexto}">
-                    ${permissoesTexto}
+                <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"title="${escH(permissoesTexto)}">
+                    ${escH(permissoesTexto)}
                 </td>
                 <td><span class="badge ${u.ativo !== false ? 'badge-success' : 'badge-danger'}">${u.ativo !== false ? 'Ativo' : 'Inativo'}</span></td>
                 <td style="text-align:center;">${typeof facialSeloHtml === 'function' ? facialSeloHtml(u.id) : ''}</td>
@@ -3113,13 +3108,13 @@ function showConfirmModal(title, message, onConfirm, onCancel) {
     modal.innerHTML = `
         <div class="modal-container"style="max-width: 420px; animation: fadeIn 0.2s ease;">
             <div class="modal-header"style="border-bottom: 1px solid var(--border-color);">
-                <span class="modal-title"style="font-size: 1.1rem; font-weight: 700;">${title}</span>
+                <span class="modal-title"style="font-size: 1.1rem; font-weight: 700;">${escH(title)}</span>
                 <button class="modal-close"onclick="closeConfirmModal()">
                     <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:1.25rem;height:1.25rem;"><line x1="18"y1="6"x2="6"y2="18"/><line x1="6"y1="6"x2="18"y2="18"/></svg>
                 </button>
             </div>
             <div class="modal-body"style="padding: 1.5rem 1.5rem;">
-                <p style="font-size: 0.95rem; color: var(--text-main); line-height: 1.5; margin: 0;">${message}</p>
+                <p style="font-size: 0.95rem; color: var(--text-main); line-height: 1.5; margin: 0;">${escH(message)}</p>
             </div>
             <div class="modal-footer"style="display: flex; gap: 0.75rem; justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 1rem;">
                 <button class="btn btn-outline"onclick="closeConfirmModal(); if(typeof onCancel === 'function') onCancel();"style="padding: 0.5rem 1.25rem; font-size: 0.85rem;">
@@ -3205,7 +3200,7 @@ function deletarUsuario(id) {
             </div>
             <div class="modal-body"style="padding: 1.5rem;">
                 <p style="font-size: 0.95rem; color: var(--text-main); line-height: 1.6; margin: 0;">
-                    Tem certeza que deseja excluir o colaborador <strong style="color: var(--danger);">"${nome}"</strong>?
+                    Tem certeza que deseja excluir o colaborador <strong style="color: var(--danger);">"${escH(nome)}"</strong>?
                 </p>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.75rem;">
                      Esta ação <strong style="color: var(--danger);">não pode ser desfeita</strong>e todos os dados associados serão removidos.
@@ -3215,7 +3210,7 @@ function deletarUsuario(id) {
                 <button class="btn btn-outline"onclick="fecharModalConfirmacao()"style="padding: 0.5rem 1.25rem; font-size: 0.85rem;">
                     Cancelar
                 </button>
-                <button class="btn btn-danger"onclick="confirmarDeletarUsuario(${id})"style="padding: 0.5rem 1.25rem; font-size: 0.85rem; background: #dc2626; border-color: #dc2626; color: white;">
+                <button class="btn btn-danger"onclick="confirmarDeletarUsuario(${escL(id)})"style="padding: 0.5rem 1.25rem; font-size: 0.85rem; background: #dc2626; border-color: #dc2626; color: white;">
                     Confirmar Exclusão
                 </button>
             </div>
@@ -3314,9 +3309,9 @@ function osBlocoAntecipacaoHTML(os) {
     return `
         <div style="padding:0.45rem 0.8rem 0.6rem;font-size:0.75rem;color:var(--text-muted);border-top:1px solid var(--border-color);background:color-mix(in srgb, var(--success, #10b981) 8%, transparent);">
             <strong style="color:var(--success, #10b981);">Devolvida com antecedência</strong> —
-            término de <strong style="color:var(--text-main);">${formatDate(os.data_fim_original)}</strong>
-            adiantado para <strong style="color:var(--text-main);">${formatDate(os.data_fim)}</strong>.
-            ${motivo ? `<br><strong>Motivo:</strong> ${motivo}` : ''}
+            término de <strong style="color:var(--text-main);">${escH(formatDate(os.data_fim_original))}</strong>
+            adiantado para <strong style="color:var(--text-main);">${escH(formatDate(os.data_fim))}</strong>.
+            ${motivo ? `<br><strong>Motivo:</strong> ${escH(motivo)}` : ''}
         </div>`;
 }
 window.osBlocoAntecipacaoHTML = osBlocoAntecipacaoHTML;
@@ -3977,7 +3972,7 @@ function showToast(message, type = 'success') {
         iconSvg = `<svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2.5"style="width:20px;height:20px;flex-shrink:0;"><circle cx="12"cy="12"r="10"></circle><line x1="12"y1="8"x2="12"y2="12"></line><line x1="12"y1="16"x2="12.01"y2="16"></line></svg>`;
     }
 
-    toast.innerHTML = `${iconSvg}<span style="font-weight: 700;">${message}</span>`;
+    toast.innerHTML = `${iconSvg}<span style="font-weight: 700;">${escH(message)}</span>`;
     container.appendChild(toast);
     
     setTimeout(() => { toast.classList.add('active'); }, 50);
@@ -4009,7 +4004,7 @@ function showPasswordInfoModal(fullName, senha) {
     modal.innerHTML = `
         <div class="modal-container"style="max-width:400px;">
             <div class="modal-header">
-                <span class="modal-title">Senha — ${fullName}</span>
+                <span class="modal-title">Senha — ${escH(fullName)}</span>
                 <button class="modal-close"onclick="document.getElementById('password-info-modal').remove()">
                     <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:1.25rem;height:1.25rem;"><line x1="18"y1="6"x2="6"y2="18"/><line x1="6"y1="6"x2="18"y2="18"/></svg>
                 </button>
@@ -4017,7 +4012,7 @@ function showPasswordInfoModal(fullName, senha) {
             <div class="modal-body">
                 <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem;">Senha atual deste colaborador:</p>
                 <div style="background:var(--bg-main);border:1px solid var(--border-color);border-radius:0.5rem;padding:1rem;text-align:center;">
-                    <span class="font-mono"style="font-size:1.3rem;font-weight:800;color:var(--primary);letter-spacing:0.05em;">${senha}</span>
+                    <span class="font-mono"style="font-size:1.3rem;font-weight:800;color:var(--primary);letter-spacing:0.05em;">${escH(senha)}</span>
                 </div>
             </div>
             <div class="modal-footer">
@@ -4147,9 +4142,9 @@ window.acessorioDoAtivo = acessorioDoAtivo;
 function selectAcessorioAtivoHTML(id, tipoAtual) {
     const atual = acessorioDoAtivo(tipoAtual);
     const opcoes = listaDeAtivos(tipoAtual)
-        .map(t => `<option value="${String(t).replace(/"/g, '&quot;')}"${t === atual ? ' selected' : ''}>${t}</option>`)
+        .map(t => `<option value="${escH(String(t))}"${t === atual ? ' selected' : ''}>${escH(t)}</option>`)
         .join('');
-    return `<select id="${id}" class="form-select" style="width:100%;padding:0.6rem 0.8rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.9rem;">
+    return `<select id="${escH(id)}" class="form-select" style="width:100%;padding:0.6rem 0.8rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.9rem;">
         <option value="">— Nenhum —</option>${opcoes}
     </select>`;
 }
@@ -4183,8 +4178,8 @@ function rotuloListaAtivo(valor) {
 window.rotuloListaAtivo = rotuloListaAtivo;
 
 function selectListaAtivoHTML(id, valorAtual) {
-    return `<select id="${id}" class="form-select" style="width:100%;padding:0.6rem 0.8rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.9rem;">
-        ${LISTA_OPCOES_ATIVO.map(([v, l]) => `<option value="${v}" ${String(valorAtual || '') === v ? 'selected' : ''}>${l}</option>`).join('')}
+    return `<select id="${escH(id)}" class="form-select" style="width:100%;padding:0.6rem 0.8rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.9rem;">
+        ${LISTA_OPCOES_ATIVO.map(([v, l]) => `<option value="${escH(v)}" ${String(valorAtual || '') === v ? 'selected' : ''}>${escH(l)}</option>`).join('')}
     </select>`;
 }
 window.selectListaAtivoHTML = selectListaAtivoHTML;
@@ -4223,7 +4218,7 @@ function preencherCamposExtrasInventario(inst) {
     const info = document.getElementById('inv-comprovante-info');
     if (info) {
         info.innerHTML = inst?.comprovante_valor
-            ? `<a href="${inst.comprovante_valor}"target="_blank"rel="noopener"style="color:var(--primary);font-weight:600;">Ver comprovante anexado</a>`
+            ? `<a href="${escU(inst.comprovante_valor)}"target="_blank"rel="noopener"style="color:var(--primary);font-weight:600;">Ver comprovante anexado</a>`
             : 'Nenhum comprovante anexado.';
     }
     atualizarInvUploadUI(inst?.comprovante_valor ? 'Comprovante já anexado' : null);
@@ -4252,7 +4247,7 @@ function atualizarInvUploadUI(nomeArquivo) {
     const texto = dropzone?.querySelector('.inv-upload-texto');
     if (nomeArquivo) {
         dropzone?.classList.add('has-file');
-        if (texto) texto.innerHTML = `<strong>${nomeArquivo}</strong><small>Clique para trocar o arquivo</small>`;
+        if (texto) texto.innerHTML = `<strong>${escH(nomeArquivo)}</strong><small>Clique para trocar o arquivo</small>`;
         if (removeBtn) removeBtn.style.display = 'inline-flex';
     } else {
         dropzone?.classList.remove('has-file');
@@ -4508,7 +4503,7 @@ function showConfirmDeleteCliente(id) {
             </div>
             <div class="modal-body"style="padding: 1.5rem;">
                 <p style="font-size: 0.95rem; color: var(--text-main); line-height: 1.6; margin: 0;">
-                    Tem certeza que deseja excluir o cliente <strong style="color: #dc2626;">"${nome}"</strong>?
+                    Tem certeza que deseja excluir o cliente <strong style="color: #dc2626;">"${escH(nome)}"</strong>?
                 </p>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.75rem;">
                      Esta ação <strong style="color: #dc2626;">não pode ser desfeita</strong>e todos os dados associados serão removidos.
@@ -4518,7 +4513,7 @@ function showConfirmDeleteCliente(id) {
                 <button class="btn btn-outline"onclick="fecharModalConfirmDeleteCliente()"style="padding: 0.5rem 1.25rem; font-size: 0.85rem; border: 1px solid var(--border-color); border-radius: 0.5rem; background: transparent; color: var(--text-main); cursor: pointer;">
                     Cancelar
                 </button>
-                <button class="btn btn-danger"onclick="confirmarDeleteCliente(${id})"style="padding: 0.5rem 1.25rem; font-size: 0.85rem; border: none; border-radius: 0.5rem; background: #dc2626; color: white; cursor: pointer; font-weight: 600;">
+                <button class="btn btn-danger"onclick="confirmarDeleteCliente(${escL(id)})"style="padding: 0.5rem 1.25rem; font-size: 0.85rem; border: none; border-radius: 0.5rem; background: #dc2626; color: white; cursor: pointer; font-weight: 600;">
                     Confirmar Exclusão
                 </button>
             </div>
@@ -4623,18 +4618,18 @@ function openClienteDetail(id) {
         <div class="modal-container"style="max-width:460px; margin: 0 auto; animation: modalFadeIn 0.25s ease; background: var(--bg-card); border-radius: 0.75rem; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
             <div class="modal-header"style="border-bottom: 1px solid var(--border-color); padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
                 <div style="display:flex;align-items:center;gap:0.6rem;">
-                    <div style="width:12px;height:12px;border-radius:50%;background:${color};flex-shrink:0;"></div>
-                    <span class="modal-title"style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">${cliente.nome}</span>
+                    <div style="width:12px;height:12px;border-radius:50%;background:${escH(color)};flex-shrink:0;"></div>
+                    <span class="modal-title"style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">${escH(cliente.nome)}</span>
                 </div>
                 <button class="modal-close"onclick="document.getElementById('cliente-detail-modal').remove()"style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0.25rem;">
                     <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:1.25rem;height:1.25rem;"><line x1="18"y1="6"x2="6"y2="18"/><line x1="6"y1="6"x2="18"y2="18"/></svg>
                 </button>
             </div>
             <div class="modal-body"style="padding: 1.5rem;">
-                <div style="border-left:3px solid ${color};padding:0.75rem 1rem;background:var(--bg-main);border-radius:0 0.375rem 0.375rem 0;margin-bottom:1rem;">
-                    <p style="font-weight:800;font-size:1rem;margin:0 0 0.25rem;">${cliente.nome}</p>
-                    <p style="font-size:0.82rem;color:var(--text-muted);margin:0;">${cliente.abreviacao || ''}</p>
-                    <p style="font-size:0.82rem;color:var(--text-muted);margin:0.25rem 0 0;">${cliente.cidade || ''} ${cliente.uf ? '- ' + cliente.uf : ''}</p>
+                <div style="border-left:3px solid ${escH(color)};padding:0.75rem 1rem;background:var(--bg-main);border-radius:0 0.375rem 0.375rem 0;margin-bottom:1rem;">
+                    <p style="font-weight:800;font-size:1rem;margin:0 0 0.25rem;">${escH(cliente.nome)}</p>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin:0;">${escH(cliente.abreviacao) || ''}</p>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin:0.25rem 0 0;">${escH(cliente.cidade) || ''} ${cliente.uf ? '- ' + escH(cliente.uf) : ''}</p>
                     <p style="font-size:0.82rem;color:var(--text-muted);margin:0.25rem 0 0;">Status: ${cliente.ativo !== false ? 'Ativo' : 'Inativo'}</p>
                 </div>
             </div>
@@ -4642,11 +4637,11 @@ function openClienteDetail(id) {
                 <button class="btn btn-outline"onclick="document.getElementById('cliente-detail-modal').remove()"style="padding: 0.5rem 1.25rem; font-size: 0.85rem; border: 1px solid var(--border-color); border-radius: 0.5rem; background: transparent; color: var(--text-main); cursor: pointer;">
                     Fechar
                 </button>
-                <button class="btn btn-outline"onclick="document.getElementById('cliente-detail-modal').remove(); openEditCliente(${cliente.id})"style="padding: 0.5rem 1.25rem; font-size: 0.85rem; border: 1px solid var(--primary); border-radius: 0.5rem; background: transparent; color: var(--primary); cursor: pointer;">
+                <button class="btn btn-outline"onclick="document.getElementById('cliente-detail-modal').remove(); openEditCliente(${escL(cliente.id)})"style="padding: 0.5rem 1.25rem; font-size: 0.85rem; border: 1px solid var(--primary); border-radius: 0.5rem; background: transparent; color: var(--primary); cursor: pointer;">
                     <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:0.85rem;height:0.85rem;margin-right:0.3rem;vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     Editar
                 </button>
-                <button class="btn btn-danger"onclick="document.getElementById('cliente-detail-modal').remove(); deleteCliente(${cliente.id})"style="padding: 0.5rem 1.25rem; font-size: 0.85rem; border: none; border-radius: 0.5rem; background: #dc2626; color: white; cursor: pointer; font-weight: 600;">
+                <button class="btn btn-danger"onclick="document.getElementById('cliente-detail-modal').remove(); deleteCliente(${escL(cliente.id)})"style="padding: 0.5rem 1.25rem; font-size: 0.85rem; border: none; border-radius: 0.5rem; background: #dc2626; color: white; cursor: pointer; font-weight: 600;">
                     Excluir
                 </button>
             </div>
@@ -4696,7 +4691,7 @@ function gerarOptionsEstados(ufSelecionado) {
     const estados = getEstadosBrasileiros();
     return estados.map(estado => {
         const selected = estado.uf === ufSelecionado ? 'selected' : '';
-        return `<option value="${estado.uf}" ${selected}>${estado.uf} - ${estado.nome}</option>`;
+        return `<option value="${escH(estado.uf)}" ${escH(selected)}>${escH(estado.uf)} - ${escH(estado.nome)}</option>`;
     }).join('');
 }
 
@@ -4908,27 +4903,27 @@ function openEditCliente(id) {
                 </button>
             </div>
             <form id="form-editar-cliente"onsubmit="return handleEditCliente(event)">
-                <input type="hidden"id="cli-edit-id"value="${cliente.id}">
+                <input type="hidden"id="cli-edit-id"value="${escH(cliente.id)}">
                 <div class="modal-body"style="padding: 1.5rem;">
                     <div class="form-group">
                         <label class="form-label"for="cli-edit-nome"style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
                             Nome do Cliente <span style="color: #dc2626; font-weight: 700;">*</span>
                         </label>
-                        <input type="text"id="cli-edit-nome"class="form-input"value="${cliente.nome}"required style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
+                        <input type="text"id="cli-edit-nome"class="form-input"value="${escH(cliente.nome)}"required style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
                     </div>
                     
                     <div class="form-group">
                         <label class="form-label"for="cli-edit-abreviacao"style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
                             Endereço <span style="color: #dc2626; font-weight: 700;">*</span>
                         </label>
-                        <input type="text"id="cli-edit-abreviacao"class="form-input"value="${cliente.abreviacao || ''}"required style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
+                        <input type="text"id="cli-edit-abreviacao"class="form-input"value="${escH(cliente.abreviacao) || ''}"required style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
                     </div>
                     
                     <div class="form-group">
                         <label class="form-label"for="cli-edit-uf"style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
                             UF (Estado) <span style="color: #dc2626; font-weight: 700;">*</span>
                         </label>
-                        <select id="cli-edit-uf"class="form-select"required style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;"onchange="popularCidades(this.value, 'cli-edit-cidade-select', '${cliente.cidade || ''}')">
+                        <select id="cli-edit-uf"class="form-select"required style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;"onchange="popularCidades(this.value, 'cli-edit-cidade-select', '${escJ(cliente.cidade) || ''}')">
                             <option value="">— Selecione o Estado —</option>
                             ${gerarOptionsEstados(cliente.uf || '')}
                         </select>
@@ -5553,7 +5548,7 @@ function openAdicionarInstrumentoModal() {
                         </label>
                         <select id="add-inst-tipo"class="form-select"required style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;"onchange="carregarSiglaEAtualizarTag()">
                             <option value="">— Selecione o Ativo —</option>
-                            ${tipos.map(t => `<option value="${t}">${t}</option>`).join('')}
+                            ${tipos.map(t => `<option value="${escH(t)}">${escH(t)}</option>`).join('')}
                         </select>
                     </div>
                     
@@ -6038,23 +6033,23 @@ function openGerenciarAtivosModal() {
                 <div style="margin-bottom: 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem; overflow: hidden;">
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background: var(--bg-surface); border-bottom: 1px solid var(--border-color);">
                         <div>
-                            <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">${tipo}</span>
-                            <span style="font-size: 0.7rem; color: var(--text-muted); margin-left: 0.5rem;">(Sigla: ${sigla})</span>
+                            <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-main);">${escH(tipo)}</span>
+                            <span style="font-size: 0.7rem; color: var(--text-muted); margin-left: 0.5rem;">(Sigla: ${escH(sigla)})</span>
                         </div>
                         <div style="display: flex; gap: 0.3rem;">
-                            <span style="font-size: 0.7rem; color: var(--text-muted);">${items.length} instrumento${items.length !== 1 ? 's' : ''}</span>
-                            <button onclick="openEditarAtivoModal('${tipo.replace(/'/g, "\\'")}')"class="inv-mini-btn inv-mini-btn-edit"title="Editar ativo">Editar</button>
-                            <button onclick="excluirTipo('${tipo.replace(/'/g, "\\'")}')"class="inv-mini-btn inv-mini-btn-del"title="Excluir todos os instrumentos deste tipo">Excluir</button>
+                            <span style="font-size: 0.7rem; color: var(--text-muted);">${escH(items.length)} instrumento${items.length !== 1 ? 's' : ''}</span>
+                            <button onclick="openEditarAtivoModal('${escJ(tipo)}')"class="inv-mini-btn inv-mini-btn-edit"title="Editar ativo">Editar</button>
+                            <button onclick="excluirTipo('${escJ(tipo)}')"class="inv-mini-btn inv-mini-btn-del"title="Excluir todos os instrumentos deste tipo">Excluir</button>
                         </div>
                     </div>
                     <div style="padding: 0.3rem 0.5rem;">
                         ${items.map(inst => `
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.8rem;">
-                                <span style="font-family: monospace; font-weight: 700; color: var(--text-main);">${inst.tag}</span>
-                                <span style="color: var(--text-muted); font-size: 0.7rem;">${inst.fabricante || '—'}</span>
+                                <span style="font-family: monospace; font-weight: 700; color: var(--text-main);">${escH(inst.tag)}</span>
+                                <span style="color: var(--text-muted); font-size: 0.7rem;">${escH(inst.fabricante) || '—'}</span>
                                 <div style="display: flex; gap: 0.3rem;">
-                                    <button onclick="editarInstrumento(${inst.id})"class="inv-mini-btn inv-mini-btn-edit"title="Editar instrumento">Editar</button>
-                                    <button onclick="excluirInstrumento(${inst.id})"class="inv-mini-btn inv-mini-btn-del"title="Excluir instrumento">Excluir</button>
+                                    <button onclick="editarInstrumento(${escL(inst.id)})"class="inv-mini-btn inv-mini-btn-edit"title="Editar instrumento">Editar</button>
+                                    <button onclick="excluirInstrumento(${escL(inst.id)})"class="inv-mini-btn inv-mini-btn-del"title="Excluir instrumento">Excluir</button>
                                 </div>
                             </div>
                         `).join('')}
@@ -6119,7 +6114,7 @@ function openEditarAtivoModal(tipo) {
                     <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:1.25rem;height:1.25rem;"><line x1="18"y1="6"x2="6"y2="18"/><line x1="6"y1="6"x2="18"y2="18"/></svg>
                 </button>
             </div>
-            <form id="form-editar-ativo"onsubmit="return handleEditarAtivo(event, '${tipo.replace(/'/g, "\\'")}')">
+            <form id="form-editar-ativo"onsubmit="return handleEditarAtivo(event, '${escJ(tipo)}')">
                 <div class="modal-body"style="padding: 1.5rem;">
                     <div style="background: var(--bg-surface); padding: 0.75rem 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border-left: 3px solid var(--warning);">
                         <p style="font-weight: 700; margin: 0; color: var(--text-main);">Alterar o nome ou sigla do ativo</p>
@@ -6130,14 +6125,14 @@ function openEditarAtivoModal(tipo) {
                         <label class="form-label"for="edit-ativo-nome"style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
                             Nome do Ativo <span style="color: #dc2626; font-weight: 700;">*</span>
                         </label>
-                        <input type="text"id="edit-ativo-nome"class="form-input"value="${tipo}"required style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
+                        <input type="text"id="edit-ativo-nome"class="form-input"value="${escH(tipo)}"required style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
                     </div>
                     
                     <div class="form-group">
                         <label class="form-label"for="edit-ativo-sigla"style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
                             Sigla da TAG <span style="color: #dc2626; font-weight: 700;">*</span>
                         </label>
-                        <input type="text"id="edit-ativo-sigla"class="form-input"value="${siglaAtual}"required style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem; font-family: monospace; text-transform: uppercase;">
+                        <input type="text"id="edit-ativo-sigla"class="form-input"value="${escH(siglaAtual)}"required style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem; font-family: monospace; text-transform: uppercase;">
                         <small style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-top: 0.2rem;">Alterar a sigla atualizará as tags de TODOS os instrumentos deste tipo</small>
                     </div>
                     
@@ -6158,7 +6153,7 @@ function openEditarAtivoModal(tipo) {
 
                     <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 0.5rem; padding: 0.75rem 1rem; margin-top: 0.5rem;">
                         <p style="font-size: 0.8rem; color: #92400e; margin: 0;">
-                             <strong>${instruments.filter(i =>i.tipo === tipo).length}</strong>instrumento(s) serão afetados por esta alteração.
+                             <strong>${escH(instruments.filter(i =>i.tipo === tipo).length)}</strong>instrumento(s) serão afetados por esta alteração.
                         </p>
                     </div>
                 </div>
@@ -6459,9 +6454,11 @@ function sairApp() {
         console.warn("Erro ao limpar sessão:", e);
     }
     
-    // Sair e sair do Atmosfera LWN: a sessao e a do main.
+    // Sair e sair do Atmosfera LWN: a sessao e a do main, e quem encerra e o
+    // servidor (o cookie nao e visivel daqui). Sem rede, a tela sai do mesmo jeito.
     try { localStorage.removeItem('customers.session'); } catch (e) { /* segue */ }
-    window.location.href = '/core/login';
+    const irAoLogin = () => { window.location.href = '/core/login'; };
+    fetch('/api/auth/sair', { method: 'POST', keepalive: true }).then(irAoLogin, irAoLogin);
 }
 
 // Forçar registro global
@@ -6627,7 +6624,7 @@ let solicitacaoTiposSelecionados = {};
 // RENDERIZAR LISTA DE TIPOS PARA SOLICITAÇÃO (COM ACCORDION)
 // ============================================================
 function escAttr(v) {
-    return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    return escH(v == null ? '' : v);
 }
 window.escAttr = escAttr;
 
@@ -6787,16 +6784,16 @@ function renderSolicitacaoLista() {
     const avisoDisponibilidade = !solicitacaoDisponibilidade
         ? `<span style="font-size:0.72rem;color:var(--warning, #f59e0b);font-weight:700;" title="Não foi possível calcular a disponibilidade agora — o número ao lado de cada ativo é o total cadastrado.">Mostrando o total do Inventário</span>`
         : (periodoAtual
-            ? `<span style="font-size:0.72rem;color:var(--success, #10b981);font-weight:700;" title="${titulo}">Disponíveis de ${formatDate(periodoAtual.inicio)} a ${formatDate(periodoAtual.fim)}</span>`
-            : `<span style="font-size:0.72rem;color:var(--success, #10b981);font-weight:700;" title="${titulo}">Disponíveis hoje — escolha o período para ver as datas da obra</span>`);
+            ? `<span style="font-size:0.72rem;color:var(--success, #10b981);font-weight:700;" title="${escH(titulo)}">Disponíveis de ${escH(formatDate(periodoAtual.inicio))} a ${escH(formatDate(periodoAtual.fim))}</span>`
+            : `<span style="font-size:0.72rem;color:var(--success, #10b981);font-weight:700;" title="${escH(titulo)}">Disponíveis hoje — escolha o período para ver as datas da obra</span>`);
     
     let html = `
         <!-- FILTRO E CONTADOR -->
         <div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem;background:var(--bg-surface);border-radius:0.4rem;border:1px solid var(--border-color);">
             <div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;">
-                <span style="font-size:0.85rem;color:var(--text-muted);font-weight:600;">${totalAtivos} ativo${totalAtivos !== 1 ? 's' : ''}</span>
-                <span style="font-size:0.75rem;color:var(--text-muted);">(${totalInstrumentos} instrumento${totalInstrumentos !== 1 ? 's' : ''})</span>
-                ${searchTerm ? `<span style="font-size:0.75rem;color:var(--primary);font-weight:600;">"${searchTerm}"</span>` : ''}
+                <span style="font-size:0.85rem;color:var(--text-muted);font-weight:600;">${escH(totalAtivos)} ativo${totalAtivos !== 1 ? 's' : ''}</span>
+                <span style="font-size:0.75rem;color:var(--text-muted);">(${escH(totalInstrumentos)} instrumento${totalInstrumentos !== 1 ? 's' : ''})</span>
+                ${searchTerm ? `<span style="font-size:0.75rem;color:var(--primary);font-weight:600;">"${escH(searchTerm)}"</span>` : ''}
                 ${avisoDisponibilidade}
             </div>
             <div style="display:flex;align-items:center;gap:0.5rem;flex:1;max-width:450px;min-width:250px;">
@@ -6811,7 +6808,7 @@ function renderSolicitacaoLista() {
     if (tiposPagina.length === 0) {
         html += `
             <div class="empty-state" style="padding:2rem;text-align:center;color:var(--text-muted);font-size:0.95rem;">
-                ${searchTerm ? `Nenhum ativo encontrado com o filtro "<strong>${searchTerm}</strong>".` : 'Nenhum ativo cadastrado.'}
+                ${searchTerm ? `Nenhum ativo encontrado com o filtro "<strong>${escH(searchTerm)}</strong>".` : 'Nenhum ativo cadastrado.'}
             </div>
         `;
         panelTodos.innerHTML = html;
@@ -6888,11 +6885,11 @@ function renderSolicitacaoEnsaios() {
         html += `
             <div class="accordion-group">
                 <button type="button" class="accordion-header ${isOpen ? 'open' : ''}"
-                        onclick="toggleAccordionEnsaio('${cat.replace(/'/g, "\\'")}')">
-                    <span>${cat}</span>
+                        onclick="toggleAccordionEnsaio('${escJ(cat)}')">
+                    <span>${escH(cat)}</span>
                     <span style="display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;margin-left:auto;text-align:right;font-size:0.7rem;font-weight:400;color:var(--text-muted);">
-                        <span>${totalInst} disponíve${totalInst == 1 ? 'l' : 'is'}</span>
-                        ${selecionados > 0 ? `<span class="badge badge-success" style="font-size:0.6rem;padding:0.05rem 0.4rem;">${selecionados} selecionado${selecionados !== 1 ? 's' : ''}</span>` : ''}
+                        <span>${escH(totalInst)} disponíve${totalInst == 1 ? 'l' : 'is'}</span>
+                        ${selecionados > 0 ? `<span class="badge badge-success" style="font-size:0.6rem;padding:0.05rem 0.4rem;">${escH(selecionados)} selecionado${selecionados !== 1 ? 's' : ''}</span>` : ''}
                     </span>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                          style="width:1rem;height:1rem;transition:transform 0.2s;${isOpen ? 'transform:rotate(180deg);' : ''}">
@@ -6905,12 +6902,12 @@ function renderSolicitacaoEnsaios() {
                         const qtd = solicitacaoTiposSelecionados[tipo] || 0;
                         return `
                             <div class="instrument-option-row">
-                                <span style="font-weight:600;color:var(--text-main);">${tipo}</span>
-                                <span style="font-size:0.7rem;color:var(--text-muted);margin-left:auto;text-align:right;">${disp} disponíve${disp == 1 ? 'l' : 'is'}</span>
+                                <span style="font-weight:600;color:var(--text-main);">${escH(tipo)}</span>
+                                <span style="font-size:0.7rem;color:var(--text-muted);margin-left:auto;text-align:right;">${escH(disp)} disponíve${disp == 1 ? 'l' : 'is'}</span>
                                 <div class="qty-control">
-                                    <button type="button" onclick="ajustarQtdSolicitacao('${tipo.replace(/'/g, "\\'")}', -1)">-</button>
-                                    <input type="number" value="${qtd}" min="0" max="${disp}" data-tipo="${tipo}" class="qty-input" readonly>
-                                    <button type="button" onclick="ajustarQtdSolicitacao('${tipo.replace(/'/g, "\\'")}', 1)">+</button>
+                                    <button type="button" onclick="ajustarQtdSolicitacao('${escJ(tipo)}', -1)">-</button>
+                                    <input type="number" value="${escH(qtd)}" min="0" max="${escH(disp)}" data-tipo="${escH(tipo)}" class="qty-input" readonly>
+                                    <button type="button" onclick="ajustarQtdSolicitacao('${escJ(tipo)}', 1)">+</button>
                                 </div>
                             </div>
                         `;
@@ -6963,7 +6960,7 @@ function renderSolicitacaoClassificacao(lista) {
     const tipos = Object.keys(tiposContagem).sort();
     if (!tipos.length) {
         panel.innerHTML = `<div class="empty-state"style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:0.9rem;">
-            Nenhuma ferramenta classificada como "${lista}". Defina a Classificação da Lista no inventário.
+            Nenhuma ferramenta classificada como "${escH(lista)}". Defina a Classificação da Lista no inventário.
         </div>`;
         return;
     }
@@ -7022,24 +7019,23 @@ function cssEscapeAtributo(valor) {
 function linhaAtivoSolicitacao(tipo, disp, opcoes) {
     const o = opcoes || {};
     const qtd = solicitacaoTiposSelecionados[tipo] || 0;
-    const esc = String(tipo).replace(/'/g, "\\'");
     // A linha inteira abre os acessórios — não só a seta. Os controles de
     // quantidade param o clique (event.stopPropagation em ajustarQtdSolicitacao)
     // para somar/subtrair sem abrir e fechar o card junto.
     const abrePeloCard = o.abrirAcessorios
-        ? ` onclick="toggleAcessoriosAtivo('${esc}', this)"`
+        ? ` onclick="toggleAcessoriosAtivo('${escJ(tipo)}', this)"`
         : '';
     return `
         <div class="instrument-option-row${o.acessorio ? ' ativo-linha-acessorio' : ''}${o.abrirAcessorios ? ' ativo-linha-clicavel' : ''}"${abrePeloCard}>
             <span class="ativo-nome">
                 ${o.acessorio ? '<span class="ativo-marca-acessorio">└─</span>' : ''}
-                <span class="ativo-nome-texto">${tipo}</span>
+                <span class="ativo-nome-texto">${escH(tipo)}</span>
             </span>
-            <span class="ativo-disponiveis"${motivoIndisponivelTexto(tipo) ? ` title="${escAttr(motivoIndisponivelTexto(tipo))}"` : ''}>${disp} disponíve${disp == 1 ? 'l' : 'is'}</span>
+            <span class="ativo-disponiveis"${motivoIndisponivelTexto(tipo) ? ` title="${escAttr(motivoIndisponivelTexto(tipo))}"` : ''}>${escH(disp)} disponíve${disp == 1 ? 'l' : 'is'}</span>
             <div class="qty-control" onclick="event.stopPropagation()">
-                <button type="button"onclick="ajustarQtdSolicitacao('${esc}', -1)">-</button>
-                <input type="number"value="${qtd}"min="0"max="${disp}"data-tipo="${tipo}"class="qty-input"readonly>
-                <button type="button"onclick="ajustarQtdSolicitacao('${esc}', 1)">+</button>
+                <button type="button"onclick="ajustarQtdSolicitacao('${escJ(tipo)}', -1)">-</button>
+                <input type="number"value="${escH(qtd)}"min="0"max="${escH(disp)}"data-tipo="${escH(tipo)}"class="qty-input"readonly>
+                <button type="button"onclick="ajustarQtdSolicitacao('${escJ(tipo)}', 1)">+</button>
             </div>
             ${o.seta || '<span class="ativo-acess-vazio"></span>'}
         </div>`;
@@ -7051,7 +7047,7 @@ window.linhaAtivoSolicitacao = linhaAtivoSolicitacao;
 function htmlAtivosComAcessorios(tipos, contagem) {
     const { filhosPorPai, paiDoFilho } = mapaAcessoriosDeAtivo();
     const presentes = new Set(tipos);
-    const escAttr = t => String(t).replace(/"/g, '&quot;');
+    const escAttr = t => escH(t);
 
     return tipos
         .slice()
@@ -7060,13 +7056,12 @@ function htmlAtivosComAcessorios(tipos, contagem) {
         .map(tipo => {
             const filhos = (filhosPorPai[tipo] || []).filter(f => presentes.has(f));
             const aberto = solicitacaoAcessoriosAbertos.has(tipo);
-            const escJs = String(tipo).replace(/'/g, "\\'");
 
             const seta = filhos.length ? `
                 <button type="button"class="ativo-acess-toggle${aberto ? ' aberto' : ''}"
-                        aria-expanded="${aberto}"
-                        title="${filhos.length} acessório${filhos.length !== 1 ? 's' : ''}"
-                        onclick="event.stopPropagation();toggleAcessoriosAtivo('${escJs}', this)">
+                        aria-expanded="${escH(aberto)}"
+                        title="${escH(filhos.length)} acessório${filhos.length !== 1 ? 's' : ''}"
+                        onclick="event.stopPropagation();toggleAcessoriosAtivo('${escJ(tipo)}', this)">
                     <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2.5"stroke-linecap="round"stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </button>` : '';
 
@@ -7094,12 +7089,12 @@ function _splitClassificacao(v) {
 }
 
 function _classAtivoSelectHTML(valor, primeiro) {
-    const esc = t => String(t).replace(/"/g, '&quot;');
+    const esc = t => escH(t);
     return `
         <div class="class-ativo-row"style="display:flex;align-items:center;gap:0.4rem;">
             <select class="form-select class-ativo-select"style="flex:1;min-width:0;padding:0.4rem 0.5rem;font-size:0.8rem;border:2px solid var(--border-color);border-radius:0.4rem;background:var(--bg-input);color:var(--text-main);">
                 <option value="">— Sem classificação —</option>
-                ${LISTA_CLASSIFICACAO_OPCOES.map(e => `<option value="${esc(e)}" ${e === valor ? 'selected' : ''}>${e}</option>`).join('')}
+                ${LISTA_CLASSIFICACAO_OPCOES.map(e => `<option value="${esc(e)}" ${e === valor ? 'selected' : ''}>${escH(e)}</option>`).join('')}
             </select>
             <button type="button"title="Adicionar outra classificação"onclick="addClassAtivoRow(this)"style="flex:none;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border-color);border-radius:0.4rem;background:transparent;color:var(--text-main);font-size:1rem;line-height:1;cursor:pointer;">+</button>
             <button type="button"title="Remover esta classificação"onclick="removeClassAtivoRow(this)"style="flex:none;width:28px;height:28px;display:${primeiro ? 'none' : 'inline-flex'};align-items:center;justify-content:center;border:1px solid var(--border-color);border-radius:0.4rem;background:transparent;color:var(--danger, #dc2626);font-size:1rem;line-height:1;cursor:pointer;">&times;</button>
@@ -7144,7 +7139,7 @@ function abrirModalClassificacaoPorAtivo() {
         tipos[tipo].combos.add(_splitClassificacao(inst.classificacao_lista).join(', '));
     });
     const listaTipos = Object.keys(tipos).sort();
-    const esc = t => String(t).replace(/"/g, '&quot;');
+    const esc = t => escH(t);
 
     const modal = document.createElement('div');
     modal.className = 'modal-overlay active';
@@ -7167,8 +7162,8 @@ function abrirModalClassificacaoPorAtivo() {
                             <div class="class-ativo-group"data-tipo="${esc(tipo)}"data-original="${esc(atuais.join(', '))}"
                                  style="display:flex;flex-direction:column;gap:0.45rem;border:1px solid var(--border-color);border-radius:0.5rem;padding:0.6rem;background:var(--bg-surface);">
                                 <div>
-                                    <div style="font-size:0.85rem;font-weight:700;color:var(--text-main);">${tipo}</div>
-                                    <div style="font-size:0.7rem;color:var(--text-muted);">${tipos[tipo].total} TAG(s)${misto ? ' · classificações diferentes' : ''}</div>
+                                    <div style="font-size:0.85rem;font-weight:700;color:var(--text-main);">${escH(tipo)}</div>
+                                    <div style="font-size:0.7rem;color:var(--text-muted);">${escH(tipos[tipo].total)} TAG(s)${misto ? ' · classificações diferentes' : ''}</div>
                                 </div>
                                 <div class="class-ativo-rows"style="display:flex;flex-direction:column;gap:0.35rem;">
                                     ${valores.map((v, i) => _classAtivoSelectHTML(v, i === 0 && valores.length === 1)).join('')}
@@ -7310,7 +7305,7 @@ function atualizarQtdSolicitacaoUI(tipo) {
         const slot = g.querySelector('.sol-sel-badge');
         if (slot) {
             slot.innerHTML = qtd > 0
-                ? `<span class="badge badge-success"style="font-size:0.6rem;padding:0.05rem 0.4rem;">${qtd} selecionado${qtd !== 1 ? 's' : ''}</span>`
+                ? `<span class="badge badge-success"style="font-size:0.6rem;padding:0.05rem 0.4rem;">${escH(qtd)} selecionado${qtd !== 1 ? 's' : ''}</span>`
                 : '';
         }
     });
@@ -7323,7 +7318,7 @@ function atualizarQtdSolicitacaoUI(tipo) {
         if (!slot) return;
         const total = tipos.reduce((acc, t) => acc + (solicitacaoTiposSelecionados[t] || 0), 0);
         slot.innerHTML = total > 0
-            ? `<span class="badge badge-success"style="font-size:0.6rem;padding:0.05rem 0.4rem;">${total} selecionado${total !== 1 ? 's' : ''}</span>`
+            ? `<span class="badge badge-success"style="font-size:0.6rem;padding:0.05rem 0.4rem;">${escH(total)} selecionado${total !== 1 ? 's' : ''}</span>`
             : '';
     });
 
@@ -7592,7 +7587,7 @@ function atualizarResumoSolicitacao() {
     let html = `
         <div style="padding:0.5rem;font-size:0.85rem;max-height:250px;overflow-y:auto;">
             <div style="display:flex;justify-content:space-between;font-weight:700;color:var(--text-main);margin-bottom:0.5rem;font-size:0.8rem;">
-                <span>Resumo (${totalItens} itens)</span>
+                <span>Resumo (${escH(totalItens)} itens)</span>
                 <button onclick="limparTodosTiposSolicitacao()" style="padding:0.1rem 0.5rem;font-size:0.65rem;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:4px;cursor:pointer;font-weight:600;">Limpar tudo</button>
             </div>
     `;
@@ -7601,11 +7596,11 @@ function atualizarResumoSolicitacao() {
         const qtd = solicitacaoTiposSelecionados[tipo];
         html += `
             <div style="display:flex;justify-content:space-between;align-items:center;padding:0.25rem 0;border-bottom:1px solid var(--border-color);">
-                <span style="font-size:0.8rem;font-weight:600;color:var(--text-main);">${tipo}</span>
+                <span style="font-size:0.8rem;font-weight:600;color:var(--text-main);">${escH(tipo)}</span>
                 <div style="display:flex;align-items:center;gap:0.4rem;">
-                    <span style="font-size:0.75rem;color:var(--text-muted);font-weight:600;">${qtd}x</span>
-                    <button onclick="ajustarQtdSolicitacao('${tipo.replace(/'/g, "\\'")}', -1)" style="padding:0.05rem 0.4rem;font-size:0.65rem;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:4px;cursor:pointer;font-weight:700;">−</button>
-                    <button onclick="ajustarQtdSolicitacao('${tipo.replace(/'/g, "\\'")}', 1)" style="padding:0.05rem 0.4rem;font-size:0.65rem;background:var(--primary);color:white;border:1px solid var(--primary);border-radius:4px;cursor:pointer;font-weight:700;">+</button>
+                    <span style="font-size:0.75rem;color:var(--text-muted);font-weight:600;">${escH(qtd)}x</span>
+                    <button onclick="ajustarQtdSolicitacao('${escJ(tipo)}', -1)" style="padding:0.05rem 0.4rem;font-size:0.65rem;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:4px;cursor:pointer;font-weight:700;">−</button>
+                    <button onclick="ajustarQtdSolicitacao('${escJ(tipo)}', 1)" style="padding:0.05rem 0.4rem;font-size:0.65rem;background:var(--primary);color:white;border:1px solid var(--primary);border-radius:4px;cursor:pointer;font-weight:700;">+</button>
                 </div>
             </div>
         `;
@@ -7649,7 +7644,7 @@ function atualizarControlesPaginaSolicitacao(totalPaginas, paginaAtual) {
         <button onclick="mudarPaginaSolicitacaoGlobal(-1)" style="padding:0.3rem 0.8rem;font-size:0.85rem;background:transparent;border:1px solid var(--border-color);border-radius:0.4rem;cursor:pointer;color:var(--text-main);font-weight:600;${paginaAtual === 0 ? 'opacity:0.4;cursor:default;' : ''}" ${paginaAtual === 0 ? 'disabled' : ''}>
             ◀ Anterior
         </button>
-        <span style="font-size:0.85rem;color:var(--text-muted);font-weight:600;">Página ${paginaAtual + 1} de ${totalPaginas}</span>
+        <span style="font-size:0.85rem;color:var(--text-muted);font-weight:600;">Página ${escH(paginaAtual) + 1} de ${escH(totalPaginas)}</span>
         <button onclick="mudarPaginaSolicitacaoGlobal(1)" style="padding:0.3rem 0.8rem;font-size:0.85rem;background:transparent;border:1px solid var(--border-color);border-radius:0.4rem;cursor:pointer;color:var(--text-main);font-weight:600;${paginaAtual >= totalPaginas - 1 ? 'opacity:0.4;cursor:default;' : ''}" ${paginaAtual >= totalPaginas - 1 ? 'disabled' : ''}>
             Próxima ▶
         </button>
@@ -7784,21 +7779,21 @@ function showSolicitacaoConfirm() {
         const qtd = solicitacaoTiposSelecionados[tipo];
         itensHtml += `
             <div style="display:flex;justify-content:space-between;padding:0.2rem 0;border-bottom:1px solid var(--border-color);font-size:0.8rem;">
-                <span style="font-weight:600;">${tipo}</span>
-                <span>${qtd}x</span>
+                <span style="font-weight:600;">${escH(tipo)}</span>
+                <span>${escH(qtd)}x</span>
             </div>
         `;
     });
     
     confirmBody.innerHTML = `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-bottom:1rem;">
-            <div><strong>Cliente:</strong> ${cliente}</div>${(() => { const o = typeof almoxObraDaOS === 'function' ? almoxObraDaOS().obra_rotulo : null; return o ? '<div><strong>Obra:</strong> ' + o + '</div>' : ''; })()}
-            <div><strong>Responsável:</strong> ${supervisor}</div>
-            <div><strong>Data Início:</strong> ${formatDate(startDate)}</div>
-            <div><strong>Data Fim:</strong> ${formatDate(endDate)}</div>
-            ${observacoes ? `<div style="grid-column:span 2;"><strong>Observações:</strong> ${observacoes}</div>` : ''}
+            <div><strong>Cliente:</strong> ${escH(cliente)}</div>${(() => { const o = typeof almoxObraDaOS === 'function' ? almoxObraDaOS().obra_rotulo : null; return o ? '<div><strong>Obra:</strong> ' + escH(o) + '</div>' : ''; })()}
+            <div><strong>Responsável:</strong> ${escH(supervisor)}</div>
+            <div><strong>Data Início:</strong> ${escH(formatDate(startDate))}</div>
+            <div><strong>Data Fim:</strong> ${escH(formatDate(endDate))}</div>
+            ${observacoes ? `<div style="grid-column:span 2;"><strong>Observações:</strong> ${escH(observacoes)}</div>` : ''}
             <div style="grid-column:span 2;margin-top:0.5rem;">
-                <strong>Instrumentos (${totalItens} itens):</strong>
+                <strong>Instrumentos (${escH(totalItens)} itens):</strong>
                 <div style="margin-top:0.3rem;max-height:150px;overflow-y:auto;border:1px solid var(--border-color);border-radius:0.3rem;padding:0.3rem;">
                     ${itensHtml}
                 </div>
@@ -7844,8 +7839,8 @@ function abrirConfirmacaoFinalSolicitacao() {
         const qtd = solicitacaoTiposSelecionados[tipo];
         itensHtml += `
             <div style="display:flex;justify-content:space-between;padding:0.2rem 0;border-bottom:1px solid var(--border-color);font-size:0.8rem;">
-                <span style="font-weight:600;">${tipo}</span>
-                <span>${qtd}x</span>
+                <span style="font-weight:600;">${escH(tipo)}</span>
+                <span>${escH(qtd)}x</span>
             </div>
         `;
     });
@@ -7867,13 +7862,13 @@ function abrirConfirmacaoFinalSolicitacao() {
             </div>
             <div class="modal-body" style="padding:1.5rem;">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:1rem;font-size:0.85rem;">
-                    <div><strong>Cliente:</strong> ${cliente}</div>${(() => { const o = typeof almoxObraDaOS === 'function' ? almoxObraDaOS().obra_rotulo : null; return o ? '<div><strong>Obra:</strong> ' + o + '</div>' : ''; })()}
-                    <div><strong>Responsável:</strong> ${supervisor}</div>
-                    <div><strong>Data Início:</strong> ${formatDate(startDate)}</div>
-                    <div><strong>Data Fim:</strong> ${formatDate(endDate)}</div>
-                    ${observacoes ? `<div style="grid-column:span 2;"><strong>Observações:</strong> ${observacoes}</div>` : ''}
+                    <div><strong>Cliente:</strong> ${escH(cliente)}</div>${(() => { const o = typeof almoxObraDaOS === 'function' ? almoxObraDaOS().obra_rotulo : null; return o ? '<div><strong>Obra:</strong> ' + escH(o) + '</div>' : ''; })()}
+                    <div><strong>Responsável:</strong> ${escH(supervisor)}</div>
+                    <div><strong>Data Início:</strong> ${escH(formatDate(startDate))}</div>
+                    <div><strong>Data Fim:</strong> ${escH(formatDate(endDate))}</div>
+                    ${observacoes ? `<div style="grid-column:span 2;"><strong>Observações:</strong> ${escH(observacoes)}</div>` : ''}
                 </div>
-                <strong style="font-size:0.85rem;">Itens selecionados (${totalItens}):</strong>
+                <strong style="font-size:0.85rem;">Itens selecionados (${escH(totalItens)}):</strong>
                 <div style="margin-top:0.3rem;max-height:220px;overflow-y:auto;border:1px solid var(--border-color);border-radius:0.3rem;padding:0.3rem;">
                     ${itensHtml}
                 </div>
@@ -8149,13 +8144,13 @@ function osBarraFiltrosHTML(vendoTudo) {
                 <div style="flex:1;min-width:170px;">
                     <label style="display:block;font-size:0.75rem;font-weight:600;color:var(--text-main);margin-bottom:0.25rem;">Status da OS</label>
                     <select id="os-filtro-status" onchange="osDefinirFiltro('osFiltroStatus', this.value)" style="width:100%;padding:0.45rem 0.7rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.85rem;">
-                        ${OS_STATUS_FILTRO.map(([v, l]) => `<option value="${v}" ${filtroStatus === v ? 'selected' : ''}>${l}</option>`).join('')}
+                        ${OS_STATUS_FILTRO.map(([v, l]) => `<option value="${escH(v)}" ${filtroStatus === v ? 'selected' : ''}>${escH(l)}</option>`).join('')}
                     </select>
                 </div>
                 ${filtroLimite}
                 <div style="flex:2;min-width:180px;">
                     <label style="display:block;font-size:0.75rem;font-weight:600;color:var(--text-main);margin-bottom:0.25rem;">Buscar</label>
-                    <input type="text" id="os-filtro-busca" value="${String(window.osFiltroBusca || '').replace(/"/g, '&quot;')}"
+                    <input type="text" id="os-filtro-busca" value="${escH(String(window.osFiltroBusca || ''))}"
                            placeholder="Nº OS, cliente, obra..." autocomplete="off" enterkeyhint="search"
                            oninput="osFiltrarBusca(this.value)"
                            style="width:100%;padding:0.45rem 0.7rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.85rem;">
@@ -8222,15 +8217,15 @@ function osAplicarFiltros() {
     const escondidas = totalFiltradas - osOrdenadas.length;
     const avisoLimite = escondidas > 0 ? `
                 <div style="margin-bottom:0.75rem;border:1px dashed var(--border-color);border-radius:0.5rem;padding:0.5rem 0.75rem;font-size:0.76rem;color:var(--text-muted);background:var(--bg-surface);">
-                    Mostrando as <strong>${osOrdenadas.length} últimas</strong> de ${totalFiltradas} —
-                    escolha <strong>Todas as obras</strong> em "Exibir" para ver as outras ${escondidas}.
+                    Mostrando as <strong>${escH(osOrdenadas.length)} últimas</strong> de ${escH(totalFiltradas)} —
+                    escolha <strong>Todas as obras</strong> em "Exibir" para ver as outras ${escH(escondidas)}.
                 </div>` : '';
 
     let html = `
             ${avisoLimite}
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
                 <span style="font-size:0.85rem;color:var(--text-muted);">
-                    ${osOrdenadas.length} OS${osOrdenadas.length !== 1 ? 's' : ''} encontrada${osOrdenadas.length !== 1 ? 's' : ''}
+                    ${escH(osOrdenadas.length)} OS${osOrdenadas.length !== 1 ? 's' : ''} encontrada${osOrdenadas.length !== 1 ? 's' : ''}
                     ${vendoTudo ? ' (todas as OS do sistema)' : ' — as que você enviou ou é responsável'}
                 </span>
                 <button id="os-btn-atualizar" onclick="atualizarMinhasObras()"style="padding:0.3rem 0.8rem;font-size:0.8rem;border:1px solid var(--border-color);border-radius:0.3rem;background:transparent;color:var(--text-muted);cursor:pointer;">
@@ -8280,7 +8275,7 @@ function osCardMinhasObrasHTML(os, baiasMap, podeGerenciarOS) {
 
     // BADGES DAS BAIAS
     const baiaBadge = baiasDaOS.length
-        ? baiasDaOS.map(b => `<span class="badge ${b.status === 'ocupada' ? 'badge-warning' : 'badge-success'}"style="font-size:0.6rem;padding:0.1rem 0.4rem;">${rotuloBaia(b)}</span>`).join('')
+        ? baiasDaOS.map(b => `<span class="badge ${b.status === 'ocupada' ? 'badge-warning' : 'badge-success'}"style="font-size:0.6rem;padding:0.1rem 0.4rem;">${escH(rotuloBaia(b))}</span>`).join('')
         : `<span class="badge badge-info"style="font-size:0.6rem;padding:0.1rem 0.4rem;background:#6b7280;">Sem Baia</span>`;
 
     // BADGES DAS OPERAÇÕES PARCIAIS (Incluída / Retirada / Devolvida parcialmente)
@@ -8293,56 +8288,56 @@ function osCardMinhasObrasHTML(os, baiasMap, podeGerenciarOS) {
     const retiradasParciais = parcial(os.retiradas_parciais);
     const devolvidasParciais = parcial(os.devolucoes_parciais);
     const badgesParciais = [
-        incluidasParciais.length ? `<span class="badge badge-info" style="font-size:0.6rem;padding:0.1rem 0.4rem;" title="${incluidasParciais.map(i => i.tag).join(', ')}">${incluidasParciais.length} Incluída(s) Parcialmente</span>` : '',
-        retiradasParciais.length ? `<span class="badge badge-warning" style="font-size:0.6rem;padding:0.1rem 0.4rem;" title="${retiradasParciais.map(i => i.tag + (i.motivo ? ' — ' + i.motivo : '')).join(' | ')}">${retiradasParciais.length} Retirada(s) Parcial</span>` : '',
-        devolvidasParciais.length ? `<span class="badge badge-success" style="font-size:0.6rem;padding:0.1rem 0.4rem;" title="${devolvidasParciais.map(i => i.tag).join(', ')}">${devolvidasParciais.length} Devolvida(s) Parcialmente</span>` : ''
+        incluidasParciais.length ? `<span class="badge badge-info" style="font-size:0.6rem;padding:0.1rem 0.4rem;" title="${escH(incluidasParciais.map(i => i.tag).join(', '))}">${escH(incluidasParciais.length)} Incluída(s) Parcialmente</span>` : '',
+        retiradasParciais.length ? `<span class="badge badge-warning" style="font-size:0.6rem;padding:0.1rem 0.4rem;" title="${escH(retiradasParciais.map(i => i.tag + (i.motivo ? ' — ' + i.motivo : '')).join(' | '))}">${escH(retiradasParciais.length)} Retirada(s) Parcial</span>` : '',
+        devolvidasParciais.length ? `<span class="badge badge-success" style="font-size:0.6rem;padding:0.1rem 0.4rem;" title="${escH(devolvidasParciais.map(i => i.tag).join(', '))}">${escH(devolvidasParciais.length)} Devolvida(s) Parcialmente</span>` : ''
     ].join('');
 
     // LINHA DAS BAIAS
     const linhaBaia = baiasDaOS.length
-        ? `<div><strong>Baia${baiasDaOS.length > 1 ? 's' : ''}: </strong>${baiasDaOS.map(b => rotuloBaia(b)).join(', ')}</div>`
+        ? `<div><strong>Baia${baiasDaOS.length > 1 ? 's' : ''}: </strong>${escH(baiasDaOS.map(b => rotuloBaia(b)).join(', '))}</div>`
         : `<div><strong>Baia:</strong> —</div>`;
 
     return `
                 <div style="border:1px solid var(--border-color);border-radius:0.5rem;margin-bottom:0.5rem;overflow:hidden;background:var(--bg-card);">
                     <div class="os-card-header"style="display:flex;align-items:center;padding:0.6rem 0.8rem;background:var(--bg-surface);border-bottom:1px solid var(--border-color);flex-wrap:wrap;gap:0.5rem;">
                         <div class="os-card-actions"style="display:flex;gap:0.25rem;flex-shrink:0;">
-                            <button onclick="previewPDFOS('${os.numero_os}')"class="os-mini-btn os-mini-btn-preview"title="Abrir OS em PDF em nova aba"aria-label="Pré-visualizar OS">Ver</button>
-                            <button onclick="baixarPDFOS('${os.numero_os}')"class="os-mini-btn os-mini-btn-pdf"title="Baixar OS em PDF"aria-label="Baixar OS">Baixar OS</button>
-                            <button onclick="abrirHistoricoOS(${os.id})"class="os-mini-btn os-mini-btn-preview"title="Histórico completo desta OS"aria-label="Histórico da OS">Histórico</button>
+                            <button onclick="previewPDFOS('${escJ(os.numero_os)}')"class="os-mini-btn os-mini-btn-preview"title="Abrir OS em PDF em nova aba"aria-label="Pré-visualizar OS">Ver</button>
+                            <button onclick="baixarPDFOS('${escJ(os.numero_os)}')"class="os-mini-btn os-mini-btn-pdf"title="Baixar OS em PDF"aria-label="Baixar OS">Baixar OS</button>
+                            <button onclick="abrirHistoricoOS(${escL(os.id)})"class="os-mini-btn os-mini-btn-preview"title="Histórico completo desta OS"aria-label="Histórico da OS">Histórico</button>
                         </div>
                         ${podeGerenciarOS ? `
                         <div class="os-card-actions"style="display:flex;gap:0.25rem;flex-shrink:0;">
-                            <button onclick="abrirModalEditarOS(${os.numero_os})"class="os-mini-btn os-mini-btn-edit"title="Editar OS"aria-label="Editar OS">Editar</button>
-                            <button onclick="excluirOS(${os.numero_os})"class="os-mini-btn os-mini-btn-del"title="Excluir OS"aria-label="Excluir OS">Excluir</button>
+                            <button onclick="abrirModalEditarOS(${escL(os.numero_os)})"class="os-mini-btn os-mini-btn-edit"title="Editar OS"aria-label="Editar OS">Editar</button>
+                            <button onclick="excluirOS(${escL(os.numero_os)})"class="os-mini-btn os-mini-btn-del"title="Excluir OS"aria-label="Excluir OS">Excluir</button>
                         </div>` : ''}
                         <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;min-width:0;">
-                            <span style="font-weight:800;font-size:1rem;color:var(--primary);font-family:monospace;">#OS-${String(os.numero_os || 0).padStart(4, '0')}</span>
-                            <span class="badge ${statusInfo.class}"style="font-size:0.7rem;">${statusInfo.label}</span>
-                            <span style="font-size:0.7rem;color:var(--text-muted);">${totalItens} instrumento${totalItens !== 1 ? 's' : ''}</span>
+                            <span style="font-weight:800;font-size:1rem;color:var(--primary);font-family:monospace;">#OS-${escH(String(os.numero_os || 0).padStart(4, '0'))}</span>
+                            <span class="badge ${escH(statusInfo.class)}"style="font-size:0.7rem;">${escH(statusInfo.label)}</span>
+                            <span style="font-size:0.7rem;color:var(--text-muted);">${escH(totalItens)} instrumento${totalItens !== 1 ? 's' : ''}</span>
                             ${baiaBadge}
                             ${badgesParciais}
                         </div>
                     </div>
 
                     <div style="padding:0.5rem 0.8rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.3rem;font-size:0.8rem;">
-                        <div><strong>Cliente:</strong> ${os.cliente || '—'}</div>
-                        <div><strong>Responsável:</strong> ${os.responsavel || '—'}</div>
-                        <div><strong>Obra:</strong> ${os.obra || os.cliente || '—'}</div>
-                        <div><strong>Data Início:</strong> ${dataInicio}</div>
+                        <div><strong>Cliente:</strong> ${escH(os.cliente) || '—'}</div>
+                        <div><strong>Responsável:</strong> ${escH(os.responsavel) || '—'}</div>
+                        <div><strong>Obra:</strong> ${escH(os.obra) || escH(os.cliente) || '—'}</div>
+                        <div><strong>Data Início:</strong> ${escH(dataInicio)}</div>
                         ${osFoiAntecipada(os)
-                            ? `<div><strong>Data de término:</strong> ${formatDate(os.data_fim_original)}</div>
-                               <div><strong>Término adiantado:</strong> ${dataFim}</div>`
-                            : `<div><strong>Data Fim:</strong> ${dataFim}</div>`}
+                            ? `<div><strong>Data de término:</strong> ${escH(formatDate(os.data_fim_original))}</div>
+                               <div><strong>Término adiantado:</strong> ${escH(dataFim)}</div>`
+                            : `<div><strong>Data Fim:</strong> ${escH(dataFim)}</div>`}
                         ${linhaBaia}
-                        <div><strong>Criada em:</strong> ${os.data_criacao ? formatDate(os.data_criacao) : '—'}</div>
-                        <div><strong>Enviado por:</strong> ${os.solicitado_por || '—'}</div>
+                        <div><strong>Criada em:</strong> ${os.data_criacao ? escH(formatDate(os.data_criacao)) : '—'}</div>
+                        <div><strong>Enviado por:</strong> ${escH(os.solicitado_por) || '—'}</div>
                     </div>
                     ${osFoiAntecipada(os) ? osBlocoAntecipacaoHTML(os) : ''}
-                    ${os.observacoes ? `<div style="padding:0.3rem 0.8rem 0.5rem;font-size:0.75rem;color:var(--text-muted);border-top:1px solid var(--border-color);"><strong>Obs:</strong> ${os.observacoes}</div>` : ''}
-                    ${os.motivo_reprovacao ? `<div class="aprov-motivo"><strong>Motivo da reprovação:</strong> ${os.motivo_reprovacao}${os.reprovado_por ? ` — ${os.reprovado_por}` : ''}${os.reprovado_em ? ` · ${formatDate(os.reprovado_em)}` : ''}</div>` : ''}
-                    ${os.aprovado_por ? `<div style="padding:0.3rem 0.8rem 0.5rem;font-size:0.75rem;color:${os.editada_por ? 'var(--warning, #f59e0b)' : 'var(--success, #10b981)'};border-top:1px solid var(--border-color);"><strong>${os.editada_por ? 'Editada e Aprovada por:' : 'Aprovada por:'}</strong> ${os.aprovado_por}${os.aprovado_em ? ` · ${formatDate(os.aprovado_em)}` : ''}</div>` : ''}
-                    ${os.devolucao_conferida_em ? `<div style="padding:0.3rem 0.8rem 0.5rem;font-size:0.75rem;color:var(--success, #10b981);border-top:1px solid var(--border-color);"><strong>Devolução conferida por:</strong> ${os.devolucao_conferida_por || '—'} · ${formatDate(os.devolucao_conferida_em)}</div>` : ''}
+                    ${os.observacoes ? `<div style="padding:0.3rem 0.8rem 0.5rem;font-size:0.75rem;color:var(--text-muted);border-top:1px solid var(--border-color);"><strong>Obs:</strong> ${escH(os.observacoes)}</div>` : ''}
+                    ${os.motivo_reprovacao ? `<div class="aprov-motivo"><strong>Motivo da reprovação:</strong> ${escH(os.motivo_reprovacao)}${os.reprovado_por ? ` — ${escH(os.reprovado_por)}` : ''}${os.reprovado_em ? ` · ${escH(formatDate(os.reprovado_em))}` : ''}</div>` : ''}
+                    ${os.aprovado_por ? `<div style="padding:0.3rem 0.8rem 0.5rem;font-size:0.75rem;color:${os.editada_por ? 'var(--warning, #f59e0b)' : 'var(--success, #10b981)'};border-top:1px solid var(--border-color);"><strong>${os.editada_por ? 'Editada e Aprovada por:' : 'Aprovada por:'}</strong> ${escH(os.aprovado_por)}${os.aprovado_em ? ` · ${escH(formatDate(os.aprovado_em))}` : ''}</div>` : ''}
+                    ${os.devolucao_conferida_em ? `<div style="padding:0.3rem 0.8rem 0.5rem;font-size:0.75rem;color:var(--success, #10b981);border-top:1px solid var(--border-color);"><strong>Devolução conferida por:</strong> ${escH(os.devolucao_conferida_por) || '—'} · ${escH(formatDate(os.devolucao_conferida_em))}</div>` : ''}
                 </div>
             `;
 }
@@ -8397,7 +8392,7 @@ async function renderizarListaOS() {
         console.error("Erro ao renderizar lista de OSs:", erro);
         container.innerHTML = `
             <div style="padding:2rem;text-align:center;color:var(--danger);">
-                <p>Erro ao carregar OSs: ${erro.message}</p>
+                <p>Erro ao carregar OSs: ${escH(erro.message)}</p>
                 <button onclick="renderizarListaOS()"style="padding:0.5rem 1rem;margin-top:0.5rem;border:none;border-radius:0.3rem;background:var(--primary);color:white;cursor:pointer;">Tentar novamente</button>
             </div>
         `;
@@ -8534,18 +8529,18 @@ function renderAtivosEditarOS(os) {
         const candidatos = (instruments || []).filter(i => (i.tipo || 'Sem tipo') === tipo);
         html += `<div style="border:1px solid var(--border-color);border-radius:0.5rem;padding:0.6rem 0.7rem;background:var(--bg-surface);">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;margin-bottom:0.45rem;">
-                <strong style="font-size:0.85rem;color:var(--text-main);">${tipo}</strong>
-                <span style="font-size:0.72rem;color:var(--text-muted);margin-left:auto;text-align:right;">${qtd} un. solicitada${qtd !== 1 ? 's' : ''}</span>
+                <strong style="font-size:0.85rem;color:var(--text-main);">${escH(tipo)}</strong>
+                <span style="font-size:0.72rem;color:var(--text-muted);margin-left:auto;text-align:right;">${escH(qtd)} un. solicitada${qtd !== 1 ? 's' : ''}</span>
             </div>`;
         for (let i = 0; i < qtd; i++) {
             const atual = alocados[usados] || '';
             usados++;
-            html += `<select class="form-select edit-os-tag-select"data-tipo="${String(tipo).replace(/"/g, '&quot;')}"style="width:100%;margin-bottom:0.35rem;padding:0.4rem 0.6rem;font-size:0.8rem;border:2px solid var(--border-color);border-radius:0.4rem;background:var(--bg-input);color:var(--text-main);">
+            html += `<select class="form-select edit-os-tag-select"data-tipo="${escH(String(tipo))}"style="width:100%;margin-bottom:0.35rem;padding:0.4rem 0.6rem;font-size:0.8rem;border:2px solid var(--border-color);border-radius:0.4rem;background:var(--bg-input);color:var(--text-main);">
                 <option value="">— Selecione a TAG —</option>
                 ${candidatos.map(c => {
                     const indisponivel = c.status && c.status !== 'disponivel' && String(c.id) !== String(atual);
-                    return `<option value="${c.id}" ${String(c.id) === String(atual) ? 'selected' : ''} ${indisponivel ? 'disabled' : ''}>
-                        ${c.tag || ('#' + c.id)}${c.numero_serie ? ' · ' + c.numero_serie : ''}${indisponivel ? ' (indisponível)' : ''}
+                    return `<option value="${escH(c.id)}" ${String(c.id) === String(atual) ? 'selected' : ''} ${indisponivel ? 'disabled' : ''}>
+                        ${escH(c.tag) || ('#' + escH(c.id))}${c.numero_serie ? ' · ' + escH(c.numero_serie) : ''}${indisponivel ? ' (indisponível)' : ''}
                     </option>`;
                 }).join('')}
             </select>`;
@@ -8606,18 +8601,18 @@ async function abrirModalEditarOS(numeroOS) {
         modal.innerHTML = `
             <div class="modal-container"style="max-width: 620px; margin:0 auto; animation:modalFadeIn 0.25s ease; background:var(--bg-card); border-radius:0.75rem; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
                 <div class="modal-header"style="border-bottom:1px solid var(--border-color); padding:1rem 1.5rem; display:flex; justify-content:space-between; align-items:center;">
-                    <span class="modal-title"style="font-size:1.1rem;font-weight:700;color:var(--text-main);">Editar OS #OS-${String(numeroOS).padStart(4, '0')}</span>
+                    <span class="modal-title"style="font-size:1.1rem;font-weight:700;color:var(--text-main);">Editar OS #OS-${escH(String(numeroOS).padStart(4, '0'))}</span>
                     <button class="modal-close"onclick="fecharModalEditarOS()"style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0.25rem;">
                         <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:1.25rem;height:1.25rem;"><line x1="18"y1="6"x2="6"y2="18"/><line x1="6"y1="6"x2="18"y2="18"/></svg>
                     </button>
                 </div>
-                <form id="form-editar-os"onsubmit="return salvarEdicaoOS(event, ${numeroOS})">
+                <form id="form-editar-os"onsubmit="return salvarEdicaoOS(event, ${escL(numeroOS)})">
                     <div class="modal-body"style="padding:1.25rem 1.5rem;">
                         <!-- BAIA ATUAL -->
                         <div style="background:${baiaAtual ? 'var(--bg-surface)' : '#fef3c7'};padding:0.5rem 0.8rem;border-radius:0.3rem;margin-bottom:0.8rem;border-left:3px solid ${baiaAtual ? 'var(--primary)' : 'var(--warning)'};">
                             <strong style="font-size:0.8rem;color:var(--text-muted);">Baia atual:</strong>
                             <span style="font-weight:700;font-size:0.9rem;color:var(--text-main);">
-                                ${baiaAtual ? `Baia ${baiaAtualIdentificador}` : 'Nenhuma baia associada'}
+                                ${baiaAtual ? `Baia ${escH(baiaAtualIdentificador)}` : 'Nenhuma baia associada'}
                             </span>
                         </div>
                         
@@ -8633,17 +8628,17 @@ async function abrirModalEditarOS(numeroOS) {
                         
                         <div class="form-group">
                             <label class="form-label">Enviado por</label>
-                            <input type="text" class="form-input" value="${os.solicitado_por || '—'}" disabled readonly style="background:var(--bg-surface);cursor:not-allowed;color:var(--text-muted);">
+                            <input type="text" class="form-input" value="${escH(os.solicitado_por) || '—'}" disabled readonly style="background:var(--bg-surface);cursor:not-allowed;color:var(--text-muted);">
                         </div>
                         
                         <div class="os-datas-grid">
                             <div class="form-group">
                                 <label class="form-label"for="edit-os-data-inicio">Data Início</label>
-                                <input type="date"id="edit-os-data-inicio"class="form-input"value="${normalizarDataInput(os.data_inicio)}">
+                                <input type="date"id="edit-os-data-inicio"class="form-input"value="${escH(normalizarDataInput(os.data_inicio))}">
                             </div>
                             <div class="form-group">
                                 <label class="form-label"for="edit-os-data-fim">Data Fim</label>
-                                <input type="date"id="edit-os-data-fim"class="form-input"value="${normalizarDataInput(os.data_fim)}">
+                                <input type="date"id="edit-os-data-fim"class="form-input"value="${escH(normalizarDataInput(os.data_fim))}">
                             </div>
                         </div>
                         
@@ -8677,7 +8672,7 @@ async function abrirModalEditarOS(numeroOS) {
                         
                         <div class="form-group">
                             <label class="form-label"for="edit-os-observacoes">Observações</label>
-                            <textarea id="edit-os-observacoes"class="form-input"rows="3"placeholder="Observações adicionais...">${os.observacoes || ''}</textarea>
+                            <textarea id="edit-os-observacoes"class="form-input"rows="3"placeholder="Observações adicionais...">${escH(os.observacoes) || ''}</textarea>
                         </div>
                         
                         ${renderAtivosEditarOS(os)}
@@ -8778,7 +8773,7 @@ function osBaiasOptionsHTML(selecionada) {
         // Sem emoji: um <option> não aceita marcação, então a situação vai
         // escrita — símbolo cheio para ocupada, vazado para livre.
         const statusIcon = (ocupada && !jaNaOS) ? '●' : '○';
-        html += `<option value="${f.id}" ${selected}>${statusIcon} ${f.tag}</option>`;
+        html += `<option value="${escH(f.id)}" ${escH(selected)}>${escH(statusIcon)} ${escH(f.tag)}</option>`;
     });
     return html;
 }
@@ -8816,7 +8811,7 @@ window.removerBaiaEdicaoOS = removerBaiaEdicaoOS;
 // EDITAR OS — OPÇÕES DE CLIENTE E RESPONSÁVEL
 // ============================================================
 function osEditEscAttr(valor) {
-    return String(valor == null ? '' : valor).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return escH(valor == null ? '' : valor);
 }
 
 function osEditClienteOptionsHTML(atual) {
@@ -9952,7 +9947,7 @@ function openEditarUsuarioModal(usuarioId) {
                     <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:1.25rem;height:1.25rem;"><line x1="18"y1="6"x2="6"y2="18"/><line x1="6"y1="6"x2="18"y2="18"/></svg>
                 </button>
             </div>
-            <form id="edit-usuario-form"onsubmit="return handleEditarUsuario(event, ${usuarioId})">
+            <form id="edit-usuario-form"onsubmit="return handleEditarUsuario(event, ${escL(usuarioId)})">
                 <div class="modal-body"style="padding: 1.5rem;">
                     <div class="form-grid"style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                         <!-- NOME COMPLETO -->
@@ -9960,7 +9955,7 @@ function openEditarUsuarioModal(usuarioId) {
                             <label class="form-label"for="edit-usuario-nome"style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
                                 Nome Completo <span style="color: #dc2626; font-weight: 700;">*</span>
                             </label>
-                            <input type="text"id="edit-usuario-nome"class="form-input"value="${usuario.nome.replace(/"/g, '&quot;')}"required style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
+                            <input type="text"id="edit-usuario-nome"class="form-input"value="${escH(usuario.nome)}"required style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
                         </div>
                         
                         <!-- CPF -->
@@ -9968,7 +9963,7 @@ function openEditarUsuarioModal(usuarioId) {
                             <label class="form-label"for="edit-usuario-cpf"style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
                                 CPF <span style="color: #dc2626; font-weight: 700;">*</span>
                             </label>
-                            <input type="text"id="edit-usuario-cpf"class="form-input"value="${formatarCpf(usuario.cpf)}"maxlength="14"required style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem; font-family: monospace;">
+                            <input type="text"id="edit-usuario-cpf"class="form-input"value="${escH(formatarCpf(usuario.cpf))}"maxlength="14"required style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem; font-family: monospace;">
                         </div>
                         
                         <!-- CARGO - COM DESENVOLVEDOR -->
@@ -9987,14 +9982,14 @@ function openEditarUsuarioModal(usuarioId) {
                             <label class="form-label"for="edit-usuario-email"style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
                                 E-mail Corporativo <span style="color: var(--text-muted); font-weight: 400;">(opcional)</span>
                             </label>
-                            <input type="email"id="edit-usuario-email"class="form-input"value="${usuario.email || ''}"placeholder="Ex: joao@lwnengenharia.com.br"style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
+                            <input type="email"id="edit-usuario-email"class="form-input"value="${escH(usuario.email) || ''}"placeholder="Ex: joao@lwnengenharia.com.br"style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
                         </div>
 
                         <div class="form-group"style="margin-bottom: 1rem;">
                             <label class="form-label"for="edit-usuario-telefone"style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem;">
                                 Telefone <span style="color: var(--text-muted); font-weight: 400;">(opcional)</span>
                             </label>
-                            <input type="tel"id="edit-usuario-telefone"class="form-input"value="${formatarTelefone(usuario.telefone || '')}"placeholder="Ex: (11) 98765-4321"maxlength="16"oninput="aplicarMascaraTelefone(this)"style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
+                            <input type="tel"id="edit-usuario-telefone"class="form-input"value="${escH(formatarTelefone(usuario.telefone || ''))}"placeholder="Ex: (11) 98765-4321"maxlength="16"oninput="aplicarMascaraTelefone(this)"style="width: 100%; padding: 0.6rem 0.8rem; border: 2px solid var(--border-color); border-radius: 0.5rem; background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
                         </div>
                         
                         <!-- ATIVO -->
@@ -11106,7 +11101,7 @@ async function renderLocalizacao() {
     } catch (erro) {
         grid.innerHTML = `
             <div class="loc-cal-erro">
-                <p>Erro ao carregar dados: ${erro.message}</p>
+                <p>Erro ao carregar dados: ${escH(erro.message)}</p>
                 <button onclick="locRecarregar()">Tentar novamente</button>
             </div>`;
         return;
@@ -11183,7 +11178,7 @@ function locRenderCalendario() {
     const primeiro = locNormalizarData(new Date(ano, mes, 1));
     const totalDias = new Date(ano, mes + 1, 0).getDate();
 
-    let html = LOC_DIAS_SEMANA.map(d => `<div class="loc-cal-weekday">${d}</div>`).join('');
+    let html = LOC_DIAS_SEMANA.map(d => `<div class="loc-cal-weekday">${escH(d)}</div>`).join('');
     for (let i = 0; i < primeiro.getDay(); i++) html += `<div class="loc-cal-vazio"></div>`;
     for (let dia = 1; dia <= totalDias; dia++) {
         html += locDiaHtml(new Date(ano, mes, dia), hoje, true);
@@ -11215,10 +11210,10 @@ function locDiaHtml(d, hoje, mensal) {
     if (total > 0) classes.push('com-atividade');
 
     return `
-        <button type="button"class="${classes.join(' ')}"onclick="locCalSelecionarDia('${locChaveData(d)}', event)"
-                title="${total} instrumento(s) em campo — shift+clique em outro dia para selecionar um período">
-            ${mensal ? '' : `<span class="loc-cal-dia-semana">${LOC_DIAS_SEMANA[d.getDay()]}</span>`}
-            <span class="loc-cal-dia-num">${d.getDate()}</span>
+        <button type="button"class="${escH(classes.join(' '))}"onclick="locCalSelecionarDia('${escJ(locChaveData(d))}', event)"
+                title="${escH(total)} instrumento(s) em campo — shift+clique em outro dia para selecionar um período">
+            ${mensal ? '' : `<span class="loc-cal-dia-semana">${escH(LOC_DIAS_SEMANA[d.getDay()])}</span>`}
+            <span class="loc-cal-dia-num">${escH(d.getDate())}</span>
             <span class="loc-cal-dot ${total > 0 ? 'on' : ''}"></span>
         </button>
     `;
@@ -11472,22 +11467,22 @@ function locRenderChips() {
 
     wrap.innerHTML = `
         <button type="button"class="loc-chip ${locFiltroChip === 'todos' ? 'active' : ''}"onclick="locSetChip('todos')">
-            Todos <strong>${localizacaoDadosCompletos.length}</strong>
+            Todos <strong>${escH(localizacaoDadosCompletos.length)}</strong>
         </button>
         <button type="button"class="loc-chip campo ${locFiltroChip === 'campo' ? 'active' : ''}"onclick="locSetChip('campo')">
-            ${emCampo} em campo
+            ${escH(emCampo)} em campo
         </button>
         <button type="button"class="loc-chip reservado ${locFiltroChip === 'reservado' ? 'active' : ''}"onclick="locSetChip('reservado')"title="Aguardando aprovação, em separação ou esperando o técnico retirar">
-            ${paraObra} para obra
+            ${escH(paraObra)} para obra
         </button>
         <button type="button"class="loc-chip calibracao ${locFiltroChip === 'calibracao' ? 'active' : ''}"onclick="locSetChip('calibracao')">
-            ${calibracao} em calibração
+            ${escH(calibracao)} em calibração
         </button>
         <button type="button"class="loc-chip calibracao ${locFiltroChip === 'manutencao' ? 'active' : ''}"onclick="locSetChip('manutencao')">
-            ${manutencao} em manutenção
+            ${escH(manutencao)} em manutenção
         </button>
         <button type="button"class="loc-chip almox ${locFiltroChip === 'almoxarife' ? 'active' : ''}"onclick="locSetChip('almoxarife')">
-            ${almoxarife} no almoxarife
+            ${escH(almoxarife)} no almoxarife
         </button>
     `;
 }
@@ -11607,7 +11602,7 @@ function locAtualizarOpcoesStatus() {
     const opcoes = Array.from(mapa.entries())
         .sort((a, b) => a[1].label.localeCompare(b[1].label, 'pt-BR'));
     sel.innerHTML = `<option value="todos">Todos</option>` + opcoes
-        .map(([chave, o]) => `<option value="${chave}">${o.label} (${o.qtd})</option>`).join('');
+        .map(([chave, o]) => `<option value="${escH(chave)}">${escH(o.label)} (${escH(o.qtd)})</option>`).join('');
     sel.value = mapa.has(atual) || atual === 'todos' ? atual : 'todos';
 }
 window.locAtualizarOpcoesStatus = locAtualizarOpcoesStatus;
@@ -11630,7 +11625,7 @@ function locAtualizarOpcoesCampo() {
         const opcoes = Array.from(mapa.entries())
             .sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
         selCli.innerHTML = `<option value="todos">Todos os clientes</option>` +
-            opcoes.map(([nome, qtd]) => `<option value="${nome}">${nome} (${qtd})</option>`).join('');
+            opcoes.map(([nome, qtd]) => `<option value="${escH(nome)}">${escH(nome)} (${escH(qtd)})</option>`).join('');
         selCli.value = mapa.has(atual) || atual === 'todos' ? atual : 'todos';
     }
 
@@ -11639,8 +11634,8 @@ function locAtualizarOpcoesCampo() {
         const atual = selFer.value || 'todos';
         const tags = Array.from(new Set(emCampo.map(inst => inst.tag).filter(Boolean)))
             .sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
-        selFer.innerHTML = `<option value="todos">Todas as TAGs (${tags.length})</option>` +
-            tags.map(t => `<option value="${t}">${t}</option>`).join('');
+        selFer.innerHTML = `<option value="todos">Todas as TAGs (${escH(tags.length)})</option>` +
+            tags.map(t => `<option value="${escH(t)}">${escH(t)}</option>`).join('');
         selFer.value = tags.includes(atual) || atual === 'todos' ? atual : 'todos';
     }
 }
@@ -11663,11 +11658,11 @@ window.locAtualizarOpcoesCampo = locAtualizarOpcoesCampo;
 function locLinhaPrazoHTML(inst) {
     const chave = locChaveStatus(inst);
     if (chave === 'aguardando_devolucao' && inst.data_fim) {
-        return `<div class="inst-reserva" style="color:var(--danger, #ef4444);font-weight:700;">Devolução vencida em <strong>${formatDate(inst.data_fim)}</strong></div>`;
+        return `<div class="inst-reserva" style="color:var(--danger, #ef4444);font-weight:700;">Devolução vencida em <strong>${escH(formatDate(inst.data_fim))}</strong></div>`;
     }
     const antesDeSair = ['aguardando_aprovacao', 'em_separacao', 'aguardando_retirada', 'reservado'];
     if (antesDeSair.includes(chave) && inst.data_inicio) {
-        return `<div class="inst-reserva">Entra em campo em <strong>${formatDate(inst.data_inicio)}</strong></div>`;
+        return `<div class="inst-reserva">Entra em campo em <strong>${escH(formatDate(inst.data_inicio))}</strong></div>`;
     }
     return '';
 }
@@ -11675,7 +11670,7 @@ window.locLinhaPrazoHTML = locLinhaPrazoHTML;
 
 function locLinhaOndeEsta(inst) {
     const linha = (texto, c) => texto
-        ? `<div class="inst-local" style="font-size:0.72rem;font-weight:700;margin:0.15rem 0 0.1rem;color:${c};">${texto}</div>`
+        ? `<div class="inst-local" style="font-size:0.72rem;font-weight:700;margin:0.15rem 0 0.1rem;color:${escH(c)};">${escH(texto)}</div>`
         : '';
 
     // O selo do cartão já diz a ETAPA ("Em Campo", "Em Manutenção"...). Aqui
@@ -11752,25 +11747,25 @@ function renderizarInstrumentosLocalizacao() {
         // a baia da OS quando ela é outra informação — repetir a mesma baia
         // duas vezes no mesmo cartão era só ruído.
         const baiaInfo = (!inst.baia_real && inst.baia_identificador)
-            ? `<div class="inst-baia">Baia ${inst.baia_identificador}${inst.baia_descricao ? ' - ' + inst.baia_descricao : ''}</div>`
+            ? `<div class="inst-baia">Baia ${escH(inst.baia_identificador)}${inst.baia_descricao ? ' - ' + escH(inst.baia_descricao) : ''}</div>`
             : '';
 
         let corpo;
         if (inst.manutencao) {
             corpo = `
-                <div class="inst-obra">Em manutenção${inst.manutencao_empresa ? ' · ' + inst.manutencao_empresa : ''}</div>
+                <div class="inst-obra">Em manutenção${inst.manutencao_empresa ? ' · ' + escH(inst.manutencao_empresa) : ''}</div>
                 ${inst.data_fim
-                    ? `<div class="inst-retorno">Retorno previsto: <strong>${formatDate(inst.data_fim)}</strong></div>`
+                    ? `<div class="inst-retorno">Retorno previsto: <strong>${escH(formatDate(inst.data_fim))}</strong></div>`
                     : `<div class="inst-cliente">Retorno não informado</div>`}
-                ${inst.manutencao_observacao ? `<div class="inst-cliente">${inst.manutencao_observacao}</div>` : ''}
+                ${inst.manutencao_observacao ? `<div class="inst-cliente">${escH(inst.manutencao_observacao)}</div>` : ''}
             `;
         } else if (inst.calibracao) {
             corpo = `
-                <div class="inst-obra">Em calibração${inst.calibracao_empresa ? ' · ' + inst.calibracao_empresa : ''}</div>
+                <div class="inst-obra">Em calibração${inst.calibracao_empresa ? ' · ' + escH(inst.calibracao_empresa) : ''}</div>
                 ${inst.data_retorno_calibracao
-                    ? `<div class="inst-retorno">Retorno previsto: <strong>${formatDate(inst.data_retorno_calibracao)}</strong></div>`
+                    ? `<div class="inst-retorno">Retorno previsto: <strong>${escH(formatDate(inst.data_retorno_calibracao))}</strong></div>`
                     : `<div class="inst-cliente">Retorno não informado</div>`}
-                ${inst.calibracao_observacao ? `<div class="inst-cliente">${inst.calibracao_observacao}</div>` : ''}
+                ${inst.calibracao_observacao ? `<div class="inst-cliente">${escH(inst.calibracao_observacao)}</div>` : ''}
             `;
         } else if (isAlmoxarife) {
             // O selo e a linha do lugar já disseram o essencial. Aqui só sobra
@@ -11785,9 +11780,9 @@ function renderizarInstrumentosLocalizacao() {
             // palavra duas vezes.
             corpo = `
                 ${locLinhaPrazoHTML(inst)}
-                <div class="inst-obra"><span style="font-weight:600;opacity:0.75;">Obra:</span> ${inst.obra || '—'}</div>
-                ${inst.cliente && inst.cliente !== '—' && inst.cliente !== 'Almoxarife' && inst.cliente !== inst.obra ? `<div class="inst-cliente">${inst.cliente}</div>` : ''}
-                ${inst.numero_os ? `<div class="inst-os">OS: #${String(inst.numero_os).padStart(4, '0')}</div>` : ''}
+                <div class="inst-obra"><span style="font-weight:600;opacity:0.75;">Obra:</span> ${escH(inst.obra) || '—'}</div>
+                ${inst.cliente && inst.cliente !== '—' && inst.cliente !== 'Almoxarife' && inst.cliente !== inst.obra ? `<div class="inst-cliente">${escH(inst.cliente)}</div>` : ''}
+                ${inst.numero_os ? `<div class="inst-os">OS: #${escH(String(inst.numero_os).padStart(4, '0'))}</div>` : ''}
                 ${baiaInfo}
             `;
         }
@@ -11797,12 +11792,12 @@ function renderizarInstrumentosLocalizacao() {
         const estiloCor = corCliente ? ` style="border-left:5px solid ${corCliente};"` : '';
 
         return `
-            <div class="localizacao-instrumento-card${corCliente ? ' com-cor-cliente' : ''}"${estiloCor}>
-                <div class="inst-tipo">${inst.tipo || 'Instrumento'}</div>
-                <div class="inst-tag">${inst.tag}</div>
-                <span class="inst-status ${statusInfo.cls}"${inst.marca_em_campo_orfa ? ' title="O Inventário ainda marca esta TAG como em campo, mas nenhuma OS aberta a prende — a marca ficou de uma OS já encerrada."' : ''}>${statusInfo.label}</span>
+            <div class="localizacao-instrumento-card${corCliente ? ' com-cor-cliente' : ''}"${escH(estiloCor)}>
+                <div class="inst-tipo">${escH(inst.tipo) || 'Instrumento'}</div>
+                <div class="inst-tag">${escH(inst.tag)}</div>
+                <span class="inst-status ${escH(statusInfo.cls)}"${inst.marca_em_campo_orfa ? ' title="O Inventário ainda marca esta TAG como em campo, mas nenhuma OS aberta a prende — a marca ficou de uma OS já encerrada."' : ''}>${escH(statusInfo.label)}</span>
                 ${linhaLocal}
-                ${periodo ? `<div class="inst-periodo">${periodo}</div>` : ''}
+                ${periodo ? `<div class="inst-periodo">${escH(periodo)}</div>` : ''}
                 ${corpo}
                 ${inst.avaria_utilizavel ? `<div class="inst-cliente" style="color:var(--warning, #f59e0b);font-weight:700;">Avariada, porém disponível para uso</div>` : ''}
             </div>
@@ -11972,17 +11967,17 @@ function renderListaGerenciarBaias() {
     box.innerHTML = baias.map(b => `
         <div style="border:1px solid var(--border-color);border-radius:0.5rem;padding:0.6rem 0.8rem;background:var(--bg-surface);">
             <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
-                <strong style="font-size:0.85rem;color:var(--text-main);min-width:90px;">${rotuloBaia(b)}</strong>
-                <input type="text" class="form-input gb-descricao" data-baia-id="${b.id}" value="${(b.descricao || '').replace(/"/g, '&quot;')}"
+                <strong style="font-size:0.85rem;color:var(--text-main);min-width:90px;">${escH(rotuloBaia(b))}</strong>
+                <input type="text" class="form-input gb-descricao" data-baia-id="${escH(b.id)}" value="${escH(b.descricao || '')}"
                        placeholder="Descrição" style="flex:1;min-width:130px;padding:0.35rem 0.5rem;font-size:0.8rem;">
-                <input type="text" class="form-input gb-codigo" data-baia-id="${b.id}" value="${(b.codigo_barras || '').replace(/"/g, '&quot;')}"
+                <input type="text" class="form-input gb-codigo" data-baia-id="${escH(b.id)}" value="${escH(b.codigo_barras || '')}"
                        placeholder="Código de bipagem (ex.: BAIA01)" style="flex:1;min-width:160px;padding:0.35rem 0.5rem;font-size:0.8rem;font-family:monospace;">
                 ${b.status === 'ocupada' ? '<span class="badge badge-warning" style="font-size:0.62rem;">Ocupada</span>' : ''}
-                <button class="btn btn-primary btn-sm" style="padding:0.3rem 0.8rem;font-size:0.75rem;" onclick="salvarGerenciarBaia(${b.id})">Salvar</button>
-                <button class="btn btn-outline btn-sm" style="padding:0.3rem 0.8rem;font-size:0.75rem;" onclick="verHistoricoBaia(${b.id})">Histórico</button>
-                <button class="btn btn-outline btn-sm" style="padding:0.3rem 0.8rem;font-size:0.75rem;color:var(--danger,#ef4444);border-color:var(--danger,#ef4444);" onclick="excluirBaiaGerenciar(${b.id}, '${String(b.tag || b.descricao || b.id).replace(/'/g, "\\'")}')">Excluir</button>
+                <button class="btn btn-primary btn-sm" style="padding:0.3rem 0.8rem;font-size:0.75rem;" onclick="salvarGerenciarBaia(${escL(b.id)})">Salvar</button>
+                <button class="btn btn-outline btn-sm" style="padding:0.3rem 0.8rem;font-size:0.75rem;" onclick="verHistoricoBaia(${escL(b.id)})">Histórico</button>
+                <button class="btn btn-outline btn-sm" style="padding:0.3rem 0.8rem;font-size:0.75rem;color:var(--danger,#ef4444);border-color:var(--danger,#ef4444);" onclick="excluirBaiaGerenciar(${escL(b.id)}, '${escJ(b.tag || b.descricao || b.id)}')">Excluir</button>
             </div>
-            <div id="gb-historico-${b.id}" style="display:none;margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);"></div>
+            <div id="gb-historico-${escH(b.id)}" style="display:none;margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);"></div>
         </div>
     `).join('') || '<p style="font-size:0.8rem;color:var(--text-muted);">Nenhuma baia cadastrada.</p>';
 }
@@ -12096,30 +12091,30 @@ async function verHistoricoBaia(baiaId) {
         };
 
         const blocoOS = movs.length ? `
-            <strong style="display:block;color:var(--text-main);margin:0.2rem 0 0.3rem;">OS que usaram esta baia (${movs.length})</strong>
+            <strong style="display:block;color:var(--text-main);margin:0.2rem 0 0.3rem;">OS que usaram esta baia (${escH(movs.length)})</strong>
             ${movs.map(m => `
             <div style="padding:0.3rem 0;border-bottom:1px solid var(--border-color);">
-                OS #${String(m.numero_os || m.os_id).padStart(4, '0')} — ${m.cliente || '—'}${m.obra ? ' · ' + m.obra : ''}
-                (${m.os_status || '—'}) · ${m.data_inicio ? new Date(m.data_inicio).toLocaleDateString('pt-BR') : '—'}
-                ${m.data_fim ? '→ ' + new Date(m.data_fim).toLocaleDateString('pt-BR') : ''}
+                OS #${escH(String(m.numero_os || m.os_id).padStart(4, '0'))} — ${escH(m.cliente) || '—'}${m.obra ? ' · ' + escH(m.obra) : ''}
+                (${escH(m.os_status) || '—'}) · ${m.data_inicio ? escH(new Date(m.data_inicio).toLocaleDateString('pt-BR')) : '—'}
+                ${m.data_fim ? '→ ' + escH(new Date(m.data_fim).toLocaleDateString('pt-BR')) : ''}
             </div>`).join('')}` : '';
 
         const blocoEventos = eventos.length ? `
-            <strong style="display:block;color:var(--text-main);margin:0.7rem 0 0.3rem;">Movimentações da baia (${eventos.length})</strong>
+            <strong style="display:block;color:var(--text-main);margin:0.7rem 0 0.3rem;">Movimentações da baia (${escH(eventos.length)})</strong>
             ${eventos.map(e => `
             <div style="padding:0.3rem 0;border-bottom:1px solid var(--border-color);">
-                <span style="font-variant-numeric:tabular-nums;">${new Date(e.criado_em).toLocaleString('pt-BR')}</span> ·
-                <strong style="color:var(--text-main);">${rotulosEvento[e.evento] || e.evento}</strong>
-                ${e.tag ? ' — ' + e.tag : ''}
-                ${(e.origem || e.destino) ? ` · ${e.origem || '—'} → ${e.destino || '—'}` : ''}
-                ${e.numero_os ? ' · OS #' + e.numero_os : ''}
-                ${e.usuario ? ' · por ' + e.usuario : ''}
-                ${e.observacao ? '<br><span style="font-size:0.72rem;">' + e.observacao + '</span>' : ''}
+                <span style="font-variant-numeric:tabular-nums;">${escH(new Date(e.criado_em).toLocaleString('pt-BR'))}</span> ·
+                <strong style="color:var(--text-main);">${escH(rotulosEvento[e.evento]) || escH(e.evento)}</strong>
+                ${e.tag ? ' — ' + escH(e.tag) : ''}
+                ${(e.origem || e.destino) ? ` · ${escH(e.origem) || '—'} → ${escH(e.destino) || '—'}` : ''}
+                ${e.numero_os ? ' · OS #' + escH(e.numero_os) : ''}
+                ${e.usuario ? ' · por ' + escH(e.usuario) : ''}
+                ${e.observacao ? '<br><span style="font-size:0.72rem;">' + escH(e.observacao) + '</span>' : ''}
             </div>`).join('')}` : '';
 
         box.innerHTML = (blocoOS + blocoEventos) || 'Nenhuma movimentação registrada para esta baia.';
     } catch (err) {
-        box.innerHTML = 'Erro ao carregar histórico: ' + err.message;
+        box.textContent = 'Erro ao carregar histórico: ' + err.message;
     }
 }
 window.verHistoricoBaia = verHistoricoBaia;
@@ -12172,16 +12167,16 @@ function abrirDetalhesMes(mesStr, nomeMes) {
     
     let instrumentosHtml = instrumentos.map(inst => `
         <div style="display:flex;justify-content:space-between;padding:0.3rem 0.5rem;border-bottom:1px solid var(--border-color);font-size:0.8rem;">
-            <span style="font-weight:700;color:var(--text-main);">${inst.tag || 'Sem TAG'}</span>
-            <span style="color:var(--text-muted);">${inst.tipo || ''}</span>
-            <span style="color:var(--text-muted);">${inst.status || ''}</span>
+            <span style="font-weight:700;color:var(--text-main);">${escH(inst.tag) || 'Sem TAG'}</span>
+            <span style="color:var(--text-muted);">${escH(inst.tipo) || ''}</span>
+            <span style="color:var(--text-muted);">${escH(inst.status) || ''}</span>
         </div>
     `).join('');
     
     modal.innerHTML = `
         <div class="modal-container"style="max-width:550px; margin:0 auto; animation:modalFadeIn 0.25s ease; background:var(--bg-card); border-radius:0.75rem; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
             <div class="modal-header"style="border-bottom:1px solid var(--border-color); padding:1rem 1.5rem; display:flex; justify-content:space-between; align-items:center;">
-                <span class="modal-title"style="font-size:1.1rem;font-weight:700;color:var(--text-main);"> ${nomeMes} ${localizacaoAnoAtual}</span>
+                <span class="modal-title"style="font-size:1.1rem;font-weight:700;color:var(--text-main);"> ${escH(nomeMes)} ${escH(localizacaoAnoAtual)}</span>
                 <button class="modal-close"onclick="document.getElementById('localizacao-detalhe-modal').remove()"style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0.25rem;">
                     <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:1.25rem;height:1.25rem;"><line x1="18"y1="6"x2="6"y2="18"/><line x1="6"y1="6"x2="18"y2="18"/></svg>
                 </button>
@@ -12190,11 +12185,11 @@ function abrirDetalhesMes(mesStr, nomeMes) {
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-bottom:1rem;">
                     <div style="background:var(--bg-surface);padding:0.75rem;border-radius:0.5rem;text-align:center;">
                         <div style="font-size:0.65rem;color:var(--text-muted);">MOVIMENTAÇÕES</div>
-                        <div style="font-size:1.3rem;font-weight:800;color:var(--text-main);">${dados.movimentacoes || 0}</div>
+                        <div style="font-size:1.3rem;font-weight:800;color:var(--text-main);">${escH(dados.movimentacoes) || 0}</div>
                     </div>
                     <div style="background:var(--bg-surface);padding:0.75rem;border-radius:0.5rem;text-align:center;">
                         <div style="font-size:0.65rem;color:var(--text-muted);">EM CAMPO</div>
-                        <div style="font-size:1.3rem;font-weight:800;color:var(--text-main);">${dados.emCampo || 0}</div>
+                        <div style="font-size:1.3rem;font-weight:800;color:var(--text-main);">${escH(dados.emCampo) || 0}</div>
                     </div>
                 </div>
                 <div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);margin-bottom:0.5rem;">INSTRUMENTOS EM CAMPO</div>
@@ -12247,7 +12242,7 @@ function renderTimeline() {
             <div style="flex:1;display:flex;">
                 ${mesesOrdenados.map(mes => `
                     <div style="flex:1;text-align:center;padding:0.3rem 0.1rem;font-size:0.55rem;font-weight:600;color:var(--text-muted);">
-                        ${mes}
+                        ${escH(mes)}
                     </div>
                 `).join('')}
             </div>
@@ -12268,8 +12263,8 @@ function renderTimeline() {
                                  'var(--primary)';
                     return `
                         <div style="flex:1;text-align:center;padding:0.2rem 0.1rem;">
-                            <div style="height:20px;border-radius:3px;background:${color};width:${Math.max(percent, 2)}%;margin:0 auto;min-width:4px;max-width:95%;"></div>
-                            <div style="font-size:0.5rem;color:var(--text-muted);margin-top:0.1rem;">${dados.movimentacoes}</div>
+                            <div style="height:20px;border-radius:3px;background:${escH(color)};width:${escH(Math.max(percent, 2))}%;margin:0 auto;min-width:4px;max-width:95%;"></div>
+                            <div style="font-size:0.5rem;color:var(--text-muted);margin-top:0.1rem;">${escH(dados.movimentacoes)}</div>
                         </div>
                     `;
                 }).join('')}
@@ -12288,8 +12283,8 @@ function renderTimeline() {
                     const percent = Math.min((dados.emCampo / maxCampo) * 100, 100);
                     return `
                         <div style="flex:1;text-align:center;padding:0.2rem 0.1rem;">
-                            <div style="height:16px;border-radius:3px;background:var(--info);width:${Math.max(percent, 2)}%;margin:0 auto;min-width:4px;max-width:95%;"></div>
-                            <div style="font-size:0.5rem;color:var(--text-muted);margin-top:0.1rem;">${dados.emCampo}</div>
+                            <div style="height:16px;border-radius:3px;background:var(--info);width:${escH(Math.max(percent, 2))}%;margin:0 auto;min-width:4px;max-width:95%;"></div>
+                            <div style="font-size:0.5rem;color:var(--text-muted);margin-top:0.1rem;">${escH(dados.emCampo)}</div>
                         </div>
                     `;
                 }).join('')}
@@ -12459,8 +12454,7 @@ function showMovimentoItemModal(dadosCodificados) {
     try { d = JSON.parse(decodeURIComponent(dadosCodificados)); } catch (e) { d = {}; }
 
     const aparencia = osItemAparencia(d.status_item) || { rotulo: 'Movimento da ferramenta' };
-    const esc = (v) => String(v === null || v === undefined ? '' : v)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const esc = (v) => escH(v === null || v === undefined ? '' : v);
 
     const cor = d.status_item === 'incluida_parcialmente' ? 'var(--roxo, #7c3aed)'
         : (d.status_item === 'retirada_parcial' || d.status_item === 'devolvida_parcialmente')
@@ -12488,7 +12482,7 @@ function showMovimentoItemModal(dadosCodificados) {
     modal.innerHTML = `
         <div class="modal-container" style="max-width:440px;animation:fadeIn 0.2s ease;">
             <div class="modal-header" style="border-bottom:1px solid var(--border-color);">
-                <span class="modal-title" style="font-size:1.05rem;font-weight:700;color:${cor};">
+                <span class="modal-title" style="font-size:1.05rem;font-weight:700;color:${escH(cor)};">
                     ${esc(aparencia.rotulo)} — ${esc(d.tag)}
                 </span>
                 <button class="modal-close" onclick="document.getElementById('os-item-movimento-modal').remove();">
@@ -12498,7 +12492,7 @@ function showMovimentoItemModal(dadosCodificados) {
             <div class="modal-body" style="padding:1.25rem;">
                 ${linhas.length ? linhas.map(([rotulo, valor]) => `
                     <div style="display:flex;gap:0.6rem;padding:0.35rem 0;border-bottom:1px solid var(--border-color);">
-                        <span style="flex:0 0 120px;font-size:0.76rem;font-weight:700;color:var(--text-muted);">${rotulo}</span>
+                        <span style="flex:0 0 120px;font-size:0.76rem;font-weight:700;color:var(--text-muted);">${escH(rotulo)}</span>
                         <span style="flex:1;font-size:0.82rem;color:var(--text-main);white-space:pre-wrap;">${esc(valor)}</span>
                     </div>`).join('')
                 : '<div style="font-size:0.85rem;color:var(--text-muted);">Sem detalhes registrados para este movimento.</div>'}
@@ -12529,20 +12523,20 @@ function showAvariaModal(tag, observacao, numeroOS, clienteOS, dataFimOS, emUso)
         modalUso.innerHTML = `
             <div class="modal-container" style="max-width:440px;animation:fadeIn 0.2s ease;">
                 <div class="modal-header" style="border-bottom:1px solid var(--border-color);">
-                    <span class="modal-title" style="font-size:1.05rem;font-weight:700;color:${cor};">Avaria (em uso) — ${tag}</span>
+                    <span class="modal-title" style="font-size:1.05rem;font-weight:700;color:${escH(cor)};">Avaria (em uso) — ${escH(tag)}</span>
                     <button class="modal-close" onclick="document.getElementById('avaria-info-modal').remove();">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1.25rem;height:1.25rem;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                 </div>
                 <div class="modal-body" style="padding:1.5rem;">
-                    <div style="border:1px solid ${cor};border-left:4px solid ${cor};border-radius:0.5rem;padding:0.7rem 0.9rem;background:color-mix(in srgb, ${cor} 8%, transparent);">
+                    <div style="border:1px solid ${escH(cor)};border-left:4px solid ${escH(cor)};border-radius:0.5rem;padding:0.7rem 0.9rem;background:color-mix(in srgb, ${escH(cor)} 8%, transparent);">
                         <span class="badge badge-warning" style="font-size:0.62rem;padding:0.12rem 0.5rem;">Avariada, porém disponível para uso</span>
                         <p style="font-size:0.78rem;color:var(--text-muted);margin:0.4rem 0 0;">Não conta como manutenção pendente.</p>
                     </div>
                     <p style="font-size:0.78rem;color:var(--text-muted);margin:1rem 0 0.5rem;">
-                        Constatada nesta obra${numeroOS ? ` — #OS-${String(numeroOS).padStart(4, '0')}` : ''}${clienteOS ? ` · ${clienteOS}` : ''}:
+                        Constatada nesta obra${numeroOS ? ` — #OS-${escH(String(numeroOS).padStart(4, '0'))}` : ''}${clienteOS ? ` · ${escH(clienteOS)}` : ''}:
                     </p>
-                    <p style="font-size:0.9rem;color:var(--text-main);line-height:1.5;margin:0;white-space:pre-wrap;">${(observacao || 'Nenhuma observação registrada.').replace(/</g, '&lt;')}</p>
+                    <p style="font-size:0.9rem;color:var(--text-main);line-height:1.5;margin:0;white-space:pre-wrap;">${escH(observacao || 'Nenhuma observação registrada.')}</p>
                 </div>
                 <div class="modal-footer" style="display:flex;justify-content:flex-end;padding:0.9rem 1.25rem;border-top:1px solid var(--border-color);">
                     <button class="btn btn-outline" onclick="document.getElementById('avaria-info-modal').remove();" style="padding:0.5rem 1.25rem;font-size:0.85rem;">Fechar</button>
@@ -12563,16 +12557,16 @@ function showAvariaModal(tag, observacao, numeroOS, clienteOS, dataFimOS, emUso)
 
     const origemHtml = `
         <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.5rem;">
-            Danificada nesta obra${numeroOS ? ` — #OS-${String(numeroOS).padStart(4, '0')}` : ''}${clienteOS ? ` · ${clienteOS}` : ''}:
+            Danificada nesta obra${numeroOS ? ` — #OS-${escH(String(numeroOS).padStart(4, '0'))}` : ''}${clienteOS ? ` · ${escH(clienteOS)}` : ''}:
         </p>
-        <p style="font-size: 0.9rem; color: var(--text-main); line-height: 1.5; margin: 0 0 1rem; white-space: pre-wrap;">${(observacao || 'Nenhuma observação registrada.').replace(/</g, '&lt;')}</p>
+        <p style="font-size: 0.9rem; color: var(--text-main); line-height: 1.5; margin: 0 0 1rem; white-space: pre-wrap;">${escH(observacao || 'Nenhuma observação registrada.')}</p>
     `;
 
     const statusHtml = jaManutencionada
         ? `<div style="border:1px solid var(--success, #22c55e);border-left:4px solid var(--success, #22c55e);border-radius:0.5rem;padding:0.7rem 0.9rem;background:color-mix(in srgb, var(--success, #22c55e) 8%, transparent);">
                 <span class="badge badge-success" style="font-size:0.62rem;padding:0.12rem 0.5rem;">✓ Já manutencionada</span>
-                <p style="font-size:0.78rem;color:var(--text-muted);margin:0.4rem 0 0;">Manutenção em ${manDataBR ? manDataBR(manDepoisDaAvaria.data_manutencao) : String(manDepoisDaAvaria.data_manutencao).slice(0,10)}</p>
-                ${manDepoisDaAvaria.observacao ? `<p style="font-size:0.8rem;color:var(--text-main);margin:0.35rem 0 0;white-space:pre-wrap;">${String(manDepoisDaAvaria.observacao).replace(/</g, '&lt;')}</p>` : ''}
+                <p style="font-size:0.78rem;color:var(--text-muted);margin:0.4rem 0 0;">Manutenção em ${manDataBR ? escH(manDataBR(manDepoisDaAvaria.data_manutencao)) : escH(String(manDepoisDaAvaria.data_manutencao).slice(0,10))}</p>
+                ${manDepoisDaAvaria.observacao ? `<p style="font-size:0.8rem;color:var(--text-main);margin:0.35rem 0 0;white-space:pre-wrap;">${escH(String(manDepoisDaAvaria.observacao))}</p>` : ''}
            </div>`
         : `<div style="border:1px solid var(--danger, #ef4444);border-left:4px solid var(--danger, #ef4444);border-radius:0.5rem;padding:0.7rem 0.9rem;background:color-mix(in srgb, var(--danger, #ef4444) 6%, transparent);">
                 <span class="badge badge-danger" style="font-size:0.62rem;padding:0.12rem 0.5rem;">▲ Ainda não manutencionada</span>
@@ -12585,7 +12579,7 @@ function showAvariaModal(tag, observacao, numeroOS, clienteOS, dataFimOS, emUso)
     modal.innerHTML = `
         <div class="modal-container" style="max-width: 440px; animation: fadeIn 0.2s ease;">
             <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
-                <span class="modal-title" style="font-size: 1.05rem; font-weight: 700; color: var(--danger, #ef4444);">Avaria — ${tag}</span>
+                <span class="modal-title" style="font-size: 1.05rem; font-weight: 700; color: var(--danger, #ef4444);">Avaria — ${escH(tag)}</span>
                 <button class="modal-close" onclick="document.getElementById('avaria-info-modal').remove();">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1.25rem;height:1.25rem;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
@@ -12729,7 +12723,7 @@ async function renderConcluidos() {
             if (!mesData || mesData.os.length === 0) {
                 lista.innerHTML = `
                     <div style="text-align:center;padding:3rem 1rem;color:var(--text-muted);">
-                        <p style="font-size:1.1rem;">Nenhuma OS concluída em ${mesData?.nome || 'este mês'} de ${concluidosAnoAtual}.</p>
+                        <p style="font-size:1.1rem;">Nenhuma OS concluída em ${escH(mesData?.nome) || 'este mês'} de ${escH(concluidosAnoAtual)}.</p>
                         <button class="btn-voltar-mes"onclick="concluidosVoltarMeses()"style="margin-top:0.8rem;">
                             <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:0.9rem;height:0.9rem;"><polyline points="19 12 5 12"></polyline><polyline points="12 19 5 12 12 5"></polyline></svg>
                             Voltar para todos os meses
@@ -12743,8 +12737,8 @@ async function renderConcluidos() {
                             <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:0.9rem;height:0.9rem;"><polyline points="19 12 5 12"></polyline><polyline points="12 19 5 12 12 5"></polyline></svg>
                             Voltar
                         </button>
-                        <span>${mesData.nome} de ${concluidosAnoAtual}</span>
-                        <span class="badge badge-success">${mesData.total} concluída${mesData.total !== 1 ? 's' : ''}</span>
+                        <span>${escH(mesData.nome)} de ${escH(concluidosAnoAtual)}</span>
+                        <span class="badge badge-success">${escH(mesData.total)} concluída${mesData.total !== 1 ? 's' : ''}</span>
                     </div>
                     <div class="os-items-grid">
                 `;
@@ -12763,8 +12757,8 @@ async function renderConcluidos() {
                     if (tags.length >0) {
                         tagsHtml = tags.map(item => {
                             const avariado = item.condicao === 'avariado';
-                            const obsEscapada = (item.observacao || '').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ');
-                            const clienteEscapado = String(cliente || '').replace(/'/g, "\\'");
+                            const obsDoItem = (item.observacao || '').replace(/\n/g, ' ');
+                            const clienteDoItem = String(cliente || '');
 
                             // Chip colorido pelo movimento (vermelho = saiu antes
                             // do fim, roxo = inclusão parcial, azul = remanejamento).
@@ -12776,15 +12770,15 @@ async function renderConcluidos() {
                                     status_item: item.status_item,
                                     movimento: item.movimento || {}
                                 })).replace(/'/g, '%27');
-                                return `<span class="tag-chip ${aparencia.classe}" title="${aparencia.rotulo} — clique para ver os detalhes"
-                                              onclick="showMovimentoItemModal('${carga}')">${item.tag}</span>`;
+                                return `<span class="tag-chip ${escH(aparencia.classe)}" title="${escH(aparencia.rotulo)} — clique para ver os detalhes"
+                                              onclick="showMovimentoItemModal('${escJ(carga)}')">${escH(item.tag)}</span>`;
                             }
 
                             if (avariado) {
-                                return `<span class="tag-chip tag-chip-avariado" title="Clique para ver a avaria" onclick="showAvariaModal('${item.tag}', '${obsEscapada}', ${os.numero_os || 'null'}, '${clienteEscapado}', '${os.data_fim || ''}')">${item.tag}</span>`;
+                                return `<span class="tag-chip tag-chip-avariado" title="Clique para ver a avaria" onclick="showAvariaModal('${escJ(item.tag)}', '${escJ(obsDoItem)}', ${escL(os.numero_os) || 'null'}, '${escJ(clienteDoItem)}', '${escJ(os.data_fim) || ''}')">${escH(item.tag)}</span>`;
                             }
                             if (item.condicao === 'avariado_utilizavel') {
-                                return `<span class="tag-chip tag-chip-avariado-uso" title="Voltou avariada, porém disponível para uso — clique para ver" onclick="showAvariaModal('${item.tag}', '${obsEscapada}', ${os.numero_os || 'null'}, '${clienteEscapado}', '${os.data_fim || ''}', true)">${item.tag}</span>`;
+                                return `<span class="tag-chip tag-chip-avariado-uso" title="Voltou avariada, porém disponível para uso — clique para ver" onclick="showAvariaModal('${escJ(item.tag)}', '${escJ(obsDoItem)}', ${escL(os.numero_os) || 'null'}, '${escJ(clienteDoItem)}', '${escJ(os.data_fim) || ''}', true)">${escH(item.tag)}</span>`;
                             }
                             // Rastreabilidade: clicar na TAG mostra a movimentação real da
                             // ferramenta (origem/destino/OS), reaproveitando verHistoricoFerramenta.
@@ -12794,8 +12788,8 @@ async function renderConcluidos() {
                             const inst = (instruments || []).find(i => String(i.tag).toUpperCase() === String(item.tag).toUpperCase());
                             const rotuloOS = `#OS-${numOS}`;
                             return inst
-                                ? `<span class="tag-chip" title="Clique para ver o que esta ferramenta viveu nesta OS" style="cursor:pointer;" onclick="abrirHistoricoFerramentaModal(${inst.id}, '${String(item.tag).replace(/'/g, "\\'")}', ${os.id}, '${rotuloOS}')">${item.tag}</span>`
-                                : `<span class="tag-chip">${item.tag}</span>`;
+                                ? `<span class="tag-chip" title="Clique para ver o que esta ferramenta viveu nesta OS" style="cursor:pointer;" onclick="abrirHistoricoFerramentaModal(${escL(inst.id)}, '${escJ(item.tag)}', ${escL(os.id)}, '${escJ(rotuloOS)}')">${escH(item.tag)}</span>`
+                                : `<span class="tag-chip">${escH(item.tag)}</span>`;
                         }).join('');
                     } else {
                         tagsHtml = '<span style="font-size:0.7rem;color:#166534;">Nenhum instrumento listado</span>';
@@ -12807,17 +12801,17 @@ async function renderConcluidos() {
                         <div class="os-item-concluido">
                             <div class="os-header">
                                 <div class="os-id-linha">
-                                    <span class="os-id">#OS-${numOS}</span>
-                                    ${baiaDaOS ? `<span class="os-baia-chip" title="Baia utilizada nesta OS">${baiaDaOS}</span>` : ''}
+                                    <span class="os-id">#OS-${escH(numOS)}</span>
+                                    ${baiaDaOS ? `<span class="os-baia-chip" title="Baia utilizada nesta OS">${escH(baiaDaOS)}</span>` : ''}
                                 </div>
-                                <div class="os-cliente">${cliente}</div>
-                                <div class="os-periodo">— · ${dataInicio} <span class="separador">—</span> ${dataFim}</div>
+                                <div class="os-cliente">${escH(cliente)}</div>
+                                <div class="os-periodo">— · ${escH(dataInicio)} <span class="separador">—</span> ${escH(dataFim)}</div>
                                 ${osFoiAntecipada(os) ? `
-                                <div class="os-antecipada" title="${String(os.motivo_antecipacao || '').replace(/"/g, '&quot;')}">
+                                <div class="os-antecipada" title="${escH(String(os.motivo_antecipacao || ''))}">
                                     <strong>Devolvida com antecedência</strong>
-                                    <span>Data de término: ${formatDate(os.data_fim_original)}</span>
-                                    <span>Término adiantado: ${dataFim}</span>
-                                    ${os.motivo_antecipacao ? `<span class="motivo">Motivo: ${os.motivo_antecipacao}</span>` : ''}
+                                    <span>Data de término: ${escH(formatDate(os.data_fim_original))}</span>
+                                    <span>Término adiantado: ${escH(dataFim)}</span>
+                                    ${os.motivo_antecipacao ? `<span class="motivo">Motivo: ${escH(os.motivo_antecipacao)}</span>` : ''}
                                 </div>` : ''}
                             </div>
                             <div class="os-instrumentos">
@@ -12830,8 +12824,8 @@ async function renderConcluidos() {
                                     CONCLUÍDO
                                 </div>
                                 <div class="os-concluido-acoes-btns" style="display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap;">
-                                    <button onclick="previewPDFOS('${os.numero_os}')" class="os-mini-btn os-mini-btn-preview" title="Abrir OS em PDF em nova aba">Ver</button>
-                                    <button onclick="baixarPDFOS('${os.numero_os}')" class="os-mini-btn os-mini-btn-pdf" title="Baixar OS em PDF">Baixar OS</button>
+                                    <button onclick="previewPDFOS('${escJ(os.numero_os)}')" class="os-mini-btn os-mini-btn-preview" title="Abrir OS em PDF em nova aba">Ver</button>
+                                    <button onclick="baixarPDFOS('${escJ(os.numero_os)}')" class="os-mini-btn os-mini-btn-pdf" title="Baixar OS em PDF">Baixar OS</button>
                                     
                                 </div>
                             </div>
@@ -12866,11 +12860,11 @@ async function renderConcluidos() {
             
             gridHtml += `
                 <div class="mes-card-concluidos ${isEmpty ? 'vazio' : ''} ${isMesAtual ? 'mes-atual' : ''}" 
-                     onclick="concluidosSelecionarMes(${i})" 
-                     title="${isEmpty ? 'Nenhuma OS concluída' : mesData.total + 'OS concluída' + (mesData.total !== 1 ? 's' : '')}">
-                    <div class="mes-nome">${mesData.nome}</div>
-                    <div class="mes-numero">${String(i).padStart(2, '0')}/${concluidosAnoAtual}</div>
-                    <div class="mes-contador ${isEmpty ? 'zero' : ''}">${mesData.total}</div>
+                     onclick="concluidosSelecionarMes(${escL(i)})" 
+                     title="${isEmpty ? 'Nenhuma OS concluída' : escH(mesData.total) + 'OS concluída' + (mesData.total !== 1 ? 's' : '')}">
+                    <div class="mes-nome">${escH(mesData.nome)}</div>
+                    <div class="mes-numero">${escH(String(i).padStart(2, '0'))}/${escH(concluidosAnoAtual)}</div>
+                    <div class="mes-contador ${isEmpty ? 'zero' : ''}">${escH(mesData.total)}</div>
                     <div class="mes-label">concluída${mesData.total !== 1 ? 's' : ''}</div>
                 </div>
             `;
@@ -12882,7 +12876,7 @@ async function renderConcluidos() {
         console.error("Erro ao renderizar Concluídos:", erro);
         grid.innerHTML = `
             <div style="grid-column:span 4;text-align:center;padding:2rem;color:var(--danger);">
-                <p>Erro ao carregar dados: ${erro.message}</p>
+                <p>Erro ao carregar dados: ${escH(erro.message)}</p>
                 <button onclick="renderConcluidos()"style="padding:0.5rem 1.2rem;margin-top:0.8rem;border:none;border-radius:0.4rem;background:var(--primary);color:white;cursor:pointer;font-weight:600;">Tentar novamente</button>
             </div>
         `;
@@ -13238,19 +13232,19 @@ function renderCertificadosTable() {
         let summaryBadge = '';
         const totalComCertTipo = statusCounts.vencido + statusCounts.alerta + statusCounts.ok;
         if (totalComCertTipo >0) {
-            summaryBadge += `<span class="badge cert-badge-ghost cert-badge-ok">${totalComCertTipo} com cert.</span>`;
+            summaryBadge += `<span class="badge cert-badge-ghost cert-badge-ok">${escH(totalComCertTipo)} com cert.</span>`;
         }
         if (statusCounts.sem_certificado >0) {
-            summaryBadge += `<span class="badge cert-badge-ghost cert-badge-none">${statusCounts.sem_certificado} sem cert.</span>`;
+            summaryBadge += `<span class="badge cert-badge-ghost cert-badge-none">${escH(statusCounts.sem_certificado)} sem cert.</span>`;
         }
         if (statusCounts.vencido >0) {
-            summaryBadge += `<span class="badge badge-danger"style="font-size:0.66rem;">${statusCounts.vencido} vencido${statusCounts.vencido >1 ? 's' : ''}</span>`;
+            summaryBadge += `<span class="badge badge-danger"style="font-size:0.66rem;">${escH(statusCounts.vencido)} vencido${statusCounts.vencido >1 ? 's' : ''}</span>`;
         }
         if (statusCounts.alerta >0) {
-            summaryBadge += `<span class="badge badge-warning"style="font-size:0.66rem;">${statusCounts.alerta} alerta</span>`;
+            summaryBadge += `<span class="badge badge-warning"style="font-size:0.66rem;">${escH(statusCounts.alerta)} alerta</span>`;
         }
         if (statusCounts.ok >0 && !summaryBadge) {
-            summaryBadge = `<span class="badge badge-success"style="font-size:0.66rem;">${statusCounts.ok} em dia</span>`;
+            summaryBadge = `<span class="badge badge-success"style="font-size:0.66rem;">${escH(statusCounts.ok)} em dia</span>`;
         }
         
         const tagRows = items.map(inst => {
@@ -13294,32 +13288,32 @@ function renderCertificadosTable() {
             // Aba Certificados = SOMENTE VISUALIZAÇÃO (gerenciamento fica em Calibração)
             let btnCert;
             if (cert) {
-                btnCert = `<button class="cert-chip-btn cert-chip-ver"onclick="event.stopPropagation();verCertificado(${cert.id})">Ver</button>`;
+                btnCert = `<button class="cert-chip-btn cert-chip-ver"onclick="event.stopPropagation();verCertificado(${escL(cert.id)})">Ver</button>`;
             } else {
                 btnCert = `<span class="cert-chip-btn cert-chip-none">Sem cert.</span>`;
             }
             
             return `
-                <div class="tag-option-row ${cls}"onclick="event.stopPropagation();">
+                <div class="tag-option-row ${escH(cls)}"onclick="event.stopPropagation();">
                     <span style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-                        <span>${inst.tag || 'Sem TAG'}</span>
+                        <span>${escH(inst.tag) || 'Sem TAG'}</span>
                         ${btnCert}
                     </span>
                     <span style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-                        <span>${label}</span>
-                        ${statusText ? `<span style="font-size:0.6rem;color:var(--text-muted);">${statusText}</span>` : ''}
+                        <span>${escH(label)}</span>
+                        ${statusText ? `<span style="font-size:0.6rem;color:var(--text-muted);">${escH(statusText)}</span>` : ''}
                     </span>
                 </div>
             `;
         }).join('');
         
         return `
-            <div class="month-card type-card ${isOpen ? 'current' : ''}"data-tipo="${escAttr(tipo)}"style="cursor:pointer;"onclick="toggleCertTypeCard('${tipo.replace(/'/g,"\\'")}', this)">
+            <div class="month-card type-card ${isOpen ? 'current' : ''}"data-tipo="${escAttr(tipo)}"style="cursor:pointer;"onclick="toggleCertTypeCard('${escJ(tipo)}', this)">
                 <div class="type-card-top">
                     <button type="button"class="type-card-header"tabindex="-1">
                         <div>
-                            <div class="month-card-name">${tipo}</div>
-                            <div class="month-card-num">${items.length} unidade${items.length !== 1 ? 's' : ''}</div>
+                            <div class="month-card-name">${escH(tipo)}</div>
+                            <div class="month-card-num">${escH(items.length)} unidade${items.length !== 1 ? 's' : ''}</div>
                         </div>
                         <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:1.1rem;height:1.1rem;flex-shrink:0;transition:transform 0.2s;${isOpen ? 'transform:rotate(180deg);' : ''}"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </button>
@@ -13369,10 +13363,10 @@ function certCampoValorHTML(id, valorAtual) {
     if (certModalOrigem !== 'calibracao') return '';
     return `
                     <div class="form-group">
-                        <label class="form-label"for="${id}"style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.3rem;">
+                        <label class="form-label"for="${escH(id)}"style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.3rem;">
                             Valor
                         </label>
-                        <input type="text"id="${id}"class="form-input"value="${certFormatarValorBR(valorAtual || 0)}"placeholder="R$ 0,00"inputmode="numeric"oninput="certMascaraValor(this)"onfocus="certMascaraValor(this)"style="width:100%;max-width:100%;min-width:0;box-sizing:border-box; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem;">
+                        <input type="text"id="${escH(id)}"class="form-input"value="${escH(certFormatarValorBR(valorAtual || 0))}"placeholder="R$ 0,00"inputmode="numeric"oninput="certMascaraValor(this)"onfocus="certMascaraValor(this)"style="width:100%;max-width:100%;min-width:0;box-sizing:border-box; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem;">
                     </div>
     `;
 }
@@ -13385,17 +13379,17 @@ function certCampoComprovanteHTML(idPrefix, comprovanteAtual) {
     return `
                     <div class="form-group">
                         <label class="form-label"style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.3rem;">Comprovante do Valor</label>
-                        <div class="inv-upload-dropzone" id="${idPrefix}-dropzone" onclick="document.getElementById('${idPrefix}-input').click()"
+                        <div class="inv-upload-dropzone" id="${escH(idPrefix)}-dropzone" onclick="document.getElementById('${escJ(idPrefix)}-input').click()"
                              ondragover="event.preventDefault();event.stopPropagation();this.classList.add('dragover');"
                              ondragleave="this.classList.remove('dragover');"
-                             ondrop="certComprovanteDrop(event, '${idPrefix}')">
+                             ondrop="certComprovanteDrop(event, '${escJ(idPrefix)}')">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="inv-upload-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                             <div class="inv-upload-texto">${info
-                                ? `<strong>${info.nome}</strong><small>Clique para trocar o arquivo</small>`
+                                ? `<strong>${escH(info.nome)}</strong><small>Clique para trocar o arquivo</small>`
                                 : `<strong>Clique para anexar</strong> ou arraste o arquivo aqui<small>PDF ou imagem, até 5MB</small>`}</div>
-                            <button type="button" id="${idPrefix}-remove-btn" class="inv-upload-remove" style="display:${info ? 'inline-flex' : 'none'};" onclick="event.stopPropagation();certRemoverComprovante('${idPrefix}');">Remover</button>
+                            <button type="button" id="${escH(idPrefix)}-remove-btn" class="inv-upload-remove" style="display:${info ? 'inline-flex' : 'none'};" onclick="event.stopPropagation();certRemoverComprovante('${escJ(idPrefix)}');">Remover</button>
                         </div>
-                        <input type="file" id="${idPrefix}-input" accept="application/pdf,image/*" onchange="certSelecionarComprovante(this, '${idPrefix}')" style="display:none;">
+                        <input type="file" id="${escH(idPrefix)}-input" accept="application/pdf,image/*" onchange="certSelecionarComprovante(this, '${escJ(idPrefix)}')" style="display:none;">
                     </div>
     `;
 }
@@ -13409,7 +13403,7 @@ function certProcessarComprovante(arquivo, idPrefix) {
         const dropzone = document.getElementById(`${idPrefix}-dropzone`);
         const removeBtn = document.getElementById(`${idPrefix}-remove-btn`);
         const texto = dropzone?.querySelector('.inv-upload-texto');
-        if (texto) texto.innerHTML = `<strong>${arquivo.name}</strong><small>Clique para trocar o arquivo</small>`;
+        if (texto) texto.innerHTML = `<strong>${escH(arquivo.name)}</strong><small>Clique para trocar o arquivo</small>`;
         if (removeBtn) removeBtn.style.display = 'inline-flex';
         dropzone?.classList.add('has-file');
     };
@@ -13478,11 +13472,11 @@ function openAdicionarCertificadoModal(instrumentoId) {
                     <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:1.25rem;height:1.25rem;"><line x1="18"y1="6"x2="6"y2="18"/><line x1="6"y1="6"x2="18"y2="18"/></svg>
                 </button>
             </div>
-            <form id="form-certificado"onsubmit="return handleSalvarCertificado(event, ${instrumentoId})">
+            <form id="form-certificado"onsubmit="return handleSalvarCertificado(event, ${escL(instrumentoId)})">
                 <div class="modal-body"style="padding:1.5rem;">
                     <div style="background:var(--bg-surface); padding:0.75rem 1rem; border-radius:0.5rem; margin-bottom:1rem; border-left:3px solid var(--primary);">
-                        <p style="font-weight:700; margin:0; color:var(--text-main);">${instrumento.tag}</p>
-                        <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0;">${instrumento.tipo} - ${instrumento.fabricante}</p>
+                        <p style="font-weight:700; margin:0; color:var(--text-main);">${escH(instrumento.tag)}</p>
+                        <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0;">${escH(instrumento.tipo)} - ${escH(instrumento.fabricante)}</p>
                     </div>
                     
                     <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:600;color:var(--text-main);background:var(--bg-surface);border:1px solid var(--border-color);border-radius:0.5rem;padding:0.65rem 0.8rem;margin-bottom:1rem;cursor:pointer;">
@@ -13504,13 +13498,13 @@ function openAdicionarCertificadoModal(instrumentoId) {
                             <label class="form-label"for="cert-envio-calibracao"style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.3rem;">
                                 Envio para Calibração <span style="color:#dc2626;font-weight:700;">*</span>
                             </label>
-                            <input type="date"id="cert-envio-calibracao"class="form-input"value="${(instrumento.data_envio_calibracao || '').toString().slice(0, 10)}"style="width:100%; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem;">
+                            <input type="date"id="cert-envio-calibracao"class="form-input"value="${escH((instrumento.data_envio_calibracao || '').toString().slice(0, 10))}"style="width:100%; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem;">
                         </div>
                         <div class="form-group">
                             <label class="form-label"for="cert-retorno-empresa"style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.3rem;">
                                 Retorno à Empresa <span style="color:#dc2626;font-weight:700;">*</span>
                             </label>
-                            <input type="date"id="cert-retorno-empresa"class="form-input"value="${(instrumento.data_retorno_calibracao || '').toString().slice(0, 10)}"style="width:100%; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem;">
+                            <input type="date"id="cert-retorno-empresa"class="form-input"value="${escH((instrumento.data_retorno_calibracao || '').toString().slice(0, 10))}"style="width:100%; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem;">
                         </div>
                     </div>
                     <div class="form-grid-2"style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
@@ -14104,10 +14098,10 @@ function verCertificado(certificadoId, permitirGerenciar = false) {
             <button class="btn btn-outline"onclick="fecharDetalheCertificado()"style="padding:0.5rem 1.25rem;font-size:0.85rem;border:1px solid var(--border-color);border-radius:0.5rem;background:transparent;color:var(--text-main);cursor:pointer;">
                 Fechar
             </button>
-            <button class="btn btn-outline"onclick="fecharDetalheCertificado(); certDefinirOrigem('certificados'); openEditarCertificadoModal(${cert.id})"style="padding:0.5rem 1.25rem;font-size:0.85rem;border:1px solid var(--primary);border-radius:0.5rem;background:transparent;color:var(--primary);cursor:pointer;">
+            <button class="btn btn-outline"onclick="fecharDetalheCertificado(); certDefinirOrigem('certificados'); openEditarCertificadoModal(${escL(cert.id)})"style="padding:0.5rem 1.25rem;font-size:0.85rem;border:1px solid var(--primary);border-radius:0.5rem;background:transparent;color:var(--primary);cursor:pointer;">
                  Editar
             </button>
-            <button class="btn btn-danger"onclick="fecharDetalheCertificado(); excluirCertificado(${cert.id})"style="padding:0.5rem 1.25rem;font-size:0.85rem;border:none;border-radius:0.5rem;background:#dc2626;color:white;cursor:pointer;font-weight:600;">
+            <button class="btn btn-danger"onclick="fecharDetalheCertificado(); excluirCertificado(${escL(cert.id)})"style="padding:0.5rem 1.25rem;font-size:0.85rem;border:none;border-radius:0.5rem;background:#dc2626;color:white;cursor:pointer;font-weight:600;">
                  Excluir
             </button>
         `;
@@ -14122,28 +14116,28 @@ function verCertificado(certificadoId, permitirGerenciar = false) {
     modal.innerHTML = `
         <div class="modal-container"style="max-width:520px; margin:0 auto; animation:modalFadeIn 0.25s ease; background:var(--bg-card); border-radius:0.75rem; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
             <div class="modal-header"style="border-bottom:1px solid var(--border-color); padding:1rem 1.5rem; display:flex; justify-content:space-between; align-items:center;">
-                <span class="modal-title"style="font-size:1.1rem; font-weight:700; color:var(--text-main);">Certificado ${cert.numero}</span>
+                <span class="modal-title"style="font-size:1.1rem; font-weight:700; color:var(--text-main);">Certificado ${escH(cert.numero)}</span>
                 <button class="modal-close"onclick="fecharDetalheCertificado()"style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0.25rem;">
                     <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:1.25rem;height:1.25rem;"><line x1="18"y1="6"x2="6"y2="18"/><line x1="6"y1="6"x2="18"y2="18"/></svg>
                 </button>
             </div>
             <div class="modal-body"style="padding:1.5rem;">
                 <div style="border-left:3px solid var(--primary);padding:0.75rem 1rem;background:var(--bg-surface);border-radius:0 0.375rem 0.375rem 0;margin-bottom:1rem;">
-                    <p style="font-weight:700;margin:0;color:var(--text-main);">${instrumento ? instrumento.tag : 'Instrumento não encontrado'}</p>
-                    <p style="font-size:0.8rem;color:var(--text-muted);margin:0.2rem 0 0;">${instrumento ? instrumento.tipo : ''}</p>
+                    <p style="font-weight:700;margin:0;color:var(--text-main);">${instrumento ? escH(instrumento.tag) : 'Instrumento não encontrado'}</p>
+                    <p style="font-size:0.8rem;color:var(--text-muted);margin:0.2rem 0 0;">${instrumento ? escH(instrumento.tipo) : ''}</p>
                 </div>
                 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
-                    <div><span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Número</span><p style="font-weight:600;margin:0.1rem 0 0;">${cert.numero}</p></div>
-                    <div><span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Status</span><p style="margin:0.1rem 0 0;"><span class="badge ${statusClass}">${statusText} - ${diffDias} dias</span></p></div>
-                    <div><span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Emissão</span><p style="margin:0.1rem 0 0;">${formatDate(cert.data_emissao)}</p></div>
-                    <div><span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Vencimento</span><p style="margin:0.1rem 0 0;">${formatDate(cert.data_vencimento)}</p></div>
+                    <div><span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Número</span><p style="font-weight:600;margin:0.1rem 0 0;">${escH(cert.numero)}</p></div>
+                    <div><span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Status</span><p style="margin:0.1rem 0 0;"><span class="badge ${escH(statusClass)}">${escH(statusText)} - ${escH(diffDias)} dias</span></p></div>
+                    <div><span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Emissão</span><p style="margin:0.1rem 0 0;">${escH(formatDate(cert.data_emissao))}</p></div>
+                    <div><span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Vencimento</span><p style="margin:0.1rem 0 0;">${escH(formatDate(cert.data_vencimento))}</p></div>
                 </div>
                 
                 ${cert.observacoes ? `
                     <div style="margin-top:0.8rem;padding:0.5rem 0.8rem;background:var(--bg-surface);border-radius:0.375rem;">
                         <span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Observações</span>
-                        <p style="font-size:0.85rem;margin:0.2rem 0 0;white-space:pre-wrap;">${cert.observacoes}</p>
+                        <p style="font-size:0.85rem;margin:0.2rem 0 0;white-space:pre-wrap;">${escH(cert.observacoes)}</p>
                     </div>
                 ` : ''}
                 
@@ -14151,11 +14145,11 @@ function verCertificado(certificadoId, permitirGerenciar = false) {
                     <div style="margin-top:0.8rem;padding:0.75rem;background:var(--bg-surface);border-radius:0.375rem;border:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;">
                         <div style="display:flex;align-items:center;gap:0.5rem;">
                             <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:1.2rem;height:1.2rem;color:var(--primary);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            <span style="font-size:0.8rem;font-weight:600;color:var(--text-main);">${cert.nome_arquivo || 'Arquivo anexado'}</span>
+                            <span style="font-size:0.8rem;font-weight:600;color:var(--text-main);">${escH(cert.nome_arquivo) || 'Arquivo anexado'}</span>
                         </div>
                         <div class="cert-file-actions" style="display:flex;gap:0.4rem;">
-                            <button class="cert-chip-btn cert-chip-ver cert-btn-mini"onclick="previewCertificado(${cert.id})">Ver</button>
-                            <button class="cert-chip-btn cert-chip-ver cert-btn-mini"onclick="baixarCertificado(${cert.id})">Baixar</button>
+                            <button class="cert-chip-btn cert-chip-ver cert-btn-mini"onclick="previewCertificado(${escL(cert.id)})">Ver</button>
+                            <button class="cert-chip-btn cert-chip-ver cert-btn-mini"onclick="baixarCertificado(${escL(cert.id)})">Baixar</button>
                         </div>
                     </div>
                 ` : `
@@ -14215,29 +14209,29 @@ function abrirHistoricoCalibracao(instrumentoId) {
         const badge = dias === null
             ? `<span class="badge badge-info" style="font-size:0.6rem;">Sem vencimento</span>`
             : dias < 0
-                ? `<span class="badge badge-danger" style="font-size:0.6rem;">Vencido há ${Math.abs(dias)} dias</span>`
+                ? `<span class="badge badge-danger" style="font-size:0.6rem;">Vencido há ${escH(Math.abs(dias))} dias</span>`
                 : dias <= 30
-                    ? `<span class="badge badge-warning" style="font-size:0.6rem;">Vence em ${dias} dias</span>`
-                    : `<span class="badge badge-success" style="font-size:0.6rem;">${dias} dias</span>`;
+                    ? `<span class="badge badge-warning" style="font-size:0.6rem;">Vence em ${escH(dias)} dias</span>`
+                    : `<span class="badge badge-success" style="font-size:0.6rem;">${escH(dias)} dias</span>`;
 
         return `
             <div style="border:1px solid var(--border-color);border-left:4px solid ${atual ? 'var(--primary)' : 'var(--border-color)'};border-radius:0.5rem;padding:0.6rem 0.75rem;background:var(--bg-card);">
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-                    <span style="font-weight:800;font-size:0.82rem;color:var(--text-main);overflow-wrap:anywhere;">${c.numero || 'Sem número'}</span>
+                    <span style="font-weight:800;font-size:0.82rem;color:var(--text-main);overflow-wrap:anywhere;">${escH(c.numero) || 'Sem número'}</span>
                     <span style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
                         ${atual ? `<span class="badge badge-info" style="font-size:0.6rem;">Atual</span>` : ''}
                         ${badge}
                     </span>
                 </div>
                 <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.2rem;">
-                    Emissão: ${c.data_emissao ? formatDate(c.data_emissao) : '—'}
-                    · Vencimento: ${c.data_vencimento ? formatDate(c.data_vencimento) : '—'}
-                    ${Number(c.valor) > 0 ? ' · ' + certFormatarValorBR(c.valor) : ''}
+                    Emissão: ${c.data_emissao ? escH(formatDate(c.data_emissao)) : '—'}
+                    · Vencimento: ${c.data_vencimento ? escH(formatDate(c.data_vencimento)) : '—'}
+                    ${Number(c.valor) > 0 ? ' · ' + escH(certFormatarValorBR(c.valor)) : ''}
                     ${c.tem_arquivo ? ' · com arquivo' : ' · sem arquivo'}
                 </div>
-                ${c.observacoes ? `<div style="font-size:0.75rem;color:var(--text-main);margin-top:0.3rem;white-space:pre-wrap;overflow-wrap:anywhere;">${String(c.observacoes).replace(/</g, '&lt;')}</div>` : ''}
+                ${c.observacoes ? `<div style="font-size:0.75rem;color:var(--text-main);margin-top:0.3rem;white-space:pre-wrap;overflow-wrap:anywhere;">${escH(String(c.observacoes))}</div>` : ''}
                 <div style="display:flex;justify-content:flex-end;gap:0.4rem;margin-top:0.45rem;">
-                    <button type="button" class="cert-chip-btn cert-chip-ver" onclick="verCertificado(${c.id})">Ver certificado</button>
+                    <button type="button" class="cert-chip-btn cert-chip-ver" onclick="verCertificado(${escL(c.id)})">Ver certificado</button>
                 </div>
             </div>`;
     }).join('');
@@ -14254,21 +14248,21 @@ function abrirHistoricoCalibracao(instrumentoId) {
     modal.innerHTML = `
         <div class="modal-container" style="max-width:560px;width:94%;margin:0 auto;background:var(--bg-card);border-radius:0.75rem;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
             <div class="modal-header" style="border-bottom:1px solid var(--border-color);padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center;gap:0.5rem;">
-                <span class="modal-title" style="font-size:1.05rem;font-weight:700;color:var(--text-main);">Calibrações de ${instrumento.tag || 'Sem TAG'}</span>
+                <span class="modal-title" style="font-size:1.05rem;font-weight:700;color:var(--text-main);">Calibrações de ${escH(instrumento.tag) || 'Sem TAG'}</span>
                 <button class="modal-close" onclick="fecharHistoricoCalibracao()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0.25rem;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1.25rem;height:1.25rem;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
             <div class="modal-body" style="padding:1.1rem 1.5rem;">
                 <div style="border-left:3px solid var(--primary);padding:0.6rem 0.9rem;background:var(--bg-surface);border-radius:0 0.375rem 0.375rem 0;margin-bottom:0.9rem;">
-                    <p style="font-weight:700;margin:0;color:var(--text-main);">${instrumento.tipo || 'Instrumento'}</p>
+                    <p style="font-weight:700;margin:0;color:var(--text-main);">${escH(instrumento.tipo) || 'Instrumento'}</p>
                     <p style="font-size:0.75rem;color:var(--text-muted);margin:0.15rem 0 0;">
-                        ${instrumento.numero_serie ? 'N/S ' + String(instrumento.numero_serie).replace(/</g, '&lt;') : 'Sem nº de série cadastrado'}
-                        ${instrumento.fabricante ? ' · ' + String(instrumento.fabricante).replace(/</g, '&lt;') : ''}
+                        ${instrumento.numero_serie ? 'N/S ' + escH(String(instrumento.numero_serie)) : 'Sem nº de série cadastrado'}
+                        ${instrumento.fabricante ? ' · ' + escH(String(instrumento.fabricante)) : ''}
                     </p>
                 </div>
                 <div style="font-size:0.78rem;font-weight:700;color:var(--text-main);margin-bottom:0.45rem;">
-                    ${lista.length} calibraç${lista.length === 1 ? 'ão' : 'ões'} no histórico
+                    ${escH(lista.length)} calibraç${lista.length === 1 ? 'ão' : 'ões'} no histórico
                 </div>
                 <div style="display:flex;flex-direction:column;gap:0.45rem;max-height:340px;overflow-y:auto;">
                     ${lista.length ? linhas : vazio}
@@ -14276,7 +14270,7 @@ function abrirHistoricoCalibracao(instrumentoId) {
             </div>
             <div class="modal-footer" style="display:flex;gap:0.75rem;justify-content:flex-end;border-top:1px solid var(--border-color);padding:1rem 1.5rem;background:var(--bg-surface);border-radius:0 0 0.75rem 0.75rem;">
                 <button type="button" class="btn btn-outline" onclick="fecharHistoricoCalibracao()" style="padding:0.5rem 1.25rem;font-size:0.85rem;border:1px solid var(--border-color);border-radius:0.5rem;background:transparent;color:var(--text-main);cursor:pointer;">Fechar</button>
-                <button type="button" class="btn btn-primary" onclick="fecharHistoricoCalibracao();certDefinirOrigem('calibracao');openAdicionarCertificadoModal(${instrumento.id})" style="padding:0.5rem 1.25rem;font-size:0.85rem;border:none;border-radius:0.5rem;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;">Recalibrar</button>
+                <button type="button" class="btn btn-primary" onclick="fecharHistoricoCalibracao();certDefinirOrigem('calibracao');openAdicionarCertificadoModal(${escL(instrumento.id)})" style="padding:0.5rem 1.25rem;font-size:0.85rem;border:none;border-radius:0.5rem;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;">Recalibrar</button>
             </div>
         </div>`;
 
@@ -14513,18 +14507,18 @@ function openEditarCertificadoModal(certificadoId) {
                     <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:1.25rem;height:1.25rem;"><line x1="18"y1="6"x2="6"y2="18"/><line x1="6"y1="6"x2="18"y2="18"/></svg>
                 </button>
             </div>
-            <form id="form-editar-certificado"onsubmit="return handleEditarCertificado(event, ${cert.id})">
+            <form id="form-editar-certificado"onsubmit="return handleEditarCertificado(event, ${escL(cert.id)})">
                 <div class="modal-body"style="padding:1.5rem;">
                     <div style="background:var(--bg-surface); padding:0.75rem 1rem; border-radius:0.5rem; margin-bottom:1rem; border-left:3px solid var(--primary);">
-                        <p style="font-weight:700; margin:0; color:var(--text-main);">${instrumento.tag}</p>
-                        <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0;">${instrumento.tipo} - ${instrumento.fabricante}</p>
+                        <p style="font-weight:700; margin:0; color:var(--text-main);">${escH(instrumento.tag)}</p>
+                        <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0;">${escH(instrumento.tipo)} - ${escH(instrumento.fabricante)}</p>
                     </div>
                     
                     <div class="form-group">
                         <label class="form-label"for="cert-edit-numero"style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.3rem;">
                             Número do Certificado <span style="color:#dc2626;font-weight:700;">*</span>
                         </label>
-                        <input type="text"id="cert-edit-numero"class="form-input"value="${cert.numero}"required style="width:100%; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem;">
+                        <input type="text"id="cert-edit-numero"class="form-input"value="${escH(cert.numero)}"required style="width:100%; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem;">
                     </div>
                     ${certCampoValorHTML('cert-edit-valor', cert.valor || 0)}
                     ${certCampoComprovanteHTML('cert-edit-comprovante', cert.comprovante)}
@@ -14534,13 +14528,13 @@ function openEditarCertificadoModal(certificadoId) {
                             <label class="form-label"for="cert-edit-envio-calibracao"style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.3rem;">
                                 Envio para Calibração
                             </label>
-                            <input type="date"id="cert-edit-envio-calibracao"class="form-input"value="${envioCal}"style="width:100%; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem;">
+                            <input type="date"id="cert-edit-envio-calibracao"class="form-input"value="${escH(envioCal)}"style="width:100%; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem;">
                         </div>
                         <div class="form-group">
                             <label class="form-label"for="cert-edit-retorno-empresa"style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.3rem;">
                                 Retorno à Empresa
                             </label>
-                            <input type="date"id="cert-edit-retorno-empresa"class="form-input"value="${retornoCal}"style="width:100%; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem;">
+                            <input type="date"id="cert-edit-retorno-empresa"class="form-input"value="${escH(retornoCal)}"style="width:100%; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem;">
                         </div>
                     </div>
                     <p style="font-size:0.7rem;color:var(--text-muted);margin:-0.4rem 0 0.8rem;">Esse período aparece na aba Localização enquanto o instrumento estiver fora para calibração.</p>
@@ -14550,13 +14544,13 @@ function openEditarCertificadoModal(certificadoId) {
                             <label class="form-label"for="cert-edit-data-emissao"style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.3rem;">
                                 Data de Emissão <span style="color:#dc2626;font-weight:700;">*</span>
                             </label>
-                            <input type="date"id="cert-edit-data-emissao"class="form-input"value="${dataEmissao}"required style="width:100%; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem;">
+                            <input type="date"id="cert-edit-data-emissao"class="form-input"value="${escH(dataEmissao)}"required style="width:100%; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem;">
                         </div>
                         <div class="form-group">
                             <label class="form-label"for="cert-edit-data-vencimento"style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.3rem;">
                                 Data de Vencimento <span style="color:#dc2626;font-weight:700;">*</span>
                             </label>
-                            <input type="date"id="cert-edit-data-vencimento"class="form-input"value="${dataVencimento}"required style="width:100%; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem;">
+                            <input type="date"id="cert-edit-data-vencimento"class="form-input"value="${escH(dataVencimento)}"required style="width:100%; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem;">
                         </div>
                     </div>
                     
@@ -14564,7 +14558,7 @@ function openEditarCertificadoModal(certificadoId) {
                         <label class="form-label"for="cert-edit-observacoes"style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.3rem;">
                             Observações
                         </label>
-                        <textarea id="cert-edit-observacoes"class="form-input"rows="3"placeholder="Observações sobre o certificado (opcional)"style="width:100%; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem; resize:vertical;">${cert.observacoes || ''}</textarea>
+                        <textarea id="cert-edit-observacoes"class="form-input"rows="3"placeholder="Observações sobre o certificado (opcional)"style="width:100%; padding:0.6rem 0.8rem; border:2px solid var(--border-color); border-radius:0.5rem; background:var(--bg-input); color:var(--text-main); font-size:0.9rem; resize:vertical;">${escH(cert.observacoes) || ''}</textarea>
                     </div>
                     
                     <div class="form-group">
@@ -14573,8 +14567,8 @@ function openEditarCertificadoModal(certificadoId) {
                         </label>
                         <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.8rem;background:var(--bg-surface);border-radius:0.375rem;border:1px solid var(--border-color);">
                             <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:1.2rem;height:1.2rem;color:var(--primary);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            <span style="font-size:0.85rem;color:var(--text-main);">${cert.nome_arquivo || 'Arquivo anexado'}</span>
-                            ${(cert.tem_arquivo || cert.arquivo) ? `<span class="cert-file-actions"><button type="button"class="cert-chip-btn cert-chip-ver cert-btn-mini"onclick="previewCertificado(${cert.id})">Ver</button><button type="button"class="cert-chip-btn cert-chip-ver cert-btn-mini"onclick="baixarCertificado(${cert.id})">Baixar</button></span>` : ''}
+                            <span style="font-size:0.85rem;color:var(--text-main);">${escH(cert.nome_arquivo) || 'Arquivo anexado'}</span>
+                            ${(cert.tem_arquivo || cert.arquivo) ? `<span class="cert-file-actions"><button type="button"class="cert-chip-btn cert-chip-ver cert-btn-mini"onclick="previewCertificado(${escL(cert.id)})">Ver</button><button type="button"class="cert-chip-btn cert-chip-ver cert-btn-mini"onclick="baixarCertificado(${escL(cert.id)})">Baixar</button></span>` : ''}
                         </div>
                         <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.2rem;">Para substituir o arquivo, anexe um novo abaixo.</p>
                     </div>
@@ -14979,7 +14973,7 @@ function _remPopularSelectOSDestino(select) {
         ? '<option value="">— Selecione a Obra —</option>' + lista.map(os => {
             const nome = os.obra || os.cliente || 'Obra sem nome';
             const numero = `#OS-${String(os.numero_os || os.id).padStart(4, '0')}`;
-            return `<option value="${os.id}" data-obra="${String(nome).replace(/"/g, '&quot;')}">${nome} — ${numero}</option>`;
+            return `<option value="${escH(os.id)}" data-obra="${escH(String(nome))}">${escH(nome)} — ${escH(numero)}</option>`;
         }).join('')
         : '<option value="">Nenhuma obra em campo no momento</option>';
 
@@ -15049,7 +15043,7 @@ function popularSelectRemanejamentoResponsavel() {
     select.innerHTML = '<option value="">Selecione o responsável</option>'
         + lista.map(u => {
             const euMesmo = usuarioAtual.nome && u.nome === usuarioAtual.nome;
-            return `<option value="${u.nome}">${u.nome}${euMesmo ? ' (você)' : ''}</option>`;
+            return `<option value="${escH(u.nome)}">${escH(u.nome)}${euMesmo ? ' (você)' : ''}</option>`;
         }).join('');
 
     if (selecionado && lista.some(u => u.nome === selecionado)) select.value = selecionado;
@@ -15072,7 +15066,7 @@ function popularSelectRemHistoricoResponsavel() {
         .slice()
         .sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
     select.innerHTML = '<option value="">Todos os responsáveis</option>'
-        + lista.map(u => `<option value="${u.nome}">${u.nome}</option>`).join('');
+        + lista.map(u => `<option value="${escH(u.nome)}">${escH(u.nome)}</option>`).join('');
     if (selecionado && lista.some(u => u.nome === selecionado)) select.value = selecionado;
 }
 window.popularSelectRemHistoricoResponsavel = popularSelectRemHistoricoResponsavel;
@@ -15148,14 +15142,14 @@ function remCampoBipagemHTML(idInput, nomeFuncao) {
     const podeDigitar = remPodeDigitar();
     return `
         <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-            <input type="text" id="${idInput}" class="form-input"
+            <input type="text" id="${escH(idInput)}" class="form-input"
                    placeholder="${podeDigitar ? 'Bipe ou digite o código / TAG da ferramenta' : 'Bipe o código com o leitor'}"
                    autocomplete="off" autocapitalize="characters"
                    style="flex:1;min-width:180px;"
                    ${podeDigitar ? '' : 'title="Digitar o código não é permitido para o seu cargo — bipe com o leitor ou use a câmera"'}>
             ${podeDigitar ? `<button type="button" class="btn btn-primary btn-sm" style="padding:0.4rem 1rem;" onclick="${nomeFuncao}()">Adicionar</button>` : ''}
             <button type="button" class="btn btn-outline btn-sm" style="padding:0.4rem 1rem;"
-                    onclick="abrirScannerCampo('${idInput}', ${nomeFuncao})">Usar câmera</button>
+                    onclick="abrirScannerCampo('${escJ(idInput)}', ${nomeFuncao})">Usar câmera</button>
         </div>
         `;
 }
@@ -15315,9 +15309,9 @@ function renderRemItensBipados() {
     if (box) {
         box.innerHTML = remItensBipados.length ? remItensBipados.map((it, idx) => `
             <div style="display:flex;align-items:center;gap:0.5rem;border:1px solid var(--border-color);border-radius:0.4rem;padding:0.4rem 0.6rem;">
-                <span style="font-family:monospace;font-weight:700;font-size:0.8rem;color:var(--text-main);">${it.tag}</span>
-                <span style="font-size:0.72rem;color:var(--text-muted);">${it.tipo || ''}</span>
-                <button type="button" class="btn btn-outline btn-sm" style="margin-left:auto;padding:0.15rem 0.5rem;font-size:0.7rem;" onclick="remRemoverItemBipado(${idx})">Remover</button>
+                <span style="font-family:monospace;font-weight:700;font-size:0.8rem;color:var(--text-main);">${escH(it.tag)}</span>
+                <span style="font-size:0.72rem;color:var(--text-muted);">${escH(it.tipo) || ''}</span>
+                <button type="button" class="btn btn-outline btn-sm" style="margin-left:auto;padding:0.15rem 0.5rem;font-size:0.7rem;" onclick="remRemoverItemBipado(${escL(idx)})">Remover</button>
             </div>
         `).join('') : `<div style="font-size:0.78rem;color:var(--text-muted);">Nenhuma ferramenta bipada ainda.</div>`;
     }
@@ -15557,7 +15551,7 @@ async function renderRemPendentesRecebimento() {
     let html = '';
     meusPendentes.forEach((rem, index) =>{
         const instrumentosHtml = rem.instrumentos.map(inst =>
-            `<span style="background:var(--bg-surface);padding:0.1rem 0.5rem;border-radius:0.3rem;font-size:0.75rem;font-family:monospace;font-weight:600;color:var(--text-main);">${inst.tag}</span>`
+            `<span style="background:var(--bg-surface);padding:0.1rem 0.5rem;border-radius:0.3rem;font-size:0.75rem;font-family:monospace;font-weight:600;color:var(--text-main);">${escH(inst.tag)}</span>`
         ).join(' ');
 
         const dataFormatada = new Date(rem.data).toLocaleDateString('pt-BR', {
@@ -15569,15 +15563,15 @@ async function renderRemPendentesRecebimento() {
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">
                     <div>
                         <div style="font-weight:700;font-size:0.9rem;color:var(--text-main);">
-                            Remanejamento #${String(rem.id)}
+                            Remanejamento #${escH(String(rem.id))}
                         </div>
                         <div style="font-size:0.75rem;color:var(--text-muted);">
-                            Obra: <strong>${rem.obra_origem}</strong>
+                            Obra: <strong>${escH(rem.obra_origem)}</strong>
                         </div>
                         <div style="font-size:0.75rem;color:var(--text-muted);">
-                            Enviado por: <strong>${rem.remetente_nome}</strong>
+                            Enviado por: <strong>${escH(rem.remetente_nome)}</strong>
                         </div>
-                        <div style="font-size:0.7rem;color:var(--text-muted);">${dataFormatada}</div>
+                        <div style="font-size:0.7rem;color:var(--text-muted);">${escH(dataFormatada)}</div>
                     </div>
                     <span class="badge badge-warning">Aguardando</span>
                 </div>
@@ -15585,7 +15579,7 @@ async function renderRemPendentesRecebimento() {
                     ${instrumentosHtml}
                 </div>
                 <div style="margin-top:0.5rem;display:flex;gap:0.5rem;">
-                    <button onclick="abrirConfirmRecebimento(${index})"class="btn btn-success btn-sm"style="padding:0.3rem 1rem;font-size:0.8rem;">
+                    <button onclick="abrirConfirmRecebimento(${escL(index)})"class="btn btn-success btn-sm"style="padding:0.3rem 1rem;font-size:0.8rem;">
                         Receber Instrumentos
                     </button>
                 </div>
@@ -15611,19 +15605,19 @@ function abrirConfirmRecebimento(index) {
     if (!container || !body) return;
 
     const instrumentosHtml = rem.instrumentos.map(inst =>
-        `<span style="background:var(--bg-surface);padding:0.1rem 0.5rem;border-radius:0.3rem;font-size:0.75rem;font-family:monospace;font-weight:600;color:var(--text-main);">${inst.tag}</span>`
+        `<span style="background:var(--bg-surface);padding:0.1rem 0.5rem;border-radius:0.3rem;font-size:0.75rem;font-family:monospace;font-weight:600;color:var(--text-main);">${escH(inst.tag)}</span>`
     ).join(' ');
 
     body.innerHTML = `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.85rem;">
             ${rem.solicitado_por ? `<div><strong>Solicitado por:</strong> ${baiaEscapar(rem.solicitado_por)}</div>` : ''}
-            <div><strong>Obra de origem:</strong> ${rem.obra_origem}</div>
-            <div><strong>Enviado por:</strong> ${rem.enviado_por || rem.remetente_nome}</div>
+            <div><strong>Obra de origem:</strong> ${escH(rem.obra_origem)}</div>
+            <div><strong>Enviado por:</strong> ${escH(rem.enviado_por) || escH(rem.remetente_nome)}</div>
             <div style="grid-column:span 2;">
                 <strong>Instrumentos:</strong><br>
                 <div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.3rem;">${instrumentosHtml}</div>
             </div>
-            ${rem.observacao ? `<div style="grid-column:span 2;"><strong>Observações:</strong> ${rem.observacao}</div>` : ''}
+            ${rem.observacao ? `<div style="grid-column:span 2;"><strong>Observações:</strong> ${escH(rem.observacao)}</div>` : ''}
         </div>
 
         <!-- BIPAGEM DO RECEBIMENTO
@@ -15633,7 +15627,7 @@ function abrirConfirmRecebimento(index) {
         <div style="margin-top:1rem;border-top:1px solid var(--border-color);padding-top:0.9rem;">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
                 <label class="form-label" style="margin:0;">Bipe as ferramentas recebidas</label>
-                <span id="rem-rec-contador" style="font-size:0.78rem;font-weight:700;color:var(--primary);">0 de ${rem.instrumentos.length}</span>
+                <span id="rem-rec-contador" style="font-size:0.78rem;font-weight:700;color:var(--primary);">0 de ${escH(rem.instrumentos.length)}</span>
             </div>
             <div id="rem-rec-campo-bipagem"></div>
             <div id="rem-rec-bipados" style="display:flex;flex-direction:column;gap:0.35rem;margin-top:0.55rem;"></div>
@@ -15721,7 +15715,7 @@ function renderRemRecBipados() {
             <span style="font-family:monospace;font-weight:700;font-size:0.8rem;color:var(--text-main);">${baiaEscapar(b.tag)}</span>
             <span style="font-size:0.72rem;color:var(--text-muted);">${baiaEscapar(b.tipo || '')}</span>
             <button type="button" class="btn btn-outline btn-sm" style="margin-left:auto;padding:0.15rem 0.5rem;font-size:0.7rem;"
-                    onclick="remRecRemoverBipado(${idx})">Remover</button>
+                    onclick="remRecRemoverBipado(${escL(idx)})">Remover</button>
         </div>`).join('')
         : `<div style="font-size:0.78rem;color:var(--text-muted);">Nenhuma ferramenta bipada ainda.</div>`;
 }
@@ -15933,7 +15927,7 @@ function remAbrirTermoRecebimento(rem) {
                 <div style="min-width:0;">
                     <div style="font-size:1.02rem;font-weight:900;letter-spacing:0.01em;">Termo de responsabilidade</div>
                     <div style="font-size:0.78rem;color:rgba(255,255,255,0.85);">
-                        ${baiaEscapar(eu.nome || 'Você')}, você está assumindo ${(rem.instrumentos || []).length} ferramenta(s).
+                        ${baiaEscapar(eu.nome || 'Você')}, você está assumindo ${escH((rem.instrumentos || []).length)} ferramenta(s).
                     </div>
                 </div>
             </div>
@@ -16270,7 +16264,7 @@ function renderRemDevLista() {
                             : '<span class="badge badge-warning" style="font-size:0.62rem;">Aguardando bipagem</span>'}
                     </div>
                     <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.2rem;">
-                        Recebida de <strong>${histEscapar(mov.responsavel || '—')}</strong> em ${recebidoEm}
+                        Recebida de <strong>${histEscapar(mov.responsavel || '—')}</strong> em ${escH(recebidoEm)}
                         ${mov.origem ? ` · origem: ${histEscapar(mov.origem)}` : ''}
                     </div>
 
@@ -16281,33 +16275,33 @@ function renderRemDevLista() {
                         <div style="flex:0 0 160px;">
                             <label class="form-label" style="display:block;font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:0.2rem;">Data de retorno</label>
                             <div style="padding:0.4rem 0.55rem;border:1px solid var(--border-color);border-radius:0.4rem;background:var(--bg-surface);color:var(--text-main);font-size:0.78rem;font-weight:700;">
-                                ${new Date(hoje + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                ${escH(new Date(hoje + 'T00:00:00').toLocaleDateString('pt-BR'))}
                             </div>
                         </div>
                         <div style="flex:0 0 180px;">
                             <label class="form-label" style="display:block;font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:0.2rem;">Estado da ferramenta</label>
-                            <select class="form-select rem-dev-estado" data-id="${mov.id}" onchange="remDevEstadoMudou('${mov.id}', this.value)"
+                            <select class="form-select rem-dev-estado" data-id="${escH(mov.id)}" onchange="remDevEstadoMudou('${escJ(mov.id)}', this.value)"
                                     style="width:100%;box-sizing:border-box;padding:0.4rem 0.55rem;border:1px solid var(--border-color);border-radius:0.4rem;background:var(--bg-input);color:var(--text-main);font-size:0.78rem;">
                                 <option value="ok">Bom / Em ordem</option>
                                 <option value="avariado">Avariado</option>
                                 <option value="avariado_utilizavel">Avariado, porém disponível para uso</option>
                             </select>
                         </div>
-                        <div style="flex:1;min-width:200px;" id="rem-dev-obs-box-${mov.id}" class="rem-dev-obs-box">
+                        <div style="flex:1;min-width:200px;" id="rem-dev-obs-box-${escH(mov.id)}" class="rem-dev-obs-box">
                             <label class="form-label" style="display:block;font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:0.2rem;">Observação</label>
-                            <input type="text" class="form-input rem-dev-obs" data-id="${mov.id}" placeholder="Opcional"
+                            <input type="text" class="form-input rem-dev-obs" data-id="${escH(mov.id)}" placeholder="Opcional"
                                    style="width:100%;box-sizing:border-box;padding:0.4rem 0.55rem;border:1px solid var(--border-color);border-radius:0.4rem;background:var(--bg-input);color:var(--text-main);font-size:0.78rem;">
                         </div>
                     </div>
                     <div style="margin-top:0.5rem;">
                         <button type="button" class="btn btn-outline btn-sm" style="padding:0.2rem 0.6rem;font-size:0.7rem;"
-                                onclick="remDevRemoverBipagem('${mov.id}')">Desfazer bipagem</button>
+                                onclick="remDevRemoverBipagem('${escJ(mov.id)}')">Desfazer bipagem</button>
                     </div>` : ''}
                 </div>`;
             }).join('')}
         </div>
         <div style="margin-top:0.8rem;font-size:0.76rem;color:var(--text-muted);">
-            ${remDevBipados.length} de ${remDevPendentes.length} ferramenta(s) bipada(s). Só as bipadas são devolvidas.
+            ${escH(remDevBipados.length)} de ${escH(remDevPendentes.length)} ferramenta(s) bipada(s). Só as bipadas são devolvidas.
         </div>`;
 }
 
@@ -16326,7 +16320,7 @@ function remDevEstadoMudou(id, valor) {
         : 'var(--text-muted)';
     if (label) {
         label.innerHTML = avaria
-            ? `Descrição da avaria <span style="color:${cor};">*</span>`
+            ? `Descrição da avaria <span style="color:${escH(cor)};">*</span>`
             : 'Observação';
         label.style.color = avaria ? cor : 'var(--text-muted)';
     }
@@ -16516,7 +16510,7 @@ async function renderRemHistorico() {
         });
 
         const instrumentosHtml = rem.instrumentos.map(inst =>
-            `<span style="background:var(--bg-surface);padding:0.1rem 0.5rem;border-radius:0.3rem;font-size:0.7rem;font-family:monospace;font-weight:600;color:var(--text-main);">${inst.tag}</span>`
+            `<span style="background:var(--bg-surface);padding:0.1rem 0.5rem;border-radius:0.3rem;font-size:0.7rem;font-family:monospace;font-weight:600;color:var(--text-main);">${escH(inst.tag)}</span>`
         ).join(' ');
 
         // Recebido numa O.S. que já se concluiu = ciclo fechado: a devolutiva
@@ -16544,14 +16538,14 @@ async function renderRemHistorico() {
         // já aconteceu — a que ainda não, vira "aguardando".
         const papel = (rotulo, nome, data, cor) => nome ? `
             <div style="font-size:0.75rem;color:var(--text-muted);">
-                ${rotulo}: <strong style="color:${cor || 'var(--text-main)'};">${histEscapar(nome)}</strong>${data ? ` · ${fmt(data)}` : ''}
+                ${escH(rotulo)}: <strong style="color:${escH(cor) || 'var(--text-main)'};">${histEscapar(nome)}</strong>${data ? ` · ${escH(fmt(data))}` : ''}
             </div>` : '';
 
         html += `
             <div style="border:1px solid var(--border-color);border-radius:0.5rem;padding:0.8rem;background:var(--bg-card);">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">
                     <div style="min-width:0;">
-                        <div style="font-weight:700;font-size:0.85rem;color:var(--text-main);">#${String(rem.id)}</div>
+                        <div style="font-weight:700;font-size:0.85rem;color:var(--text-main);">#${escH(String(rem.id))}</div>
                         <div style="font-size:0.75rem;color:var(--text-muted);">Obra: <strong>${histEscapar(rem.obra_origem)}</strong></div>
                         ${papel('Solicitada por', rem.solicitado_por, rem.data_solicitacao)}
                         ${papel('Enviada por', rem.enviado_por || rem.remetente_nome, rem.data_envio || rem.data)}
@@ -16583,7 +16577,7 @@ async function renderRemHistorico() {
                     <button type="button" class="btn btn-outline btn-sm"
                             style="padding:0.2rem 0.7rem;font-size:0.72rem;border-color:var(--danger,#ef4444);color:var(--danger,#ef4444);"
                             title="Apagar este remanejamento do histórico"
-                            onclick="remExcluirHistorico('${rem.grupo_id || ''}', '${rem.ids.join(',')}')">Excluir</button>
+                            onclick="remExcluirHistorico('${escJ(rem.grupo_id) || ''}', '${escJ(rem.ids.join(','))}')">Excluir</button>
                 </div>` : ''}
             </div>
         `;
@@ -16648,7 +16642,7 @@ function remConfirmarExclusaoHistorico(qtd) {
                 </div>
                 <div class="modal-body" style="padding:1.15rem 1.4rem;">
                     <p style="font-size:0.86rem;color:var(--text-main);margin:0 0 0.75rem;">
-                        ${qtd || 1} registro(s) de movimentação serão apagados <strong>permanentemente</strong>.
+                        ${escH(qtd) || 1} registro(s) de movimentação serão apagados <strong>permanentemente</strong>.
                     </p>
                     <div style="border:1px solid var(--warning,#f59e0b);background:color-mix(in srgb, var(--warning,#f59e0b) 12%, transparent);border-radius:0.5rem;padding:0.7rem 0.85rem;font-size:0.79rem;color:var(--text-main);">
                         Isto apaga só o <strong>registro</strong>. A ferramenta continua onde está e a O.S. que a
@@ -16693,8 +16687,7 @@ const HIST_CATEGORIAS = {
 };
 
 function histEscapar(texto) {
-    return String(texto === null || texto === undefined ? '' : texto)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return escH(texto === null || texto === undefined ? '' : texto);
 }
 
 function histDataHora(valor) {
@@ -16729,11 +16722,11 @@ function histRenderizar(targetId, dados) {
         const info = HIST_CATEGORIAS[cat];
         const ativo = filtro === cat;
         const rotulo = cat === 'todas' ? `Tudo (${timeline.length})` : `${info?.rotulo || cat} (${timeline.filter(e => e.categoria === cat).length})`;
-        return `<button type="button" onclick="histAplicarFiltro('${targetId}','${cat}')"
+        return `<button type="button" onclick="histAplicarFiltro('${escJ(targetId)}','${escJ(cat)}')"
                     style="padding:0.22rem 0.6rem;font-size:0.7rem;font-weight:700;border-radius:999px;cursor:pointer;
                            border:1px solid ${ativo ? 'var(--primary)' : 'var(--border-color)'};
                            background:${ativo ? 'var(--primary)' : 'transparent'};
-                           color:${ativo ? '#fff' : 'var(--text-muted)'};">${rotulo}</button>`;
+                           color:${ativo ? '#fff' : 'var(--text-muted)'};">${escH(rotulo)}</button>`;
     }).join('');
 
     const linhas = visiveis.map(e => {
@@ -16741,14 +16734,14 @@ function histRenderizar(targetId, dados) {
         return `
         <div style="display:flex;gap:0.6rem;align-items:flex-start;">
             <div style="flex:0 0 8px;display:flex;flex-direction:column;align-items:center;align-self:stretch;padding-top:0.35rem;">
-                <span style="width:8px;height:8px;border-radius:50%;background:${info.cor};flex-shrink:0;"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:${escH(info.cor)};flex-shrink:0;"></span>
                 <span style="flex:1;width:2px;background:var(--border-color);margin-top:2px;"></span>
             </div>
             <div style="flex:1;min-width:0;padding-bottom:0.7rem;">
                 <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
-                    <span style="font-size:0.7rem;color:var(--text-muted);font-variant-numeric:tabular-nums;">${histDataHora(e.data)}</span>
+                    <span style="font-size:0.7rem;color:var(--text-muted);font-variant-numeric:tabular-nums;">${escH(histDataHora(e.data))}</span>
                     <span style="font-size:0.62rem;font-weight:800;letter-spacing:0.03em;text-transform:uppercase;
-                                 color:${info.cor};border:1px solid ${info.cor};border-radius:999px;padding:0.03rem 0.4rem;">${histEscapar(info.rotulo)}</span>
+                                 color:${escH(info.cor)};border:1px solid ${escH(info.cor)};border-radius:999px;padding:0.03rem 0.4rem;">${histEscapar(info.rotulo)}</span>
                 </div>
                 <div style="font-size:0.84rem;font-weight:700;color:var(--text-main);margin-top:0.15rem;">${histEscapar(e.titulo)}</div>
                 ${e.detalhe ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.1rem;">${histEscapar(e.detalhe)}</div>` : ''}
@@ -16771,7 +16764,7 @@ function histRenderizar(targetId, dados) {
                         ? `Somente nesta O.S.: <strong style="color:var(--text-main);">${histEscapar(rotuloOS)}</strong>`
                         : `Localização atual: <strong style="color:var(--text-main);">${histEscapar(dados.localizacao_atual || 'Almoxarifado')}</strong>`}
                 </div>
-                <div style="font-size:0.72rem;color:var(--text-muted);">${timeline.length} evento(s)</div>
+                <div style="font-size:0.72rem;color:var(--text-muted);">${escH(timeline.length)} evento(s)</div>
             </div>
             <div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-bottom:0.75rem;">${abas}</div>
             ${visiveis.length ? linhas : `<div style="padding:1.2rem;text-align:center;color:var(--text-muted);font-size:0.82rem;">Nenhum evento registrado${filtro !== 'todas' ? ' nesta categoria' : (rotuloOS ? ' desta ferramenta nesta O.S.' : '')}.</div>`}
@@ -16820,7 +16813,7 @@ function abrirHistoricoFerramentaModal(ferramentaId, tagLabel, osId, rotuloOS) {
     modal.innerHTML = `
         <div class="modal-container" style="max-width:700px;width:95%;margin:0 auto;background:var(--bg-card);border-radius:0.75rem;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:85vh;display:flex;flex-direction:column;">
             <div class="modal-header" style="border-bottom:1px solid var(--border-color);padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center;">
-                <span class="modal-title" style="font-size:1.05rem;font-weight:700;color:var(--text-main);">Movimentação — ${tagLabel || ''}${rotuloOS ? ` <span style="font-weight:600;color:var(--text-muted);">na ${rotuloOS}</span>` : ''}</span>
+                <span class="modal-title" style="font-size:1.05rem;font-weight:700;color:var(--text-main);">Movimentação — ${escH(tagLabel) || ''}${rotuloOS ? ` <span style="font-weight:600;color:var(--text-muted);">na ${escH(rotuloOS)}</span>` : ''}</span>
                 <button class="modal-close" onclick="fecharHistoricoFerramentaModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0.25rem;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1.25rem;height:1.25rem;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
@@ -17111,11 +17104,11 @@ function openInstrumentDetail(id) {
     const linhas = historico.length ? historico.map(os => {
         const st = getStatusInfo(os.status);
         return '<tr style="border-bottom:1px solid var(--border-color);">'
-            + '<td style="padding:0.45rem 0.5rem;font-weight:700;">#' + String(os.numero_os || '').padStart(4, '0') + '</td>'
-            + '<td style="padding:0.45rem 0.5rem;">' + (os.cliente || '—') + '</td>'
-            + '<td style="padding:0.45rem 0.5rem;">' + (os.obra || '—') + '</td>'
-            + '<td style="padding:0.45rem 0.5rem;white-space:nowrap;">' + (os.data_inicio ? formatDate(os.data_inicio) : '—') + ' - ' + (os.data_fim ? formatDate(os.data_fim) : '—') + '</td>'
-            + '<td style="padding:0.45rem 0.5rem;"><span class="badge ' + st.class + '">' + st.label + '</span></td></tr>';
+            + '<td style="padding:0.45rem 0.5rem;font-weight:700;">#' + escH(String(os.numero_os || '').padStart(4, '0')) + '</td>'
+            + '<td style="padding:0.45rem 0.5rem;">' + (escH(os.cliente) || '—') + '</td>'
+            + '<td style="padding:0.45rem 0.5rem;">' + (escH(os.obra) || '—') + '</td>'
+            + '<td style="padding:0.45rem 0.5rem;white-space:nowrap;">' + (os.data_inicio ? escH(formatDate(os.data_inicio)) : '—') + ' - ' + (os.data_fim ? escH(formatDate(os.data_fim)) : '—') + '</td>'
+            + '<td style="padding:0.45rem 0.5rem;"><span class="badge ' + escH(st.class) + '">' + escH(st.label) + '</span></td></tr>';
     }).join('') : '<tr><td colspan="5" style="padding:1rem;text-align:center;color:var(--text-muted);">Nenhuma OS registrada para esta ferramenta.</td></tr>';
 
     // Certificados do instrumento (apenas visualização)
@@ -17127,11 +17120,11 @@ function openInstrumentDetail(id) {
     const certsHtml = certsUltimo.length
         ? '<div style="display:flex;flex-direction:column;gap:0.35rem;">' + certsUltimo.map(c =>
             '<div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;border:1px solid var(--border-color);border-radius:0.4rem;padding:0.4rem 0.55rem;background:var(--bg-surface);font-size:0.78rem;">'
-            + '<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><strong>' + (c.numero || c.numero_certificado || 'Certificado') + '</strong>'
-            + (c.laboratorio ? ' · ' + c.laboratorio : '') + '</span>'
+            + '<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><strong>' + (escH(c.numero) || escH(c.numero_certificado) || 'Certificado') + '</strong>'
+            + (c.laboratorio ? ' · ' + escH(c.laboratorio) : '') + '</span>'
             + '<span style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;color:var(--text-muted);font-size:0.72rem;">'
-            + (c.data_emissao ? formatDate(c.data_emissao) : '—') + ' → ' + ((c.data_vencimento || c.data_validade) ? formatDate(c.data_vencimento || c.data_validade) : '—')
-            + '<button type="button" onclick="verCertificadoDoInstrumento(' + c.id + ')" style="padding:0.2rem 0.55rem;font-size:0.7rem;border:1px solid var(--border-color);border-radius:0.35rem;background:var(--bg-card);color:var(--text-main);cursor:pointer;font-weight:600;">Visualizar</button>'
+            + (c.data_emissao ? escH(formatDate(c.data_emissao)) : '—') + ' → ' + ((c.data_vencimento || c.data_validade) ? escH(formatDate(c.data_vencimento || c.data_validade)) : '—')
+            + '<button type="button" onclick="verCertificadoDoInstrumento(' + escL(c.id) + ')" style="padding:0.2rem 0.55rem;font-size:0.7rem;border:1px solid var(--border-color);border-radius:0.35rem;background:var(--bg-card);color:var(--text-main);cursor:pointer;font-weight:600;">Visualizar</button>'
             + '</span></div>').join('') + '</div>'
         : '<div style="font-size:0.78rem;color:var(--text-muted);">Nenhum certificado cadastrado para esta ferramenta.</div>';
 
@@ -17142,30 +17135,30 @@ function openInstrumentDetail(id) {
     modal.className = 'modal-overlay active';
     modal.id = 'instrument-detail-modal';
     modal.style.cssText = 'display:flex;align-items:center;justify-content:center;z-index:1200;';
-    const ensaios = inst.classificacao_lista ? String(inst.classificacao_lista).split(',').map(e => '<span class="badge badge-purple">' + e.trim() + '</span>').join(' ') : '';
+    const ensaios = inst.classificacao_lista ? String(inst.classificacao_lista).split(',').map(e => '<span class="badge badge-purple">' + escH(e.trim()) + '</span>').join(' ') : '';
     modal.innerHTML = '<div class="modal-container" style="max-width:760px;width:95%;background:var(--bg-card);border-radius:0.75rem;">'
         + '<div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem;border-bottom:1px solid var(--border-color);">'
-        + '<span class="modal-title" style="font-weight:700;color:var(--text-main);">' + (inst.tag || 'Ferramenta') + ' - ' + (inst.tipo || '') + '</span>'
+        + '<span class="modal-title" style="font-weight:700;color:var(--text-main);">' + (escH(inst.tag) || 'Ferramenta') + ' - ' + (escH(inst.tipo) || '') + '</span>'
         + '<button class="modal-close" onclick="document.getElementById(\'instrument-detail-modal\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:1rem;">X</button></div>'
         + '<div class="modal-body" style="padding:1.25rem;max-height:70vh;overflow:auto;">'
-        + '<div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;"><span class="badge badge-info">' + ((getStatusRealInstrumento(inst) || '').replace(/_/g, ' ') || 'sem status') + '</span>' + ensaios + '</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;"><span class="badge badge-info">' + (escH((getStatusRealInstrumento(inst) || '').replace(/_/g, ' ')) || 'sem status') + '</span>' + ensaios + '</div>'
         + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.6rem;margin-bottom:1.25rem;font-size:0.8rem;color:var(--text-main);">'
-        + '<div><strong>Fabricante:</strong> ' + (inst.fabricante || '—') + '</div>'
-        + '<div><strong>Modelo:</strong> ' + (inst.modelo || '—') + '</div>'
-        + '<div><strong>Nº de série:</strong> ' + (inst.numero_serie || '—') + '</div>'
-        + '<div><strong>Última calibração:</strong> ' + (inst.ultima_calibracao ? formatDate(inst.ultima_calibracao) : '—') + '</div>'
-        + '<div><strong>Vencimento:</strong> ' + (inst.vencimento_calibracao ? formatDate(inst.vencimento_calibracao) : '—') + '</div></div>'
-        + '<h4 style="font-size:0.9rem;font-weight:700;color:var(--text-main);margin-bottom:0.5rem;">Último certificado' + (certsInst.length > 1 ? ' (de ' + certsInst.length + ')' : '') + '</h4>'
+        + '<div><strong>Fabricante:</strong> ' + (escH(inst.fabricante) || '—') + '</div>'
+        + '<div><strong>Modelo:</strong> ' + (escH(inst.modelo) || '—') + '</div>'
+        + '<div><strong>Nº de série:</strong> ' + (escH(inst.numero_serie) || '—') + '</div>'
+        + '<div><strong>Última calibração:</strong> ' + (inst.ultima_calibracao ? escH(formatDate(inst.ultima_calibracao)) : '—') + '</div>'
+        + '<div><strong>Vencimento:</strong> ' + (inst.vencimento_calibracao ? escH(formatDate(inst.vencimento_calibracao)) : '—') + '</div></div>'
+        + '<h4 style="font-size:0.9rem;font-weight:700;color:var(--text-main);margin-bottom:0.5rem;">Último certificado' + (certsInst.length > 1 ? ' (de ' + escH(certsInst.length) + ')' : '') + '</h4>'
         + '<div style="margin-bottom:1.25rem;">' + certsHtml + '</div>'
-        + '<h4 style="font-size:0.9rem;font-weight:700;color:var(--text-main);margin-bottom:0.5rem;">Histórico de OS (' + historico.length + ')</h4>'
+        + '<h4 style="font-size:0.9rem;font-weight:700;color:var(--text-main);margin-bottom:0.5rem;">Histórico de OS (' + escH(historico.length) + ')</h4>'
         + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.78rem;color:var(--text-main);min-width:520px;">'
         + '<thead><tr style="text-align:left;color:var(--text-muted);border-bottom:1px solid var(--border-color);">'
         + '<th style="padding:0.4rem 0.5rem;">OS</th><th style="padding:0.4rem 0.5rem;">Cliente</th><th style="padding:0.4rem 0.5rem;">Obra</th>'
         + '<th style="padding:0.4rem 0.5rem;">Período</th><th style="padding:0.4rem 0.5rem;">Status</th></tr></thead>'
         + '<tbody>' + linhas + '</tbody></table></div></div>'
         + '<div class="modal-footer" style="display:flex;justify-content:flex-end;gap:0.6rem;padding:1rem 1.25rem;border-top:1px solid var(--border-color);">'
-        + '<button type="button" class="btn btn-danger" onclick="excluirInstrumento(' + JSON.stringify(inst.id) + ')" style="padding:0.5rem 1rem;font-size:0.82rem;">Excluir</button>'
-        + '<button type="button" class="btn btn-primary" onclick="document.getElementById(\'instrument-detail-modal\').remove();editarInstrumento(' + JSON.stringify(inst.id) + ')" style="padding:0.5rem 1rem;font-size:0.82rem;">Editar</button>'
+        + '<button type="button" class="btn btn-danger" onclick="excluirInstrumento(' + escH(JSON.stringify(inst.id)) + ')" style="padding:0.5rem 1rem;font-size:0.82rem;">Excluir</button>'
+        + '<button type="button" class="btn btn-primary" onclick="document.getElementById(\'instrument-detail-modal\').remove();editarInstrumento(' + escH(JSON.stringify(inst.id)) + ')" style="padding:0.5rem 1rem;font-size:0.82rem;">Editar</button>'
         + '</div></div>';
     document.body.appendChild(modal);
     modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
@@ -17186,7 +17179,7 @@ window.verCertificadoDoInstrumento = verCertificadoDoInstrumento;
 // ============================================================
 function _classFerramentaSelectHTML(valor, primeiro) {
     const opts = ['<option value="">— Sem classificação —</option>']
-        .concat(LISTA_CLASSIFICACAO_OPCOES.map(o => `<option value="${o}"${o === valor ? ' selected' : ''}>${o}</option>`))
+        .concat(LISTA_CLASSIFICACAO_OPCOES.map(o => `<option value="${escH(o)}"${o === valor ? ' selected' : ''}>${escH(o)}</option>`))
         .join('');
     return `<div class="inv-classificacao-row"style="display:flex;gap:0.4rem;align-items:center;">
         <select ${primeiro ? 'id="inv-classificacao" ' : ''}class="form-select inv-classificacao-select"style="flex:1;min-width:0;">${opts}</select>
@@ -17286,7 +17279,7 @@ function atualizarFiltroCargos() {
     const atual = select.value;
     const cargos = listarCargos();
     select.innerHTML = '<option value="">— Todos os Cargos —</option>' +
-        cargos.map(c => `<option value="${c}">${c}</option>`).join('');
+        cargos.map(c => `<option value="${escH(c)}">${escH(c)}</option>`).join('');
     if (atual && cargos.includes(atual)) select.value = atual;
 }
 window.atualizarFiltroCargos = atualizarFiltroCargos;
@@ -17348,8 +17341,8 @@ function openCargoFormModal() {
             <div class="form-group"style="margin-bottom:1rem;">
                 <label class="form-label"style="display:block;font-size:0.8rem;font-weight:700;color:var(--text-main);margin-bottom:0.3rem;">Cor do Cargo</label>
                 <div style="display:flex;align-items:center;gap:0.75rem;">
-                    <input type="color"id="novo-cargo-cor"value="${corSugerida}"style="width:52px;height:38px;border:none;background:none;cursor:pointer;"onchange="previewCorCargo()"oninput="previewCorCargo()">
-                    <span id="novo-cargo-preview"class="cargo-color-preview"style="background:color-mix(in srgb, ${corSugerida} 14%, transparent);color:${corCargoLegivel(corSugerida)};">Novo Cargo</span>
+                    <input type="color"id="novo-cargo-cor"value="${escH(corSugerida)}"style="width:52px;height:38px;border:none;background:none;cursor:pointer;"onchange="previewCorCargo()"oninput="previewCorCargo()">
+                    <span id="novo-cargo-preview"class="cargo-color-preview"style="background:color-mix(in srgb, ${escH(corSugerida)} 14%, transparent);color:${escH(corCargoLegivel(corSugerida))};">Novo Cargo</span>
                 </div>
                 <div class="cargo-swatch-grid"id="novo-cargo-swatches"></div>
             </div>
@@ -17359,7 +17352,7 @@ function openCargoFormModal() {
             <div style="margin-bottom:1.25rem;">
                 <span style="display:block;font-size:0.75rem;font-weight:700;color:var(--text-muted);margin-bottom:0.35rem;text-transform:uppercase;letter-spacing:0.04em;">Cargos existentes</span>
                 <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
-                    ${Object.entries(cargosAtuais).map(([nome, cor]) => `<span class="cargo-color-preview"role="button"tabindex="0"title="Clique para editar ou excluir"style="background:color-mix(in srgb, ${cor} 14%, transparent);color:${cor};cursor:pointer;"onclick="openCargoEditModal('${nome.replace(/'/g, "\\'")}')">${nome} ✎</span>`).join('')}
+                    ${Object.entries(cargosAtuais).map(([nome, cor]) => `<span class="cargo-color-preview"role="button"tabindex="0"title="Clique para editar ou excluir"style="background:color-mix(in srgb, ${escH(cor)} 14%, transparent);color:${escH(cor)};cursor:pointer;"onclick="openCargoEditModal('${escJ(nome)}')">${escH(nome)} ✎</span>`).join('')}
                 </div>
             </div>
 
@@ -17376,7 +17369,7 @@ function openCargoFormModal() {
     const swatches = document.getElementById('novo-cargo-swatches');
     if (swatches) {
         const livres = CARGO_PALETA_SUGESTAO.filter(c => !corJaUsada(c)).slice(0, 8);
-        swatches.innerHTML = livres.map(c => `<span class="cargo-swatch${c === corSugerida ? ' selected' : ''}"data-cor="${c}"style="background:${c};"title="${c}"onclick="selecionarCorCargo('${c}')"></span>`).join('');
+        swatches.innerHTML = livres.map(c => `<span class="cargo-swatch${c === corSugerida ? ' selected' : ''}"data-cor="${escH(c)}"style="background:${escH(c)};"title="${escH(c)}"onclick="selecionarCorCargo('${escJ(c)}')"></span>`).join('');
     }
 
     const input = document.getElementById('novo-cargo-nome');
@@ -17502,22 +17495,22 @@ function openCargoEditModal(cargoOriginal) {
         <div class="modal-content cargo-modal-content"style="background:var(--bg-card);border-radius:1rem;max-height:88vh;overflow-y:auto;padding:1.5rem;box-shadow:0 20px 45px rgba(15,23,42,0.35);">
             <h3 style="margin:0 0 0.25rem;font-size:1.1rem;font-weight:800;color:var(--text-main);">Editar Cargo</h3>
             <p style="margin:0 0 1.25rem;font-size:0.8rem;color:var(--text-muted);">
-                ${emUso ? `${emUso} colaborador(es) usam este cargo.` : 'Nenhum colaborador usa este cargo.'}
+                ${emUso ? `${escH(emUso)} colaborador(es) usam este cargo.` : 'Nenhum colaborador usa este cargo.'}
             </p>
 
             <div class="form-group"style="margin-bottom:1rem;">
                 <label class="form-label"for="edit-cargo-nome"style="display:block;font-size:0.8rem;font-weight:700;color:var(--text-main);margin-bottom:0.3rem;">Nome do Cargo</label>
-                <input type="text"id="edit-cargo-nome"class="form-input"value="${cargoOriginal}"style="width:100%;padding:0.6rem 0.8rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.9rem;">
+                <input type="text"id="edit-cargo-nome"class="form-input"value="${escH(cargoOriginal)}"style="width:100%;padding:0.6rem 0.8rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.9rem;">
                 ${ehPadrao ? `<small style="display:block;margin-top:0.3rem;font-size:0.72rem;color:var(--text-muted);">
-                    Cargo original do sistema. Renomear troca o nome em todo lugar${emUso ? `, inclusive nos ${emUso} colaborador(es) que o usam` : ''} — o nome antigo deixa de existir.
+                    Cargo original do sistema. Renomear troca o nome em todo lugar${emUso ? `, inclusive nos ${escH(emUso)} colaborador(es) que o usam` : ''} — o nome antigo deixa de existir.
                 </small>` : ''}
             </div>
 
             <div class="form-group"style="margin-bottom:1.25rem;">
                 <label class="form-label"style="display:block;font-size:0.8rem;font-weight:700;color:var(--text-main);margin-bottom:0.3rem;">Cor do Cargo</label>
                 <div style="display:flex;align-items:center;gap:0.75rem;">
-                    <input type="color"id="edit-cargo-cor"value="${corAtual}"style="width:52px;height:38px;border:none;background:none;cursor:pointer;">
-                    <span id="edit-cargo-preview"class="cargo-color-preview"style="background:color-mix(in srgb, ${corAtual} 14%, transparent);color:${corCargoLegivel(corAtual)};">${cargoOriginal}</span>
+                    <input type="color"id="edit-cargo-cor"value="${escH(corAtual)}"style="width:52px;height:38px;border:none;background:none;cursor:pointer;">
+                    <span id="edit-cargo-preview"class="cargo-color-preview"style="background:color-mix(in srgb, ${escH(corAtual)} 14%, transparent);color:${escH(corCargoLegivel(corAtual))};">${escH(cargoOriginal)}</span>
                 </div>
             </div>
 
@@ -17731,7 +17724,7 @@ function popularSelectResponsaveis() {
         .sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
 
     select.innerHTML = '<option value="">Selecione o responsável</option>' +
-        lista.map(u => `<option value="${u.nome}" data-user-id="${u.id}">${u.nome}</option>`).join('');
+        lista.map(u => `<option value="${escH(u.nome)}" data-user-id="${escH(u.id)}">${escH(u.nome)}</option>`).join('');
 
     if (selecionado && lista.some(u => u.nome === selecionado)) select.value = selecionado;
 

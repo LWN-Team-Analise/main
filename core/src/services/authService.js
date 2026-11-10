@@ -82,19 +82,17 @@ export async function signIn({ identifier, password }) {
 /**
  * Revalida a sessao guardada. Devolve uma de tres respostas:
  *
- *   { user }             — o token vale, e este e o cadastro de agora
- *   { expirada: true }   — o token morreu; a pessoa precisa entrar de novo
+ *   { user }             — a sessao vale, e este e o cadastro de agora
+ *   { expirada: true }   — a sessao morreu; a pessoa precisa entrar de novo
  *   { indefinido: true } — nao deu para perguntar (API fora do ar)
  *
  * A diferenca entre as duas ultimas e o que importa: sem ela, um
  * servidor momentaneamente fora do ar deslogaria todo mundo.
  */
-export async function fetchMe(token) {
+export async function fetchMe() {
   let resposta
   try {
-    resposta = await fetch('/api/auth/me', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    resposta = await fetch('/api/auth/me')
   } catch {
     return { indefinido: true }
   }
@@ -107,20 +105,21 @@ export async function fetchMe(token) {
   return { indefinido: true }
 }
 
+/** Encerra a sessao no servidor: o cookie sai e o token deixa de valer. */
 export async function signOut() {
-  // o token e sem estado no servidor: sair e apagar a sessao local
+  await fetch('/api/auth/sair', { method: 'POST' }).catch(() => {})
 }
 
 /* ============================================================
    Esqueci minha senha — os tres passos do pop-up
    ============================================================ */
 
-async function falar(caminho, corpo, cabecalhos = {}) {
+async function falar(caminho, corpo) {
   let resposta
   try {
     resposta = await fetch(`/api/auth/${caminho}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...cabecalhos },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(corpo),
     })
   } catch {
@@ -200,5 +199,5 @@ export const inicioDoOutlook = (redirecionar) => falar('outlook/inicio', { redir
 export const entrarComOutlook = (codigo, redirecionar) =>
   falar('outlook/entrar', { codigo, redirecionar })
 
-export const vincularOutlook = (codigo, redirecionar, token) =>
-  falar('outlook/vincular', { codigo, redirecionar }, { Authorization: `Bearer ${token}` })
+export const vincularOutlook = (codigo, redirecionar) =>
+  falar('outlook/vincular', { codigo, redirecionar })

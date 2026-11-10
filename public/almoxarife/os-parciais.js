@@ -68,8 +68,7 @@ function opHojeISO() {
 }
 
 function opEscapar(texto) {
-    return String(texto === null || texto === undefined ? '' : texto)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return escH(texto === null || texto === undefined ? '' : texto);
 }
 
 function opOS(osId) {
@@ -95,13 +94,13 @@ function opAbrirModal(id, titulo, subtitulo, corpo, rodape, largura) {
     modal.id = id;
     modal.style.cssText = 'display:flex;align-items:center;justify-content:center;z-index:1200;';
     modal.innerHTML = `
-        <div class="modal-container" style="max-width:${largura || '760px'};width:95%;margin:0 auto;background:var(--bg-card);border-radius:0.75rem;box-shadow:0 20px 60px rgba(0,0,0,0.35);max-height:88vh;display:flex;flex-direction:column;">
+        <div class="modal-container" style="max-width:${escH(largura) || '760px'};width:95%;margin:0 auto;background:var(--bg-card);border-radius:0.75rem;box-shadow:0 20px 60px rgba(0,0,0,0.35);max-height:88vh;display:flex;flex-direction:column;">
             <div class="modal-header" style="border-bottom:1px solid var(--border-color);padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
                 <div style="min-width:0;">
-                    <div class="modal-title" style="font-size:1.05rem;font-weight:800;color:var(--text-main);">${titulo}</div>
-                    ${subtitulo ? `<div style="font-size:0.76rem;color:var(--text-muted);margin-top:0.15rem;">${subtitulo}</div>` : ''}
+                    <div class="modal-title" style="font-size:1.05rem;font-weight:800;color:var(--text-main);">${escH(titulo)}</div>
+                    ${subtitulo ? `<div style="font-size:0.76rem;color:var(--text-muted);margin-top:0.15rem;">${escH(subtitulo)}</div>` : ''}
                 </div>
-                <button class="modal-close" onclick="opFechar('${id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0.25rem;flex-shrink:0;">
+                <button class="modal-close" onclick="opFechar('${escJ(id)}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0.25rem;flex-shrink:0;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1.25rem;height:1.25rem;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
@@ -245,15 +244,15 @@ function opInclusaoRenderRemovidos() {
                                 <span style="font-size:0.78rem;color:var(--text-main);">${opEscapar(item.tipo)}</span>
                             </div>
                             <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.15rem;">
-                                ${[r.data_retirada ? 'Retirada em ' + opDataBR(r.data_retirada) : null,
+                                ${escH([r.data_retirada ? 'Retirada em ' + opDataBR(r.data_retirada) : null,
                                    r.motivo ? 'Motivo: ' + r.motivo : null,
-                                   r.observacao || null].filter(Boolean).map(opEscapar).join(' · ') || '—'}
+                                   r.observacao || null].filter(Boolean).map(opEscapar).join(' · ')) || '—'}
                             </div>
                         </div>
                         ${avaria
                             ? `<button class="btn btn-sm" disabled title="Retirada como avariada — segue para a Manutenção e não volta para esta OS"
                                        style="padding:0.35rem 0.9rem;font-size:0.78rem;border:none;border-radius:0.45rem;background:var(--danger,#ef4444);color:#fff;font-weight:700;cursor:not-allowed;white-space:nowrap;">Avariado</button>`
-                            : `<button class="btn btn-sm" onclick="opInclusaoConfirmar(${item.ferramenta_id}, true)"
+                            : `<button class="btn btn-sm" onclick="opInclusaoConfirmar(${escL(item.ferramenta_id)}, true)"
                                        title="Devolver esta ferramenta à OS"
                                        style="padding:0.35rem 0.9rem;font-size:0.78rem;border:none;border-radius:0.45rem;background:var(--warning,#f59e0b);color:#fff;font-weight:700;cursor:pointer;white-space:nowrap;">Voltar item</button>`}
                     </div>`;
@@ -329,15 +328,15 @@ function opInclusaoRenderLista() {
                     ${indisponivel && !emUso ? `<span class="badge badge-warning" style="font-size:0.62rem;">${opEscapar(String(f.status).replace(/_/g, ' '))}</span>` : ''}
                 </div>
                 <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.15rem;">
-                    ${[f.fabricante, f.modelo, f.numero_serie ? 'S/N ' + f.numero_serie : null, f.codigo_barras ? 'cód. ' + f.codigo_barras : null, f.localizacao_atual]
-                        .filter(Boolean).map(opEscapar).join(' · ') || '—'}
+                    ${escH([f.fabricante, f.modelo, f.numero_serie ? 'S/N ' + f.numero_serie : null, f.codigo_barras ? 'cód. ' + f.codigo_barras : null, f.localizacao_atual]
+                        .filter(Boolean).map(opEscapar).join(' · ')) || '—'}
                 </div>
             </div>
             <button class="btn btn-primary btn-sm" ${bloqueado ? 'disabled' : ''}
-                    ${bloqueado ? '' : `onclick="opInclusaoConfirmar(${f.id})"`}
+                    ${bloqueado ? '' : `onclick="opInclusaoConfirmar(${escL(f.id)})"`}
                     title="${emUso ? 'Ferramenta em campo em outra OS — não pode ser incluída aqui' : ''}"
                     style="padding:0.35rem 0.9rem;font-size:0.78rem;border:none;border-radius:0.45rem;background:${bloqueado ? 'var(--text-muted)' : 'var(--primary)'};color:#fff;font-weight:700;cursor:${bloqueado ? 'not-allowed' : 'pointer'};white-space:nowrap;">
-                ${rotuloBotao}
+                ${escH(rotuloBotao)}
             </button>
         </div>`;
     }).join('') : `<div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:0.85rem;">Nenhuma ferramenta encontrada para essa busca.</div>`;
@@ -368,7 +367,7 @@ function opInclusaoConfirmar(ferramentaId, retorno) {
         </div>` : ''}
         <div class="form-group" style="margin-bottom:0.85rem;">
             <label class="form-label" style="display:block;font-size:0.8rem;font-weight:700;margin-bottom:0.3rem;color:var(--text-main);">Data de saída</label>
-            <input type="date" id="op-inc-data" class="form-input" value="${opHojeISO()}"
+            <input type="date" id="op-inc-data" class="form-input" value="${escH(opHojeISO())}"
                    style="width:100%;box-sizing:border-box;padding:0.5rem 0.7rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.85rem;">
         </div>
         <div class="form-group" style="margin-bottom:0.85rem;">
@@ -388,7 +387,7 @@ function opInclusaoConfirmar(ferramentaId, retorno) {
         `
         <button type="button" class="btn btn-outline" onclick="opFechar('inclusao-parcial-confirmar-modal')"
                 style="padding:0.5rem 1.1rem;border:1px solid var(--border-color);border-radius:0.5rem;background:transparent;color:var(--text-main);cursor:pointer;font-weight:600;">Cancelar</button>
-        <button type="button" class="btn btn-primary" id="op-inc-salvar" onclick="opInclusaoSalvar(${f.id}, ${ehRetorno})"
+        <button type="button" class="btn btn-primary" id="op-inc-salvar" onclick="opInclusaoSalvar(${escL(f.id)}, ${escL(ehRetorno)})"
                 style="padding:0.5rem 1.1rem;border:none;border-radius:0.5rem;background:${ehRetorno ? 'var(--warning,#f59e0b)' : 'var(--primary)'};color:#fff;font-weight:700;cursor:pointer;">${ehRetorno ? 'Voltar item' : 'Confirmar inclusão'}</button>
         `,
         '520px'
@@ -517,43 +516,43 @@ function opRetiradaRenderLista() {
     const itens = opRetiradaEstado.itens;
 
     box.innerHTML = itens.length ? itens.map((i, idx) => `
-        <div class="op-ret-item" data-idx="${idx}" style="border:1px solid var(--border-color);border-radius:0.55rem;padding:0.6rem 0.75rem;background:var(--bg-surface);">
+        <div class="op-ret-item" data-idx="${escH(idx)}" style="border:1px solid var(--border-color);border-radius:0.55rem;padding:0.6rem 0.75rem;background:var(--bg-surface);">
             <label style="display:flex;align-items:center;gap:0.55rem;cursor:pointer;">
-                <input type="checkbox" class="op-ret-check" data-idx="${idx}" onchange="opRetiradaToggle(${idx}, this.checked)"
+                <input type="checkbox" class="op-ret-check" data-idx="${escH(idx)}" onchange="opRetiradaToggle(${escL(idx)}, this.checked)"
                        style="width:1.05rem;height:1.05rem;accent-color:var(--primary);cursor:pointer;flex-shrink:0;">
                 <span style="font-family:monospace;font-weight:800;font-size:0.85rem;color:var(--text-main);">[${opEscapar(i.tag)}]</span>
                 <span style="font-size:0.8rem;color:var(--text-main);">${opEscapar(i.tipo)}</span>
-                ${i.status_item ? `<span class="badge ${getStatusItemOSInfo(i.status_item)?.class || 'badge-info'}" style="font-size:0.62rem;">${getStatusItemOSInfo(i.status_item)?.label || ''}</span>` : ''}
+                ${i.status_item ? `<span class="badge ${escH(getStatusItemOSInfo(i.status_item)?.class) || 'badge-info'}" style="font-size:0.62rem;">${escH(getStatusItemOSInfo(i.status_item)?.label) || ''}</span>` : ''}
             </label>
-            <div class="op-ret-campos" id="op-ret-campos-${idx}" style="display:none;margin-top:0.55rem;padding-left:1.6rem;">
+            <div class="op-ret-campos" id="op-ret-campos-${escH(idx)}" style="display:none;margin-top:0.55rem;padding-left:1.6rem;">
                 <div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:flex-start;">
                     <div style="flex:0 0 160px;">
                         <label class="form-label" style="display:block;font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:0.2rem;">Data da retirada</label>
-                        <input type="date" class="form-input op-ret-data" data-idx="${idx}" value="${opHojeISO()}"
+                        <input type="date" class="form-input op-ret-data" data-idx="${escH(idx)}" value="${escH(opHojeISO())}"
                                style="width:100%;box-sizing:border-box;padding:0.4rem 0.55rem;border:1px solid var(--border-color);border-radius:0.4rem;background:var(--bg-input);color:var(--text-main);font-size:0.78rem;">
                     </div>
                     <div style="flex:0 0 170px;">
                         <label class="form-label" style="display:block;font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:0.2rem;">Estado da ferramenta</label>
-                        <select class="form-select op-ret-estado" data-idx="${idx}" onchange="opRetiradaEstadoMudou(${idx}, this.value)"
+                        <select class="form-select op-ret-estado" data-idx="${escH(idx)}" onchange="opRetiradaEstadoMudou(${escL(idx)}, this.value)"
                                 style="width:100%;box-sizing:border-box;padding:0.4rem 0.55rem;border:1px solid var(--border-color);border-radius:0.4rem;background:var(--bg-input);color:var(--text-main);font-size:0.78rem;">
-                            ${OP_ESTADOS_FERRAMENTA.map(e => `<option value="${e.valor}">${e.label}</option>`).join('')}
+                            ${OP_ESTADOS_FERRAMENTA.map(e => `<option value="${escH(e.valor)}">${escH(e.label)}</option>`).join('')}
                         </select>
                     </div>
                     <div style="flex:1;min-width:200px;">
                         <label class="form-label" style="display:block;font-size:0.72rem;font-weight:700;color:var(--text-muted);margin-bottom:0.2rem;">
                             Motivo da retirada <span style="color:var(--danger,#ef4444);">* obrigatório</span>
                         </label>
-                        <input type="text" class="form-input op-ret-motivo" data-idx="${idx}" placeholder="Ex: ferramenta com defeito, não será usada..."
+                        <input type="text" class="form-input op-ret-motivo" data-idx="${escH(idx)}" placeholder="Ex: ferramenta com defeito, não será usada..."
                                style="width:100%;box-sizing:border-box;padding:0.4rem 0.55rem;border:1px solid var(--border-color);border-radius:0.4rem;background:var(--bg-input);color:var(--text-main);font-size:0.78rem;">
                     </div>
                 </div>
-                <div id="op-ret-obs-box-${idx}" style="display:none;margin-top:0.5rem;">
-                    <label class="form-label" id="op-ret-obs-label-${idx}" style="display:block;font-size:0.72rem;font-weight:700;color:var(--danger,#ef4444);margin-bottom:0.2rem;">
+                <div id="op-ret-obs-box-${escH(idx)}" style="display:none;margin-top:0.5rem;">
+                    <label class="form-label" id="op-ret-obs-label-${escH(idx)}" style="display:block;font-size:0.72rem;font-weight:700;color:var(--danger,#ef4444);margin-bottom:0.2rem;">
                         Descrição da avaria <span>* obrigatória</span>
                     </label>
-                    <input type="text" class="form-input op-ret-obs" data-idx="${idx}" placeholder="Descreva a avaria encontrada..."
+                    <input type="text" class="form-input op-ret-obs" data-idx="${escH(idx)}" placeholder="Descreva a avaria encontrada..."
                            style="width:100%;box-sizing:border-box;padding:0.4rem 0.55rem;border:1px solid var(--danger,#ef4444);border-radius:0.4rem;background:var(--bg-input);color:var(--text-main);font-size:0.78rem;">
-                    <small id="op-ret-obs-ajuda-${idx}" style="display:block;margin-top:0.2rem;font-size:0.7rem;color:var(--text-muted);">
+                    <small id="op-ret-obs-ajuda-${escH(idx)}" style="display:block;margin-top:0.2rem;font-size:0.7rem;color:var(--text-muted);">
                         A ferramenta ficará com status "Avariado" no Inventário e aparecerá na aba Manutenção.
                     </small>
                 </div>
@@ -720,7 +719,7 @@ async function abrirDevolucaoParcial(osId) {
     if (box) {
         box.innerHTML = emCampo.length ? emCampo.map((i, idx) => `
             <label style="display:flex;align-items:center;gap:0.55rem;border:1px solid var(--border-color);border-radius:0.5rem;padding:0.55rem 0.7rem;background:var(--bg-surface);cursor:pointer;">
-                <input type="checkbox" class="op-dev-check" data-idx="${idx}"
+                <input type="checkbox" class="op-dev-check" data-idx="${escH(idx)}"
                        style="width:1.05rem;height:1.05rem;accent-color:var(--primary);cursor:pointer;flex-shrink:0;">
                 <span style="font-family:monospace;font-weight:800;font-size:0.85rem;color:var(--text-main);">[${opEscapar(i.tag)}]</span>
                 <span style="font-size:0.8rem;color:var(--text-main);">${opEscapar(i.tipo)}</span>
@@ -749,7 +748,7 @@ function opDevolucaoAvancar() {
     const baiasHTML = (typeof baias !== 'undefined' && Array.isArray(baias))
         ? `<option value="">— Selecione a baia —</option>` + baias
             .filter(b => b.status !== 'inativa')
-            .map(b => `<option value="${b.id}" data-nome="${opEscapar(b.tag || b.descricao || ('Baia ' + b.identificador))}">${opEscapar(b.tag || b.descricao || ('Baia ' + b.identificador))}</option>`).join('')
+            .map(b => `<option value="${escH(b.id)}" data-nome="${opEscapar(b.tag || b.descricao || ('Baia ' + b.identificador))}">${opEscapar(b.tag || b.descricao || ('Baia ' + b.identificador))}</option>`).join('')
         : '<option value="">— Nenhuma baia cadastrada —</option>';
 
     opAbrirModal(
@@ -764,7 +763,7 @@ function opDevolucaoAvancar() {
             <div style="flex:0 0 170px;">
                 <label class="form-label" style="display:block;font-size:0.8rem;font-weight:700;margin-bottom:0.25rem;color:var(--text-main);">Data de devolução</label>
                 <div style="padding:0.5rem 0.65rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-surface);color:var(--text-main);font-size:0.85rem;font-weight:700;">
-                    ${opDataBR(opHojeISO())}
+                    ${escH(opDataBR(opHojeISO()))}
                 </div>
                 <small style="display:block;margin-top:0.2rem;font-size:0.7rem;color:var(--text-muted);">Registrada como a data de hoje.</small>
             </div>
@@ -792,15 +791,15 @@ function opDevolucaoAvancar() {
                 <div style="display:flex;align-items:center;gap:0.55rem;flex-wrap:wrap;">
                     <span style="font-family:monospace;font-weight:800;font-size:0.82rem;color:var(--text-main);">[${opEscapar(i.tag)}]</span>
                     <span style="font-size:0.78rem;color:var(--text-muted);">${opEscapar(i.tipo)}</span>
-                    <select class="form-select op-dev-estado" data-idx="${idx}" onchange="opDevolucaoEstadoMudou(${idx}, this.value)"
+                    <select class="form-select op-dev-estado" data-idx="${escH(idx)}" onchange="opDevolucaoEstadoMudou(${escL(idx)}, this.value)"
                             style="margin-left:auto;max-width:190px;padding:0.3rem 0.5rem;font-size:0.78rem;border:1px solid var(--border-color);border-radius:0.4rem;background:var(--bg-input);color:var(--text-main);">
-                        ${OP_ESTADOS_FERRAMENTA.map(e => `<option value="${e.valor}">${e.label}</option>`).join('')}
+                        ${OP_ESTADOS_FERRAMENTA.map(e => `<option value="${escH(e.valor)}">${escH(e.label)}</option>`).join('')}
                     </select>
                 </div>
-                <div id="op-dev-obs-box-${idx}" style="display:none;margin-top:0.45rem;">
-                    <input type="text" class="op-dev-obs form-input" data-idx="${idx}" placeholder="Descreva a avaria encontrada..."
+                <div id="op-dev-obs-box-${escH(idx)}" style="display:none;margin-top:0.45rem;">
+                    <input type="text" class="op-dev-obs form-input" data-idx="${escH(idx)}" placeholder="Descreva a avaria encontrada..."
                            style="width:100%;box-sizing:border-box;padding:0.4rem 0.55rem;border:1px solid var(--danger,#ef4444);border-radius:0.4rem;background:var(--bg-input);color:var(--text-main);font-size:0.78rem;">
-                    <small id="op-dev-obs-ajuda-${idx}" style="display:block;margin-top:0.2rem;font-size:0.7rem;color:var(--text-muted);"></small>
+                    <small id="op-dev-obs-ajuda-${escH(idx)}" style="display:block;margin-top:0.2rem;font-size:0.7rem;color:var(--text-muted);"></small>
                 </div>
             </div>`).join('')}
         </div>
@@ -952,7 +951,7 @@ async function abrirHistoricoOS(osId) {
             <div style="display:flex;flex-direction:column;gap:0.5rem;">
                 ${eventos.map(e => `
                 <div style="border-left:3px solid var(--primary);padding:0.5rem 0.7rem;background:var(--bg-surface);border-radius:0 0.45rem 0.45rem 0;">
-                    <div style="font-size:0.72rem;color:var(--text-muted);">${new Date(e.criado_em).toLocaleString('pt-BR')}</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">${escH(new Date(e.criado_em).toLocaleString('pt-BR'))}</div>
                     <div style="font-size:0.85rem;font-weight:700;color:var(--text-main);margin-top:0.1rem;">
                         ${opEscapar(rotulos[e.evento] || e.evento)}${e.tag ? ` — ${opEscapar(e.tag)}` : ''}
                     </div>
