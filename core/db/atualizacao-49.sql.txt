@@ -1,0 +1,14 @@
+-- Atualizacao 49: sessoes encerradas antes do prazo.
+--
+-- A sessao e um token assinado, e o servidor nao guarda quais estao abertas.
+-- Para o "sair da conta" valer de verdade, o numero da sessao encerrada fica
+-- aqui ate o prazo dela acabar. Depois disso o token ja nao vale por si, e a
+-- linha e apagada na proxima saida.
+
+CREATE TABLE IF NOT EXISTS sessao_revogada (
+  jti        text PRIMARY KEY,
+  expira_em  timestamptz NOT NULL,
+  criada_em  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS sessao_revogada_expira_idx ON sessao_revogada (expira_em);

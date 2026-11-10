@@ -337,6 +337,15 @@ canvas {
     font-size: 16px;
   }
 
+  /* o texto de exemplo nao precisa dos 16px: o zoom do iPhone olha o
+     campo, nao o exemplo, e em 16px ele quebrava linha e tomava a caixa.
+     Vale para todo campo. O `min` e para o campo de letra menor que
+     13px (o chat, fora do iPhone): ali o exemplo nao fica maior que ela */
+  input::placeholder,
+  textarea::placeholder {
+    font-size: min(13px, 1em);
+  }
+
   /* menor: com o respiro de antes o campo ficava visivelmente mais
      alto que os botoes da mesma barra, e a tela parecia ter dois
      tamanhos de controle */

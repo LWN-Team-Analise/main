@@ -1,8 +1,8 @@
 /**
  * Cargos e usuarios (server/routes/equipe.js).
  *
- * Colaborador novo entra com a senha padrão (123456) e com
- * senha_temporaria ligado: o sistema cobra a troca no primeiro acesso.
+ * Colaborador novo entra com uma senha provisória sorteada para ele e
+ * com senha_temporaria ligado: o sistema cobra a troca no primeiro acesso.
  *
  * A senha volta na resposta do cadastro para ser mostrada ao
  * administrador.
@@ -59,6 +59,9 @@ export async function carregarUsuarios() {
   return usuarios ?? []
 }
 
+/** Um lote de quem ainda esta com a senha padrao: { ids, proximo }. */
+export const carregarSenhaPadrao = (desde = 0) => get(`/equipe/usuarios/senha-padrao?desde=${desde}`)
+
 /** Setores + cargos + usuarios de uma vez, para a carga inicial. */
 export async function carregarEquipe() {
   const [cargos, titulos, usuarios] = await Promise.all([
@@ -87,6 +90,9 @@ export async function editarUsuario(id, campos) {
 }
 
 export const apagarUsuario = (id) => del(`/equipe/usuarios/${id}`)
+
+/** Sorteia outra senha provisória (quem não recebe o código por e-mail). */
+export const gerarSenhaProvisoria = (id) => post(`/equipe/usuarios/${id}/senha-provisoria`)
 
 /**
  * A foto INTEIRA da pessoa — a que o editor de enquadramento usa para

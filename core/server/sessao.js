@@ -16,10 +16,105 @@ if (!SEGREDO) {
   throw new Error('JWT_SECRET não está definido no ambiente. Defina esta variável de ambiente com uma string aleatória forte.')
 }
 
-/** O token do cabecalho Authorization, ou null. */
+/* ------------------------------------------------------------
+   A SESSAO MORA NUM COOKIE QUE O JAVASCRIPT NAO LE
+
+   O token ficava no localStorage: qualquer script que rodasse na pagina
+   (uma falha de XSS, uma extensao, uma biblioteca comprometida) levava a
+   sessao embora e usava de outro lugar ate ela vencer. Com HttpOnly, nem
+   o proprio site consegue ler o token; ele so viaja nas chamadas.
+
+     HttpOnly         o JavaScript nao enxerga
+     Secure           so viaja em https
+     SameSite=Strict  pedido que nasce em outro site vai sem o cookie
+     __Host-          o navegador exige Secure, Path=/ e nenhum Domain,
+                      entao um subdominio nao consegue plantar outro
+
+   Em http://localhost o Secure e o __Host- ficam de fora: o Safari nao
+   guarda cookie Secure fora de https, e o site nao abriria na maquina.
+   ------------------------------------------------------------ */
+export const PRODUCAO = Boolean(process.env.VERCEL) || process.env.NODE_ENV === 'production'
+export const COOKIE_DA_SESSAO = PRODUCAO ? '__Host-lwn_sessao' : 'lwn_sessao'
+const OPCOES_DO_COOKIE = { httpOnly: true, secure: PRODUCAO, sameSite: 'strict', path: '/' }
+
+/** O token do cookie da sessao, ou null. */
 export function tokenDo(req) {
-  const cabecalho = req.headers.authorization ?? ''
-  return cabecalho.startsWith('Bearer ') ? cabecalho.slice(7) : null
+  const cabecalho = req.headers.cookie
+  if (!cabecalho) return null
+  for (const pedaco of cabecalho.split(';')) {
+    const igual = pedaco.indexOf('=')
+    if (igual > 0 && pedaco.slice(0, igual).trim() === COOKIE_DA_SESSAO) {
+      return pedaco.slice(igual + 1).trim() || null
+    }
+  }
+  return null
+}
+
+/**
+ * Assina uma sessao nova e entrega no cookie. O `jti` e o numero dela: e
+ * por ele que o "sair" derruba esta sessao e nao as outras.
+ */
+export function gravarSessao(res, { sub, senhaHash, expira }) {
+  const token = jwt.sign({ sub, sh: marcaDaSenha(senhaHash), jti: crypto.randomUUID() }, SEGREDO, {
+    expiresIn: expira,
+    algorithm: 'HS256',
+  })
+  const { exp } = jwt.decode(token)
+  res.cookie(COOKIE_DA_SESSAO, token, { ...OPCOES_DO_COOKIE, maxAge: Math.max(0, exp * 1000 - Date.now()) })
+}
+
+export function apagarSessao(res) {
+  res.clearCookie(COOKIE_DA_SESSAO, OPCOES_DO_COOKIE)
+}
+
+/** O token foi assinado por este servidor e ainda vale? Nao olha o banco. */
+export function tokenAssinado(token) {
+  if (!token) return false
+  try {
+    jwt.verify(token, SEGREDO, { algorithms: ['HS256'] })
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Marca a sessao como encerrada ate o prazo dela. Sem isso, sair da conta
+ * so apagava a copia do navegador, e quem tivesse copiado o token seguia
+ * entrando. As linhas vencidas saem aqui mesmo: depois do prazo o token
+ * ja nao vale por si.
+ */
+export async function revogarSessao(jti, exp) {
+  try {
+    await query(
+      'INSERT INTO sessao_revogada (jti, expira_em) VALUES ($1, to_timestamp($2)) ON CONFLICT (jti) DO NOTHING',
+      [jti, exp],
+    )
+    await query('DELETE FROM sessao_revogada WHERE expira_em < now()')
+  } catch (erro) {
+    /* atualizacao 49 ainda nao rodou: sair continua funcionando no navegador */
+    if (erro.code !== '42P01') throw erro
+    logger.error('sessao/revogar', 'tabela sessao_revogada ausente: rode a atualizacao 49')
+  }
+}
+
+/* A conta do token e se esta sessao ja foi encerrada, numa ida so ao banco.
+   Sem a tabela (atualizacao 49 pendente) o site continua de pe e o "sair"
+   vale so para o navegador, ate o banco ser atualizado. */
+async function contaDaSessao(sub, jti) {
+  try {
+    const { rows } = await query(
+      `SELECT u.ativo, u.senha_hash,
+              EXISTS (SELECT 1 FROM sessao_revogada r WHERE r.jti = $2) AS revogada
+         FROM usuario u WHERE u.id = $1`,
+      [sub, jti],
+    )
+    return rows[0]
+  } catch (erro) {
+    if (erro.code !== '42P01') throw erro
+    const { rows } = await query('SELECT ativo, senha_hash FROM usuario WHERE id = $1', [sub])
+    return rows[0]
+  }
 }
 
 /**
@@ -39,10 +134,11 @@ export const marcaDaSenha = (hash) =>
  *     com o mesmo segredo, e sem esta trava ele abria todas as rotas;
  *   - colaborador desativado continuava entrando com o token que ja
  *     tinha, ate ele vencer (8 horas);
- *   - trocar a senha nao derrubava a sessao aberta em outro aparelho.
+ *   - trocar a senha nao derrubava a sessao aberta em outro aparelho;
+ *   - sair da conta nao encerrava nada no servidor.
  *
- * Token emitido antes da marca da senha existir (sem `sh`) passa pela
- * conferencia da conta ativa e vence no prazo dele.
+ * Token sem `jti` e da epoca do localStorage: so serve uma vez, para ser
+ * trocado pelo cookie em /api/auth/migrar.
  */
 export async function donoDoToken(token) {
   if (!token) return null
@@ -52,12 +148,11 @@ export async function donoDoToken(token) {
   } catch {
     return null
   }
-  if (dono.uso || !dono.sub) return null
+  if (dono.uso || !dono.sub || !dono.jti) return null
 
-  const { rows } = await query('SELECT ativo, senha_hash FROM usuario WHERE id = $1', [dono.sub])
-  const conta = rows[0]
-  if (!conta || conta.ativo === false) return null
-  if (dono.sh && dono.sh !== marcaDaSenha(conta.senha_hash)) return null
+  const conta = await contaDaSessao(dono.sub, dono.jti)
+  if (!conta || conta.ativo === false || conta.revogada) return null
+  if (dono.sh !== marcaDaSenha(conta.senha_hash)) return null
   return dono
 }
 
@@ -93,6 +188,11 @@ export function tratar(erro, res, onde) {
         'atualizacao.sql.txt, atualizacao-2.sql.txt, atualizacao-3.sql.txt, ' +
         'atualizacao-4.sql.txt e atualizacao-5.sql.txt. Ou, de uma vez: npm run db:atualizar.',
     })
+  }
+  /* id que nao e numero, data que nao existe: o pedido e que veio errado,
+     e isso nao e erro do servidor */
+  if (['22P02', '22007', '22008', '22003'].includes(erro.code)) {
+    return res.status(400).json({ erro: 'Dados inválidos.' })
   }
   logger.error(onde, erro.message, { code: erro.code })
   return res.status(500).json({ erro: 'Não foi possível completar a operação.' })

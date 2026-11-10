@@ -580,9 +580,7 @@ async function carregarLogs() {
 }
 
 function logsEsc(t) {
-    return String(t == null ? '' : t)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    return escH(t == null ? '' : t);
 }
 
 function logsDataHora(valor) {
@@ -652,7 +650,7 @@ function logsDiffHtml(id, antes, depois, acao) {
         chaves = chaves.filter(k => k === 'Colaboradores afetados'
             || logsValorTexto(antes[k]) !== logsValorTexto(depois ? depois[k] : null));
         if (!chaves.length) {
-            return `<div class="logs-detalhes" id="logs-det-${id}" style="display:${aberto ? 'grid' : 'none'};">
+            return `<div class="logs-detalhes" id="logs-det-${escH(id)}" style="display:${aberto ? 'grid' : 'none'};">
                         <div class="logs-det-campo full"><div class="logs-det-label">Nenhum campo alterado</div></div>
                     </div>`;
         }
@@ -690,8 +688,8 @@ function logsDiffHtml(id, antes, depois, acao) {
         ? 'Como estava antes da exclusão'
         : (!antes || !Object.keys(antes).length ? 'Informações cadastradas' : 'O que foi alterado');
 
-    return `<div class="logs-detalhes" id="logs-det-${id}" style="display:${aberto ? 'grid' : 'none'};">
-                <div class="logs-det-campo full"><div class="logs-det-label">${titulo}</div></div>
+    return `<div class="logs-detalhes" id="logs-det-${escH(id)}" style="display:${aberto ? 'grid' : 'none'};">
+                <div class="logs-det-campo full"><div class="logs-det-label">${escH(titulo)}</div></div>
                 ${campos}
             </div>`;
 }
@@ -709,7 +707,7 @@ function logsSnapshotHtml(id, snapshot) {
             </div>`;
     }).join('');
 
-    return `<div class="logs-detalhes" id="logs-det-${id}" style="display:${aberto ? 'grid' : 'none'};">${campos}</div>`;
+    return `<div class="logs-detalhes" id="logs-det-${escH(id)}" style="display:${aberto ? 'grid' : 'none'};">${campos}</div>`;
 }
 
 async function renderLogs() {
@@ -726,7 +724,7 @@ async function renderLogs() {
             <div>
                 <div class="logs-title">Logs de Atividade</div>
             </div>
-            <span class="logs-badge" id="logs-total">${logsCache.length} registros</span>
+            <span class="logs-badge" id="logs-total">${escH(logsCache.length)} registros</span>
         </div>
 
         <div class="logs-filtros">
@@ -736,7 +734,7 @@ async function renderLogs() {
             </select>
             <select class="logs-select" onchange="logsSetFiltro('acao', this.value)">
                 <option value="">Todas as ações</option>
-                ${Object.entries(LOGS_ACOES).map(([k, v]) => `<option value="${k}" ${logsFiltro.acao === k ? 'selected' : ''}>${v.label}</option>`).join('')}
+                ${Object.entries(LOGS_ACOES).map(([k, v]) => `<option value="${escH(k)}" ${logsFiltro.acao === k ? 'selected' : ''}>${escH(v.label)}</option>`).join('')}
             </select>
             <select class="logs-select" onchange="logsSetFiltro('modulo', this.value)">
                 <option value="">Todos os módulos</option>
@@ -834,7 +832,7 @@ function renderLogsLista() {
 
     el.innerHTML = Array.from(grupos.entries()).map(([dia, itens]) => `
         <div class="logs-dia">
-            <div class="logs-dia-label">${logsEsc(dia)} <span>${itens.length}</span></div>
+            <div class="logs-dia-label">${logsEsc(dia)} <span>${escH(itens.length)}</span></div>
             ${itens.map(l => {
                 const info = LOGS_ACOES[l.acao] || { label: l.acao, cor: '#64748b' };
                 const inicial = String(l.usuario_nome || '?').trim().charAt(0).toUpperCase();
@@ -852,21 +850,21 @@ function renderLogsLista() {
                     ? logsDiffHtml(l.id, det.antes, det.depois, l.acao)
                     : (snapshot ? logsSnapshotHtml(l.id, snapshot) : '');
                 const caret = detalheHtml ? `
-                    <span class="logs-caret ${logsAbertos.has(String(l.id)) ? 'aberto' : ''}" id="logs-cart-${l.id}"
+                    <span class="logs-caret ${logsAbertos.has(String(l.id)) ? 'aberto' : ''}" id="logs-cart-${escH(l.id)}"
                           title="Ver detalhes do registro" aria-hidden="true">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </span>` : '';
                 return `
-                <div class="logs-item ${detalheHtml ? 'is-clicavel' : ''}" ${detalheHtml ? `onclick="logsToggleDetalhes('${l.id}')"` : ''}>
+                <div class="logs-item ${detalheHtml ? 'is-clicavel' : ''}" ${detalheHtml ? `onclick="logsToggleDetalhes('${escJ(l.id)}')"` : ''}>
                     <div class="logs-avatar" title="${logsEsc(l.usuario_nome)}">${logsEsc(inicial)}</div>
                     <div class="logs-item-main">
                         <div class="logs-item-top">
                             <strong>${logsEsc(l.usuario_nome || 'Desconhecido')}</strong>
-                            <span class="logs-acao" style="background:color-mix(in srgb, ${info.cor} 14%, transparent);color:${info.cor};">${logsEsc(info.label)}</span>
+                            <span class="logs-acao" style="background:color-mix(in srgb, ${escH(info.cor)} 14%, transparent);color:${escH(info.cor)};">${logsEsc(info.label)}</span>
                             <span class="logs-desc">${logsEsc(l.descricao || l.entidade || '')}</span>
                         </div>
                         <div class="logs-item-meta">
-                            ${l.usuario_cargo ? logsEsc(l.usuario_cargo) + ' · ' : ''}${l.modulo ? logsEsc(l.modulo) + ' · ' : ''}${logsDataHora(l.criado_em)}
+                            ${l.usuario_cargo ? logsEsc(l.usuario_cargo) + ' · ' : ''}${l.modulo ? logsEsc(l.modulo) + ' · ' : ''}${escH(logsDataHora(l.criado_em))}
                         </div>
                         ${contextoHtml}
                         ${detalheHtml}

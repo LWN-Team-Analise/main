@@ -5,6 +5,7 @@ import ReactDOM from 'react-dom/client'
 import './styles/global.css'
 import App from './App'
 import { ligarExemplos } from './utils/exemplos'
+import { trocarTokenAntigo } from './services/api'
 
 /* os exemplos dos campos: sorteados cada vez que um pop-up abre */
 ligarExemplos()
@@ -17,8 +18,11 @@ if ('serviceWorker' in navigator) {
   })
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
+/* a tela so monta depois: a primeira carga ja sai com o cookie */
+trocarTokenAntigo().finally(() => {
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  )
+})

@@ -153,9 +153,78 @@
   color: var(--text-strong);
 }
 
-.pessoa__abrir:focus-visible {
+.pessoa__abrir:focus-visible,
+.pessoa__sinal:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* o "!" da inconformidade, no mesmo canto, ao lado do "v". O nome cede
+   espaco a ele, para as reticencias nao correrem por baixo */
+.pessoa.is-inconforme .pessoa__topo {
+  padding-right: 54px;
+}
+
+.pessoa__sinal {
+  position: absolute;
+  top: 11px;
+  right: 40px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--obra-aviso-borda);
+  border-radius: 50%;
+  background: var(--obra-aviso);
+  color: var(--obra-aviso-fg);
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pessoa__sinal:hover {
+  filter: brightness(1.06);
+}
+
+/* o pop-up que o "!" abre */
+.inconforme {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.inconforme__sinal {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--obra-aviso-borda);
+  border-radius: 50%;
+  background: var(--obra-aviso);
+  color: var(--obra-aviso-fg);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.inconforme__texto h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: var(--text-strong);
+}
+
+.inconforme__texto p {
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.inconforme__texto p:last-child {
+  margin-bottom: 0;
 }
 
 /* editar e excluir: so existem com o card aberto pelo "v" — a ultima

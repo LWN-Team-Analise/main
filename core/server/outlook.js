@@ -34,6 +34,12 @@ const ESCOPOS = 'openid profile email offline_access User.Read'
 
 const BASE = () => `https://login.microsoftonline.com/${INQUILINO}/oauth2/v2.0`
 
+/* Com um diretorio generico, entra conta de QUALQUER empresa, e o campo
+   `mail` e texto livre: quem controla outro diretorio escreve ali o e-mail
+   de alguem daqui. O userPrincipalName so aceita dominio verificado. Com o
+   ID do diretorio da empresa no OUTLOOK_TENANT, os dois sao de dentro. */
+const DIRETORIO_GENERICO = ['organizations', 'common', 'consumers'].includes(INQUILINO.toLowerCase())
+
 export function configurado() {
   return Boolean(CLIENTE && SEGREDO)
 }
@@ -114,7 +120,7 @@ export async function perfilDoCodigo(codigo, redirecionar) {
   return {
     id: perfil.id,
     nome: perfil.displayName ?? '',
-    email: String(perfil.mail || perfil.userPrincipalName || '').toLowerCase(),
+    email: String((DIRETORIO_GENERICO ? '' : perfil.mail) || perfil.userPrincipalName || '').toLowerCase(),
     foto: await buscarFoto(token),
   }
 }

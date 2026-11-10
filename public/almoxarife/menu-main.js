@@ -214,10 +214,10 @@
             const parte = Math.round(Math.max(0, Math.min(1, valor - i)) * 100);
             const id = `almox-est${i}-${parte}`;
             caixa.insertAdjacentHTML('beforeend',
-                `<span><svg viewBox="0 0 24 24" width="${tamanho}" height="${tamanho}"><defs><linearGradient id="${id}">` +
-                `<stop offset="${parte}%" style="stop-color: var(--am-pri-media)"/><stop offset="${parte}%" style="stop-color: transparent"/>` +
+                `<span><svg viewBox="0 0 24 24" width="${escH(tamanho)}" height="${escH(tamanho)}"><defs><linearGradient id="${escH(id)}">` +
+                `<stop offset="${escH(parte)}%" style="stop-color: var(--am-pri-media)"/><stop offset="${escH(parte)}%" style="stop-color: transparent"/>` +
                 `</linearGradient></defs><path d="m12 3.6 2.6 5.3 5.9.85-4.25 4.15 1 5.85L12 16.99 6.75 19.75l1-5.85L3.5 9.75l5.9-.85z" ` +
-                `fill="url(#${id})" style="stroke: var(--am-pri-media)" stroke-width="1.3" stroke-linejoin="round"/></svg></span>`);
+                `fill="url(#${escH(id)})" style="stroke: var(--am-pri-media)" stroke-width="1.3" stroke-linejoin="round"/></svg></span>`);
         }
         return caixa;
     }

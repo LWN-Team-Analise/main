@@ -29,7 +29,9 @@ const TTL_PADRAO = {
 };
 
 function ttlDe(recurso) {
-    return TTL_PADRAO[recurso] || 60_000;
+    // ?? e nao ||: o 0 de "solicitacoes" quer dizer "nao guarda", e com ||
+    // ele virava o padrao de 60 segundos
+    return TTL_PADRAO[recurso] ?? 60_000;
 }
 
 function agora() {
@@ -50,7 +52,10 @@ function set(chave, dados, ttl) {
     const corpo = JSON.stringify(dados);
     const etag = 'W/"' + crypto.createHash("sha1").update(corpo).digest("base64") + '"';
     const item = { corpo, etag, expiraEm: agora() + ttl };
-    store.set(chave, item);
+    // TTL zero: a resposta sai com ETag (o 304 continua valendo), mas nada
+    // fica na memoria para a proxima leitura
+    if (ttl > 0) store.set(chave, item);
+    else store.delete(chave);
     return item;
 }
 

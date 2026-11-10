@@ -1523,10 +1523,6 @@
     height: 28px;
     font-size: 14px;
   }
-
-  .omni__campo::placeholder {
-    font-size: 14px;
-  }
 }
 
 /* SO no iPhone a letra digitada continua em 16px: abaixo disso o Safari

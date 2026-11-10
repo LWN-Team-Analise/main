@@ -630,6 +630,35 @@ export function aplicarRegraDaReserva(roteiro, obra) {
   }))
 }
 
+/* ------------------------------------------------------------
+   A "Análise para liberar para faturamento" (4a etapa, Comercial)
+
+   A tarefa do Comercial nasce quando a Qualidade marca "Aprovação dos
+   protocolos" (atualizacao 50). Antes disso ela nao aparece nem conta no
+   andamento, e o card do Comercial que so tiver ela some junto. O
+   servidor faz a mesma conta na conclusao da obra.
+   ------------------------------------------------------------ */
+export const CHECK_APROVACAO_PROTOCOLOS = 'aprovacao_protocolos'
+export const CHECK_ANALISE_FATURAMENTO = 'analise_faturamento'
+
+const ehAnaliseDeFaturamento = (check) => check.tipo === CHECK_ANALISE_FATURAMENTO
+
+/** O roteiro da obra sem a analise de faturamento enquanto os protocolos nao forem aprovados. */
+export function aplicarRegraDoFaturamento(roteiro, obra) {
+  const checks = (roteiro ?? []).flatMap((e) => (e.cards ?? []).flatMap((c) => c.checks ?? []))
+  const analises = checks.filter(ehAnaliseDeFaturamento)
+  if (analises.length === 0) return roteiro
+  const marcado = (check) => Boolean(obra?.checks?.[check.id])
+  const aprovado = checks.some((k) => k.tipo === CHECK_APROVACAO_PROTOCOLOS && marcado(k))
+  if (aprovado || analises.some(marcado)) return roteiro
+  return roteiro.map((etapa) => ({
+    ...etapa,
+    cards: etapa.cards
+      .filter((card) => !(card.checks.length > 0 && card.checks.every(ehAnaliseDeFaturamento)))
+      .map((card) => ({ ...card, checks: card.checks.filter((k) => !ehAnaliseDeFaturamento(k)) })),
+  }))
+}
+
 /**
  * Quem reserva o carro: o SUPERVISOR — o cargo da pessoa (Supervisor),
  * nao o setor — ou quem esta num setor com acesso total. `cargoTitulo`

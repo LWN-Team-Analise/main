@@ -70,7 +70,7 @@ function manAtualizarNomeComprovante() {
     const texto = dropzone?.querySelector('.inv-upload-texto');
     if (manComprovanteAtual) {
         dropzone?.classList.add('has-file');
-        if (texto) texto.innerHTML = `<strong>${manComprovanteAtual.nome}</strong><small>Clique para trocar o arquivo</small>`;
+        if (texto) texto.innerHTML = `<strong>${escH(manComprovanteAtual.nome)}</strong><small>Clique para trocar o arquivo</small>`;
         if (removeBtn) removeBtn.style.display = 'inline-flex';
     } else {
         dropzone?.classList.remove('has-file');
@@ -127,7 +127,7 @@ function manAbrirComprovante(id) {
         const bin = atob(base64);
         const bytes = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-        const url = URL.createObjectURL(new Blob([bytes], { type: tipo }));
+        const url = URL.createObjectURL(new Blob([bytes], { type: tipoQueAbreNaAba(tipo) }));
         window.open(url, '_blank');
         setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (e) {
@@ -260,10 +260,10 @@ function manBadgeTag(tag, statusFerramenta, instrumento) {
         return avariaPendente + `<span class="badge"style="font-size:0.55rem;padding:0.1rem 0.4rem;background:color-mix(in srgb, var(--text-muted) 16%, transparent);color:var(--text-muted);border-radius:999px;font-weight:700;">Sem manutenção</span>`;
     }
     if (s.situacao === 'prevista') {
-        return avariaPendente + `<span class="badge badge-warning"style="font-size:0.55rem;padding:0.1rem 0.4rem;">${s.previstas} a manutencionar</span>`
-            + (s.realizadas ? `<span class="badge badge-success"style="font-size:0.55rem;padding:0.1rem 0.4rem;margin-left:0.2rem;">${s.realizadas} realizada${s.realizadas !== 1 ? 's' : ''}</span>` : '');
+        return avariaPendente + `<span class="badge badge-warning"style="font-size:0.55rem;padding:0.1rem 0.4rem;">${escH(s.previstas)} a manutencionar</span>`
+            + (s.realizadas ? `<span class="badge badge-success"style="font-size:0.55rem;padding:0.1rem 0.4rem;margin-left:0.2rem;">${escH(s.realizadas)} realizada${s.realizadas !== 1 ? 's' : ''}</span>` : '');
     }
-    return avariaPendente + `<span class="badge badge-success"style="font-size:0.55rem;padding:0.1rem 0.4rem;">${s.realizadas} manutenção${s.realizadas !== 1 ? 'ões' : ''} realizada${s.realizadas !== 1 ? 's' : ''}</span>`;
+    return avariaPendente + `<span class="badge badge-success"style="font-size:0.55rem;padding:0.1rem 0.4rem;">${escH(s.realizadas)} manutenção${s.realizadas !== 1 ? 'ões' : ''} realizada${s.realizadas !== 1 ? 's' : ''}</span>`;
 }
 
 function toggleManTypeCard(tipo) {
@@ -289,21 +289,21 @@ function manRenderAvariasPendentes() {
     box.style.display = 'flex';
     box.innerHTML = `
         <div style="font-size:0.85rem;font-weight:800;color:var(--danger, #ef4444);display:flex;align-items:center;gap:0.4rem;">
-            ▲ Necessita manutenção (${pendentes.length})
+            ▲ Necessita manutenção (${escH(pendentes.length)})
         </div>
         ${pendentes.map(p => {
             const inst = p.instrumento;
             const os = p.ultimaOS;
             const osLabel = os ? `#OS-${String(os.numero_os || '').padStart(4, '0')} · ${os.cliente || os.obra || '—'}` : 'Sem OS registrada';
             return `
-                <div onclick="abrirHistoricoManutencao('${String(inst.tag || '').replace(/'/g, "\\'")}', ${inst.id || 'null'})"
+                <div onclick="abrirHistoricoManutencao('${escJ(inst.tag || '')}', ${escL(inst.id) || 'null'})"
                      style="cursor:pointer;border:1px solid var(--danger, #ef4444);border-left:4px solid var(--danger, #ef4444);border-radius:0.6rem;padding:0.7rem 0.9rem;background:color-mix(in srgb, var(--danger, #ef4444) 6%, var(--bg-card));">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-                        <span style="font-weight:800;font-size:0.85rem;color:var(--text-main);">${inst.tag || 'Sem TAG'} <span style="font-weight:600;color:var(--text-muted);font-size:0.75rem;">— ${inst.tipo || ''}</span></span>
+                        <span style="font-weight:800;font-size:0.85rem;color:var(--text-main);">${escH(inst.tag) || 'Sem TAG'} <span style="font-weight:600;color:var(--text-muted);font-size:0.75rem;">— ${escH(inst.tipo) || ''}</span></span>
                         <span class="badge badge-danger" style="font-size:0.62rem;padding:0.12rem 0.5rem;">Necessita manutenção</span>
                     </div>
-                    <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;">Última obra: ${osLabel}</div>
-                    ${p.observacaoAvaria ? `<div style="font-size:0.78rem;color:var(--text-main);margin-top:0.3rem;white-space:pre-wrap;">${String(p.observacaoAvaria).replace(/</g, '&lt;')}</div>` : ''}
+                    <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;">Última obra: ${escH(osLabel)}</div>
+                    ${p.observacaoAvaria ? `<div style="font-size:0.78rem;color:var(--text-main);margin-top:0.3rem;white-space:pre-wrap;">${escH(String(p.observacaoAvaria))}</div>` : ''}
                 </div>`;
         }).join('')}
     `;
@@ -366,9 +366,9 @@ function renderManutencaoTable() {
         items.forEach(i => { resumo[manSituacaoTag(i.tag).situacao]++; });
 
         const countBadges = `
-            ${resumo.realizada ? `<span class="badge badge-success"style="font-size:0.6rem;padding:0.1rem 0.4rem;">${resumo.realizada} manutenção${resumo.realizada !== 1 ? 'ões' : ''}</span>` : ''}
-            ${resumo.prevista ? `<span class="badge badge-warning"style="font-size:0.6rem;padding:0.1rem 0.4rem;">${resumo.prevista} prevista${resumo.prevista !== 1 ? 's' : ''}</span>` : ''}
-            ${resumo.sem ? `<span class="badge"style="font-size:0.6rem;padding:0.1rem 0.4rem;background:color-mix(in srgb, var(--text-muted) 16%, transparent);color:var(--text-muted);border-radius:999px;font-weight:700;">${resumo.sem} sem manutenção</span>` : ''}
+            ${resumo.realizada ? `<span class="badge badge-success"style="font-size:0.6rem;padding:0.1rem 0.4rem;">${escH(resumo.realizada)} manutenção${resumo.realizada !== 1 ? 'ões' : ''}</span>` : ''}
+            ${resumo.prevista ? `<span class="badge badge-warning"style="font-size:0.6rem;padding:0.1rem 0.4rem;">${escH(resumo.prevista)} prevista${resumo.prevista !== 1 ? 's' : ''}</span>` : ''}
+            ${resumo.sem ? `<span class="badge"style="font-size:0.6rem;padding:0.1rem 0.4rem;background:color-mix(in srgb, var(--text-muted) 16%, transparent);color:var(--text-muted);border-radius:999px;font-weight:700;">${escH(resumo.sem)} sem manutenção</span>` : ''}
         `;
 
         const tagRows = items.map(inst => {
@@ -378,11 +378,11 @@ function renderManutencaoTable() {
                 : 'var(--text-muted)';
             const ultima = s.ultima ? `Última: ${manDataBR(s.ultima.data_manutencao)}` : 'Nenhum registro';
             return `
-                <div onclick="event.stopPropagation();abrirHistoricoManutencao('${String(inst.tag || '').replace(/'/g, "\\'")}', ${inst.id || 'null'})"
-                     style="display:flex;justify-content:space-between;align-items:center;gap:0.4rem;padding:0.35rem 0.45rem;border-radius:5px;margin-bottom:0.15rem;cursor:pointer;border-left:3px solid ${cor};background:color-mix(in srgb, ${cor} 8%, transparent);">
+                <div onclick="event.stopPropagation();abrirHistoricoManutencao('${escJ(inst.tag || '')}', ${escL(inst.id) || 'null'})"
+                     style="display:flex;justify-content:space-between;align-items:center;gap:0.4rem;padding:0.35rem 0.45rem;border-radius:5px;margin-bottom:0.15rem;cursor:pointer;border-left:3px solid ${escH(cor)};background:color-mix(in srgb, ${escH(cor)} 8%, transparent);">
                     <span style="display:flex;flex-direction:column;min-width:0;">
-                        <span style="font-weight:700;font-size:0.75rem;color:var(--text-main);">${inst.tag || 'Sem TAG'}</span>
-                        <span style="font-size:0.6rem;color:var(--text-muted);">${ultima}</span>
+                        <span style="font-weight:700;font-size:0.75rem;color:var(--text-main);">${escH(inst.tag) || 'Sem TAG'}</span>
+                        <span style="font-size:0.6rem;color:var(--text-muted);">${escH(ultima)}</span>
                     </span>
                     <span style="flex-shrink:0;display:flex;align-items:center;gap:0.2rem;flex-wrap:wrap;justify-content:flex-end;">
                         ${manBadgeTag(inst.tag, inst.status, inst)}
@@ -391,13 +391,13 @@ function renderManutencaoTable() {
         }).join('');
 
         return `
-            <div class="month-card${isOpen ? ' current' : ''}"style="cursor:default;padding:0.8rem 0.9rem;"onclick="toggleManTypeCard('${tipo.replace(/'/g, "\\'")}')">
+            <div class="month-card${isOpen ? ' current' : ''}"style="cursor:default;padding:0.8rem 0.9rem;"onclick="toggleManTypeCard('${escJ(tipo)}')">
                 <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
                     <div style="display:flex;align-items:center;gap:0.3rem;flex:1;min-width:0;">
-                        <span style="font-size:0.85rem;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${tipo}</span>
+                        <span style="font-size:0.85rem;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escH(tipo)}</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.3rem;flex-shrink:0;">
-                        <span style="font-size:0.65rem;color:var(--text-muted);">${items.length}</span>
+                        <span style="font-size:0.65rem;color:var(--text-muted);">${escH(items.length)}</span>
                         <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:0.9rem;height:0.9rem;flex-shrink:0;transition:transform 0.2s;${isOpen ? 'transform:rotate(180deg);' : ''}"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </div>
                 </div>
@@ -441,9 +441,9 @@ function abrirHistoricoManutencao(tag, instrumentoId) {
         <div style="border:1px solid var(--danger, #ef4444);border-left:4px solid var(--danger, #ef4444);border-radius:0.6rem;padding:0.7rem 0.9rem;background:color-mix(in srgb, var(--danger, #ef4444) 6%, var(--bg-card));margin-bottom:1rem;">
             <span class="badge badge-danger" style="font-size:0.62rem;padding:0.12rem 0.5rem;">▲ Necessita manutenção</span>
             <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.4rem;">
-                Última obra: ${avariaInfo.ultimaOS ? `#OS-${String(avariaInfo.ultimaOS.numero_os || '').padStart(4, '0')} · ${avariaInfo.ultimaOS.cliente || avariaInfo.ultimaOS.obra || '—'}` : 'Sem OS registrada'}
+                Última obra: ${avariaInfo.ultimaOS ? `#OS-${escH(String(avariaInfo.ultimaOS.numero_os || '').padStart(4, '0'))} · ${escH(avariaInfo.ultimaOS.cliente) || escH(avariaInfo.ultimaOS.obra) || '—'}` : 'Sem OS registrada'}
             </div>
-            ${avariaInfo.observacaoAvaria ? `<div style="font-size:0.8rem;color:var(--text-main);margin-top:0.35rem;white-space:pre-wrap;">${String(avariaInfo.observacaoAvaria).replace(/</g, '&lt;')}</div>` : ''}
+            ${avariaInfo.observacaoAvaria ? `<div style="font-size:0.8rem;color:var(--text-main);margin-top:0.35rem;white-space:pre-wrap;">${escH(String(avariaInfo.observacaoAvaria))}</div>` : ''}
         </div>` : '';
 
     // A ferramenta está marcada como avariada mas em uso? O modal diz isso
@@ -454,8 +454,8 @@ function abrirHistoricoManutencao(tag, instrumentoId) {
     const avariaEmUsoHtml = instAvaria ? `
         <div style="border:1px solid var(--warning, #f59e0b);border-left:4px solid var(--warning, #f59e0b);border-radius:0.6rem;padding:0.7rem 0.9rem;background:color-mix(in srgb, var(--warning, #f59e0b) 6%, var(--bg-card));margin-bottom:1rem;">
             <span class="badge badge-warning" style="font-size:0.62rem;padding:0.12rem 0.5rem;">Avariada, porém disponível para uso</span>
-            ${instAvaria.avaria_registrada_em ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.4rem;">Avaria registrada em ${manDataBR(instAvaria.avaria_registrada_em)}</div>` : ''}
-            ${instAvaria.avaria_observacao ? `<div style="font-size:0.8rem;color:var(--text-main);margin-top:0.35rem;white-space:pre-wrap;">${String(instAvaria.avaria_observacao).replace(/</g, '&lt;')}</div>` : ''}
+            ${instAvaria.avaria_registrada_em ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.4rem;">Avaria registrada em ${escH(manDataBR(instAvaria.avaria_registrada_em))}</div>` : ''}
+            ${instAvaria.avaria_observacao ? `<div style="font-size:0.8rem;color:var(--text-main);margin-top:0.35rem;white-space:pre-wrap;">${escH(String(instAvaria.avaria_observacao))}</div>` : ''}
         </div>` : '';
 
     const modal = document.createElement('div');
@@ -466,7 +466,7 @@ function abrirHistoricoManutencao(tag, instrumentoId) {
     modal.innerHTML = `
         <div class="modal-container man-modal"style="max-width:560px;">
             <div class="modal-header">
-                <span class="modal-title">Histórico de Manutenções — ${tag}</span>
+                <span class="modal-title">Histórico de Manutenções — ${escH(tag)}</span>
                 <button class="modal-close"onclick="fecharHistoricoManutencao()">
                     <svg viewBox="0 0 24 24"fill="none"stroke="currentColor"stroke-width="2"style="width:1.25rem;height:1.25rem;"><line x1="18"y1="6"x2="6"y2="18"/><line x1="6"y1="6"x2="18"y2="18"/></svg>
                 </button>
@@ -475,7 +475,7 @@ function abrirHistoricoManutencao(tag, instrumentoId) {
                 ${avariaHtml}
                 ${avariaEmUsoHtml}
                 <div class="man-modal-actions"style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap;">
-                    <span style="font-size:0.8rem;color:var(--text-muted);">${lista.length ? `${lista.length} registro${lista.length !== 1 ? 's' : ''}` : 'Nenhuma manutenção registrada para esta TAG.'}</span>
+                    <span style="font-size:0.8rem;color:var(--text-muted);">${lista.length ? `${escH(lista.length)} registro${lista.length !== 1 ? 's' : ''}` : 'Nenhuma manutenção registrada para esta TAG.'}</span>
                     ${podeEditar ? `
                     <span style="display:flex;gap:0.4rem;flex-wrap:wrap;">
                         <button class="btn btn-primary man-btn-add"onclick="abrirFormManutencao()"style="padding:0.45rem 0.9rem;border:none;border-radius:0.5rem;background:var(--primary);color:#fff;font-weight:700;font-size:0.8rem;cursor:pointer;">+ Adicionar manutenção</button>
@@ -488,11 +488,11 @@ function abrirHistoricoManutencao(tag, instrumentoId) {
                     <div class="man-form-grid"style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0.75rem;">
                         <div style="min-width:0;">
                             <label class="form-label"id="man-label-data-emissao"style="display:block;font-size:0.8rem;font-weight:700;color:var(--text-main);margin-bottom:0.25rem;">Data de emissão *</label>
-                            <input type="date"id="man-data-emissao"class="form-input"value="${hoje}"style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;padding:0.5rem 0.7rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.8rem;line-height:1.2;font-family:inherit;">
+                            <input type="date"id="man-data-emissao"class="form-input"value="${escH(hoje)}"style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;padding:0.5rem 0.7rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.8rem;line-height:1.2;font-family:inherit;">
                         </div>
                         <div style="min-width:0;" id="man-campo-data-manutencao">
                             <label class="form-label"id="man-label-data-manutencao"style="display:block;font-size:0.8rem;font-weight:700;color:var(--text-main);margin-bottom:0.25rem;">Data da manutenção *</label>
-                            <input type="date"id="man-data-manutencao"class="form-input"value="${hoje}"style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;padding:0.5rem 0.7rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.8rem;line-height:1.2;font-family:inherit;">
+                            <input type="date"id="man-data-manutencao"class="form-input"value="${escH(hoje)}"style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;padding:0.5rem 0.7rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.8rem;line-height:1.2;font-family:inherit;">
                         </div>
                         <div style="min-width:0;" id="man-campo-envio">
                             <label class="form-label"style="display:block;font-size:0.8rem;font-weight:700;color:var(--text-main);margin-bottom:0.25rem;">Envio para Manutenção</label>
@@ -573,35 +573,35 @@ function manHistoricoHtml(lista) {
         const futura = !avariaEmUso && manDataISO(m.data_manutencao) > hoje;
         const cor = avariaEmUso ? 'var(--warning, #f59e0b)'
             : futura ? 'var(--warning, #f59e0b)' : 'var(--success)';
-        const idEsc = String(m.id).replace(/'/g, "\\'");
+        const idDaManutencao = String(m.id);
         return `
-            <div class="man-hist-item"style="border:1px solid var(--border-color);border-left:4px solid ${cor};border-radius:0.6rem;padding:0.7rem 0.8rem;background:var(--bg-card);">
+            <div class="man-hist-item"style="border:1px solid var(--border-color);border-left:4px solid ${escH(cor)};border-radius:0.6rem;padding:0.7rem 0.8rem;background:var(--bg-card);">
                 <div class="man-hist-head"style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;">
                     <span style="font-size:0.82rem;font-weight:800;color:var(--text-main);word-break:break-word;">${
                         avariaEmUso
-                            ? 'Avaria em ' + manDataBR(m.data_emissao)
-                            : 'Manutenção em ' + manDataBR(m.data_manutencao)
+                            ? 'Avaria em ' + escH(manDataBR(m.data_emissao))
+                            : 'Manutenção em ' + escH(manDataBR(m.data_manutencao))
                     }</span>
                     <span class="badge ${(avariaEmUso || futura) ? 'badge-warning' : 'badge-success'}"style="font-size:0.6rem;padding:0.1rem 0.45rem;">${
                         avariaEmUso ? 'Em uso · manutenção em aberto' : (futura ? 'Em manutenção' : 'Realizada')
                     }</span>
                 </div>
                 <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.15rem;word-break:break-word;">
-                    Emissão: ${manDataBR(m.data_emissao)}${m.responsavel ? ' · ' + m.responsavel : ''}${
+                    Emissão: ${escH(manDataBR(m.data_emissao))}${m.responsavel ? ' · ' + escH(m.responsavel) : ''}${
                         avariaEmUso ? ' · Data da manutenção: em aberto' : ''}
                 </div>
                 ${(m.data_envio || m.data_retorno || m.empresa) ? `
                 <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.1rem;word-break:break-word;">
-                    ${m.data_envio ? 'Envio: ' + manDataBR(m.data_envio) : ''}${m.data_retorno ? ' · Retorno: ' + manDataBR(m.data_retorno) : (m.data_envio ? ' · Em manutenção' : '')}${m.empresa ? ' · ' + String(m.empresa).replace(/</g, '&lt;') : ''}
+                    ${m.data_envio ? 'Envio: ' + escH(manDataBR(m.data_envio)) : ''}${m.data_retorno ? ' · Retorno: ' + escH(manDataBR(m.data_retorno)) : (m.data_envio ? ' · Em manutenção' : '')}${m.empresa ? ' · ' + escH(String(m.empresa)) : ''}
                 </div>` : ''}
-                <div style="font-size:0.75rem;font-weight:700;color:var(--text-main);margin-top:0.25rem;">Valor: ${manFormatarValorBR(m.valor)}</div>
-                ${manComprovanteInfo(m.comprovante) ? `<div style="margin-top:0.25rem;"><button type="button"onclick="manAbrirComprovante('${idEsc}')"style="font-size:0.72rem;font-weight:700;border:none;background:transparent;color:var(--primary);cursor:pointer;padding:0;">Ver comprovante</button></div>` : ''}
-                ${m.observacao ? `<div style="font-size:0.78rem;color:var(--text-main);margin-top:0.4rem;white-space:pre-wrap;overflow-wrap:anywhere;">${String(m.observacao).replace(/</g, '&lt;')}</div>` : ''}
+                <div style="font-size:0.75rem;font-weight:700;color:var(--text-main);margin-top:0.25rem;">Valor: ${escH(manFormatarValorBR(m.valor))}</div>
+                ${manComprovanteInfo(m.comprovante) ? `<div style="margin-top:0.25rem;"><button type="button"onclick="manAbrirComprovante('${escJ(idDaManutencao)}')"style="font-size:0.72rem;font-weight:700;border:none;background:transparent;color:var(--primary);cursor:pointer;padding:0;">Ver comprovante</button></div>` : ''}
+                ${m.observacao ? `<div style="font-size:0.78rem;color:var(--text-main);margin-top:0.4rem;white-space:pre-wrap;overflow-wrap:anywhere;">${escH(String(m.observacao))}</div>` : ''}
                 ${podeEditar ? `
                 <div class="man-hist-actions"style="display:flex;justify-content:flex-end;gap:0.4rem;margin-top:0.55rem;flex-wrap:wrap;">
-                    ${avariaEmUso ? `<button type="button"class="man-action-btn"onclick="editarManutencao('${idEsc}')"title="Desmarque &quot;Avaria, porém disponível para uso&quot; e preencha a manutenção para fechar esta avaria"style="padding:0.32rem 0.7rem;font-size:0.72rem;font-weight:700;border:1px solid var(--primary);border-radius:0.4rem;background:transparent;color:var(--primary);cursor:pointer;">Foi para manutenção</button>` : ''}
-                    <button type="button"class="man-action-btn"onclick="editarManutencao('${idEsc}')"style="padding:0.32rem 0.7rem;font-size:0.72rem;font-weight:700;border:1px solid var(--border-color);border-radius:0.4rem;background:var(--bg-surface);color:var(--text-main);cursor:pointer;">Editar</button>
-                    <button type="button"class="man-action-btn"onclick="excluirManutencao('${idEsc}')"style="padding:0.32rem 0.7rem;font-size:0.72rem;font-weight:700;border:1px solid var(--danger, #ef4444);border-radius:0.4rem;background:transparent;color:var(--danger, #ef4444);cursor:pointer;">Excluir</button>
+                    ${avariaEmUso ? `<button type="button"class="man-action-btn"onclick="editarManutencao('${escJ(idDaManutencao)}')"title="Desmarque &quot;Avaria, porém disponível para uso&quot; e preencha a manutenção para fechar esta avaria"style="padding:0.32rem 0.7rem;font-size:0.72rem;font-weight:700;border:1px solid var(--primary);border-radius:0.4rem;background:transparent;color:var(--primary);cursor:pointer;">Foi para manutenção</button>` : ''}
+                    <button type="button"class="man-action-btn"onclick="editarManutencao('${escJ(idDaManutencao)}')"style="padding:0.32rem 0.7rem;font-size:0.72rem;font-weight:700;border:1px solid var(--border-color);border-radius:0.4rem;background:var(--bg-surface);color:var(--text-main);cursor:pointer;">Editar</button>
+                    <button type="button"class="man-action-btn"onclick="excluirManutencao('${escJ(idDaManutencao)}')"style="padding:0.32rem 0.7rem;font-size:0.72rem;font-weight:700;border:1px solid var(--danger, #ef4444);border-radius:0.4rem;background:transparent;color:var(--danger, #ef4444);cursor:pointer;">Excluir</button>
                 </div>` : ''}
             </div>`;
     }).join('');

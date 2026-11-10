@@ -12,6 +12,7 @@ import {
   MOTIVO_DA_TRAVA,
   aplicarRegraDosGases,
   aplicarRegraDaReserva,
+  aplicarRegraDoFaturamento,
   chaveDoCargo,
   ensaiosDeGases,
   estadoDaEtapa,
@@ -1085,11 +1086,15 @@ export function DadosProvider({ children }) {
    */
   const roteiroDaObra = useCallback(
     (obra) =>
-      /* e sem o "Retirada do carro" na obra que nao reservou carro */
-      aplicarRegraDaReserva(
-        aplicarRegraDosGases(
-          roteiroVigente(roteiroBruto, obra?.criadoEm, obra),
-          ensaiosDeGases(obra, ensaioPorId),
+      /* sem o "Retirada do carro" na obra que nao reservou carro, e sem a
+         analise de faturamento enquanto os protocolos nao forem aprovados */
+      aplicarRegraDoFaturamento(
+        aplicarRegraDaReserva(
+          aplicarRegraDosGases(
+            roteiroVigente(roteiroBruto, obra?.criadoEm, obra),
+            ensaiosDeGases(obra, ensaioPorId),
+          ),
+          obra,
         ),
         obra,
       ),

@@ -515,7 +515,7 @@ export default function Conversa({
               className="chat__campo"
               aria-label="Escrever mensagem"
               rows={2}
-              placeholder="Escreva a mensagem... use @ para mencionar alguém"
+              placeholder="Escreva a mensagem..."
               value={texto}
               onChange={aoDigitar}
               onKeyDown={(e) => {

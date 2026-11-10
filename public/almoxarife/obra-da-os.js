@@ -94,11 +94,10 @@ async function almoxCarregarObrasDoCliente(escolher) {
     almoxObrasDoCliente = Array.isArray(obras) ? obras : [];
     if (!almoxObrasDoCliente.length) return;
 
-    const esc = (t) => String(t == null ? '' : t)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const esc = (t) => escH(t == null ? '' : t);
     const varias = almoxObrasDoCliente.length > 1;
     select.innerHTML = (varias ? '<option value="">Selecione a obra</option>' : '')
-        + almoxObrasDoCliente.map(o => `<option value="${o.id}">${esc(o.rotulo)}</option>`).join('');
+        + almoxObrasDoCliente.map(o => `<option value="${escH(o.id)}">${esc(o.rotulo)}</option>`).join('');
     if (escolher && almoxObrasDoCliente.some(o => String(o.id) === String(escolher))) select.value = String(escolher);
     if (ajuda) {
         ajuda.textContent = varias
@@ -151,8 +150,7 @@ const ALMOX_CAMPOS_TRAVADOS = ['os-client', 'os-obra-id', 'os-start-date', 'os-e
 const ALMOX_CADEADO = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8.4 10.5V7.8a3.6 3.6 0 0 1 7.2 0v2.7"/></svg>';
 
 function almoxEscapar(t) {
-    return String(t == null ? '' : t)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return escH(t == null ? '' : t);
 }
 
 function almoxDataBR(iso) {
@@ -206,7 +204,7 @@ function almoxTravarDaObra(obra) {
         <div class="almox-da-obra__texto">
             <strong>OS da obra ${almoxEscapar(obra.rotulo)}</strong>
             <span>${comDatas
-                ? `Cliente, obra e datas vêm do Atmosfera LWN — período do prazo da execução: <b>${almoxDataBR(obra.execucao_inicio)}</b> a <b>${almoxDataBR(obra.execucao_prazo)}</b>.`
+                ? `Cliente, obra e datas vêm do Atmosfera LWN — período do prazo da execução: <b>${escH(almoxDataBR(obra.execucao_inicio))}</b> a <b>${escH(almoxDataBR(obra.execucao_prazo))}</b>.`
                 : 'Cliente e obra vêm do Atmosfera LWN. A obra ainda não tem o prazo da execução (1ª etapa): escolha as datas.'}
                 Só o responsável pode ser trocado.</span>
         </div>`;

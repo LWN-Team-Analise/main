@@ -250,8 +250,9 @@ async function osPdfCarregarLogo() {
    descem no primeiro clique em "Ver" / "Baixar OS".
    ------------------------------------------------------------ */
 const OS_PDF_SCRIPTS = [
-    'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
-    'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js'
+    /* copias do proprio site: nenhum script de fora roda na sessao de ninguem */
+    '/almoxarife/vendor/jspdf.umd.min.js',
+    '/almoxarife/vendor/jspdf.plugin.autotable.min.js'
 ];
 
 let _osPdfCarregando = null;

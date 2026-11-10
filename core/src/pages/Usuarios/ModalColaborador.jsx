@@ -8,7 +8,7 @@ import { CampoSelecao, CampoTexto } from '@/components/Campo/Campo'
 import { useDados } from '@/context/DadosContext'
 import { podeEditarCpf } from '@/domain/obras'
 import { ALTERACAO, VISUALIZACAO } from '@/domain/permissoes'
-import { carregarFotoOriginal } from '@/services/equipeService'
+import { carregarFotoOriginal, gerarSenhaProvisoria } from '@/services/equipeService'
 import { validateCPF, validateEmail } from '@/services/authService'
 import { formatarCPF, formatarTelefone, soDigitos } from '@/utils/formato'
 import { prepararImagem } from '@/utils/imagem'
@@ -83,7 +83,12 @@ export default function ModalColaborador({
   const [erros, setErros] = useState({})
   const [salvando, setSalvando] = useState(false)
 
+  /* a senha provisoria nova: aparece uma vez, aqui, para ser passada */
+  const [pedindoSenha, setPedindoSenha] = useState(false)
+  const [senhaNova, setSenhaNova] = useState('')
+
   const editando = Boolean(colaborador)
+  const outraPessoa = editando && String(colaborador.id) !== String(usuarioLogado?.id)
   const cpfLiberado = podeEditarCpf(usuarioLogado, pode)
   const podeCargo = pode('editar_cargo_titulo')
   /* cadastro novo abre so com e-mail, setor e cargo; o resto e opcional */
@@ -108,6 +113,7 @@ export default function ModalColaborador({
     setAjustando(null)
     setFotoMexida(false)
     setMaisDados(false)
+    setSenhaNova('')
   }, [aberto, colaborador])
 
   const mudar = (campo) => (evento) => {
@@ -398,12 +404,45 @@ export default function ModalColaborador({
           </p>
         )}
 
+        {outraPessoa && pode('editar_usuario') && (
+          <div>
+            <button type="button" className="formcolab__mais" onClick={() => setPedindoSenha(true)}>
+              Gerar senha provisória
+            </button>
+            {senhaNova && (
+              <p className="formcolab__dica" role="status">
+                Nova senha provisória: <strong>{senhaNova}</strong>. Ela aparece só agora: passe para a pessoa, que
+                troca no primeiro acesso.
+              </p>
+            )}
+          </div>
+        )}
+
         <footer className="formobra__acoes">
           <Button type="submit" loading={salvando}>
             {editando ? 'Salvar alterações' : 'Adicionar colaborador'}
           </Button>
         </footer>
       </form>
+
+      <Confirma
+        aberto={pedindoSenha}
+        nivel={1}
+        tom="acao"
+        titulo="Gerar outra senha para esta pessoa?"
+        mensagem="A senha atual deixa de valer, e as sessões abertas dela caem. Use quando a pessoa não consegue receber o código por e-mail."
+        rotuloConfirmar="Gerar senha"
+        aoConfirmar={async () => {
+          setPedindoSenha(false)
+          try {
+            const { senhaProvisoria } = await gerarSenhaProvisoria(colaborador.id)
+            setSenhaNova(senhaProvisoria)
+          } catch (erro) {
+            setErros({ geral: erro.message })
+          }
+        }}
+        aoFechar={() => setPedindoSenha(false)}
+      />
 
       {/* A conferência é sobre o SETOR.
 

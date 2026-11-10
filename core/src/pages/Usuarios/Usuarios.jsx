@@ -9,11 +9,13 @@ import { useDados } from '@/context/DadosContext'
 import { useAuth } from '@/context/AuthContext'
 import Estrelas from '@/components/Estrelas/Estrelas'
 import { usePresencaDaEquipe } from '@/hooks/usePresenca'
+import useSenhaPadrao from '@/hooks/useSenhaPadrao'
 
 import { formatarTelefone } from '@/utils/formato'
 import ModalCargos from './ModalCargos'
 import ModalTitulos from './ModalTitulos'
 import ModalColaborador from './ModalColaborador'
+import ModalInconformidade from './ModalInconformidade'
 import './Usuarios.css'
 
 const Icone = {
@@ -116,6 +118,10 @@ export default function Usuarios() {
   /* atribuir cargo tem permissao propria: sem ela ninguem escolhe o
      cargo de ninguem — nem o proprio, em Configuracoes */
   const podeTitulos = pode('editar_cargo_titulo')
+  /* o "!" no card de quem ainda nao trocou a senha padrao */
+  const podeSenhaPadrao = pode('ver_senha_padrao')
+  const comSenhaPadrao = useSenhaPadrao(podeSenhaPadrao)
+  const [inconforme, setInconforme] = useState(null)
 
   const [modalCargos, setModalCargos] = useState(false)
   const [modalTitulos, setModalTitulos] = useState(false)
@@ -327,11 +333,14 @@ export default function Usuarios() {
               /* quem esta olhando esta tela esta, por definicao, com o
                  site aberto e na frente — sem esperar o proprio aviso */
               const estado = pessoa.souEu ? 'ativo' : presenca[pessoa.id] ?? 'offline'
+              const senhaPendente = podeSenhaPadrao && comSenhaPadrao.has(pessoa.id)
 
               return (
                 <li
                   key={pessoa.id}
-                  className={`pessoa ${pessoa.souEu ? 'is-eu' : ''} ${aberto ? 'is-aberto' : ''}`.trim()}
+                  className={`pessoa ${pessoa.souEu ? 'is-eu' : ''} ${aberto ? 'is-aberto' : ''} ${
+                    senhaPendente ? 'is-inconforme' : ''
+                  }`.trim()}
                   style={{ '--cargo-cor': cargo?.cor ?? '#6b7280' }}
                 >
                   {/* O topo tem altura FIXA: todos os cards fechados ficam do
@@ -381,6 +390,19 @@ export default function Usuarios() {
                         </span>
                       )}
                     </span>
+
+                    {senhaPendente && (
+                      <button
+                        type="button"
+                        className="pessoa__sinal"
+                        aria-haspopup="dialog"
+                        aria-label={`Ver a inconformidade de ${pessoa.nome}`}
+                        title="Inconformidade: senha padrão não alterada"
+                        onClick={() => setInconforme(pessoa)}
+                      >
+                        !
+                      </button>
+                    )}
 
                     {/* o "v" no canto de cima, a direita: e ele que abre o
                         card — contato, nota e, para quem pode, editar e
@@ -469,6 +491,8 @@ export default function Usuarios() {
       <ModalCargos aberto={modalCargos} aoFechar={() => setModalCargos(false)} />
 
       <ModalTitulos aberto={modalTitulos} aoFechar={() => setModalTitulos(false)} />
+
+      <ModalInconformidade pessoa={inconforme} aoFechar={() => setInconforme(null)} />
 
       <ModalColaborador
         aberto={modalColab}

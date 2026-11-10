@@ -5,6 +5,7 @@ import { cargoPode, exige, exigeSessao, meuCargo, tratar } from '../sessao.js'
 import { limparGuardadas, normalizar } from '../../src/domain/permissoes.js'
 import { lerRegrasCheck } from '../../src/domain/regrasCheck.js'
 import { IMAGEM_INVALIDA, imagemValida } from '../utils/imagem.js'
+import { gerarSenhaProvisoria } from '../utils/senha.js'
 import { registrarAtividade } from '../atividade.js'
 
 const router = Router()
@@ -53,8 +54,10 @@ const ROTULO_CAMPO_USUARIO = {
   cpf: 'CPF',
 }
 
-/** A senha com que todo colaborador novo entra. O sistema pede a troca
-    no primeiro acesso (senha_temporaria = true). */
+/** A senha com que todo colaborador novo entrava, e que esta escrita no
+    repositorio publico. Nao abre mais conta nenhuma (ver /auth/login): fica
+    aqui para achar quem ainda esta com ela (server/avisosConta.js e o "!"
+    dos cards de Usuarios, em GET /usuarios/senha-padrao). */
 export const SENHA_PADRAO = '123456'
 
 const soDigitos = (valor) => String(valor ?? '').replace(/\D/g, '')
@@ -634,6 +637,55 @@ router.get('/usuarios', exigeSessao, async (req, res) => {
   }
 })
 
+/* cada conferencia e lenta de proposito (bcrypt custo 12, uns 0,25 s):
+   a tela pede de lote em lote, e nenhuma chamada fica pendurada */
+const LOTE_SENHA_PADRAO = 10
+
+/* o resultado so muda quando o hash muda, entao o hash e a chave: reabrir
+   a aba nao refaz a conta. Numa funcao nova da Vercel ela e refeita. */
+const senhaPadraoPorHash = new Map()
+
+async function usaSenhaPadrao(hash) {
+  if (!senhaPadraoPorHash.has(hash)) {
+    senhaPadraoPorHash.set(hash, await bcrypt.compare(SENHA_PADRAO, hash))
+  }
+  return senhaPadraoPorHash.get(hash)
+}
+
+/**
+ * GET /api/equipe/usuarios/senha-padrao?desde=0 — quem ainda nao trocou a
+ * senha padrao: o "!" dos cards de Usuarios.
+ *
+ * Confere no hash, como server/avisosConta.js: a marca senha_temporaria
+ * nao serve (o vinculo com o Outlook a liga de proposito, e conta antiga
+ * nasceu com ela desligada).
+ *
+ * Devolve { ids, proximo }: `proximo` e o `desde` da chamada seguinte, ou
+ * null quando acabou. So os ids saem daqui, nunca o hash.
+ */
+router.get('/usuarios/senha-padrao', exigeSessao, exige('ver_senha_padrao'), async (req, res) => {
+  const desde = Math.max(0, Number.parseInt(req.query.desde, 10) || 0)
+  try {
+    const { rows } = await query(
+      `SELECT u.id, u.senha_hash
+         FROM usuario u
+         LEFT JOIN cargo c ON c.id = u.cargo_id
+        WHERE coalesce(u.ativo, true) AND u.senha_hash IS NOT NULL
+          AND NOT coalesce((to_jsonb(c) ->> 'painel_tv')::boolean, false)
+        ORDER BY u.id
+       OFFSET $1 LIMIT $2`,
+      [desde, LOTE_SENHA_PADRAO + 1],
+    )
+    const ids = []
+    for (const pessoa of rows.slice(0, LOTE_SENHA_PADRAO)) {
+      if (await usaSenhaPadrao(pessoa.senha_hash)) ids.push(String(pessoa.id))
+    }
+    return res.json({ ids, proximo: rows.length > LOTE_SENHA_PADRAO ? desde + LOTE_SENHA_PADRAO : null })
+  } catch (erro) {
+    return tratar(erro, res, 'equipe/senha-padrao')
+  }
+})
+
 /**
  * A foto INTEIRA da pessoa — a que o editor precisa para reenquadrar
  * sem recortar o recorte anterior.
@@ -658,9 +710,9 @@ router.get('/usuarios/:id/foto', exigeSessao, async (req, res) => {
 /**
  * POST /api/equipe/usuarios — cadastra o colaborador.
  *
- * Entra com a SENHA_PADRAO (123456) e senha_temporaria = true:
- * no primeiro acesso a tela cobra a troca. Quem cadastra precisa da
- * permissao `editar_usuario`.
+ * Entra com uma senha provisoria sorteada so para ela, e
+ * senha_temporaria = true: no primeiro acesso a tela cobra a troca. Quem
+ * cadastra precisa da permissao `editar_usuario`.
  *
  * Dois jeitos de cadastrar, e o SETOR e obrigatorio nos dois (e ele
  * que decide o que a pessoa pode fazer):
@@ -719,7 +771,8 @@ router.post('/usuarios', exigeSessao, async (req, res) => {
       ? await acharTitulo(req.body?.cargoTituloId, req.body?.cargoTitulo)
       : null
 
-    const hash = await bcrypt.hash(SENHA_PADRAO, 12)
+    const senhaProvisoria = gerarSenhaProvisoria()
+    const hash = await bcrypt.hash(senhaProvisoria, 12)
 
     const { rows } = await query(
       `INSERT INTO usuario (name, email, cpf, data_nascimento, telefone,
@@ -756,7 +809,7 @@ router.post('/usuarios', exigeSessao, async (req, res) => {
     })
     return res
       .status(201)
-      .json({ usuario: paraUsuario(criado.rows[0]), senhaPadrao: SENHA_PADRAO })
+      .json({ usuario: paraUsuario(criado.rows[0]), senhaPadrao: senhaProvisoria })
   } catch (erro) {
     if (erro.code === '23505') {
       const qual = String(erro.detail ?? '').includes('cpf') ? 'CPF' : 'e-mail'
@@ -934,6 +987,47 @@ router.patch('/usuarios/:id', exigeSessao, async (req, res) => {
       })
     }
     return tratar(erro, res, 'equipe/usuarios-editar')
+  }
+})
+
+/**
+ * POST /api/equipe/usuarios/:id/senha-provisoria — sorteia uma senha nova.
+ *
+ * E o caminho de quem nao recebe o codigo do "esqueci minha senha" (quem
+ * entra so pelo CPF, ou nao tem e-mail). Derruba as sessoes abertas da
+ * pessoa: o token leva a marca da senha antiga.
+ */
+router.post('/usuarios/:id/senha-provisoria', exigeSessao, exige('editar_usuario'), async (req, res) => {
+  const alvo = String(req.params.id)
+  if (!/^\d{1,15}$/.test(alvo)) return res.status(400).json({ erro: 'Usuário inválido.' })
+  if (String(req.dono.sub) === alvo) {
+    return res.status(400).json({ erro: 'Troque a sua própria senha em Configurações.' })
+  }
+
+  try {
+    if (!req.cargo?.acessoTotal && (await temAcessoTotal(alvo))) {
+      return res.status(403).json({ erro: SO_ACESSO_TOTAL_MEXE })
+    }
+    const senhaProvisoria = gerarSenhaProvisoria()
+    const { rows } = await query(
+      `UPDATE usuario SET senha_hash = $1, senha_temporaria = true
+        WHERE id = $2 AND ativo RETURNING id, name`,
+      [await bcrypt.hash(senhaProvisoria, 12), alvo],
+    )
+    if (!rows[0]) return res.status(404).json({ erro: 'Usuário não encontrado.' })
+    await registrarAtividade(req, {
+      acao: 'usuario.senha_provisoria',
+      categoria: 'equipe',
+      entidade: ['usuario', alvo],
+      descricao: 'Senha provisória gerada',
+      detalhes: { pessoa: rows[0].name },
+    })
+    return res.json({ senhaProvisoria })
+  } catch (erro) {
+    if (erro.message?.includes('protegido')) {
+      return res.status(409).json({ erro: 'Este usuário está protegido no banco e não pode ter a senha trocada pela tela.' })
+    }
+    return tratar(erro, res, 'equipe/senha-provisoria')
   }
 })
 

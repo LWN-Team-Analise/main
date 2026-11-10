@@ -11,7 +11,6 @@ import { useTheme } from '@/context/ThemeContext'
 import useOutlook from '@/hooks/useOutlook'
 import { carregarFotoOriginal, editarUsuario, trocarSenha } from '@/services/equipeService'
 import { validateCPF, vincularOutlook } from '@/services/authService'
-import { tokenAtual } from '@/services/api'
 import { conectarTeams, estadoTeams, inicioConexaoTeams } from '@/services/pushService'
 import { formatarCPF, formatarTelefone, soDigitos } from '@/utils/formato'
 import { prepararImagem } from '@/utils/imagem'
@@ -490,7 +489,7 @@ function BlocoOutlook() {
     setOcupado(true)
     try {
       const { codigo, redirecionar } = await outlook.abrir()
-      const resposta = await vincularOutlook(codigo, redirecionar, tokenAtual())
+      const resposta = await vincularOutlook(codigo, redirecionar)
       atualizarPerfil({
         outlook: true,
         outlookEmail: resposta.user?.outlookEmail ?? null,
@@ -667,7 +666,7 @@ function AvisoTeams() {
  * conta Microsoft.
  */
 function TrocarSenha({ chamado = null }) {
-  const { user, atualizarPerfil, renovarToken } = useAuth()
+  const { user, atualizarPerfil } = useAuth()
 
   const caixa = useRef(null)
   /* aceso = o bloco acabou de ser apontado pela ilha do topo. E so um
@@ -714,9 +713,8 @@ function TrocarSenha({ chamado = null }) {
 
     setSalvando(true)
     try {
-      const resposta = await trocarSenha(atual, nova)
-      /* a senha nova derruba o token antigo no servidor: o novo vem junto */
-      renovarToken(resposta?.token)
+      /* a senha nova derruba a sessao antiga: o cookie novo vem na resposta */
+      await trocarSenha(atual, nova)
       atualizarPerfil({ senhaTemporaria: false })
       setAtual('')
       setNova('')

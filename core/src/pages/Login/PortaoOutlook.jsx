@@ -6,7 +6,6 @@ import useOutlook from '@/hooks/useOutlook'
 import { useAuth } from '@/context/AuthContext'
 import { useTheme } from '@/context/ThemeContext'
 import { vincularOutlook } from '@/services/authService'
-import { tokenAtual } from '@/services/api'
 import outlookLogo from '@/assets/outlook.png'
 import logoLight from '@/assets/LogoLWN.png'
 import logoDark from '@/assets/LogoLWNWhite.png'
@@ -55,7 +54,7 @@ export default function PortaoOutlook() {
     setOcupado(true)
     try {
       const { codigo, redirecionar } = await outlook.abrir()
-      const resposta = await vincularOutlook(codigo, redirecionar, tokenAtual())
+      const resposta = await vincularOutlook(codigo, redirecionar)
       /* atualizar o perfil e o que derruba este portao: o
          ProtectedRoute volta a deixar passar no mesmo instante */
       atualizarPerfil({
