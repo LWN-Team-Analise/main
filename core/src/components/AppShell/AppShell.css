@@ -956,8 +956,12 @@
     right: 0;
   }
 
+  /* A folga de baixo e a altura da barra (82px contando o respiro dela),
+     a bolha que aflora (13px) e um pouco de ar. A area segura entra na
+     conta porque ela empurra a barra para cima: no iPhone a barra sobe
+     34px, e sem isso cobria o fim da pagina. */
   .shell__coluna {
-    padding: 14px 14px 104px;
+    padding: 14px 14px calc(env(safe-area-inset-bottom, 0px) + 116px);
   }
 
   /* Respiro IGUAL nos quatro lados. Ele era `12px 58px 12px 12px`: os

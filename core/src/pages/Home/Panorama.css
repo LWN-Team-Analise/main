@@ -1029,13 +1029,15 @@ button.pdest:hover .pdest__foto {
 .pglobo__mapa {
   width: min(100%, 340px);
   height: 340px;
+}
+
+/* gira no arrasto — e so isso, e so em cima da esfera. O pingo nao abre
+   nada, entao o cursor nao promete clique: so a mao de arrastar */
+.pglobo__mapa .globo__bola {
   cursor: grab;
 }
 
-/* gira no arrasto — e so isso. O pingo nao abre nada, entao o cursor
-   nao promete clique: so a mao de arrastar */
-.pglobo__mapa:active,
-.pglobo__mapa canvas:active {
+.pglobo__mapa .globo__bola:active {
   cursor: grabbing;
 }
 
