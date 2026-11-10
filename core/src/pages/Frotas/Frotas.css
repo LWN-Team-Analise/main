@@ -1162,12 +1162,6 @@
     padding: 6px 11px 6px 13px;
   }
 
-  /* o campo continua com 16px (abaixo disso o iPhone da zoom na tela ao
-     focar, ver global.css); so o texto de exemplo encolhe */
-  .registros__procura input::placeholder {
-    font-size: 13px;
-  }
-
   .frotas__acoes {
     grid-template-columns: 1fr;
   }

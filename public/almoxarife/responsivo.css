@@ -585,3 +585,17 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
         line-height: 1.25;
     }
 }
+
+/* ============================================================
+   O TEXTO DE EXEMPLO NO CELULAR
+
+   Os campos ficam com 16px (abaixo disso o iPhone dá zoom na tela ao
+   focar), e o exemplo herdava esse tamanho. O zoom olha o campo, não o
+   exemplo: só ele encolhe. É a mesma medida do Atmosfera (global.css).
+   ============================================================ */
+@media (max-width: 768px) {
+    input::placeholder,
+    textarea::placeholder {
+        font-size: 13px;
+    }
+}
