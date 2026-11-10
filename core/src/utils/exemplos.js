@@ -1,4 +1,4 @@
-import { EXEMPLOS } from '@/domain/exemplos'
+import { EXEMPLOS, GRUPOS } from '@/domain/exemplos'
 
 /* ------------------------------------------------------------
    O SORTEIO DOS EXEMPLOS DOS CAMPOS
@@ -17,19 +17,61 @@ import { EXEMPLOS } from '@/domain/exemplos'
    o mesmo exemplo para sempre.
    ------------------------------------------------------------ */
 
-/* o ultimo de cada lista: reabrir nunca repete o que acabou de aparecer */
+const sortearDe = (lista, anterior) => {
+  const candidatos = lista.filter((item) => item !== anterior)
+  return candidatos[Math.floor(Math.random() * candidatos.length)]
+}
+
+/* chave -> em que grupo e em que coluna ela esta */
+const noGrupo = new Map()
+for (const grupo of GRUPOS) {
+  grupo.campos.forEach((chave, coluna) => noGrupo.set(chave, { grupo, coluna }))
+}
+
+/* por grupo: a linha da vez e os campos que a estao mostrando */
+const emUso = new Map()
+
+/* A linha so muda quando nao sobrou nenhum campo dela na tela. Assim os
+   campos do mesmo pop-up combinam mesmo quando um deles aparece depois
+   (o "Qual gas", que so existe com a opcao Outro), e reabrir sorteia. */
+function linhaDe(grupo, campo) {
+  let atual = emUso.get(grupo)
+  if (!atual?.campos.some((c) => c.isConnected)) {
+    atual = { linha: sortearDe(grupo.linhas, atual?.linha), campos: [] }
+    emUso.set(grupo, atual)
+  }
+  if (campo) atual.campos.push(campo)
+  return atual.linha
+}
+
+/* o ultimo de cada lista solta: reabrir nunca repete o que acabou de sair */
 const ultimo = new Map()
 
-function sortear(chave) {
-  const candidatos = EXEMPLOS[chave].filter((item) => item !== ultimo.get(chave))
-  const item = candidatos[Math.floor(Math.random() * candidatos.length)]
+function daListaSolta(chave) {
+  const item = sortearDe(EXEMPLOS[chave], ultimo.get(chave))
   ultimo.set(chave, item)
   return item
 }
 
+/* 'UF (ex.: SP)' com 'GO' -> 'UF (ex.: GO)'; sem "ex" o valor e o texto todo */
+function naFrase(chave, valor) {
+  const marca = /\bex[.:]+\s*/i.exec(chave)
+  if (!marca) return valor
+  return chave.slice(0, marca.index + marca[0].length) + valor + (chave.endsWith(')') ? ')' : '')
+}
+
+const temExemplos = (chave) => noGrupo.has(chave) || Array.isArray(EXEMPLOS[chave])
+
+function textoPara(chave, campo) {
+  const lugar = noGrupo.get(chave)
+  if (!lugar) return daListaSolta(chave)
+  return naFrase(chave, linhaDe(lugar.grupo, campo)[lugar.coluna])
+}
+
 /** O exemplo sorteado sem o "Ex.: ", para usar no meio de uma frase. */
 export function sortearExemplo(chave) {
-  return sortear(chave).replace(/^Ex\.: /, '')
+  const lugar = noGrupo.get(chave)
+  return lugar ? linhaDe(lugar.grupo)[lugar.coluna] : daListaSolta(chave).replace(/^Ex\.: /, '')
 }
 
 /* o que o observador escreveu em cada campo. Sem isto ele veria a propria
@@ -39,8 +81,8 @@ const escrito = new WeakMap()
 
 function trocar(campo) {
   const atual = campo.getAttribute('placeholder')
-  if (!Array.isArray(EXEMPLOS[atual]) || escrito.get(campo) === atual) return
-  const novo = sortear(atual)
+  if (!temExemplos(atual) || escrito.get(campo) === atual) return
+  const novo = textoPara(atual, campo)
   escrito.set(campo, novo)
   campo.setAttribute('placeholder', novo)
 }
