@@ -68,7 +68,8 @@ export const ASSUNTOS = [
     resposta:
       'Três motivos possíveis: o check é de outro setor; a etapa dele ainda não abriu (a anterior não ' +
       'fechou); ou o seu cargo não tem a permissão. Na grade da página inicial, a linha com cadeado é ' +
-      'justamente a de outro setor — ela aparece para você saber quem está segurando a fila.',
+      'justamente a de outro setor — ela aparece para você saber quem está segurando a fila. Quem tem ' +
+      'a permissão "Check em todas as etapas" não espera a etapa anterior fechar.',
   },
   {
     id: 'check-sem-informacao',

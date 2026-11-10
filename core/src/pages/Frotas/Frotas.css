@@ -402,6 +402,89 @@
   color: var(--text-strong);
 }
 
+/* a ultima devolucao, na saida: em vermelho o que pede atencao */
+.frota-devolvido {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+}
+
+.frota-devolvido__topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 0.86rem;
+  color: var(--text-strong);
+}
+
+.frota-devolvido__atencao {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.frota-devolvido__quem {
+  flex-basis: 100%;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.frota-devolvido__lista {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.frota-devolvido__lista li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  color: var(--text-base);
+}
+
+.frota-devolvido__lista li strong {
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.frota-devolvido__lista li[data-alerta='sim'] {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.frota-devolvido__lista li[data-alerta='sim'] strong {
+  color: var(--danger);
+}
+
+.frota-devolvido__nota {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .frota-devolvido__lista {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .frota-form__aviso {
   margin: -6px 0 0;
   padding: 10px 13px;

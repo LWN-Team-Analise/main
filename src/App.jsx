@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { privacyPath } from './data/site';
+import { accessibilityPath, privacyPath, termsPath } from './data/site';
 import SiteLayout from './layouts/SiteLayout';
 import HomePage from './pages/HomePage';
 
@@ -11,6 +11,8 @@ const BlogPage = lazy(() => import('./pages/BlogPage'));
 const ArticlePage = lazy(() => import('./pages/ArticlePage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+const AccessibilityPage = lazy(() => import('./pages/AccessibilityPage'));
 
 export default function App() {
   return (
@@ -58,6 +60,25 @@ export default function App() {
           }
         />
         <Route path="privacy-policy" element={<Navigate to={privacyPath} replace />} />
+        <Route
+          path={termsPath.slice(1)}
+          element={
+            <Suspense fallback={<div className="page-loading" />}>
+              <TermsPage />
+            </Suspense>
+          }
+        />
+        <Route path="termos-de-servico" element={<Navigate to={termsPath} replace />} />
+        <Route path="terms-of-use" element={<Navigate to={termsPath} replace />} />
+        <Route
+          path={accessibilityPath.slice(1)}
+          element={
+            <Suspense fallback={<div className="page-loading" />}>
+              <AccessibilityPage />
+            </Suspense>
+          }
+        />
+        <Route path="accessibility" element={<Navigate to={accessibilityPath} replace />} />
         <Route
           path="*"
           element={

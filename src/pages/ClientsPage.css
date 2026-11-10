@@ -173,3 +173,10 @@
     padding: 1rem 0.75rem;
   }
 }
+
+.clients-page__trademarks {
+  padding-bottom: 2.5rem;
+  color: var(--c-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}

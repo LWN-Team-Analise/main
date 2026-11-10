@@ -19,6 +19,10 @@ export const credit = { label: '@oluuiss', href: 'https://oluuiss.com/' };
 // The privacy policy page (the same page in both languages; /privacy-policy also leads there).
 export const privacyPath = '/politica-de-privacidade';
 
+// Os outros documentos do rodape (os enderecos antigos ou em ingles levam a eles, em App.jsx).
+export const termsPath = '/termos-de-uso';
+export const accessibilityPath = '/acessibilidade';
+
 // Atmosfera LWN, the employees' management platform: a separate app served under this path (core/).
 export const corePath = '/core/';
 
@@ -206,16 +210,16 @@ export const offices = [
 
 // Google reviews shown on the current website (Trustindex widget), unchanged.
 export const reviews = [
-  { name: 'Roberto Damasco', date: '13/06/2025', rating: 5, avatar: 'https://lh3.googleusercontent.com/a-/ALV-UjU7s1aTOtkpRrMRC965GJJEmbbPMAtw8mlItMUGJ0Y8zss47ZU=w80-h80-c-rp-mo-br100', text: 'Uma empresa séria e comprometida com os clientes, embasada em normas, procura trazer à luz da verdade, o melhor resultado que os sistemas de HVAC podem oferecer.' },
-  { name: 'Giovanna I', date: '11/06/2025', rating: 5, avatar: 'https://lh3.googleusercontent.com/a/ACg8ocJhbAAeBpsSxUCccl3eAXwOM1XvRC9jxaTnYCRGTtKqu292BO0t=w80-h80-c-rp-mo-br100', text: 'Excelente experiência! Profissionais preparados e serviço feito com eficiência. Voltaria a contratar com certeza.' },
-  { name: 'Livia Cruzatto Brito', date: '11/06/2025', rating: 5, avatar: 'https://lh3.googleusercontent.com/a-/ALV-UjXRQjTE8uA7DeV6jZtG8BYZ-zut2lWwtVGyXZ-LHKOzOcwYtj1EAA=w80-h80-c-rp-mo-br100', text: 'LWN Engenharia é uma empresa responsável e extremamente competente, além de preocupada com a qualidade e segurança dos seus ensaios! Recomendo os serviços da empresa com total confiança!' },
-  { name: 'Kézia D Souza Dias', date: '11/06/2025', rating: 5, avatar: 'https://lh3.googleusercontent.com/a-/ALV-UjV1IghOUW78QDhz1_Ki-J0KaSwTGl7PLDwpSW2OGceH60R526g=w80-h80-c-rp-mo-br100', text: 'Colocam o cliente e seus funcionários em primeiro lugar. Gratificante fazer parte da equipe LWN!' },
-  { name: 'Juraci Rodrigues de Lima', date: '10/06/2025', rating: 5, avatar: 'https://lh3.googleusercontent.com/a/ACg8ocIKMF3B7BPz-qXo2o5QTaRQj0RNzQi1wH9tfps8X4f8t2Zr=w80-h80-c-rp-mo-br100', text: 'Empresa seria, serviço de primeira e ótimo atendimento' },
-  { name: 'Larissa Carvalho', date: '09/06/2025', rating: 5, avatar: 'https://lh3.googleusercontent.com/a-/ALV-UjVR1ygbW205RLeHKHihdcJA_1qDUNPHQlsUQ-fzIl_WJabJU97Miw=w80-h80-c-rp-mo-br100', text: 'Eles tem ótimos serviços para oferecer e uma equipe muito comprometida e dedicada.' },
-  { name: 'Marileide Paula Morais', date: '09/06/2025', rating: 5, avatar: 'https://lh3.googleusercontent.com/a-/ALV-UjVrwClGrdNaYYwpSNlzE_RLwREpr8koHk0A0Dg56N7UQf15SlgN=w80-h80-c-rp-mo-ba4-br100', text: 'Empresa que pensa no colaborador' },
-  { name: 'Gabriel Silva Costa', date: '09/06/2025', rating: 5, avatar: 'https://lh3.googleusercontent.com/a-/ALV-UjU92l4BFOjuxs3GcJ0GK5V3jBPcz3NTBfkkAA-4uT7t4yGxTFdT=w80-h80-c-rp-mo-ba3-br100', text: 'Engenharia aplicada em sistemas de HVAC e gases medicinais, com Equipes totalmente Qualificada e Instrumentos de Ponta. A maior da América Latina . Orgulho de fazer parte do Time' },
-  { name: 'Vanessa Paranhos', date: '09/06/2025', rating: 5, avatar: 'https://lh3.googleusercontent.com/a/ACg8ocJfFYNBg-ejbaYf-Fh8QCpGGLuVkB81YxG0KF9iBzKYd-AAmw=w80-h80-c-rp-mo-br100', text: 'Excelência e perfeição em todos os serviços oferecidos!!!' },
-  { name: 'Leticia Nogueira Gonçalves', date: '09/06/2025', rating: 5, avatar: 'https://lh3.googleusercontent.com/a/ACg8ocLBk_JuPPMlkz7YLS_DxydL6Q4VkILAO2juLJqiy4GC4qy07GaE=w80-h80-c-rp-mo-br100', text: 'Ótima empresa, excelente comprometimento e profissionais únicos! Empresa de muito sucesso!' },
+  { name: 'Roberto Damasco', date: '13/06/2025', rating: 5, text: 'Uma empresa séria e comprometida com os clientes, embasada em normas, procura trazer à luz da verdade, o melhor resultado que os sistemas de HVAC podem oferecer.' },
+  { name: 'Giovanna I', date: '11/06/2025', rating: 5, text: 'Excelente experiência! Profissionais preparados e serviço feito com eficiência. Voltaria a contratar com certeza.' },
+  { name: 'Livia Cruzatto Brito', date: '11/06/2025', rating: 5, text: 'LWN Engenharia é uma empresa responsável e extremamente competente, além de preocupada com a qualidade e segurança dos seus ensaios! Recomendo os serviços da empresa com total confiança!' },
+  { name: 'Kézia D Souza Dias', date: '11/06/2025', rating: 5, text: 'Colocam o cliente e seus funcionários em primeiro lugar. Gratificante fazer parte da equipe LWN!' },
+  { name: 'Juraci Rodrigues de Lima', date: '10/06/2025', rating: 5, text: 'Empresa seria, serviço de primeira e ótimo atendimento' },
+  { name: 'Larissa Carvalho', date: '09/06/2025', rating: 5, text: 'Eles tem ótimos serviços para oferecer e uma equipe muito comprometida e dedicada.' },
+  { name: 'Marileide Paula Morais', date: '09/06/2025', rating: 5, text: 'Empresa que pensa no colaborador' },
+  { name: 'Gabriel Silva Costa', date: '09/06/2025', rating: 5, text: 'Engenharia aplicada em sistemas de HVAC e gases medicinais, com Equipes totalmente Qualificada e Instrumentos de Ponta. A maior da América Latina . Orgulho de fazer parte do Time' },
+  { name: 'Vanessa Paranhos', date: '09/06/2025', rating: 5, text: 'Excelência e perfeição em todos os serviços oferecidos!!!' },
+  { name: 'Leticia Nogueira Gonçalves', date: '09/06/2025', rating: 5, text: 'Ótima empresa, excelente comprometimento e profissionais únicos! Empresa de muito sucesso!' },
 ];
 
 // Seals from the current website. The third image is the INEG / QTQ seal; its

@@ -411,10 +411,12 @@
   max-height: 232px;
   margin: 0;
   padding: 5px;
-  border: 1px solid var(--control-border);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  background: var(--modal-bg);
-  box-shadow: var(--modal-sombra);
+  background: var(--vidro-janela);
+  box-shadow: var(--modal-sombra), var(--vidro-aro);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
   list-style: none;
   overflow-y: auto;
 }
@@ -533,7 +535,6 @@
   place-items: center;
   padding: 20px;
   background: rgba(8, 10, 14, 0.55);
-  backdrop-filter: blur(2px);
 }
 
 .chat__apagarcaixa {
@@ -543,10 +544,12 @@
   width: 100%;
   max-width: 340px;
   padding: 16px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  background: var(--surface);
-  box-shadow: var(--modal-sombra);
+  background: var(--vidro-janela);
+  box-shadow: var(--modal-sombra), var(--vidro-aro);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
 }
 
 .chat__apagartitulo {

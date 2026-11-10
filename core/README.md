@@ -601,11 +601,20 @@ esconde o botao e a API recusa a chamada usando exatamente as mesmas chaves.
 | Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_turnos`, `ver_avaliacoes`, `ver_usuarios`, `ver_avisos` |
 | Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `criar_obras`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `check_todas_obras`, `check_sem_informacao`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
 
-Alteracao **sempre** depende da visualizacao correspondente: desmarcar "Obras"
-apaga junto tudo o que so faz sentido dentro de Obras, e essas linhas ficam
-travadas ate a visualizacao voltar. Quem tem `acesso_total` (diretoria) passa
-por qualquer uma, marcada ou nao. A lista e normalizada ao gravar **e ao ler**
+Alteracao **sempre** depende da visualizacao correspondente: sem "Obras", o
+setor nao edita nada de Obras, e essas linhas ficam travadas ate a
+visualizacao voltar. Quem tem `acesso_total` (diretoria) passa por qualquer
+uma, marcada ou nao. A lista e normalizada ao gravar **e ao ler**
 (`normalizar()`): alteracao gravada sem a visualizacao dela nao vale.
+
+Desmarcar "Obras" tira **so a aba** (atualizacao 45). O que estava marcado
+dentro dela fica **guardado** em `cargo.permissoes_guardadas`: aparece marcado,
+travado e com a borda tracejada, nao vale (nenhuma trava le essa coluna, so
+`permissoes` vale) e volta a valer do jeito que estava quando a aba for marcada
+de novo. Antes caia tudo junto, e reabrir a aba era marcar uma por uma. A tela
+junta as duas listas e divide na hora de gravar (`separar()`); a API confere as
+guardadas contra a lista nova (`limparGuardadas()`). Sem a atualizacao 45 no
+banco, a tela volta a derrubar tudo junto com a aba.
 
 Na tela do setor, cada aba ocupa uma linha: a visualizacao a esquerda e as
 alteracoes dela ao lado, uma na frente da outra, quebrando a linha no fim
@@ -662,6 +671,10 @@ Tres chaves valem uma nota:
   se desmarcam. NAO abre check de outro setor: `podeMarcar` e
   `podeEditarCheck` continuam valendo. A API confere em
   `PUT /api/dados/obras/:id/checks/:checkId` com `{ semInformacao: true }`.
+  Vale tambem para os checks da O.S. (**Solicitar OS**, **Gestao dos
+  instrumentos**, **Retirada** e **Devolucao das ferramentas**), mesmo sem OS:
+  "Preencher agora" leva ao LWN Control, quando ha OS esperando aquele passo,
+  e o selo sai quando o Control registra o passo de verdade.
   Precisa de `db/atualizacao-36.sql.txt` (sem ela, so o "Concluir sem
   informação" e recusado, com o recado de rodar `npm run db:atualizar`).
 - **`criar_obras`** ("Criar obra") separou CRIAR a obra de editar: so o
@@ -685,7 +698,10 @@ com o motivo):
    tela, quem nao esta na obra ve "você não está na obra" ao lado de Membros
    e o cadeado dos cards diz por que.
 2. **Setor**, como sempre: o card (ou o dono proprio do check) e do setor da
-   pessoa. `check_todas_etapas` e a obra de emergencia passam por esta.
+   pessoa. `check_todas_etapas` e a obra de emergencia passam por esta. Os
+   dois tambem nao esperam a fila: com eles, a etapa seguinte ja abre antes de
+   a anterior fechar (`estadoDaEtapaPara`, so na tela da obra; a API nao trava
+   por etapa).
 3. **Cargo.** Na tela do setor, o bloco **Checks por cargo** aperta o que
    cada cargo (cargo_titulo) marca: **a partir de que etapa** e os checks
    **de fora** ("menos Determinar Focal Point"). Em **Exceção por pessoa** a
@@ -1243,7 +1259,14 @@ alguem clica em **Compartilhar com a equipe** no rodape do negocio
 negocio guarda o n° da proposta em `negocio.proposta` (o n° sugerido pula os
 reservados pelos pendentes) e da para corrigir o n° e o cliente; o
 compartilhamento fica carimbado em `negocio.compartilhado_em` e
-`compartilhado_por`. O cadastro manual em Obras continua do mesmo jeito.
+`compartilhado_por`.
+
+O caminho contrario tambem existe: toda obra criada na mao em Obras entra
+sozinha no Comercial, no funil **Novos negocios**, em **Demanda Recebida**,
+ja ligada a obra (`server/negocioDaObra.js`; titulo = n° da proposta, a
+descricao na observacao, responsavel = quem criou). As obras abertas que ja
+estavam na 1a etapa vieram pela atualizacao 48. A obra excluida leva o negocio
+que ainda esta como nasceu; o que o Comercial ja fez andar continua la.
 
 - No formulario aparece o bloco da obra com o **N° da proposta**, ja sugerido
   como no "Nova obra" (o da ultima, mais um; `GET /api/comercial/proxima-proposta`,
@@ -1433,6 +1456,14 @@ ou a API fora do ar: o estado e a cidade viram campo livre.
   rodar `npm run db:atualizar`.
 - Nas listas de escolha, digitar as primeiras letras pula para a opcao ("par"
   acha o Paraguai), como no `<select>` do navegador.
+
+## Frotas: a ultima devolucao, na saida
+
+Ao escolher o carro no formulario de saida (e na retirada do carro de uma obra)
+aparece como ele voltou da ultima vez: quem devolveu, quando, o KM, o tanque, as
+respostas e a observacao (`veiculo.ultimaDevolucao`, em `GET /api/frotas/veiculos`).
+Em vermelho, o "Não" das perguntas marcadas como `importante` e o tanque abaixo da
+metade; o "Sem Parar" nao conta, porque "Não" ali nao e problema.
 
 ## Frotas: excluir saida ou devolucao
 
@@ -1825,7 +1856,7 @@ src/
 │   ├── Clientes/           # cadastro de clientes (CEP + IBGE)
 │   ├── Concluidas/         # fechadas, agrupadas por ano e mes
 │   ├── Configuracoes/      # editar a propria conta e o tema
-│   ├── Home/               # o "meu dia": Grade, Quadro e Dashboard
+│   ├── Home/               # o "meu dia": Panorama, Grade, Quadro e Dashboard
 │   ├── Login/              # tela de login (foto + faixas de vidro + cartao)
 │   ├── Obras/              # quadro, card, modais e a tela da obra
 │   ├── Privacy/            # politica de privacidade (texto provisorio)
@@ -1896,14 +1927,45 @@ inferior esquerdo, os dois fora dela. Clicando no avatar abrem-se
 
 ## Pagina inicial
 
-Tres modos de olhar a MESMA lista, e a lista e uma so: **os checks das
-obras abertas**.
+Abre no **Panorama** (a aba da empresa, logo abaixo). Depois dele, tres
+modos de olhar a MESMA lista, e a lista e uma so: **os checks das obras
+abertas**.
 
 | Aba | O que mostra |
 |---|---|
+| **Panorama** | avisos, aniversariantes do mes, agenda da empresa e destaques das avaliacoes |
 | **Grade** | so o que da para fazer AGORA, em ordem de urgencia |
 | **Quadro** | as mesmas tarefas em tres colunas: Nao iniciado / Em andamento / Concluida |
 | **Dashboard** | os numeros de tempo que a lista nao mostra |
+
+### Panorama (atualizacao 44)
+
+Quatro cards de vidro (`src/pages/Home/Panorama.jsx`), duas colunas no
+computador e uma no celular — quem decide e a largura que sobra para os
+cards (consulta de conteiner), e nao a da janela:
+
+| Card | De onde vem |
+|---|---|
+| **Avisos e Comunicados** | o **aviso geral** (atualizacoes 46 e 47, `aviso_geral` em `/api/avisos`): o "Enviar aviso" do botao **+**, para todos os setores ou um so, com titulo, texto opcional, data de expiracao opcional e "importante" (pingo laranja, sempre no topo). So aparece para o setor dele, inclusive para a diretoria. Vale ate o fim do dia da expiracao; sem ela, ate alguem encerrar. Terminado, fica no **Historico de avisos** (link no pe do card); quem tem `enviar_avisos` ve la os de todos os setores. O clique abre ele inteiro, e quem tem a permissao encerra e exclui por la. So o excluido (com duplo check) some do historico. Junto, por data, os avisos de obra do sininho (`minhasNotificacoes`: so os do seu setor e os sem setor); o clique abre a obra e nao marca nada como lido |
+| **Aniversariantes do Mes** | o `aniversario` de cada pessoa da equipe: so o dia e o mes (`'MM-DD'`), que a API manda para todos. A data inteira continua so para quem edita usuario. Quem faz aniversario hoje ganha o anel e os confetes |
+| **Agenda da Empresa** | a tabela nova `agenda_evento` (titulo, dia, hora e local opcionais), em `/api/agenda` (`server/routes/agenda.js`). Todos veem os eventos de hoje em diante; quem tem `enviar_avisos` cria, edita e exclui pelo "Ver calendario" |
+| **Destaques e Conquistas** | as avaliacoes: as obras com nota 4 ou mais (ate 5, a melhor primeiro) e um slide com as tres melhores medias da equipe. Carrossel com pontinhos, que anda sozinho e para com o mouse em cima |
+
+Embaixo dos quatro cards, no meio, fica o **globo dos clientes**
+(`src/pages/Home/GloboClientes.jsx`): um pingo azul por estado com cliente e o
+total de clientes embaixo. Ele morava no vazio da Grade ("Nada pendente por
+aqui", que agora mostra so o sol). Como anima sem parar e fica abaixo da
+dobra, so e desenhado quando esta perto da tela.
+
+Sem a atualizacao 44 no banco, a agenda so sai vazia (o `GET` devolve
+`semTabela: true`); o resto da pagina nao depende dela. Sem a 46, o card de
+avisos mostra so os de obra. A TV continua abrindo na Grade e nao tem o
+Panorama.
+
+O botao flutuante do canto (AppShell) e sempre o **+** com menu, em todas as
+abas: "Chat da equipe", "Enviar aviso" e "Marcar evento" para quem tem `enviar_avisos` e o que a
+tela acrescentar (a observacao do quadro, em Obras). Antes, sem opcao extra,
+ele era so o balao do chat. Dentro da obra continua o + proprio dela.
 
 ### Tarefa aqui e CHECK de obra
 

@@ -30,7 +30,7 @@ import * as cache from './cache.js'
 import * as push from './push.js'
 import * as mail from './email.js'
 import { depoisDeMarcar } from '../membrosObra.js'
-import { informacaoChegou } from '../semInformacao.js'
+import { informacaoChegou, temSemInformacao } from '../semInformacao.js'
 import { logger } from '../logger.js'
 import { descreverObra, registrarAtividade } from '../atividade.js'
 import { cargoPode, meuCargo } from '../sessao.js'
@@ -8074,8 +8074,9 @@ async function marcarCheckDaOS(os, tipo, quem, { forcar = false } = {}) {
              RETURNING check_id`,
             [os.obra_id, checkId, autor]
         );
-        if (!r.rowCount) return false;
+        // ja estava marcado: se foi concluido na mao sem a informacao, agora ela chegou
         await informacaoChegou(os.obra_id, checkId);
+        if (!r.rowCount) return false;
         if (autor) {
             const titulo = await pool.query('SELECT titulo FROM etapa_check WHERE id = $1', [checkId]);
             await registrarAtividade(autor, {
@@ -8134,7 +8135,9 @@ async function desmarcarChecksDaOS(obraId, excetoOsId) {
             );
             if (outra.rows.length) continue;
             const checkId = await checkDaObra(obraId, tipo);
-            if (checkId) await pool.query('DELETE FROM obra_check WHERE obra_id = $1 AND check_id = $2', [obraId, checkId]);
+            // o concluido na mao, sem a informacao, nao era desta OS: fica
+            const soDaOS = (await temSemInformacao()) ? ' AND sem_informacao IS NOT TRUE' : '';
+            if (checkId) await pool.query(`DELETE FROM obra_check WHERE obra_id = $1 AND check_id = $2${soDaOS}`, [obraId, checkId]);
         } catch (e) {
             logger.error('almox/check-da-os', `${tipo}: ${e.message}`);
         }

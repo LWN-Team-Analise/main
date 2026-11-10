@@ -513,6 +513,7 @@ export default function Conversa({
             <textarea
               ref={campo}
               className="chat__campo"
+              aria-label="Escrever mensagem"
               rows={2}
               placeholder="Escreva a mensagem... use @ para mencionar alguém"
               value={texto}

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
 import Confirma from '@/components/Confirma/Confirma'
+import ExemploSorteado from '@/components/ExemploSorteado/ExemploSorteado'
 import { CampoSelecao, CampoTexto } from '@/components/Campo/Campo'
 import { CampoData, CampoHora } from '@/components/CampoData/CampoData'
 import { useDados } from '@/context/DadosContext'
@@ -407,7 +408,9 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
 
           <label className="formrot__marca turnoform__inteiro">
             <input type="checkbox" checked={form.diaInteiro} onChange={mudar('diaInteiro')} />
-            <span>Dia inteiro (sem horário — ex.: folga)</span>
+            <span>
+              Dia inteiro (sem horário — ex.: <ExemploSorteado chave="dia-inteiro" />)
+            </span>
           </label>
 
           {!form.diaInteiro && (

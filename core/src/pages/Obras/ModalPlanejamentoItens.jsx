@@ -328,7 +328,7 @@ export default function ModalPlanejamentoItens({
             <CampoTexto
               rotulo="TAG (opcional)"
               maxLength={LIMITES_ITEM.tag}
-              placeholder="Ex.: CSB-03"
+              placeholder={`Ex.: ${tipoDoItem(rascunho.tipo)?.exemploTag ?? ''}`}
               value={rascunho.tag}
               onChange={mudarCampo('tag')}
             />

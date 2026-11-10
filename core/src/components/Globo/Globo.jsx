@@ -23,6 +23,11 @@ import { useEffect, useRef } from 'react'
  * mouse vem DESLIGADO no uso da tela inicial (`pointer={{ zoom: 0 }}`):
  * ligado, ele engoliria a rolagem da pagina de quem so passou o cursor
  * por cima.
+ *
+ * Quem recebe o toque e a `.globo__bola`, um circulo do tamanho exato da
+ * esfera, e nao o canvas. O gesto so pega se comecar nela, e fora dela o
+ * dedo rola a pagina normalmente: o `touch-action` nao muda conforme o
+ * ponto dentro de um mesmo elemento, entao precisa ser outro elemento.
  */
 
 const MAX_DPR = 2
@@ -168,6 +173,7 @@ export default function Globo(props) {
     const pointer_ = { ...POINTER_DEFAULTS, ...(pointer || {}) }
 
     const canvasRef = useRef(null)
+    const bolaRef = useRef(null)
     const sizeRef = useRef({ w: 0, h: 0 })
     sizeRef.current = { w: num(width, 0), h: num(height, 0) }
 
@@ -222,7 +228,8 @@ export default function Globo(props) {
 
     useEffect(() => {
         const canvas = canvasRef.current
-        if (!canvas) return undefined
+        const bola = bolaRef.current
+        if (!canvas || !bola) return undefined
         const ctx = canvas.getContext("2d")
         if (!ctx) {
             console.error("Globo: contexto 2D indisponível")
@@ -346,6 +353,7 @@ export default function Globo(props) {
         let zoom = 1
         let zoomT = 1
         let seenClick = 0
+        let bolaMedida = ""
         const sea = []
         const soil = []
         const land8 = []
@@ -383,6 +391,17 @@ export default function Globo(props) {
             const cy = ch / 2 + u * 0.035
             const R = u * 0.318 * zoom * v.radius
             const fs = u * 0.0275 * Math.pow(zoom, 0.72) * v.glyphSize
+
+            /* a area de pegar acompanha a esfera. So escreve quando muda:
+               mexer no estilo a cada quadro forcaria layout o tempo todo */
+            const medida = cx + "|" + cy + "|" + R
+            if (medida !== bolaMedida) {
+                bolaMedida = medida
+                bola.style.left = cx - R + "px"
+                bola.style.top = cy - R + "px"
+                bola.style.width = R * 2 + "px"
+                bola.style.height = R * 2 + "px"
+            }
 
             if (ptr.dragging) {
                 /* O SINAL acompanha o espelho do mapa.
@@ -697,7 +716,7 @@ export default function Globo(props) {
             lastX = p.x
             lastY = p.y
             try {
-                canvas.setPointerCapture(e.pointerId)
+                bola.setPointerCapture(e.pointerId)
             } catch {
                 /* navegador sem captura de ponteiro: o arrasto segue pelo window */
             }
@@ -718,24 +737,24 @@ export default function Globo(props) {
             zoomT = clampN(zoomT * Math.exp(-e.deltaY * 0.0016 * v.zoom), 0.85, 2.6)
         }
 
-        canvas.addEventListener("pointermove", track)
-        canvas.addEventListener("pointerenter", track)
-        canvas.addEventListener("pointerleave", onLeave)
-        canvas.addEventListener("pointerdown", onDown)
+        bola.addEventListener("pointermove", track)
+        bola.addEventListener("pointerenter", track)
+        bola.addEventListener("pointerleave", onLeave)
+        bola.addEventListener("pointerdown", onDown)
         window.addEventListener("pointerup", onUp)
         window.addEventListener("pointercancel", onUp)
-        canvas.addEventListener("wheel", onWheel, { passive: false })
+        bola.addEventListener("wheel", onWheel, { passive: false })
         raf = requestAnimationFrame(render)
 
         return () => {
             cancelAnimationFrame(raf)
-            canvas.removeEventListener("pointermove", track)
-            canvas.removeEventListener("pointerenter", track)
-            canvas.removeEventListener("pointerleave", onLeave)
-            canvas.removeEventListener("pointerdown", onDown)
+            bola.removeEventListener("pointermove", track)
+            bola.removeEventListener("pointerenter", track)
+            bola.removeEventListener("pointerleave", onLeave)
+            bola.removeEventListener("pointerdown", onDown)
             window.removeEventListener("pointerup", onUp)
             window.removeEventListener("pointercancel", onUp)
-            canvas.removeEventListener("wheel", onWheel)
+            bola.removeEventListener("wheel", onWheel)
         }
     }, [])
 
@@ -758,6 +777,15 @@ export default function Globo(props) {
                     width: "100%",
                     height: "100%",
                     display: "block",
+                    pointerEvents: "none",
+                }}
+            />
+            <div
+                ref={bolaRef}
+                className="globo__bola"
+                style={{
+                    position: "absolute",
+                    borderRadius: "50%",
                     touchAction: "none",
                     userSelect: "none",
                     WebkitUserSelect: "none",

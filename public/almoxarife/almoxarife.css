@@ -3,8 +3,8 @@
 /* ===== Floating Pill Navigation · Clean Light Theme ===== */
 /* ======================================================== */
 
-/* ── Google Fonts ── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+/* ── Fontes locais (public/assets/fonts) ── */
+@import url('/assets/fonts/inter.css');
 
 
 

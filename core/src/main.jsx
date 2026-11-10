@@ -4,6 +4,10 @@ import ReactDOM from 'react-dom/client'
    ajustar o que vem de global/comum, e nao o contrario */
 import './styles/global.css'
 import App from './App'
+import { ligarExemplos } from './utils/exemplos'
+
+/* os exemplos dos campos: sorteados cada vez que um pop-up abre */
+ligarExemplos()
 
 /* o service worker so cuida das notificacoes no celular (public/core/sw.js);
    registrar cedo deixa ele pronto para quando a pessoa ligar os avisos */

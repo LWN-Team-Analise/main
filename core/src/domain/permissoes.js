@@ -25,6 +25,8 @@
    visualizacao correspondente. Se o setor nao ve Obras, ele
    nao edita obra, nem etapa, nem card, nem check — a tela
    trava sozinha (`dependeDe`) e o servidor recusa igual.
+   O que estava marcado dentro da aba desmarcada fica GUARDADO
+   (sem valer) e volta com ela — ver `separar`, mais abaixo.
 
    Setor novo nasce com a lista VAZIA: quem administra marca
    uma a uma. A unica excecao e o setor com `acessoTotal`
@@ -121,6 +123,7 @@ export const ALTERACAO = [
   { chave: 'criar_obras', rotulo: 'Criar obra', dependeDe: 'ver_obras' },
   { chave: 'editar_obras', rotulo: 'Editar obras', dependeDe: 'ver_obras' },
   { chave: 'excluir_concluidas', rotulo: 'Excluir obra concluída', dependeDe: 'ver_concluidas' },
+  /* marca os checks de qualquer setor e nao espera a etapa anterior fechar */
   { chave: 'check_todas_etapas', rotulo: 'Check em todas as etapas', dependeDe: 'ver_obras' },
   /* o check e de quem esta NA OBRA (Membros > Incluir membro; quem ja
      marcou check nela tambem conta). Com esta, o setor marca os checks
@@ -130,7 +133,8 @@ export const ALTERACAO = [
      os ensaios, o prazo da execucao, o documento da proposta, a reserva
      e a retirada do carro) sem preencher a informacao (atualizacao 36).
      Nao abre o check de outro setor: quem marca o que continua sendo a
-     regra de sempre (podeEditarCheck) */
+     regra de sempre (podeEditarCheck). Vale tambem para os quatro checks
+     da O.S., que fora daqui so o LWN Control marca */
   { chave: 'check_sem_informacao', rotulo: 'Concluir check sem preencher a informação', dependeDe: 'ver_obras' },
   { chave: 'editar_etapa', rotulo: 'Adicionar / alterar etapa', dependeDe: 'ver_obras' },
   { chave: 'editar_cards', rotulo: 'Adicionar / alterar cards', dependeDe: 'ver_obras' },
@@ -240,13 +244,64 @@ export function normalizar(lista) {
   return CHAVES.filter((c) => marcadas.has(c))
 }
 
+/* ------------------------------------------------------------
+   As GUARDADAS (atualizacao 45)
+
+   Desmarcar a aba ("Obras") tira so a aba. As alteracoes de dentro
+   que estavam marcadas nao valem mais — `normalizar` as tira da lista
+   que vale —, mas ficam guardadas a parte (cargo.permissoes_guardadas)
+   e voltam do jeito que estavam quando a aba for marcada de novo.
+   Antes elas caiam junto, e reabrir a aba era marcar tudo outra vez.
+
+   Na tela, a lista do setor e uma so (as `marcadas`: as que valem mais
+   as guardadas); `separar` e que divide na hora de gravar.
+   ------------------------------------------------------------ */
+
+/** As alteracoes marcadas cuja aba esta desmarcada, na ordem de CHAVES. */
+export function guardadas(marcadas) {
+  const lista = new Set((marcadas ?? []).filter((c) => CHAVES.includes(c)))
+  return ALTERACAO.filter((p) => p.dependeDe && lista.has(p.chave) && !lista.has(p.dependeDe)).map((p) => p.chave)
+}
+
+/**
+ * As marcadas da tela, divididas no que vai para o banco: `permissoes`
+ * (o que vale) e `guardadas`. As guardadas saem ANTES do `normalizar`:
+ * senao a regra antiga de Usuarios (editar usuario sem `ver_usuarios`
+ * devolve a aba) marcava "Usuários" de volta sozinha.
+ */
+export function separar(marcadas) {
+  const fora = guardadas(marcadas)
+  return {
+    permissoes: normalizar((marcadas ?? []).filter((c) => !fora.includes(c))),
+    guardadas: fora,
+  }
+}
+
+/**
+ * As guardadas que ainda fazem sentido diante da lista que vale: so
+ * alteracao, so com a aba DESMARCADA e que nao esteja valendo. Guardada
+ * cuja aba voltou por outro caminho (uma atualizacao do banco que marcou
+ * a aba para todos) nao volta a valer sozinha: ela sai, e a tela mostra
+ * a aba sem ela — o que vale e so o que esta em `permissoes`.
+ */
+export function limparGuardadas(lista, permissoes) {
+  const valem = new Set(permissoes ?? [])
+  const pedidas = new Set(lista ?? [])
+  return ALTERACAO.filter(
+    (p) => p.dependeDe && pedidas.has(p.chave) && !valem.has(p.dependeDe) && !valem.has(p.chave),
+  ).map((p) => p.chave)
+}
+
 /** true quando a permissao de alteracao esta travada pela falta da visualizacao. */
 export function travada(chave, lista) {
   const exigida = DEPENDENCIA[chave]
   return Boolean(exigida) && !(lista ?? []).includes(exigida)
 }
 
-/** As alteracoes que caem junto quando essa visualizacao e desmarcada. */
+/**
+ * As alteracoes de uma visualizacao. Desmarcar a aba so as derruba
+ * quando o banco ainda nao tem as guardadas (sem a atualizacao 45).
+ */
 export function dependentes(chaveVisualizacao) {
   return ALTERACAO.filter((p) => p.dependeDe === chaveVisualizacao).map((p) => p.chave)
 }

@@ -660,6 +660,7 @@ export default function Comercial() {
                   {(novaCondicao.campo === 'texto' || novaCondicao.campo === 'valorMin') && (
                     <input
                       className="condicao__entrada"
+                      aria-label="Valor da condição"
                       autoFocus
                       inputMode={novaCondicao.campo === 'valorMin' ? 'decimal' : undefined}
                       placeholder={novaCondicao.campo === 'valorMin' ? 'Ex.: 10000' : 'Ex.: Aché'}

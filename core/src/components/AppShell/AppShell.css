@@ -97,11 +97,8 @@
   align-items: center;
   gap: 6px;
   padding: 8px 5px;
+  /* o vidro e o .rail::before do comum.css */
   border-radius: 26px;
-  /* o vidro vem da classe .vidro; aqui so o desfoque mais forte, que e
-     o que faz a bolha do menu parecer mais grossa que o resto */
-  backdrop-filter: blur(calc(var(--glass-blur) * 1.7)) saturate(175%);
-  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.7)) saturate(175%);
 }
 
 /* A camada liquida e a bolha sao do celular. No computador a bolha e
@@ -355,8 +352,8 @@
   border-radius: 50%;
   background: var(--vidro-fundo);
   box-shadow: var(--vidro-realce), var(--vidro-sombra);
-  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
   cursor: pointer;
   transition: box-shadow var(--dur-fast) var(--ease-out),
     transform var(--dur-fast) var(--ease-out);
@@ -380,10 +377,10 @@
   padding: 7px;
   border-radius: var(--radius-md);
   background: var(--vidro-menu);
-  border: 1px solid var(--vidro-borda);
-  box-shadow: var(--glass-shadow), var(--vidro-realce);
-  backdrop-filter: blur(calc(var(--glass-blur) * 1.5)) saturate(175%);
-  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.5)) saturate(175%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--vidro-aro);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
   animation: menu-sobe var(--dur-fast) var(--ease-out);
 }
 
@@ -468,11 +465,8 @@
   align-items: center;
   gap: 14px;
   padding: 9px 10px 9px 18px;
+  /* o vidro e o .topbar::before do comum.css */
   border-radius: var(--radius-pill);
-  /* o vidro vem da classe .vidro; o desfoque forte e o que deixa o
-     conteudo passar por baixo da barra sem atrapalhar a leitura */
-  backdrop-filter: blur(calc(var(--glass-blur) * 1.7)) saturate(175%);
-  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.7)) saturate(175%);
 }
 
 .topbar__saudacao {
@@ -694,17 +688,21 @@
      deslocada para dentro do vinco. Sombra de circulo e circulo, e
      e a borda dele que faz a curva.
 
-     Por isso a faixa deixa de ser vidro no celular: as pecas sao
-     pintadas com uma cor chapada, e cor chapada nao casa com
-     superficie translucida. Ela vira uma superficie propria — que
-     de quebra e mais legivel sobre qualquer tela.
+     A faixa e de vidro, e a bolha tambem. Para as duas tintas nao se
+     somarem onde o circulo cruza a faixa, ele e cortado na linha da
+     borda (`clip-path`, abaixo): so a parte que aflora e pintada, com a
+     mesma tinta e o mesmo desfoque, e as duas pecas viram uma silhueta.
+     Pelo mesmo motivo a faixa nao tem fio nem aro no celular: um risco
+     na borda de cima atravessaria a base da bolha.
      ============================================================ */
   .rail {
-    background: var(--barra-cor);
-    border: 1px solid var(--vidro-borda);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
     overflow: visible;
+  }
+
+  .rail::before {
+    inset: 0;
+    border: 0;
+    box-shadow: none;
   }
 
   /* ---- a geometria da bolha ----
@@ -727,7 +725,12 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: var(--barra-cor);
+    background: var(--vidro-barra);
+    -webkit-backdrop-filter: var(--vidro-filtro);
+    backdrop-filter: var(--vidro-filtro);
+    /* o de baixo e a parte do circulo que fica dentro da faixa; os laterais
+       negativos deixam as duas curvas de fora do corte */
+    clip-path: inset(-1px -6px calc(100% - (28px - var(--afunda))) -6px);
     pointer-events: none;
   }
 
@@ -753,7 +756,7 @@
     background: radial-gradient(
       circle 12px at 0 -8.1px,
       transparent 11.5px,
-      var(--barra-cor) 12px
+      var(--vidro-barra) 12px
     );
   }
 
@@ -762,7 +765,7 @@
     background: radial-gradient(
       circle 12px at 100% -8.1px,
       transparent 11.5px,
-      var(--barra-cor) 12px
+      var(--vidro-barra) 12px
     );
   }
 
@@ -879,12 +882,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
-    opacity: 0.62;
-    transition: opacity 0.24s var(--ease-out);
-  }
-
-  .rail__btn.is-atual .rail__rotulo {
-    opacity: 1;
   }
 
   /* com o menu lateral aberto o botao flutuante do chat sai de cena */
@@ -959,8 +956,12 @@
     right: 0;
   }
 
+  /* A folga de baixo e a altura da barra (82px contando o respiro dela),
+     a bolha que aflora (13px) e um pouco de ar. A area segura entra na
+     conta porque ela empurra a barra para cima: no iPhone a barra sobe
+     34px, e sem isso cobria o fim da pagina. */
   .shell__coluna {
-    padding: 14px 14px 104px;
+    padding: 14px 14px calc(env(safe-area-inset-bottom, 0px) + 116px);
   }
 
   /* Respiro IGUAL nos quatro lados. Ele era `12px 58px 12px 12px`: os
@@ -1148,10 +1149,10 @@
   flex-direction: column;
   border-radius: var(--radius-md);
   background: var(--vidro-menu);
-  border: 1px solid var(--vidro-borda);
-  box-shadow: var(--glass-shadow), var(--vidro-realce);
-  backdrop-filter: blur(calc(var(--glass-blur) * 1.5)) saturate(175%);
-  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.5)) saturate(175%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--vidro-aro);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
   animation: menu-sobe var(--dur-fast) var(--ease-out);
   overflow: hidden;
 }
@@ -1359,12 +1360,15 @@
   place-items: center;
   width: 54px;
   height: 54px;
-  border: 1px solid var(--vidro-borda);
+  border: 1px solid var(--vidro-borda-cor);
   border-radius: 50%;
-  background: var(--btn-bg);
+  background: var(--vidro-acao);
   color: var(--btn-fg);
   cursor: pointer;
-  box-shadow: var(--btn-shadow), 0 10px 26px -12px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--btn-shadow), 0 10px 26px -12px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.4);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
   transition: transform var(--dur-fast) var(--ease-out),
     box-shadow var(--dur-fast) var(--ease-out);
 }
@@ -1421,12 +1425,12 @@
   gap: 3px;
   min-width: 210px;
   padding: 7px;
-  border: 1px solid var(--vidro-borda);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   background: var(--vidro-menu);
-  box-shadow: var(--glass-shadow), var(--vidro-realce);
-  backdrop-filter: blur(calc(var(--glass-blur) * 1.5)) saturate(175%);
-  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.5)) saturate(175%);
+  box-shadow: var(--glass-shadow), var(--vidro-aro);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
   animation: menu-sobe var(--dur-fast) var(--ease-out);
 }
 
@@ -1681,8 +1685,8 @@
     padding: 0;
     border: 0;
     background: var(--modal-veu);
-    backdrop-filter: blur(3px);
     -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
     opacity: 0;
     transition: opacity var(--menulado-sai) var(--ease-out);
   }
@@ -1701,10 +1705,12 @@
     flex-direction: column;
     width: min(300px, 82vw);
     padding: calc(env(safe-area-inset-top, 0px) + 20px) 20px calc(env(safe-area-inset-bottom, 0px) + 14px);
-    border-left: 1px solid var(--vidro-borda);
+    border-left: 1px solid var(--glass-border);
     border-radius: 24px 0 0 24px;
-    background: var(--barra-cor);
-    box-shadow: -24px 0 48px -20px rgba(0, 0, 0, 0.5);
+    background: var(--vidro-menu);
+    box-shadow: -24px 0 48px -20px rgba(0, 0, 0, 0.5), var(--vidro-aro);
+    -webkit-backdrop-filter: var(--vidro-filtro);
+    backdrop-filter: var(--vidro-filtro);
     overflow-y: auto;
     overscroll-behavior: contain;
     outline: none;
@@ -1864,6 +1870,12 @@
   .menulado__item.is-atual {
     color: var(--accent);
     font-weight: 700;
+  }
+
+  /* o azul do sistema nao se le sobre o vidro escuro: o mesmo tom claro
+     do icone aceso da barra */
+  :root[data-theme='dark'] .menulado__item.is-atual {
+    color: var(--grad-b);
   }
 
   .menulado__item.is-atual .menulado__glifo {

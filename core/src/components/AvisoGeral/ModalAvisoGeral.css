@@ -1,0 +1,285 @@
+/* ============================================================
+   O pop-up do "Enviar aviso" (botao + do AppShell)
+   ============================================================ */
+
+.avisogeral {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* "Importante": a caixinha com o pingo laranja do card ao lado, para a
+   pessoa ver o que a marca muda antes de marcar */
+.avisogeral__importante {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  font-size: 0.82rem;
+  color: var(--text-base);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+
+.avisogeral__importante:has(input:checked) {
+  border-color: color-mix(in srgb, var(--obra-emerg) 55%, transparent);
+  background: color-mix(in srgb, var(--obra-emerg) 10%, transparent);
+}
+
+.avisogeral__importante input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--obra-emerg);
+  cursor: pointer;
+}
+
+.avisogeral__importante strong {
+  color: var(--text-strong);
+}
+
+.avisogeral__pingo {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--obra-emerg);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--obra-emerg) 18%, transparent);
+}
+
+.avisogeral__erro {
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* setor e expiracao, lado a lado */
+.avisogeral__linha {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.avisogeral__expira {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.avisogeral__limpar {
+  align-self: flex-start;
+  margin-top: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  /* o pop-up abre em qualquer aba: fora da pagina inicial essa cor pode
+     ainda nao existir */
+  color: var(--panorama-azul, var(--accent));
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 560px) {
+  .avisogeral__linha {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---- o aviso aberto (card do Panorama ou historico) ---- */
+
+/* para quem foi, e quando termina ou terminou */
+.avisogeral__dados {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.avisogeral__dado {
+  padding: 4px 11px;
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-base);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.avisogeral__selo {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 11px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--obra-emerg) 12%, transparent);
+  color: var(--obra-emerg);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.avisogeral__texto {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-base);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* o excluir vai para a esquerda, longe do Fechar */
+.avisogeral__apagar {
+  margin-right: auto;
+}
+
+/* enviado: o visto verde e o atalho para o Panorama */
+.avisogeral--feito {
+  align-items: center;
+  text-align: center;
+}
+
+.avisogeral--feito > p {
+  max-width: 340px;
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-base);
+}
+
+.avisogeral--feito > p strong {
+  color: var(--text-strong);
+}
+
+.avisogeral--feito .formobra__acoes {
+  align-self: stretch;
+}
+
+.avisogeral__ok {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
+}
+
+/* ---- o historico de avisos ---- */
+
+.avisoshist {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.avisoshist__grupo {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.avisoshist__lista {
+  display: flex;
+  flex-direction: column;
+  margin: 0 -8px;
+  padding: 0;
+  list-style: none;
+}
+
+.avisoshist__lista li + li {
+  border-top: 1px solid var(--line);
+}
+
+.avisoshist__linha {
+  --ponto: var(--panorama-azul);
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 4px 12px;
+  width: 100%;
+  padding: 10px 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.avisoshist__linha:hover {
+  background: var(--control-bg);
+}
+
+.avisoshist__linha[data-importante='sim'] {
+  --ponto: var(--obra-emerg);
+}
+
+.avisoshist__ponto {
+  width: 9px;
+  height: 9px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--ponto);
+}
+
+.avisoshist__corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.avisoshist__corpo strong {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.avisoshist__texto {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.avisoshist__dados {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+.avisoshist__data {
+  margin-top: 2px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.avisoshist__vazio {
+  margin: 0;
+  padding: 22px 12px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+}

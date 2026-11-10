@@ -32,3 +32,38 @@
   /* Trailing gap keeps the spacing identical across the loop seam. */
   padding-right: var(--marquee-gap);
 }
+
+/* Quem envolve o carrossel e o botao de pausar: o botao fica fora da mascara
+   que apaga as bordas, em cima da faixa ja esmaecida. */
+.marquee-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.marquee__pause {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--c-line-strong);
+  border-radius: 50%;
+  background: var(--c-surface);
+  color: var(--c-ink);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: border-color 0.2s var(--ease-out);
+}
+
+.marquee__pause:hover {
+  border-color: var(--c-ink);
+}
+
+/* Com movimento reduzido o carrossel ja fica parado: nao ha o que pausar. */
+@media (prefers-reduced-motion: reduce) {
+  .marquee__pause {
+    display: none;
+  }
+}

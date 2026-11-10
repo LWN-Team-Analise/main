@@ -305,10 +305,12 @@
   max-height: min(60vh, 420px);
   overflow-y: auto;
   padding: 6px;
-  border: 1px solid var(--modal-borda, var(--control-border));
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  background: var(--modal-bg, var(--surface));
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  background: var(--vidro-menu);
+  box-shadow: var(--glass-shadow), var(--vidro-aro);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
 }
 
 .commenu__lista[data-alinhar='direita'] {
@@ -974,12 +976,14 @@
   height: 64px;
   border: 2px dashed currentColor;
   border-radius: var(--radius-md);
-  background: var(--com-cartao);
+  background: var(--vidro-menu);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
   font-size: 0.9rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2), var(--vidro-aro);
   transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
 }
 

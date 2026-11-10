@@ -4,6 +4,7 @@ import Button from '@/components/Button/Button'
 import { CampoArea, CampoTexto } from '@/components/Campo/Campo'
 import { NOME_VEICULO_MAXIMO, OBSERVACAO_MAXIMA, kmLegivel } from '@/domain/frotas'
 import * as frotasApi from '@/services/frotasService'
+import { sortearExemplo } from '@/utils/exemplos'
 import { Falta } from './icones'
 
 /**
@@ -53,7 +54,7 @@ export default function ModalVeiculo({ aberto, veiculo, aoFechar, aoSalvo }) {
 
   const conferir = () => {
     const novos = {}
-    if (!form.nome.trim()) novos.nome = 'Dê um nome ao veículo (ex.: Spin 01).'
+    if (!form.nome.trim()) novos.nome = `Dê um nome ao veículo (ex.: ${sortearExemplo('Ex.: Spin 01')}).`
     if (!form.marca.trim()) novos.marca = 'Informe a marca.'
     if (!form.modelo.trim()) novos.modelo = 'Informe o modelo.'
     if (!/^[A-Z]{3}-?\d[A-Z0-9]\d{2}$/.test(form.placa.trim().toUpperCase())) {

@@ -223,7 +223,8 @@
    a acao principal do quadro: eles ficam com o vidro sobre a cor
    (e sem borda).
 
-   Regra da casa: pop-up nunca leva vidro.
+   O que flutua sobre a tela (barras, menus, pop-ups) tem um vidro
+   proprio, mais forte: ver VIDRO FLUTUANTE, mais abaixo.
    ============================================================ */
 
 .vidro {
@@ -416,7 +417,8 @@
 }
 
 /* ============================================================
-   Pop-up: superficie opaca, sem vidro nenhum.
+   Dentro do pop-up as caixas nao levam vidro de novo: o vidro e
+   a janela, e o que esta dentro dela e so conteudo.
    ============================================================ */
 
 .modal__caixa .vidro {
@@ -428,18 +430,106 @@
 }
 
 /* ============================================================
-   Menu lateral e barra superior
+   VIDRO FLUTUANTE
 
-   Os dois ficam SO com o desfoque: uma camada translucida que
-   borra o que passa por baixo, sem degrade nenhum pintado por
-   cima. E o unico "efeito" que sobra neles.
+   A aparencia do Liquid Glass do iOS 26 (o GlassView do
+   expo-glass-effect) feita em CSS: tudo que flutua sobre a tela
+   usa os mesmos quatro tokens de tokens.css.
+     background       --vidro-barra, --vidro-menu ou --vidro-janela
+     border           --glass-border
+     box-shadow       sombra de fora + --vidro-aro
+     backdrop-filter  --vidro-filtro
+
+   SEMPRE o -webkit-backdrop-filter ANTES do backdrop-filter. Na ordem
+   contraria o minificador do build apaga o sem prefixo, e o Chrome e o
+   Edge so entendem o sem prefixo: no localhost o vidro desfoca, no site
+   publicado nao desfoca nada.
+
+   public/almoxarife/estilo-main.css e gerado a partir deste bloco
+   (scripts/estilo-almoxarife.mjs): mudou aqui, rode o script.
    ============================================================ */
 
+/* ---- o que flutua: inicio ---- */
+
+/* A tinta e o desfoque das duas barras moram num ::before, e nao nelas.
+
+   Um elemento com `backdrop-filter` isola o que esta dentro dele: um
+   filho so enxerga o que foi pintado dentro do pai, e nao a pagina. Com
+   o filtro na propria barra, o painel do sino e a lista da busca (que
+   sao filhos dela) nao conseguiam desfocar nada, e o texto da tela
+   aparecia nitido por tras deles. No ::before ele nao isola ninguem. */
 .rail,
 .topbar {
-  background: var(--vidro-fundo);
-  box-shadow: var(--vidro-sombra);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
+
+.rail::before,
+.topbar::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: 0;
+  border: 1px solid var(--glass-border);
+  border-radius: inherit;
+  background: var(--vidro-barra);
+  box-shadow: var(--vidro-aro);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
+  pointer-events: none;
+}
+
+/* Os textos fracos da pagina foram escolhidos para fundo liso. Sobre o
+   vidro passa de tudo por tras, entao aqui eles escurecem (ou clareiam,
+   no tema escuro). So as variaveis: a ordem das folhas nao interfere. */
+.rail,
+.topbar,
+.menulado__painel,
+.modal__caixa,
+.euzinho__menu,
+.sininho__painel,
+.busca__caixa,
+.sel__lista,
+.datahora__painel,
+.bolhachat__menu,
+.flutua__menu,
+.dica,
+.cookie,
+.commenu__lista,
+.turnos__painel,
+.turnos__escolha,
+.chat__mencoes,
+.chat__apagarcaixa {
+  --text-muted: var(--vidro-texto-suave);
+  --text-faint: var(--vidro-texto-fraco);
+  --danger: var(--vidro-perigo);
+}
+
+/* Sem desfoque (navegador antigo) ou com "reduzir transparencia" ligado
+   no aparelho: a mesma peca, com a tinta cheia. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root,
+  :root[data-theme='dark'] {
+    --vidro-barra: var(--glass-fallback);
+    --vidro-menu: var(--glass-fallback);
+    --vidro-janela: var(--glass-fallback);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  :root[data-theme='dark'] {
+    --vidro-barra: var(--glass-fallback);
+    --vidro-menu: var(--glass-fallback);
+    --vidro-janela: var(--glass-fallback);
+    --vidro-filtro: none;
+  }
+}
+
+/* ---- o que flutua: fim ---- */
 
 /* ============================================================
    O (!) de "falta preencher"

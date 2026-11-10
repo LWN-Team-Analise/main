@@ -367,6 +367,7 @@ export default function ChatBot({ aberto, aoFechar }) {
 
           <textarea
             className="bot__campo"
+            aria-label={etapa === 'texto' ? 'Escrever sugestão' : 'Perguntar ao assistente'}
             rows={2}
             value={texto}
             onChange={(e) => setTexto(e.target.value)}

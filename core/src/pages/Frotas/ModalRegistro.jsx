@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
+import ExemploSorteado from '@/components/ExemploSorteado/ExemploSorteado'
 import { CampoArea, CampoSelecao, CampoTexto } from '@/components/Campo/Campo'
 import { CampoData, CampoHora } from '@/components/CampoData/CampoData'
 import { useAuth } from '@/context/AuthContext'
@@ -16,6 +17,7 @@ import {
   kmLegivel,
   lerCombustivel,
   lerHora,
+  rotuloDoCombustivel,
 } from '@/domain/frotas'
 import * as frotasApi from '@/services/frotasService'
 import { dataBR, hojeISO } from '@/utils/formato'
@@ -113,6 +115,60 @@ function rotuloDaObra(obra, cliente) {
   const qual = String(obra.proposta ?? '').trim() || String(obra.descricao ?? '').trim()
   const curto = qual.length > 60 ? `${qual.slice(0, 59)}…` : qual
   return [cliente?.nome, curto].filter(Boolean).join(' — ') || 'Obra sem nome'
+}
+
+/**
+ * Como o carro voltou da ultima vez, para quem vai sair com ele: quem
+ * devolveu, o tanque e as respostas. Em vermelho, o que precisa de
+ * atencao: o "Não" das perguntas que importam (o "Sem Parar" e so como
+ * pagou: "Não" ali nao e problema) e o tanque abaixo da metade. Pergunta
+ * sem resposta (os registros antigos da planilha) nao aparece.
+ */
+function UltimaDevolucao({ dados }) {
+  const respostas = CHECKLIST.filter((c) => typeof dados.checklist?.[c.chave] === 'boolean').map((c) => {
+    const sim = dados.checklist[c.chave]
+    return { chave: c.chave, rotulo: c.curto, valor: sim ? 'Sim' : 'Não', alerta: c.importante && !sim }
+  })
+  const tanque = dados.combustivel === null ? '' : rotuloDoCombustivel(dados.combustivel)
+  const linhas = [
+    ...(tanque
+      ? [{ chave: 'combustivel', rotulo: 'Nível do combustível', valor: tanque, alerta: dados.combustivel < COMBUSTIVEL_MINIMO }]
+      : []),
+    ...respostas,
+  ]
+  const atencao = linhas.filter((l) => l.alerta).length
+
+  return (
+    <section className="frota-devolvido" aria-label="Como o carro voltou na última devolução">
+      <header className="frota-devolvido__topo">
+        <strong>Última devolução</strong>
+        {atencao > 0 && (
+          <span className="frota-devolvido__atencao">
+            {atencao} {atencao === 1 ? 'ponto' : 'pontos'} de atenção
+          </span>
+        )}
+        <span className="frota-devolvido__quem">
+          {[dados.condutorNome, [dataBR(dados.data), dados.hora && `às ${dados.hora}`].filter(Boolean).join(' '), dados.km !== null && kmLegivel(dados.km)]
+            .filter(Boolean)
+            .join(' · ')}
+        </span>
+      </header>
+
+      {linhas.length > 0 && (
+        <ul className="frota-devolvido__lista">
+          {linhas.map((l) => (
+            <li key={l.chave} data-alerta={l.alerta ? 'sim' : undefined}>
+              <span>{l.rotulo}</span>
+              <strong>{l.valor}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {dados.posto && <p className="frota-devolvido__nota">Abastecimento: {dados.posto}</p>}
+      {dados.observacao && <p className="frota-devolvido__nota">Observação: {dados.observacao}</p>}
+    </section>
+  )
 }
 
 export default function ModalRegistro({ modo, veiculos, aoFechar, aoRegistrado, fixo = null, rodizio = null }) {
@@ -394,6 +450,9 @@ export default function ModalRegistro({ modo, veiculos, aoFechar, aoRegistrado, 
           </p>
         )}
 
+        {/* antes de registrar a saida: como o carro voltou da ultima vez */}
+        {!devolucao && veiculo?.ultimaDevolucao && <UltimaDevolucao dados={veiculo.ultimaDevolucao} />}
+
         {noRodizio && (
           <p className="frota-form__aviso is-rodizio" role="note">
             <strong>Rodízio:</strong> placa final {finalPlaca} não circula no centro de São Paulo{' '}
@@ -482,7 +541,11 @@ export default function ModalRegistro({ modo, veiculos, aoFechar, aoRegistrado, 
               />
               {c.chave === 'semParar' && form.checklist.semParar === 'sim' && (
                 <CampoTexto
-                  rotulo={PERGUNTA_POSTO}
+                  rotulo={
+                    <>
+                      {PERGUNTA_POSTO} (Exemplo: <ExemploSorteado chave="Posto Ipiranga Barueri, R$ 20,50" />)
+                    </>
+                  }
                   maxLength={POSTO_MAXIMO}
                   placeholder="Posto Ipiranga Barueri, R$ 20,50"
                   value={form.posto}

@@ -2,15 +2,22 @@
 // LGPD (Lei nº 13.709/2018). Company details come from site.js; anything the
 // project does not state (e.g. a named data protection officer) is described
 // generically rather than invented. What the site does with data here matches
-// the code: no analytics or advertising cookies, theme and language kept in
-// localStorage, fonts from Google Fonts, reviewer photos from Google.
+// the code: no analytics or advertising cookies, theme, language and the cookie
+// notice kept in localStorage, fonts and images served by the site itself.
+import { faltaPreencher, identificacaoDaEmpresa, legal } from './legal';
 import { company, offices } from './site';
 
-export const PRIVACY_UPDATED = '2026-09-30';
+export const PRIVACY_UPDATED = '2026-11-09';
 
 const email = `<a href="mailto:${company.email}">${company.email}</a>`;
 const phone = `<a href="${company.phoneHref}">${company.phoneDisplay}</a>`;
 const officeList = offices.map((o) => `<strong>${o.city}</strong> — ${o.street}, ${o.region}, ${o.zip}`);
+
+// O que ainda nao foi preenchido em legal.js sai da frase (e fica marcado rodando local).
+const identificacao = identificacaoDaEmpresa ? `, ${identificacaoDaEmpresa}` : '';
+const faltaIdentificacao = identificacaoDaEmpresa ? '' : faltaPreencher('razão social e CNPJ');
+const { nome: dpoNome, email: dpoEmail } = legal.encarregado;
+const dpoContato = dpoEmail ? ` (<a href="mailto:${dpoEmail}">${dpoEmail}</a>)` : '';
 
 // Block types: { p: html } and { ul: [html, …] }.
 const pt = {
@@ -24,7 +31,7 @@ const pt = {
       title: 'Quem somos',
       blocks: [
         {
-          p: `Este site é mantido pelo <strong>Grupo LWN Engenharia</strong> (${company.name} / ${company.fullName}), especialista em qualificação e certificação de salas limpas, Smoke Test, gases medicinais e sistemas HVAC-R. Para os fins da LGPD, o Grupo LWN Engenharia é o controlador dos dados pessoais tratados por meio deste site.`,
+          p: `Este site é mantido pelo <strong>Grupo LWN Engenharia</strong> (${company.name} / ${company.fullName}${identificacao}), especialista em qualificação e certificação de salas limpas, Smoke Test, gases medicinais e sistemas HVAC-R. Para os fins da LGPD, o Grupo LWN Engenharia é o controlador dos dados pessoais tratados por meio deste site.${faltaIdentificacao}`,
         },
         { p: 'Nossas unidades:' },
         { ul: officeList },
@@ -41,7 +48,7 @@ const pt = {
           p: '<strong>Dados de navegação e técnicos.</strong> Ao acessar o site, alguns dados técnicos podem ser registrados automaticamente pelos servidores e serviços que o mantêm no ar, como endereço IP, data e hora do acesso, páginas visitadas, tipo de navegador e de dispositivo e sistema operacional. Esses registros são usados para operar, proteger e melhorar o site.',
         },
         {
-          p: '<strong>Preferências salvas no seu dispositivo.</strong> O site guarda no armazenamento local do seu navegador (localStorage) as suas preferências de tema (claro ou escuro) e de idioma. Essas informações ficam apenas no seu dispositivo, não identificam você e não são enviadas para nós. Você pode apagá-las a qualquer momento nas configurações do navegador.',
+          p: '<strong>Preferências salvas no seu dispositivo.</strong> O site guarda no armazenamento local do seu navegador (localStorage) as suas preferências de tema (claro ou escuro) e de idioma e o registro de que você já viu o aviso de cookies. Essas informações ficam apenas no seu dispositivo, não identificam você e não são enviadas para nós. Você pode apagá-las a qualquer momento nas configurações do navegador.',
         },
       ],
     },
@@ -50,14 +57,10 @@ const pt = {
       title: 'Cookies e tecnologias semelhantes',
       blocks: [
         {
-          p: 'Atualmente, o site não utiliza cookies de publicidade nem ferramentas de análise ou de rastreamento de visitantes. Algumas funcionalidades carregam conteúdo de terceiros, que podem receber dados técnicos do seu acesso (como o endereço IP) de acordo com as suas próprias políticas de privacidade:',
+          p: 'O site não instala cookies próprios e não utiliza cookies de publicidade nem ferramentas de análise ou de rastreamento de visitantes. As fontes tipográficas, as imagens e os vídeos são servidos pelo próprio site, sem acionar serviços de terceiros ao abrir as páginas.',
         },
         {
-          ul: [
-            'as fontes tipográficas do site, carregadas a partir do Google Fonts;',
-            'as fotos de perfil exibidas junto às avaliações do Google;',
-            'os links para WhatsApp, Google Maps, avaliações do Google e redes sociais (LinkedIn, Instagram, Facebook e YouTube), que só são acionados quando você clica neles.',
-          ],
+          p: 'Os links para WhatsApp, Google Maps, avaliações do Google e redes sociais (LinkedIn, Instagram, Facebook e YouTube) só são acionados quando você clica neles; a partir daí, valem as políticas de privacidade desses serviços.',
         },
         {
           p: 'Caso passemos a utilizar cookies de análise ou de marketing, esta política será atualizada e, quando exigido, pediremos o seu consentimento.',
@@ -171,7 +174,7 @@ const pt = {
       title: 'Como falar conosco sobre privacidade',
       blocks: [
         {
-          p: `Para exercer os seus direitos ou tirar dúvidas sobre esta política e sobre o tratamento dos seus dados, entre em contato pelo e-mail ${email} ou pelo telefone ${phone}. Esse é também o canal para solicitações dirigidas ao encarregado pelo tratamento de dados pessoais.`,
+          p: `Para exercer os seus direitos ou tirar dúvidas sobre esta política e sobre o tratamento dos seus dados, entre em contato pelo e-mail ${email} ou pelo telefone ${phone}. ${dpoNome ? `O encarregado pelo tratamento de dados pessoais é <strong>${dpoNome}</strong>${dpoContato}.` : `Esse é também o canal para solicitações dirigidas ao encarregado pelo tratamento de dados pessoais.${faltaPreencher('nome e e-mail do encarregado')}`}`,
         },
         {
           p: 'Para a sua segurança, poderemos solicitar informações que confirmem a sua identidade antes de atender ao pedido. Responderemos dentro dos prazos previstos na legislação.',
@@ -219,7 +222,7 @@ const en = {
       title: 'Who we are',
       blocks: [
         {
-          p: `This website is maintained by <strong>Grupo LWN Engenharia</strong> (${company.name} / ${company.fullName}), a specialist in the qualification and certification of cleanrooms, Smoke Test, medical gases and HVAC-R systems. For the purposes of the LGPD, Grupo LWN Engenharia is the controller of the personal data processed through this website.`,
+          p: `This website is maintained by <strong>Grupo LWN Engenharia</strong> (${company.name} / ${company.fullName}${identificacao}), a specialist in the qualification and certification of cleanrooms, Smoke Test, medical gases and HVAC-R systems. For the purposes of the LGPD, Grupo LWN Engenharia is the controller of the personal data processed through this website.${faltaIdentificacao}`,
         },
         { p: 'Our offices:' },
         { ul: officeList },
@@ -236,7 +239,7 @@ const en = {
           p: '<strong>Browsing and technical data.</strong> When you access the website, some technical data may be recorded automatically by the servers and services that keep it online, such as your IP address, the date and time of access, the pages visited, your browser and device type and your operating system. These records are used to operate, protect and improve the website.',
         },
         {
-          p: '<strong>Preferences saved on your device.</strong> The website stores your theme (light or dark) and language preferences in your browser’s local storage (localStorage). This information stays on your device only, does not identify you and is not sent to us. You can delete it at any time in your browser settings.',
+          p: '<strong>Preferences saved on your device.</strong> The website stores your theme (light or dark) and language preferences, and a record that you have seen the cookie notice, in your browser’s local storage (localStorage). This information stays on your device only, does not identify you and is not sent to us. You can delete it at any time in your browser settings.',
         },
       ],
     },
@@ -245,14 +248,10 @@ const en = {
       title: 'Cookies and similar technologies',
       blocks: [
         {
-          p: 'The website currently does not use advertising cookies or visitor analytics or tracking tools. Some features load third-party content, and those third parties may receive technical data about your visit (such as your IP address) under their own privacy policies:',
+          p: 'The website does not set cookies of its own and does not use advertising cookies or visitor analytics or tracking tools. Typefaces, images and videos are served by the website itself, without calling third-party services when pages open.',
         },
         {
-          ul: [
-            'the website’s typefaces, loaded from Google Fonts;',
-            'the profile photos shown next to Google reviews;',
-            'the links to WhatsApp, Google Maps, Google reviews and social networks (LinkedIn, Instagram, Facebook and YouTube), which are only triggered when you click them.',
-          ],
+          p: 'The links to WhatsApp, Google Maps, Google reviews and social networks (LinkedIn, Instagram, Facebook and YouTube) are only triggered when you click them; from then on, those services’ privacy policies apply.',
         },
         {
           p: 'If we start using analytics or marketing cookies, this policy will be updated and, where required, we will ask for your consent.',
@@ -366,7 +365,7 @@ const en = {
       title: 'How to contact us about privacy',
       blocks: [
         {
-          p: `To exercise your rights or ask questions about this policy and how your data is handled, contact us by email at ${email} or by phone on ${phone}. This is also the channel for requests addressed to our data protection officer (encarregado).`,
+          p: `To exercise your rights or ask questions about this policy and how your data is handled, contact us by email at ${email} or by phone on ${phone}. ${dpoNome ? `Our data protection officer (encarregado) is <strong>${dpoNome}</strong>${dpoContato}.` : `This is also the channel for requests addressed to our data protection officer (encarregado).${faltaPreencher('nome e e-mail do encarregado')}`}`,
         },
         {
           p: 'For your security, we may ask for information to confirm your identity before fulfilling a request. We will respond within the time limits set by law.',

@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom'
 import './Modal.css'
 
 /**
- * Janela centralizada, com fundo escurecido. Superficie OPACA: e o unico
- * lugar do sistema sem o vidro, para o formulario nao brigar com o que
- * passa por tras.
+ * Janela centralizada, com fundo escurecido e superficie de vidro.
+ *
+ * Fechada ela nao desenha nada, e e isso que faz os exemplos dos campos
+ * serem sorteados de novo a cada abertura (ver utils/exemplos.js).
  *
  * Fecha no Esc, no clique fora e no X. Enquanto esta aberta, a rolagem
  * da pagina fica travada e o foco vai para dentro do dialogo.

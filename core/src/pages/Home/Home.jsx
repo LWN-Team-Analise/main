@@ -3,14 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import AppShell from '@/components/AppShell/AppShell'
 import Avatar from '@/components/Avatar/Avatar'
 import IconeClima from '@/components/Clima/IconeClima'
-import Globo from '@/components/Globo/Globo'
 import Seletor from '@/components/Seletor/Seletor'
 import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
-import { useTheme } from '@/context/ThemeContext'
-import { rotuloPrioridadeObra, tomPrioridadeObra } from '@/domain/obras'
-import { coordenadaDaUF } from '@/domain/geo'
-import { ehBrasil } from '@/domain/paises'
+import { rotuloPrioridadeObra, temAcessoTotal, tomPrioridadeObra } from '@/domain/obras'
 import useClima, { familiaDoTempo, nomeDoTempo } from '@/hooks/useClima'
 import { dataBR, dataHora, hojeISO } from '@/utils/formato'
 import useTarefas from './useTarefas'
@@ -18,9 +14,19 @@ import useModoTv from './useModoTv'
 import Painel from './Painel'
 import Historico from './Historico'
 import ModalPowerBI from './ModalPowerBI'
+import Panorama from './Panorama'
 import './Home.css'
 
 const Icone = {
+  /* os quatro cards de tamanhos diferentes da aba Panorama */
+  panorama: () => (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="3.5" y="3.5" width="9" height="8" rx="1.6" />
+      <rect x="15.5" y="3.5" width="5" height="8" rx="1.4" />
+      <rect x="3.5" y="14.5" width="5" height="6" rx="1.4" />
+      <rect x="11.5" y="14.5" width="9" height="6" rx="1.6" />
+    </svg>
+  ),
   grade: () => (
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8">
       <rect x="3.5" y="3.5" width="7" height="7" rx="1.4" />
@@ -211,8 +217,13 @@ const COLUNAS = [
 /**
  * Pagina inicial — o "meu dia" do sistema.
  *
- * Tres modos de olhar a MESMA lista de tarefas, e a tarefa aqui e o
- * CHECK de uma obra (ver `useTarefas`):
+ * Abre no PANORAMA, a aba da empresa: avisos, aniversariantes do mes,
+ * a agenda e os destaques das avaliacoes (ver `Panorama`). Ele nao e
+ * lista de tarefa nenhuma, e por isso o mes e o "Para você/Todas" nao
+ * aparecem nele.
+ *
+ * Depois dele, tres modos de olhar a MESMA lista de tarefas, e a
+ * tarefa aqui e o CHECK de uma obra (ver `useTarefas`):
  *
  *   Grade      — a tabela do que precisa ser feito, em ordem de urgencia;
  *   Quadro     — as mesmas tarefas em tres colunas, por estado;
@@ -239,7 +250,9 @@ export default function Home() {
   const tv = Boolean(user?.painelTv)
   const veHistorico = pode('ver_historico') && !tv
 
-  const [abaEscolhida, setAba] = useState('grade')
+  /* a TV continua abrindo na Grade: ela reveza Grade e Quadro sozinha
+     (useModoTv), e o Panorama nem aparece nela */
+  const [abaEscolhida, setAba] = useState(() => (user?.painelTv ? 'grade' : 'panorama'))
   const [powerBI, setPowerBI] = useState(false)
   const [recado, setRecado] = useState('')
   /* o passo do Dashboard mora aqui porque o seletor dele vive na barra
@@ -268,8 +281,14 @@ export default function Home() {
   })
   /* "minhas" = so o que e do meu setor. Quem nao tem setor, ou quem nao
      tem tarefa nenhuma no dele, ve tudo — senao a tela abre vazia e
-     parece quebrada. */
-  const [escopo, setEscopo] = useState('minhas')
+     parece quebrada.
+
+     Quem tem ACESSO TOTAL abre em "Todas", com as tarefas de todos os
+     setores, como a Diretoria (que nao tem check proprio no roteiro e
+     por isso sempre caiu em todas). A Excelencia tambem tem acesso
+     total, mas tem checks proprios — abria em "Para você" e so via os
+     do proprio setor. O botao continua la para trocar. */
+  const [escopo, setEscopo] = useState(() => (temAcessoTotal(user) ? 'todas' : 'minhas'))
 
   const temMinhas = useMemo(() => tarefas.some((t) => t.minha), [tarefas])
   const soMinhas = escopo === 'minhas' && temMinhas && !tv
@@ -283,7 +302,12 @@ export default function Home() {
 
   /* quem perde a permissao com a aba aberta volta para a Grade, em vez
      de ficar olhando um painel que nao e mais dele (a TV nem tem o painel) */
-  const aba = abaEscolhida === 'painel' && (!veDashboard || tv) ? 'grade' : abaEscolhida
+  const aba =
+    (abaEscolhida === 'painel' && (!veDashboard || tv)) || (abaEscolhida === 'panorama' && tv)
+      ? 'grade'
+      : abaEscolhida
+  /* o Panorama nao e lista de tarefas: o mes e o escopo nao mexem nele */
+  const naLista = aba === 'grade' || aba === 'quadro'
   const { saindo: tvSaindo } = useModoTv({ ligado: tv, aba, aoTrocar: proximaTela })
 
   const visiveis = useMemo(
@@ -434,6 +458,7 @@ export default function Home() {
         <div className="inicio__barra">
           <nav className="abas" role="tablist" aria-label="Modo de visualização">
             {[
+              ...(tv ? [] : [{ id: 'panorama', rotulo: 'Panorama', Glifo: Icone.panorama }]),
               { id: 'grade', rotulo: 'Grade', Glifo: Icone.grade },
               { id: 'quadro', rotulo: 'Quadro', Glifo: Icone.quadro },
               ...(veDashboard ? [{ id: 'painel', rotulo: 'Dashboard', Glifo: Icone.painel }] : []),
@@ -455,7 +480,9 @@ export default function Home() {
           {/* O mês fica no meio, entre as abas e o Minhas/Todas. Ele
               filtra só o que TEM data: a coluna de concluídas do Quadro
               e os gráficos do Dashboard. */}
-          <SeletorMes mes={mes} aoMudar={setMes} foraDoPainel={aba !== 'painel'} />
+          {aba !== 'panorama' && (
+            <SeletorMes mes={mes} aoMudar={setMes} foraDoPainel={aba !== 'painel'} />
+          )}
 
           {/* o passo do Dashboard entra na MESMA linha das abas: ele é
               um modo de olhar, como elas, e não um controle de dentro
@@ -527,7 +554,7 @@ export default function Home() {
             </div>
           )}
 
-          {aba !== 'painel' && temMinhas && !tv && (
+          {naLista && temMinhas && !tv && (
             <div className="escopo" role="group" aria-label="De quem são as tarefas">
               <button
                 type="button"
@@ -551,7 +578,7 @@ export default function Home() {
             HOJE: pendência não tem mês. Quando o mês escolhido não é o
             corrente, o aviso evita a leitura errada de que a lista
             também voltou no tempo. */}
-        {!mes.atual && aba !== 'painel' && (
+        {!mes.atual && naLista && (
           <p className="inicio__nota" role="status">
             O que está pendente é sempre de hoje — {mes.rotulo.toLowerCase()} filtra apenas o
             que já foi concluído.
@@ -569,6 +596,8 @@ export default function Home() {
           </div>
         ) : (
           <>
+            {aba === 'panorama' && <Panorama />}
+
             {telaGrade}
 
             {/* O Historico mora embaixo da Grade — do globo, quando nao ha
@@ -662,7 +691,7 @@ function Prazo({ iso, hoje }) {
 function Grade({ tarefas, hoje, nomeDoCargo, corDoCargo, aoAbrir, paraVoce = false }) {
   if (tarefas.length === 0) {
     return (
-      <Vazio titulo="Nada pendente por aqui" arte="globo" />
+      <Vazio titulo="Nada pendente por aqui" />
     )
   }
 
@@ -1127,100 +1156,18 @@ function Quadro({ tarefas, hoje, mes, nomeDoCargo, corDoCargo, pessoaPorId, aoAb
   )
 }
 
-/* A cor do pingo no globo. Fica aqui, e nao nos tokens, por um motivo
-   pratico: o canvas nao le variavel de CSS — ele precisa da cor
-   resolvida em texto. E o mesmo azul do orbe da barra de busca. */
-const CLIENTE_NO_MAPA = "#4d8ff0"
-
-/** O vazio das abas: um recado, e nao uma tela em branco. */
-export function Vazio({ titulo, texto, arte = 'sol' }) {
-  const { isDark } = useTheme()
-  const { clientes } = useDados()
-
-  /**
-   * Um pingo por ESTADO, e nao por cliente nem por obra.
-   *
-   * Antes cada obra virava uma marca, verde ou laranja, e clicar nela
-   * abria uma ficha. Oito clientes em Sao Paulo empilhavam oito pingos
-   * no mesmo lugar, e o globo passava a responder "quantas obras" —
-   * pergunta que a grade ao lado ja responde melhor.
-   *
-   * Agora ele responde outra: ONDE a empresa esta. Uma marca por UF,
-   * no centro do estado, azul e sem clique. Tres clientes em Minas dao
-   * um pingo em Minas, como daria um so.
-   */
-  const marcas = useMemo(() => {
-    if (arte !== 'globo') return []
-
-    const porUF = new Map()
-    for (const cliente of clientes) {
-      /* o estado de fora do Brasil nao e UF: "AL" no Alabama nao e Alagoas */
-      if (!ehBrasil(cliente?.pais)) continue
-      const uf = String(cliente?.estado ?? '').trim().toUpperCase()
-      if (porUF.has(uf)) continue
-      /* UF em branco ou escrita errada nao tem lugar no mapa: o
-         cliente continua no sistema, so nao aparece no globo */
-      const onde = coordenadaDaUF(uf)
-      if (!onde) continue
-      porUF.set(uf, { chave: uf, cor: CLIENTE_NO_MAPA, ...onde })
-    }
-    return [...porUF.values()]
-  }, [arte, clientes])
-
+/**
+ * O vazio das abas: um recado, e nao uma tela em branco.
+ *
+ * O globo dos clientes, que morava aqui no vazio da Grade, foi para o
+ * pe do Panorama (ver `GloboClientes`).
+ */
+export function Vazio({ titulo, texto }) {
   return (
     <div className="vaziot vidro">
-      {/* O globo e do vazio da GRADE, e nao de todo vazio: e a tela do
-          "o que faco agora", e quando nao ha nada a fazer ela fica sem
-          assunto. Um mundo girando devagar, que responde ao cursor,
-          ocupa esse silencio melhor que um icone parado — e nao inventa
-          nenhum dado que nao existe. */}
-      {arte === 'globo' ? (
-        <div className="vaziot__globo">
-          <Globo
-            /* a tinta do globo segue o tema; o fundo dele e transparente,
-               entao quem aparece atras e o vidro do painel */
-            baseColor={isDark ? '#e2e4e9' : '#1d2633'}
-            /* o preset do autor foi calibrado para uma tela de 1200x800.
-               Aqui a caixa tem 340px: com a densidade de la a malha do mar
-               rala some e sobram letras soltas no escuro, sem bola nenhuma
-               por tras. Estes dois numeros devolvem a esfera no tamanho que
-               ela tem nesta tela. */
-            density={95}
-            glyphSize={115}
-            marcas={marcas}
-            /* O giro parado, a pouco mais de um quarto do padrao do
-               componente. Os 210 de fabrica foram calibrados para um globo
-               de tela cheia, onde a volta demora porque a bola e grande;
-               nesta caixa de 340px a mesma velocidade angular vira um pião.
-
-               So o repouso muda: `speed` continua inteiro, entao arrastar
-               responde com a mesma leveza de sempre. */
-            globe={{ drift: 55 }}
-            /* sem `aoTocarMarca` o pingo nao responde a clique nenhum:
-               ele esta ali para dizer onde tem cliente, e nao para ser
-               um botao disfarçado de enfeite */
-            /* zoom pela roda desligado: ligado, ele comeria a rolagem da
-               pagina de quem so passou o cursor por cima */
-            pointer={{ zoom: 0, light: 100, pins: 7 }}
-          />
-        </div>
-      ) : (
-        <IconeClima familia="sol" titulo="" tamanho={54} />
-      )}
+      <IconeClima familia="sol" titulo="" tamanho={54} />
       <strong>{titulo}</strong>
       {texto && <p>{texto}</p>}
-
-      {/* Sem esta linha o pingo azul seria enfeite: ninguem adivinha do
-          que ele esta falando. O numero e o de CLIENTES, e nao o de
-          estados: "clientes em 1 estado" e uma frase sobre o mapa, e quem
-          olha quer saber o tamanho da carteira. */}
-      {/* a unidade (Einstein Anapolis) nao e outro cliente: conta so o de cima */}
-      {arte === 'globo' && clientes.some((c) => !c.matrizId) && (
-        <p className="vaziot__legenda">
-          <span className="vaziot__ponto" aria-hidden="true" />
-          {clientes.filter((c) => !c.matrizId).length} cliente{clientes.filter((c) => !c.matrizId).length === 1 ? '' : 's'}
-        </p>
-      )}
     </div>
   )
 }

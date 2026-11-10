@@ -36,10 +36,10 @@
      conteúdo da tela, e com 50% de transparência o texto dela caía em
      cima de outro texto — dois alfabetos disputando o mesmo pixel. */
   background: var(--vidro-menu);
-  border: 1px solid var(--vidro-borda);
-  backdrop-filter: blur(calc(var(--glass-blur) * 1.4)) saturate(170%);
-  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.4)) saturate(170%);
-  box-shadow: var(--vidro-realce), 0 18px 40px rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
+  box-shadow: var(--glass-shadow), var(--vidro-aro);
   overflow-y: auto;
   animation: busca-desce var(--dur-fast) var(--ease-out);
 }
@@ -90,8 +90,8 @@
   border-radius: var(--radius-sm);
   background: var(--vidro-fundo);
   box-shadow: var(--vidro-realce);
-  backdrop-filter: blur(calc(var(--glass-blur) * 0.7)) saturate(150%);
   -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.7)) saturate(150%);
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.7)) saturate(150%);
   color: var(--text-base);
   font: inherit;
   text-align: left;
@@ -112,8 +112,8 @@
   z-index: -1;
   opacity: 0.3;
   pointer-events: none;
-  backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
 }
 
 @supports (filter: url("#lg-refraction")) {

@@ -1,11 +1,16 @@
 import { Link } from 'react-router-dom'
 import ThemeToggle from '@/components/ThemeToggle/ThemeToggle'
+import { identificacaoDaEmpresa, legal } from '../../../../src/data/legal'
 import './Privacy.css'
 
 /* o mesmo contato da politica do site (src/data/site.js) */
 const EMAIL = 'contato@lwnengenharia.com.br'
 const TELEFONE = '+55 11 4116-9210'
 const TELEFONE_LINK = 'tel:+551141169210'
+
+const { nome: encarregadoNome, email: encarregadoEmail } = legal.encarregado
+/* o que falta em src/data/legal.js fica marcado so rodando local */
+const LOCAL = import.meta.env.DEV
 
 /**
  * Politica de privacidade do Atmosfera LWN, a plataforma interna.
@@ -26,7 +31,7 @@ export default function Privacy() {
         </Link>
 
         <h1 className="privacy__title">Política de privacidade</h1>
-        <p className="privacy__updated">Última atualização: 23 de outubro de 2026</p>
+        <p className="privacy__updated">Última atualização: 9 de novembro de 2026</p>
 
         <section>
           <p>
@@ -41,8 +46,10 @@ export default function Privacy() {
         <section>
           <h2>1. Quem é o controlador</h2>
           <p>
-            O Grupo LWN Engenharia é o controlador dos dados pessoais tratados no Atmosfera LWN e responde pelas
-            decisões sobre esse tratamento. Os canais de contato estão no item 11.
+            O Grupo LWN Engenharia{identificacaoDaEmpresa && ` (${identificacaoDaEmpresa})`} é o controlador dos dados
+            pessoais tratados no Atmosfera LWN e responde pelas decisões sobre esse tratamento. Os canais de contato
+            estão no item 11.
+            {LOCAL && !identificacaoDaEmpresa && <mark> [PREENCHER: razão social e CNPJ]</mark>}
           </p>
         </section>
 
@@ -77,6 +84,20 @@ export default function Privacy() {
             <li>
               <strong>Comercial:</strong> dados de contatos de clientes (nome, e-mail, telefone e empresa) e os
               e-mails enviados pela plataforma.
+            </li>
+            <li>
+              <strong>Almoxarife (LWN Control):</strong> ordens de serviço, retirada e devolução de ferramentas e
+              instrumentos, com quem fez cada passo, data e horário.
+            </li>
+            <li>
+              <strong>Agenda e turnos:</strong> eventos, escalas e anotações registrados na plataforma.
+            </li>
+            <li>
+              <strong>Assistente:</strong> as perguntas e sugestões que você escreve no assistente do sistema.
+            </li>
+            <li>
+              <strong>Câmera:</strong> usada só quando você escolhe tirar uma foto ou ler um código. Guardamos apenas as
+              imagens que você anexa.
             </li>
             <li>
               <strong>Conta Microsoft:</strong> ao entrar com a conta Microsoft (Outlook), recebemos os dados básicos
@@ -119,17 +140,19 @@ export default function Privacy() {
           <h2>5. Armazenamento no navegador e cookies</h2>
           <p>
             A sua sessão fica guardada no armazenamento local do navegador, para que você continue conectado quando
-            escolher &ldquo;Manter conectado&rdquo;. Também guardamos ali preferências como tema, filtros e a sua
-            escolha no aviso de cookies. Esses dados ficam só no seu dispositivo: a sessão é apagada quando você sai
+            escolher &ldquo;Manter conectado&rdquo;. Também guardamos ali preferências como tema, filtros e o
+            registro de que você viu o aviso de cookies. Esses dados ficam só no seu dispositivo: a sessão é apagada quando você sai
             do sistema, e todo o resto pode ser apagado limpando os dados do site no navegador.
           </p>
           <p>
-            Atualmente a plataforma não utiliza ferramentas de análise, publicidade ou rastreamento. Se passar a
-            utilizá-las, isso só acontecerá com o seu consentimento, dado no aviso exibido no primeiro acesso.
+            A plataforma não utiliza cookies nem ferramentas de análise, publicidade ou rastreamento. Se passar a
+            utilizá-las, isso só acontecerá depois de pedirmos o seu consentimento.
           </p>
           <p>
-            Algumas funcionalidades usam serviços de terceiros que não recebem dados pessoais seus: as fontes
-            tipográficas (Google Fonts), a previsão do tempo e as condições de trânsito exibidas no sistema.
+            A previsão do tempo (Open-Meteo) e a busca de endereço por CEP e cidade (ViaCEP, IBGE e CountriesNow) são
+            consultadas diretamente pelo seu navegador: esses serviços recebem o endereço IP da conexão e, na busca de
+            endereço, o CEP ou a localidade digitados, sem nome ou outro dado de cadastro. As condições de trânsito e
+            os alertas são buscados pelo nosso servidor e não envolvem dados seus.
           </p>
         </section>
 
@@ -141,8 +164,8 @@ export default function Privacy() {
           </p>
           <ul>
             <li>
-              com fornecedores que mantêm a plataforma funcionando — hospedagem, banco de dados, e-mail e
-              autenticação (como a Microsoft) —, que tratam os dados conforme as nossas instruções e com obrigações de
+              com fornecedores que mantêm a plataforma funcionando — hospedagem, banco de dados, e-mail, autenticação,
+              armazenamento de arquivos e mensagens (como Microsoft Outlook, SharePoint e Teams) —, que tratam os dados conforme as nossas instruções e com obrigações de
               confidencialidade e segurança;
             </li>
             <li>com autoridades públicas, por obrigação legal, ordem judicial ou requisição de autoridade competente;</li>
@@ -202,9 +225,24 @@ export default function Privacy() {
           <h2>11. Como falar conosco</h2>
           <p>
             Para exercer os seus direitos ou tirar dúvidas sobre esta política, entre em contato pelo e-mail{' '}
-            <a href={`mailto:${EMAIL}`}>{EMAIL}</a> ou pelo telefone <a href={TELEFONE_LINK}>{TELEFONE}</a>. Esse é
-            também o canal do encarregado pelo tratamento de dados pessoais. Para a sua segurança, poderemos confirmar
-            a sua identidade antes de atender ao pedido, e responderemos nos prazos previstos na legislação.
+            <a href={`mailto:${EMAIL}`}>{EMAIL}</a> ou pelo telefone <a href={TELEFONE_LINK}>{TELEFONE}</a>.{' '}
+            {encarregadoNome ? (
+              <>
+                O encarregado pelo tratamento de dados pessoais é <strong>{encarregadoNome}</strong>
+                {encarregadoEmail && (
+                  <>
+                    {' '}
+                    (<a href={`mailto:${encarregadoEmail}`}>{encarregadoEmail}</a>)
+                  </>
+                )}
+                .
+              </>
+            ) : (
+              'Esse é também o canal do encarregado pelo tratamento de dados pessoais.'
+            )}{' '}
+            Para a sua segurança, poderemos confirmar a sua identidade antes de atender ao pedido, e responderemos nos
+            prazos previstos na legislação.
+            {LOCAL && !encarregadoNome && <mark> [PREENCHER: nome e e-mail do encarregado]</mark>}
           </p>
         </section>
 

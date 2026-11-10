@@ -167,6 +167,28 @@
   color: var(--accent);
 }
 
+/* No celular as quatro abas (Panorama, Grade, Quadro, Dashboard) nao
+   cabem lado a lado: a fileira rola de lado com o dedo, em vez de
+   quebrar em duas linhas ou espremer os rotulos */
+@media (max-width: 620px) {
+  .abas {
+    max-width: 100%;
+    margin: -2px;
+    padding: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .abas::-webkit-scrollbar {
+    display: none;
+  }
+
+  .abas__aba {
+    flex: none;
+    padding: 8px 13px;
+  }
+}
+
 /* ---- O mês, no meio da barra ----
 
    Entre as abas (esquerda) e o Minhas/Todas (direita). As margens
@@ -1159,41 +1181,6 @@
 .cartao__selo[data-tom='ruim'] { --selo-cor: var(--gr-ruim); }
 .cartao__selo[data-tom='bom'] { --selo-cor: var(--gr-bom); }
 
-/* o globo do vazio da grade: ocupa a largura do painel e tem altura
-   propria — o canvas precisa de uma caixa medida para se desenhar */
-.vaziot__globo {
-  width: min(100%, 340px);
-  height: 340px;
-  margin-bottom: 2px;
-  cursor: grab;
-}
-
-.vaziot__globo:active {
-  cursor: grabbing;
-}
-
-/* a legenda das marcas do globo */
-.vaziot__legenda {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin: 2px 0 0;
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: var(--text-faint);
-}
-
-/* O pingo da legenda, do mesmo azul dos pingos do globo. O valor esta
-   escrito a mao nos dois lugares de proposito: o canvas nao le variavel
-   de CSS, entao a cor de la e texto — e duas cores parecidas seriam pior
-   que uma repetida. */
-.vaziot__ponto {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #4d8ff0;
-}
-
 /* ============================================================
    A GRADE NO CELULAR
 
@@ -1291,12 +1278,6 @@
     display: inline;
     margin-left: 6px;
   }
-}
-
-/* o globo gira no arrasto — e so isso. O pingo nao abre nada, entao o
-   cursor nao promete clique: ele mostra a mao de arrastar e mais nada. */
-.vaziot__globo canvas {
-  cursor: grab;
 }
 
 /* os dois grupos de escolha do cartao de tempo de resposta: em tela

@@ -32,17 +32,19 @@
   }
 }
 
-/* O pop-up e o unico lugar sem vidro: superficie opaca, sem desfoque
-   e sem brilho. Formulario tem que ser facil de ler. */
+/* O pop-up e de vidro, com a tinta mais forte de todas: formulario tem
+   que ser facil de ler. */
 .modal__caixa {
   width: 100%;
   max-height: min(calc(100dvh - var(--modal-topo) - 20px), 860px);
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-lg);
-  background: var(--modal-bg);
-  border: 1px solid var(--modal-borda);
-  box-shadow: var(--modal-sombra);
+  background: var(--vidro-janela);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--modal-sombra), var(--vidro-aro);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
   animation: modal-sobe var(--dur-base) var(--ease-out);
 }
 
@@ -96,9 +98,12 @@
   overflow-y: auto;
 }
 
+/* O veu entra pela cor, e nao pela opacidade: enquanto o `.modal` esta
+   com opacidade abaixo de 1 a caixa nao enxerga a pagina, e o desfoque
+   so aparecia de uma vez no fim da entrada. */
 @keyframes modal-entra {
   from {
-    opacity: 0;
+    background-color: transparent;
   }
 }
 

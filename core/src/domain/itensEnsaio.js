@@ -34,10 +34,10 @@ export const rotuloDoServico = (id) => SERVICOS.find((s) => s.id === id)?.rotulo
  * classificacao aparece em todos).
  */
 export const TIPOS_DE_ITEM = [
-  { id: 'ambiente', rotulo: 'Ambiente', plural: 'ambientes', exemplo: 'Sala 101 — Envase', classes: ['hvac'] },
-  { id: 'equipamento', rotulo: 'Equipamento', plural: 'equipamentos', exemplo: 'Cabine de segurança biológica', classes: ['hvac'] },
-  { id: 'sistema', rotulo: 'Sistema', plural: 'sistemas', exemplo: 'AHU-01', classes: ['hvac', 'gases'] },
-  { id: 'ponto_uso', rotulo: 'Ponto de uso', plural: 'pontos de uso', exemplo: 'Ponto 12 — Laboratório', classes: ['gases'] },
+  { id: 'ambiente', rotulo: 'Ambiente', plural: 'ambientes', exemplo: 'Sala 101 — Envase', exemploTag: 'SL-101', classes: ['hvac'] },
+  { id: 'equipamento', rotulo: 'Equipamento', plural: 'equipamentos', exemplo: 'Cabine de segurança biológica', exemploTag: 'CSB-03', classes: ['hvac'] },
+  { id: 'sistema', rotulo: 'Sistema', plural: 'sistemas', exemplo: 'AHU-01', exemploTag: 'HV-AHU-01', classes: ['hvac', 'gases'] },
+  { id: 'ponto_uso', rotulo: 'Ponto de uso', plural: 'pontos de uso', exemplo: 'Ponto 12 — Laboratório', exemploTag: 'PU-12', classes: ['gases'] },
 ]
 
 export const tipoDoItem = (id) => TIPOS_DE_ITEM.find((t) => t.id === id) ?? null

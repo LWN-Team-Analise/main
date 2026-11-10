@@ -7,7 +7,17 @@ import EscolhaCor from '@/components/EscolhaCor/EscolhaCor'
 import Seletor from '@/components/Seletor/Seletor'
 import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
-import { ALTERACAO, CHAVES, GRUPOS, VISUALIZACAO, dependentes, normalizar, travada } from '@/domain/permissoes'
+import {
+  ALTERACAO,
+  CHAVES,
+  GRUPOS,
+  VISUALIZACAO,
+  dependentes,
+  limparGuardadas,
+  normalizar,
+  separar,
+  travada,
+} from '@/domain/permissoes'
 import { lerRegrasCheck } from '@/domain/obras'
 import RegrasCheck from './RegrasCheck'
 import { CORES_SETOR } from './ModalCargos'
@@ -34,10 +44,21 @@ import './SetorPagina.css'
  *   Visualizacao — que abas ele enxerga no menu;
  *   Alteracao    — o que ele mexe dentro delas.
  *
- * Desmarcar "Obras" apaga junto tudo o que so faz sentido dentro de
- * Obras, e essas linhas ficam travadas ate a visualizacao voltar.
+ * Desmarcar "Obras" tira so a aba: o que estava marcado dentro dela
+ * fica GUARDADO — travado, sem valer — e volta a valer do jeito que
+ * estava quando "Obras" for marcada de novo (atualizacao 45). Antes
+ * caia tudo junto, e reabrir a aba era marcar uma por uma outra vez.
  * "Acesso total" (diretoria) passa por cima de tudo.
+ *
+ * Por isso o formulario guarda as `marcadas` (as que valem MAIS as
+ * guardadas) numa lista so; `separar` divide na hora de gravar.
  */
+
+/** As marcadas de um setor: as que valem e as guardadas, juntas. */
+function marcadasDo(cargo) {
+  const permissoes = normalizar(cargo?.permissoes ?? [])
+  return [...permissoes, ...limparGuardadas(cargo?.permissoesGuardadas ?? [], permissoes)]
+}
 export default function SetorPagina() {
   const { id } = useParams()
   const navegar = useNavigate()
@@ -66,7 +87,7 @@ export default function SetorPagina() {
       curto: cargo.curto,
       acessoTotal: Boolean(cargo.acessoTotal),
       painelTv: Boolean(cargo.painelTv),
-      permissoes: normalizar(cargo.permissoes ?? []),
+      marcadas: marcadasDo(cargo),
       /* null = o banco ainda nao tem a atualizacao 37: a parte some */
       regrasCheck: cargo.regrasCheck ? lerRegrasCheck(cargo.regrasCheck) : null,
     })
@@ -107,23 +128,32 @@ export default function SetorPagina() {
     setRecado('')
   }
 
-  /* desmarcar uma de visualizacao derruba as alteracoes que dependiam dela */
+  /* o banco ja guarda as alteracoes da aba desmarcada (atualizacao 45)?
+     Sem a coluna (null), desmarcar a aba volta a derrubar tudo junto —
+     senao a tela mostraria guardadas que o banco jogaria fora */
+  const guarda = cargo.permissoesGuardadas !== null && cargo.permissoesGuardadas !== undefined
+
+  /* o que vale e o que fica guardado, como vai para o banco */
+  const { permissoes: valem, guardadas: guardadasAgora } = separar(form.marcadas)
+
+  /* desmarcar uma visualizacao tira SO ela: as alteracoes de dentro
+     ficam marcadas (guardadas) e voltam a valer junto com a aba */
   const alternar = (chave) => {
     setForm((atual) => {
-      const tem = atual.permissoes.includes(chave)
-      let lista = tem ? atual.permissoes.filter((c) => c !== chave) : [...atual.permissoes, chave]
-      if (tem) {
+      const tem = atual.marcadas.includes(chave)
+      let lista = tem ? atual.marcadas.filter((c) => c !== chave) : [...atual.marcadas, chave]
+      if (tem && !guarda) {
         const caem = dependentes(chave)
         lista = lista.filter((c) => !caem.includes(c))
       }
-      return { ...atual, permissoes: normalizar(lista) }
+      return { ...atual, marcadas: CHAVES.filter((c) => lista.includes(c)) }
     })
     setErro('')
     setRecado('')
   }
 
-  const marcarTodas = () => mudar('permissoes')([...CHAVES])
-  const desmarcarTodas = () => mudar('permissoes')([])
+  const marcarTodas = () => mudar('marcadas')([...CHAVES])
+  const desmarcarTodas = () => mudar('marcadas')([])
 
   /* copiar SUBSTITUI a lista (e o acesso total, para quem pode dar) */
   const copiarDe = (idFonte) => {
@@ -133,7 +163,8 @@ export default function SetorPagina() {
     setForm((atual) => ({
       ...atual,
       acessoTotal: souTotal ? Boolean(fonte.acessoTotal) : atual.acessoTotal,
-      permissoes: normalizar(fonte.permissoes ?? []),
+      /* as guardadas da fonte vem junto: a copia e o setor como ele esta */
+      marcadas: guarda ? marcadasDo(fonte) : normalizar(fonte.permissoes ?? []),
     }))
     setErro('')
     setRecado('')
@@ -159,11 +190,12 @@ export default function SetorPagina() {
   const gravar = async () => {
     setSalvando(true)
     try {
-      const { regrasCheck, ...resto } = form
+      const { regrasCheck, marcadas: _marcadas, ...resto } = form
       await atualizarCargo(cargo.id, {
         ...resto,
         nome: form.nome.trim(),
-        permissoes: normalizar(form.permissoes),
+        permissoes: valem,
+        ...(guarda ? { permissoesGuardadas: guardadasAgora } : {}),
         ...(regrasCheck ? { regrasCheck: lerRegrasCheck(regrasCheck) } : {}),
       })
       setConferindo(false)
@@ -189,7 +221,7 @@ export default function SetorPagina() {
     }
   }
 
-  const marcadas = form.permissoes.length
+  const marcadas = valem.length
 
   return (
     <AppShell semChat>
@@ -204,6 +236,7 @@ export default function SetorPagina() {
             </h1>
             <p className="setorpag__sub">
               {emUso} pessoa{emUso === 1 ? '' : 's'} neste setor · {marcadas} de {CHAVES.length} permissões
+              {guardadasAgora.length > 0 && ` · ${guardadasAgora.length} guardada${guardadasAgora.length === 1 ? '' : 's'}`}
             </p>
           </div>
         </header>
@@ -343,7 +376,9 @@ export default function SetorPagina() {
 
                 {GRUPOS.map((grupo) => {
                   const aba = grupo.visualizacao
-                  const travadas = grupo.alteracoes.some((p) => travada(p.chave, form.permissoes))
+                  const travadas = grupo.alteracoes.some((p) => travada(p.chave, form.marcadas))
+                  /* as marcadas desta aba que estao guardadas (aba desmarcada) */
+                  const guardadasAqui = grupo.alteracoes.filter((p) => guardadasAgora.includes(p.chave)).length
                   return (
                     <div key={aba?.chave ?? grupo.rotulo} className="perm__grupo">
                       <div className="perm__aba">
@@ -351,7 +386,7 @@ export default function SetorPagina() {
                           <label className="perm__chip perm__chip--aba">
                             <input
                               type="checkbox"
-                              checked={form.permissoes.includes(aba.chave)}
+                              checked={form.marcadas.includes(aba.chave)}
                               onChange={() => alternar(aba.chave)}
                             />
                             <span>{aba.rotulo}</span>
@@ -365,16 +400,26 @@ export default function SetorPagina() {
                         <div className="perm__alts">
                           <ul className="perm__chips">
                             {grupo.alteracoes.map((p) => {
-                              const bloqueada = travada(p.chave, form.permissoes)
+                              const bloqueada = travada(p.chave, form.marcadas)
+                              const marcada = form.marcadas.includes(p.chave)
+                              /* guardada: marcada, mas a aba esta desmarcada — nao
+                                 vale agora e volta a valer com a aba */
+                              const guardada = bloqueada && marcada
                               return (
                                 <li key={p.chave}>
                                   <label
-                                    className={`perm__chip ${bloqueada ? 'is-travada' : ''}`.trim()}
-                                    title={bloqueada ? `Marque "${aba?.rotulo}" em Visualização primeiro.` : undefined}
+                                    className={`perm__chip ${bloqueada ? 'is-travada' : ''} ${guardada ? 'is-guardada' : ''}`.trim()}
+                                    title={
+                                      guardada
+                                        ? `Guardada: não vale enquanto "${aba?.rotulo}" estiver desmarcada, e volta a valer junto com ela.`
+                                        : bloqueada
+                                          ? `Marque "${aba?.rotulo}" em Visualização primeiro.`
+                                          : undefined
+                                    }
                                   >
                                     <input
                                       type="checkbox"
-                                      checked={form.permissoes.includes(p.chave)}
+                                      checked={marcada}
                                       onChange={() => alternar(p.chave)}
                                       disabled={bloqueada}
                                     />
@@ -384,7 +429,13 @@ export default function SetorPagina() {
                               )
                             })}
                           </ul>
-                          {travadas && <p className="perm__trava">Marque “{aba?.rotulo}” para liberar estas.</p>}
+                          {travadas && (
+                            <p className="perm__trava">
+                              {guardadasAqui > 0
+                                ? `“${aba?.rotulo}” está desmarcada: as ${guardadasAqui === 1 ? 'marcada fica guardada' : `${guardadasAqui} marcadas ficam guardadas`} e ${guardadasAqui === 1 ? 'volta' : 'voltam'} a valer quando a aba for marcada de novo.`
+                                : `Marque “${aba?.rotulo}” para liberar estas.`}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -474,16 +525,32 @@ export default function SetorPagina() {
 
             <dt>Permissões</dt>
             <dd>
-              {form.permissoes.length === 0 ? (
+              {valem.length === 0 ? (
                 <em>Nenhuma marcada</em>
               ) : (
                 <ul>
-                  {form.permissoes.map((chave) => (
+                  {valem.map((chave) => (
                     <li key={chave}>{rotuloDaPermissao(chave)}</li>
                   ))}
                 </ul>
               )}
             </dd>
+
+            {/* o que fica guardado, sem valer, ate a aba voltar */}
+            {guardadasAgora.length > 0 && (
+              <>
+                <dt>Guardadas</dt>
+                <dd>
+                  <ul>
+                    {guardadasAgora.map((chave) => (
+                      <li key={chave}>
+                        {rotuloDaPermissao(chave)} <em>(volta com {rotuloDaAba(chave)})</em>
+                      </li>
+                    ))}
+                  </ul>
+                </dd>
+              </>
+            )}
           </dl>
         }
         aviso={
@@ -526,4 +593,10 @@ function resumoDasRegras(regras) {
 function rotuloDaPermissao(chave) {
   const achada = [...VISUALIZACAO, ...ALTERACAO].find((p) => p.chave === chave)
   return achada?.rotulo ?? chave
+}
+
+/** O nome da aba de que uma alteracao depende ("Obras"). */
+function rotuloDaAba(chave) {
+  const exigida = ALTERACAO.find((p) => p.chave === chave)?.dependeDe
+  return exigida ? rotuloDaPermissao(exigida) : 'a aba'
 }

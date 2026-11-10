@@ -23,10 +23,13 @@ import {
   checkAbrePopup,
   checkDoPrazoDaExecucao,
   corDoSetorDoCard,
+  destinoDoCheckNoControl,
   diasAte,
   diasDaExecucao,
+  ehCheckDaOS,
   ehMembroDaObra,
   ehPropostaTecnica,
+  estadoDaEtapaPara,
   nomeDoCard,
   oQueOCheckPede,
   podeEditarCheck,
@@ -200,6 +203,29 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
     aoRecusar: setAvisoRoteiro,
   })
 
+  /* As etapas ficam lado a lado, e no celular so cabe uma na tela: a obra
+     abria na 1a e era preciso arrastar ate a atual. Agora ela abre ja
+     rolada ate a etapa em que esta — so quando a atual nao esta inteira
+     a vista (no computador, com tres ou quatro na tela, quase nunca
+     mexe). Uma vez por obra: depois de arrastar, ou com a etapa fechando
+     enquanto a pessoa esta ali, a tela fica onde ela deixou. */
+  const trilhoRef = useRef(null)
+  const rolouNaObra = useRef(null)
+  const obraId = obra?.id ?? null
+  const etapasNaTela = obra ? roteiroDaObra(obra).length : 0
+  useEffect(() => {
+    const trilho = trilhoRef.current
+    if (!trilho || !obraId || rolouNaObra.current === obraId) return
+    const atual = trilho.querySelector('.etapa[data-atual]')
+    if (!atual) return
+    rolouNaObra.current = obraId
+    const caixa = trilho.getBoundingClientRect()
+    const dela = atual.getBoundingClientRect()
+    if (dela.left >= caixa.left - 1 && dela.right <= caixa.right + 1) return
+    const recuo = parseFloat(getComputedStyle(trilho).paddingLeft) || 0
+    trilho.scrollLeft += dela.left - caixa.left - recuo
+  }, [obraId, etapasNaTela])
+
   if (carregando && !obra) {
     return (
       <AppShell>
@@ -274,6 +300,12 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   }
 
   const abrirCheck = (etapa, card, check) => {
+    /* os checks da O.S. se preenchem no LWN Control */
+    if (ehCheckDaOS(check)) {
+      const destino = destinoDoCheckNoControl(user, check, obra)
+      if (destino) window.location.assign(destino)
+      return
+    }
     if (check.tipo === CHECK_RESERVA) {
       /* a reserva e por periodo: sem o prazo da execucao nao ha dias
          para saber quais carros estao livres (a reserva que ja existe
@@ -350,6 +382,11 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
     }
     abrirCheck(etapa, card, check)
   }
+
+  /* os da O.S. se preenchem no LWN Control, e so quando ha uma OS
+     esperando aquele passo que a pessoa possa abrir */
+  const temOndePreencher = ({ etapa, check }) =>
+    ehCheckDaOS(check) ? Boolean(destinoDoCheckNoControl(user, check, obra)) : checkAbrePopup(etapa, check)
 
   /* concluir sem a informacao tambem pode fechar a sua parte da etapa: o
      anuncio e o mesmo da marcacao comum */
@@ -561,6 +598,15 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                 é procurada no resto da empresa */}
             <h1 className="capa__titulo">{nomeDaObra}</h1>
 
+            {/* A descricao mora embaixo do nome, na mesma largura dele.
+                Antes ficava no canto direito, numa coluna de 320px: um
+                paragrafo de contrato virava oito linhas espremidas e
+                empurrava os botoes para baixo. A descricao e opcional;
+                sem ela a capa diz isso, em letra apagada. */}
+            <p className="capa__desc">
+              {obra.descricao || <em className="capa__semdesc">sem descrição</em>}
+            </p>
+
             {marcas.length > 0 && (
               <span className="capa__etiquetas">
                 {marcas.map((e) => (
@@ -578,11 +624,6 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
 
           <div className="capa__lado">
             <span className="capa__selo">{obra.tipo === 'emergencia' ? 'Emergência' : 'Padrão'}</span>
-            {/* a descrição é opcional; sem ela a capa diz isso em vez de
-                deixar um vazio entre o selo e os botões */}
-            <p className="capa__desc">
-              {obra.descricao || <em className="capa__semdesc">sem descrição</em>}
-            </p>
 
             {/* Etiquetas e Anexos ficam na obra FECHADA também — só que
                 em modo consulta. Antes os dois botões sumiam junto com o
@@ -871,9 +912,10 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
 
         {/* ---------------- etapas + observacoes ---------------- */}
         <div className="tabuleiro">
-          <div className="trilho">
+          <div className="trilho" ref={trilhoRef}>
             {roteiro.map((etapa) => {
-              const estado = estadoEtapa(obra, etapa.numero)
+              /* quem tem "Check em todas as etapas" nao espera a anterior fechar */
+              const estado = estadoDaEtapaPara(user, estadoEtapa(obra, etapa.numero))
               /* o placar conta so os cards que ja tem check: card recem-criado,
                  ainda vazio, nao entra na conta nem trava a etapa */
               const valem = cardsQueValem(etapa)
@@ -893,7 +935,13 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
               )
 
               return (
-                <section key={etapa.id} className="etapa vidro" data-estado={estado}>
+                <section
+                  key={etapa.id}
+                  className="etapa vidro"
+                  data-estado={estado}
+                  /* a etapa em que a obra esta: a tela abre rolada ate ela */
+                  data-atual={etapa.numero === numeroAtual ? '' : undefined}
+                >
                   <header className="etapa__topo">
                     {/* O NOME da etapa é o título ("1° Etapa"); etapa sem
                         nome cai no rótulo automático ("1ª Etapa") */}
@@ -1404,7 +1452,7 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                   ? `, por ${pessoaPorId(obra.checks[semInfo.check.id].feitoPor).nome}`
                   : ''}
                 {obra.checks[semInfo.check.id]?.feitoEm ? `, em ${dataHora(obra.checks[semInfo.check.id].feitoEm)}` : ''}.{' '}
-                {checkAbrePopup(semInfo.etapa, semInfo.check)
+                {temOndePreencher(semInfo)
                   ? 'Preencha agora pelo caminho de sempre ou desmarque o check.'
                   : 'Para desfazer, desmarque o check.'}
               </p>
@@ -1427,7 +1475,7 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                   Desmarcar
                 </button>
               )}
-              {(!semInfo.marcado || checkAbrePopup(semInfo.etapa, semInfo.check)) && (
+              {(ehCheckDaOS(semInfo.check) ? temOndePreencher(semInfo) : !semInfo.marcado || temOndePreencher(semInfo)) && (
                 <Button
                   type="button"
                   variant={semInfo.marcado ? 'primary' : 'ghost'}

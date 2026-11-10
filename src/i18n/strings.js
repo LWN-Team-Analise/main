@@ -8,6 +8,10 @@ const pt = {
     homeTitle: 'LWN Engenharia — Qualificação e Certificação de Salas Limpas',
     skipLink: 'Pular para o conteúdo',
     newTab: '(abre em nova aba)',
+    pauseCarousel: 'Pausar o carrossel',
+    playCarousel: 'Retomar o carrossel',
+    pauseVideo: 'Pausar o vídeo',
+    playVideo: 'Reproduzir o vídeo',
   },
   header: {
     home: 'LWN Engenharia — página inicial',
@@ -105,6 +109,10 @@ const pt = {
     offices: 'Unidades',
     rights: 'Todos os direitos reservados.',
     privacy: 'Política de Privacidade',
+    terms: 'Termos de Uso',
+    accessibility: 'Acessibilidade',
+    legal: 'Documentos legais',
+    trademarks: 'As marcas e os logotipos de terceiros exibidos neste site pertencem aos respectivos titulares.',
     team: 'Área do colaborador',
   },
   blog: {
@@ -128,6 +136,8 @@ const pt = {
     sectors: 'Setores',
     count: (n) => `${n} clientes`,
     cta: 'Fale com um especialista',
+    trademarks:
+      'As marcas e os logotipos pertencem aos respectivos titulares. Eles identificam empresas atendidas e não significam patrocínio, endosso ou afiliação.',
   },
   gases: {
     title: 'Certificação e qualificação de gases',
@@ -156,6 +166,21 @@ const pt = {
     updated: 'Última atualização',
     contents: 'Nesta página',
   },
+  terms: {
+    title: 'Termos de Uso',
+    tag: 'Site',
+    eyebrow: 'Condições de uso',
+  },
+  accessibility: {
+    title: 'Acessibilidade',
+    eyebrow: 'Declaração de acessibilidade',
+  },
+  cookies: {
+    label: 'Aviso de cookies',
+    text: 'Este site não usa cookies de publicidade nem ferramentas de rastreamento. Guardamos no seu navegador apenas as suas preferências de tema e idioma.',
+    more: 'Saiba mais',
+    ok: 'Entendi',
+  },
   bal: {
     open: 'Abrir o BAL, assistente virtual da LWN Engenharia',
     close: 'Fechar o assistente BAL',
@@ -176,6 +201,10 @@ const en = {
     homeTitle: 'LWN Engenharia — Cleanroom Qualification and Certification',
     skipLink: 'Skip to content',
     newTab: '(opens in a new tab)',
+    pauseCarousel: 'Pause the carousel',
+    playCarousel: 'Resume the carousel',
+    pauseVideo: 'Pause the video',
+    playVideo: 'Play the video',
   },
   header: {
     home: 'LWN Engenharia — home page',
@@ -272,6 +301,10 @@ const en = {
     offices: 'Offices',
     rights: 'All rights reserved.',
     privacy: 'Privacy Policy',
+    terms: 'Terms of Use',
+    accessibility: 'Accessibility',
+    legal: 'Legal documents',
+    trademarks: 'Third-party trademarks and logos shown on this website belong to their respective owners.',
     team: 'Employee area',
   },
   blog: {
@@ -295,6 +328,8 @@ const en = {
     sectors: 'Sectors',
     count: (n) => `${n} clients`,
     cta: 'Talk to a specialist',
+    trademarks:
+      'Trademarks and logos belong to their respective owners. They identify companies served and do not imply sponsorship, endorsement or affiliation.',
   },
   gases: {
     title: 'Gas certification and qualification',
@@ -322,6 +357,21 @@ const en = {
     eyebrow: 'Privacy and LGPD',
     updated: 'Last updated',
     contents: 'On this page',
+  },
+  terms: {
+    title: 'Terms of Use',
+    tag: 'Site',
+    eyebrow: 'Conditions of use',
+  },
+  accessibility: {
+    title: 'Accessibility',
+    eyebrow: 'Accessibility statement',
+  },
+  cookies: {
+    label: 'Cookie notice',
+    text: 'This website does not use advertising cookies or tracking tools. We only store your theme and language preferences in your browser.',
+    more: 'Learn more',
+    ok: 'Got it',
   },
   bal: {
     open: 'Open BAL, the LWN Engenharia virtual assistant',

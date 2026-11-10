@@ -154,13 +154,33 @@
   flex: 0 1 200px;
 }
 
+/* No celular o "+ Pessoa" ia para uma linha so dele, embaixo, e o
+   horario se esticava pela linha inteira. Agora quem vai fica ao lado do
+   horario, na mesma linha: o horario encolhe para o tamanho dele, e as
+   pessoas escolhidas quebram ali dentro. Sem o x (as datas da execucao
+   nao saem), as pessoas tomam tambem o lugar dele. */
 @media (max-width: 560px) {
   .horario__linha {
-    grid-template-columns: 52px minmax(0, 1fr) 28px;
-    grid-auto-flow: dense;
+    grid-template-columns: 42px minmax(92px, 1fr) minmax(0, 1.1fr) 26px;
+    gap: 8px;
+    padding: 8px;
   }
 
-  .horario__pessoas {
-    grid-column: 1 / -1;
+  .horario__linha:has(> span[aria-hidden='true']:last-child) .horario__pessoas {
+    grid-column: 3 / -1;
+  }
+
+  .horario__linha:has(> span[aria-hidden='true']:last-child) > span[aria-hidden='true']:last-child {
+    display: none;
+  }
+
+  .horario__adicionar {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .horario__adicionar > .sel {
+    display: flex;
+    width: 100%;
   }
 }

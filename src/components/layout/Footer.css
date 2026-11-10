@@ -162,6 +162,27 @@
   text-decoration-color: currentColor;
 }
 
+.footer__legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+}
+
+.footer__legal--icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Identificacao da empresa e o aviso das marcas de terceiros. */
+.footer__note {
+  margin-top: 0.85rem;
+  color: var(--c-muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
 /* Developer credit: present but quiet, at the far end of the row. */
 .footer__credit {
   margin-left: auto;
@@ -206,7 +227,8 @@
   }
 
   /* The last lines of the page stay clear of BAL's corner (the floating assistant). */
-  .footer__bottom > * {
+  .footer__bottom > *,
+  .footer__note {
     padding-right: 64px;
   }
 

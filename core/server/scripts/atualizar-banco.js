@@ -76,6 +76,13 @@ const ARQUIVOS = [
   'db/atualizacao-41.sql.txt',
   'db/atualizacao-42.sql.txt',
   'db/atualizacao-43.sql.txt',
+  'db/atualizacao-44.sql.txt',
+  'db/atualizacao-45.sql.txt',
+  'db/atualizacao-46.sql.txt',
+  'db/atualizacao-47.sql.txt',
+  /* so dados (as obras da 1a etapa viram negocio): sem linha na CONFERENCIA,
+     porque um negocio apagado depois nao e falha da atualizacao */
+  'db/atualizacao-48.sql.txt',
 ]
 
 /**
@@ -235,6 +242,12 @@ const CONFERENCIA = [
     `SELECT EXISTS (SELECT 1 FROM etapa_check
                     WHERE tipo = 'separar_os' AND vigente_ate IS NULL AND obra_id IS NULL) AS ok`,
   ],
+  ['agenda_evento (agenda da empresa)', "SELECT to_regclass('public.agenda_evento') IS NOT NULL AS ok"],
+  ['cargo.permissoes_guardadas', col('cargo', 'permissoes_guardadas')],
+  ['aviso_geral (o Enviar aviso do botao +)', "SELECT to_regclass('public.aviso_geral') IS NOT NULL AS ok"],
+  ['aviso_geral.setor_chave', col('aviso_geral', 'setor_chave')],
+  ['aviso_geral.expira_em', col('aviso_geral', 'expira_em')],
+  ['aviso_geral.encerrado_em', col('aviso_geral', 'encerrado_em')],
 ]
 
 function col(tabela, coluna) {

@@ -76,6 +76,8 @@ export default function ClientsPage() {
             <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </Reveal>
+
+        <p className="clients-page__trademarks">{t.clientsPage.trademarks}</p>
       </div>
     </div>
   );

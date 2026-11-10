@@ -6,6 +6,7 @@ import { logger } from '../logger.js'
 import { descreverObra, registrarAtividade } from '../atividade.js'
 import { concluidoSemInformacao, informacaoChegou, temSemInformacao } from '../semInformacao.js'
 import { avisarAvaliacao, avisarChat, avisarInclusao, avisarObraConcluida } from '../avisosObra.js'
+import { apagarNegocioDaObra, criarNegocioDaObra } from '../negocioDaObra.js'
 import { depoisDeMarcar, incluirNaObra } from '../membrosObra.js'
 import { bytesDoDataUrl, guardarAnexoDaObra, sharepointConfigurado } from '../sharepoint.js'
 import { notificar, pessoasDosSetores, todosAtivos } from '../push.js'
@@ -2271,6 +2272,8 @@ router.post('/obras', exigeSessao, exige('criar_obras'), async (req, res) => {
     })
     /* quem cria a obra ja faz parte dela: nao precisa se incluir em Membros */
     await incluirNaObra(rows[0].id, req.dono.sub)
+    /* a obra criada aqui entra sozinha no Comercial, em Demanda Recebida */
+    await criarNegocioDaObra(req, { obraId: rows[0].id, clienteId, proposta, descricao })
     return res.status(201).json({ id: String(rows[0].id), tipo })
   } catch (e) {
     if (e.code === '23503') return res.status(400).json({ erro: 'Cliente não encontrado.' })
@@ -2387,6 +2390,7 @@ router.delete('/obras/:id', exigeSessao, async (req, res) => {
 
     /* o nome e lido ANTES: depois do DELETE nao ha mais o que ler */
     const antes = await descreverObra(req.params.id)
+    await apagarNegocioDaObra(req.params.id)
     const { rowCount } = await query('DELETE FROM obra WHERE id = $1', [req.params.id])
     if (rowCount === 0) return res.status(404).json({ erro: 'Obra não encontrada.' })
     await registrarAtividade(req, {
@@ -2676,18 +2680,22 @@ async function recusouMarcar(res, usuarioId, checkId, obraId, deOutro) {
    a recusa de marcar e de desmarcar na mao */
 const CHECKS_DA_OS = {
   enviar_os: {
+    falta: 'a OS aprovada',
     marcar: 'Este check é marcado pelo sistema quando a OS desta obra é aprovada no LWN Control.',
     desmarcar: 'Este check acompanha a OS aprovada no LWN Control: ele só sai se a OS for excluída lá.',
   },
   separar_os: {
+    falta: 'a separação das TAGs',
     marcar: 'Este check é marcado pelo sistema quando o Almoxarife separa as TAGs da OS desta obra no LWN Control.',
     desmarcar: 'Este check acompanha a separação das TAGs no LWN Control: ele só sai se a OS for excluída lá.',
   },
   retirada_os: {
+    falta: 'a retirada das ferramentas',
     marcar: 'Este check é marcado pelo sistema quando as ferramentas da OS desta obra são retiradas no LWN Control.',
     desmarcar: 'Este check acompanha a retirada feita no LWN Control: ele só sai se a OS for excluída lá.',
   },
   devolucao_os: {
+    falta: 'a devolução das ferramentas',
     marcar: 'Este check é marcado pelo sistema quando as ferramentas da OS desta obra são devolvidas no LWN Control.',
     desmarcar: 'Este check acompanha a devolução feita no LWN Control: ele só sai se a OS for excluída lá.',
   },
@@ -2869,6 +2877,12 @@ const rotuloResposta = (resposta) => (resposta === true ? 'Sim' : resposta === f
  * src/domain/obras.js), na mesma ordem.
  */
 async function faltaNoCheck(obraId, checkId, regra, resposta) {
+  /* os da O.S. acontecem no LWN Control: aqui so chega quem esta
+     concluindo sem a informacao */
+  if (CHECKS_DA_OS[regra.tipo]) {
+    return { status: 409, erro: CHECKS_DA_OS[regra.tipo].marcar, falta: CHECKS_DA_OS[regra.tipo].falta }
+  }
+
   /* o check com horario (atualizacao 31) marca no pop-up dele, com as
      datas e os horarios; sem horario nenhum definido, nao fecha */
   const { rows: comHorario } = await query(
@@ -2984,11 +2998,11 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
 
     /* Os checks da O.S. ("Solicitar OS" da 2a etapa; "Gestao dos
        instrumentos", "Retirada" e "Devolucao das ferramentas" da 3a;
-       atualizacoes 38, 40, 42 e 43) sao os
-       unicos que ninguem marca na mao — nem concluindo sem a informacao:
-       quem marca e o LWN Control, quando a OS desta obra chega la
-       (server/almoxarife) */
-    if (CHECKS_DA_OS[regra.tipo]) {
+       atualizacoes 38, 40, 42 e 43) quem marca e o LWN Control, quando a
+       OS desta obra chega la (server/almoxarife). Na mao, so concluindo
+       sem a informacao: a marca "sem informacao" sai quando o passo
+       acontece de verdade (marcarCheckDaOS) */
+    if (CHECKS_DA_OS[regra.tipo] && !semInformacao) {
       return res.status(409).json({ erro: CHECKS_DA_OS[regra.tipo].marcar })
     }
 
@@ -3089,12 +3103,16 @@ router.delete('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req,
        O concluido SEM a informacao (atualizacao 36) nao acompanha nada —
        nem o prazo, nem a reserva, nem a saida —, e desmarca como os outros */
     const { tipo } = await regraDoCheck(req.params.checkId)
+    const semInformacao = await concluidoSemInformacao(req.params.id, req.params.checkId)
     /* os da O.S. acompanham a OS no LWN Control: saem sozinhos so se a OS
-       for excluida */
-    if (CHECKS_DA_OS[tipo]) {
+       for excluida. So os concluidos sem a informacao desmarcam, e so por
+       quem pode concluir assim */
+    if (
+      CHECKS_DA_OS[tipo] &&
+      !(semInformacao && cargoPode(await meuCargo(req.dono.sub), 'check_sem_informacao'))
+    ) {
       return res.status(409).json({ erro: CHECKS_DA_OS[tipo].desmarcar })
     }
-    const semInformacao = await concluidoSemInformacao(req.params.id, req.params.checkId)
     if (tipo === 'prazo_execucao' && !semInformacao) {
       return res.status(409).json({
         erro: 'Este check acompanha o prazo da execução. Para mudar, altere a data no período de execução.',

@@ -1,0 +1,45 @@
+/* No canto esquerdo: o direito e do BAL. Nao bloqueia a pagina. */
+.cookie-notice {
+  position: fixed;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: min(32rem, calc(100vw - 110px));
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--c-line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-card);
+  color: var(--c-text);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.cookie-notice a {
+  color: var(--c-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cookie-notice .cookie-notice__ok {
+  flex: none;
+  height: 40px;
+  padding: 0 1.1rem;
+  font-size: 0.84rem;
+}
+
+/* Celular: o texto em cima e o botao embaixo, sem encostar no BAL. */
+@media (max-width: 639px) {
+  .cookie-notice {
+    left: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+    width: calc(100vw - 88px);
+  }
+}

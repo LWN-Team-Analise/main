@@ -37,7 +37,7 @@
   --gr-grade: rgba(13, 13, 13, 0.07);
   --gr-eixo: rgba(13, 13, 13, 0.2);
 
-  --gr-dica-bg: rgba(17, 21, 30, 0.96);
+  --gr-dica-bg: rgba(17, 21, 30, 0.8);
   --gr-dica-borda: rgba(255, 255, 255, 0.12);
   --gr-dica-fg: #ffffff;
   --gr-dica-fraco: rgba(255, 255, 255, 0.6);
@@ -59,7 +59,7 @@
   --gr-grade: rgba(255, 255, 255, 0.07);
   --gr-eixo: rgba(255, 255, 255, 0.22);
 
-  --gr-dica-bg: rgba(24, 28, 38, 0.97);
+  --gr-dica-bg: rgba(24, 28, 38, 0.8);
   --gr-dica-borda: rgba(255, 255, 255, 0.14);
   --gr-dica-fg: #ffffff;
   --gr-dica-fraco: rgba(255, 255, 255, 0.58);
@@ -222,7 +222,9 @@
   border: 1px solid var(--gr-dica-borda);
   border-radius: 10px;
   background: var(--gr-dica-bg);
-  box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
   color: var(--gr-dica-fg);
   pointer-events: none;
   white-space: nowrap;
