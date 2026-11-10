@@ -127,7 +127,7 @@ function manAbrirComprovante(id) {
         const bin = atob(base64);
         const bytes = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-        const url = URL.createObjectURL(new Blob([bytes], { type: tipo }));
+        const url = URL.createObjectURL(new Blob([bytes], { type: tipoQueAbreNaAba(tipo) }));
         window.open(url, '_blank');
         setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (e) {

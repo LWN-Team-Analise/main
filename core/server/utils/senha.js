@@ -65,6 +65,16 @@ export function validarForcaSenha(senha) {
 }
 
 /**
+ * A senha provisoria de uma conta: 12 caracteres sorteados, sem os que se
+ * confundem na hora de ler (0/O, 1/l/I). Quem cadastra passa para a pessoa,
+ * e o sistema pede a troca no primeiro acesso.
+ */
+export function gerarSenhaProvisoria() {
+  const letras = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
+  return Array.from({ length: 12 }, () => letras[crypto.randomInt(letras.length)]).join('')
+}
+
+/**
  * Gera uma senha forte aleatória.
  * @param {number} tamanho - Tamanho da senha (padrão: 16)
  * @returns {string} Senha gerada

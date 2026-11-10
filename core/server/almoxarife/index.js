@@ -87,6 +87,147 @@ app.use(async (req, res, next) => {
 });
 
 // ============================================================
+// ERRO DE BANCO NÃO VAI PARA A TELA
+//
+// Boa parte das rotas daqui devolvia o texto do erro do Postgres
+// ({ erro: err.message }): nome de tabela, de coluna, tipo do campo. Isso
+// só ajuda quem procura brecha. O texto continua indo para o log; a
+// resposta 500 sai sempre a mesma.
+// ============================================================
+app.use((req, res, next) => {
+    const enviar = res.json.bind(res);
+    res.json = (corpo) => {
+        if (res.statusCode === 500) {
+            logger.error('almox/rota', `${req.method} ${req.path}: ${corpo && corpo.erro}`);
+            return enviar({ erro: "Não foi possível completar a operação." });
+        }
+        return enviar(corpo);
+    };
+    next();
+});
+
+// ============================================================
+// QUEM PODE GRAVAR O QUÊ
+//
+// Esta API veio do lwncontrol, onde a trava morava na tela: a aba sumia
+// do menu e o botão não aparecia, mas a rota aceitava qualquer um que
+// chegasse até ela. Com isso, quem tinha só "ver_almoxarife" excluía
+// ferramenta, baia, certificado e OS chamando a API na mão, e apagava
+// o log de atividades.
+//
+// A tabela abaixo é a mesma regra da tela, agora no servidor: cada
+// gravação pede a permissão da aba que a faz (basta uma da lista). O
+// acesso total passa por todas (cargoPode).
+//
+// Gravação que não está na lista é RECUSADA: rota nova só funciona depois
+// de alguém dizer aqui quem pode. `null` = a própria rota confere (ela
+// precisa saber quem é o responsável da OS, por exemplo).
+// ============================================================
+const almox = (...chaves) => chaves.map((chave) => `almox_${chave}`);
+
+/* a manutenção tem a marca "só visualizar", que tira a gravação de quem
+   vê a aba — a tela faz a mesma conta em usuarioPodeEditarManutencao */
+const editaManutencao = (cargo) =>
+    cargoPode(cargo, 'almox_manutencao') && !(cargo.permissoes || []).includes('almox_manutencao_somente_leitura');
+
+const QUEM_MEXE_NA_OS = almox('gerenciar_os');
+const QUEM_REMANEJA = almox('remanejamento', 'aprovar_remanejamento', 'gerenciar_os', 'responsavel_obra');
+const QUEM_BIPA = almox('conferencia', 'separar_tags', 'devolutiva', 'conferir_devolucao');
+
+const REGRAS_DE_GRAVACAO = [
+    ['POST', /^\/ferramentas$/, almox('instrumentos')],
+    ['PUT', /^\/ferramentas\/tipo\//, almox('instrumentos', 'calibracao')],
+    ['PUT', /^\/ferramentas\/[^/]+$/, almox('instrumentos', 'calibracao', 'certificados')],
+    ['DELETE', /^\/ferramentas\/[^/]+$/, almox('instrumentos')],
+    ['PUT', /^\/ativos\/[^/]+\/codigo-barras$/, almox('instrumentos')],
+
+    /* o cliente é do main: as três rotas conferem editar_clientes por dentro */
+    ['POST', /^\/clientes$/, null],
+    ['PUT', /^\/clientes\/[^/]+$/, null],
+    ['DELETE', /^\/clientes\/[^/]+$/, null],
+
+    ['POST', /^\/baias$/, almox('baias')],
+    ['PUT', /^\/baias\/[^/]+\/liberar$/, almox('baias', 'gerenciar_os')],
+    ['PUT', /^\/baias\/[^/]+$/, almox('baias')],
+    ['DELETE', /^\/baias\/[^/]+$/, almox('baias')],
+
+    ['POST', /^\/certificados$/, almox('certificados', 'calibracao')],
+    ['PUT', /^\/certificados\/[^/]+$/, almox('certificados', 'calibracao')],
+    ['DELETE', /^\/certificados\/[^/]+$/, almox('certificados', 'calibracao')],
+
+    ['POST', /^\/manutencoes$/, editaManutencao],
+    ['PUT', /^\/manutencoes\/[^/]+$/, editaManutencao],
+    ['DELETE', /^\/manutencoes\/[^/]+$/, editaManutencao],
+
+    /* a lista de cargos e permissões antigas do lwncontrol */
+    ['PUT', /^\/configuracoes\/[^/]+$/, ['editar_cargo']],
+
+    /* o histórico não pode ser apagado por quem ele registra */
+    ['DELETE', /^\/logs$/, almox('logs')],
+    /* a tela registra o que cada um faz: a rota usa o dono da sessão */
+    ['POST', /^\/logs$/, null],
+
+    ['POST', /^\/solicitacoes$/, almox('solicitacoes', 'gerenciar_os', 'concluidos')],
+    ['PUT', /^\/solicitacoes\/[^/]+$/, almox('gerenciar_os', 'separar_tags', 'conferencia')],
+    ['DELETE', /^\/solicitacoes\/[^/]+$/, QUEM_MEXE_NA_OS],
+    /* quem decide é o responsável da obra ou aprovar_todas_os: a rota confere */
+    ['PUT', /^\/solicitacoes\/[^/]+\/(aprovar|editar-aprovar|reprovar)$/, null],
+    ['PUT', /^\/solicitacoes\/[^/]+\/separar$/, almox('separar_tags')],
+    ['PUT', /^\/solicitacoes\/[^/]+\/conferencia$/, almox('conferencia')],
+    ['PUT', /^\/solicitacoes\/[^/]+\/devolutiva$/, almox('devolutiva')],
+    ['PUT', /^\/solicitacoes\/[^/]+\/conferir-devolucao$/, almox('conferir_devolucao')],
+    ['PUT', /^\/solicitacoes\/[^/]+\/prorrogar$/, almox('gerenciar_os', 'prorrogar_os')],
+    ['POST', /^\/solicitacoes\/[^/]+\/prorrogacoes$/, almox('gerenciar_os', 'prorrogar_os')],
+    ['POST', /^\/solicitacoes\/[^/]+\/(inclusao|retirada|devolucao)-parcial$/, QUEM_MEXE_NA_OS],
+    ['PUT', /^\/prorrogacoes\/[^/]+\/(aprovar|rejeitar)$/, null],
+
+    ['POST', /^\/conferencia\/validar(-baia)?$/, QUEM_BIPA],
+    ['POST', /^\/separacao\/validar$/, almox('separar_tags')],
+
+    /* aprovar e rejeitar conferem a permissão por dentro */
+    ['POST', /^\/remanejamentos\/(aprovar|rejeitar)$/, null],
+    ['POST', /^\/remanejamentos\/excluir$/, almox('gerenciar_os', 'aprovar_remanejamento')],
+    ['POST', /^\/remanejamentos(\/(solicitar|passar|enviar))?$/, QUEM_REMANEJA],
+    ['POST', /^\/remanejamentos\/[^/]+\/devolver$/, QUEM_REMANEJA],
+    ['PUT', /^\/remanejamentos\/[^/]+$/, QUEM_REMANEJA],
+];
+
+/* leitura que também é só de quem tem a aba */
+const REGRAS_DE_LEITURA = [[/^\/logs$/, almox('logs')]];
+
+/* o Express aceita /Baias e /baias/ no lugar de /baias: a conferência
+   precisa enxergar o mesmo caminho que a rota */
+const caminhoDaRegra = (req) => (req.path.replace(/\/+$/, '') || '/').toLowerCase();
+
+const passa = (cargo, exigido) =>
+    typeof exigido === 'function' ? exigido(cargo) : exigido.some((chave) => cargoPode(cargo, chave));
+
+app.use(async (req, res, next) => {
+    const caminho = caminhoDaRegra(req);
+    const leitura = req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS';
+    const regra = leitura
+        ? REGRAS_DE_LEITURA.find(([padrao]) => padrao.test(caminho))
+        : REGRAS_DE_GRAVACAO.find(([metodo, padrao]) => metodo === req.method && padrao.test(caminho));
+
+    if (leitura && !regra) return next();
+    if (!regra) {
+        logger.error('almox/permissao', `gravacao sem regra: ${req.method} ${caminho}`);
+        return res.status(403).json({ erro: 'Seu setor não tem permissão para esta ação.' });
+    }
+    const exigido = regra[regra.length - 1];
+    if (exigido === null) return next();
+
+    try {
+        if (!passa(await meuCargo(req.dono.sub), exigido)) {
+            return res.status(403).json({ erro: 'Seu setor não tem permissão para esta ação.' });
+        }
+        return next();
+    } catch (err) {
+        return next(err);
+    }
+});
+
+// ============================================================
 // INVALIDAÇÃO AUTOMÁTICA DE CACHE
 // Qualquer escrita (POST/PUT/DELETE) limpa o cache do recurso
 // afetado, garantindo que ninguém veja dado velho.
@@ -887,9 +1028,14 @@ app.delete("/clientes/:id", async (req, res) => {
 // colaborador logado.
 // ============================================================
 
+/* A lista serve aos seletores (responsável, quem recebe...): CPF e telefone
+   dos colegas não têm o que fazer nela. Cada um lê os próprios em /eu. */
+const COLUNAS_DA_LISTA = `id, nome, email, cargo, setor, ativo, foto, criado_em, atualizado_em,
+                          permissoes, responsavel_obra`;
+
 app.get("/usuarios", async (req, res) => {
     return cache.responderComCache(req, res, "usuarios", "usuarios:lista", async () => {
-        const result = await pool.query("SELECT * FROM almox.usuarios ORDER BY nome");
+        const result = await pool.query(`SELECT ${COLUNAS_DA_LISTA} FROM almox.usuarios ORDER BY nome`);
         return result.rows;
     });
 });
@@ -918,7 +1064,8 @@ app.get("/eu", async (req, res) => {
 
 app.get("/usuarios/:id", async (req, res) => {
     try {
-        const r = await pool.query("SELECT * FROM almox.usuarios WHERE id = $1", [req.params.id]);
+        if (!/^\d{1,15}$/.test(req.params.id)) return res.status(404).json({ erro: "Usuário não encontrado" });
+        const r = await pool.query(`SELECT ${COLUNAS_DA_LISTA} FROM almox.usuarios WHERE id = $1`, [req.params.id]);
         if (!r.rows[0]) return res.status(404).json({ erro: "Usuário não encontrado" });
         res.json(r.rows[0]);
     } catch (err) {
@@ -2066,15 +2213,20 @@ app.get("/configuracoes", async (req, res) => {
     }
 });
 
-// PUT /api/configuracoes/:chave  { valor, usuario }
+/* as únicas chaves que a tela grava (CONFIG_CHAVES, em public/almoxarife) */
+const CONFIGURACOES_ACEITAS = ['permissoes_cargos', 'cargos_custom', 'cargos_removidos', 'cargos_responsaveis'];
+
+// PUT /api/configuracoes/:chave  { valor }
 app.put("/configuracoes/:chave", async (req, res) => {
     try {
         await garantirTabelaConfiguracoes();
         const chave = String(req.params.chave || '').trim();
-        if (!chave) return res.status(400).json({ erro: "Chave não informada" });
+        if (!CONFIGURACOES_ACEITAS.includes(chave)) return res.status(400).json({ erro: "Configuração desconhecida" });
 
-        const { valor, usuario } = req.body || {};
+        const { valor } = req.body || {};
         if (valor === undefined) return res.status(400).json({ erro: "Valor não informado" });
+        const dono = await pool.query("SELECT nome FROM almox.usuarios WHERE id = $1", [req.dono.sub]);
+        const usuario = dono.rows[0] ? dono.rows[0].nome : null;
 
         const r = await pool.query(`
             INSERT INTO almox.configuracoes (chave, valor, atualizado_em, atualizado_por)
@@ -3326,13 +3478,16 @@ app.post("/logs", async (req, res) => {
         await garantirTabelaLogs();
         const b = req.body || {};
         if (!b.acao) return res.status(400).json({ erro: "Campo 'acao' é obrigatório" });
+        /* quem fez sai da SESSÃO: vindo do corpo, qualquer um assinava o log
+           com o nome de outra pessoa */
+        const dono = await pool.query("SELECT id, nome, cargo FROM almox.usuarios WHERE id = $1", [req.dono.sub]);
         const r = await pool.query(`
             INSERT INTO almox.logs_atividade (usuario_id, usuario_nome, usuario_cargo, acao, modulo, entidade, descricao, detalhes)
             VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *
         `, [
-            b.usuario_id || null,
-            b.usuario_nome || 'Desconhecido',
-            b.usuario_cargo || null,
+            req.dono.sub,
+            dono.rows[0] ? dono.rows[0].nome : 'Desconhecido',
+            dono.rows[0] ? dono.rows[0].cargo : null,
             String(b.acao).slice(0, 80),
             b.modulo || null,
             b.entidade || null,

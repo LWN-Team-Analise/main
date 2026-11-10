@@ -8138,7 +8138,7 @@ function osBarraFiltrosHTML(vendoTudo) {
     const filtroLimite = vendoTudo ? `
                 <div style="flex:1;min-width:150px;">
                     <label style="display:block;font-size:0.75rem;font-weight:600;color:var(--text-main);margin-bottom:0.25rem;">Exibir</label>
-                    <select id="os-filtro-limite" onchange="window.osFiltroLimite=this.value;osAplicarFiltros()" style="width:100%;padding:0.45rem 0.7rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.85rem;">
+                    <select id="os-filtro-limite" onchange="osDefinirFiltro('osFiltroLimite', this.value)" style="width:100%;padding:0.45rem 0.7rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.85rem;">
                         <option value="5" ${limite === '5' ? 'selected' : ''}>Últimas 5 obras</option>
                         <option value="todas" ${limite === 'todas' ? 'selected' : ''}>Todas as obras</option>
                     </select>
@@ -8148,7 +8148,7 @@ function osBarraFiltrosHTML(vendoTudo) {
             <div style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;background:var(--bg-surface);padding:0.85rem 1rem;border-radius:0.75rem;border:1px solid var(--border-color);margin-bottom:1rem;">
                 <div style="flex:1;min-width:170px;">
                     <label style="display:block;font-size:0.75rem;font-weight:600;color:var(--text-main);margin-bottom:0.25rem;">Status da OS</label>
-                    <select id="os-filtro-status" onchange="window.osFiltroStatus=this.value;osAplicarFiltros()" style="width:100%;padding:0.45rem 0.7rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.85rem;">
+                    <select id="os-filtro-status" onchange="osDefinirFiltro('osFiltroStatus', this.value)" style="width:100%;padding:0.45rem 0.7rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.85rem;">
                         ${OS_STATUS_FILTRO.map(([v, l]) => `<option value="${v}" ${filtroStatus === v ? 'selected' : ''}>${l}</option>`).join('')}
                     </select>
                 </div>
@@ -8157,7 +8157,7 @@ function osBarraFiltrosHTML(vendoTudo) {
                     <label style="display:block;font-size:0.75rem;font-weight:600;color:var(--text-main);margin-bottom:0.25rem;">Buscar</label>
                     <input type="text" id="os-filtro-busca" value="${String(window.osFiltroBusca || '').replace(/"/g, '&quot;')}"
                            placeholder="Nº OS, cliente, obra..." autocomplete="off" enterkeyhint="search"
-                           oninput="window.osFiltroBusca=this.value;clearTimeout(window._osBuscaTimer);window._osBuscaTimer=setTimeout(osAplicarFiltros,250);"
+                           oninput="osFiltrarBusca(this.value)"
                            style="width:100%;padding:0.45rem 0.7rem;border:2px solid var(--border-color);border-radius:0.5rem;background:var(--bg-input);color:var(--text-main);font-size:0.85rem;">
                 </div>
                 <button onclick="osLimparFiltros()" style="padding:0.45rem 1rem;border:2px solid var(--border-color);border-radius:0.5rem;background:transparent;color:var(--text-muted);cursor:pointer;font-weight:600;font-size:0.8rem;">Limpar</button>
@@ -8179,6 +8179,19 @@ function osLimparFiltros() {
 window.osLimparFiltros = osLimparFiltros;
 
 // Redesenha SÓ os resultados, a partir de workOrders (já em memória).
+// Os filtros de Gerenciar OS. Os campos chamam estas funcoes em vez de
+// gravar em window no proprio atributo (ver handlers-seguros.js).
+function osDefinirFiltro(nome, valor) {
+    if (nome !== 'osFiltroLimite' && nome !== 'osFiltroStatus') return;
+    window[nome] = valor;
+    osAplicarFiltros();
+}
+function osFiltrarBusca(valor) {
+    window.osFiltroBusca = valor;
+    clearTimeout(window._osBuscaTimer);
+    window._osBuscaTimer = setTimeout(osAplicarFiltros, 250);
+}
+
 function osAplicarFiltros() {
     const alvoResultados = document.getElementById('os-lista-resultados');
     if (!alvoResultados) return;
@@ -14313,6 +14326,13 @@ function baixarCertificado(certificadoId) {
     });
 }
 
+// Arquivo que abre numa aba do site precisa ser PDF ou imagem: um HTML
+// gravado como "certificado" abriria como pagina, na origem do sistema.
+function tipoQueAbreNaAba(tipo) {
+    return /^(application\/pdf|image\/(png|jpe?g|gif|webp))$/i.test(String(tipo || '')) ? tipo : 'application/octet-stream';
+}
+window.tipoQueAbreNaAba = tipoQueAbreNaAba;
+
 async function _certificadoParaBlob(cert) {
     let base64Data = await obterArquivoCertificado(cert);
     let fileName = cert.nome_arquivo || `certificado_${cert.numero}.pdf`;
@@ -14333,7 +14353,7 @@ async function _certificadoParaBlob(cert) {
     let mimeType = 'application/pdf';
     const headerMime = header.match(/^data:([^;]+)/);
     if (headerMime && headerMime[1] !== 'application/octet-stream') {
-        mimeType = headerMime[1];
+        mimeType = tipoQueAbreNaAba(headerMime[1]);
     } else if (/\.jpe?g$/i.test(fileName)) mimeType = 'image/jpeg';
     else if (/\.png$/i.test(fileName)) mimeType = 'image/png';
     const bytes = _base64ParaUint8Array(base64Data);

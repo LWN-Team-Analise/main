@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import crypto from 'node:crypto'
 import express from 'express'
 import { checarConexao } from './db.js'
 import authRouter from './routes/auth.js'
@@ -41,6 +42,14 @@ import { donoDoToken, exige, exigeSessao, meuCargo, tokenDo } from './sessao.js'
 
 const app = express()
 
+/* compara em tempo constante: o tempo da resposta nao conta quantos
+   caracteres do segredo ja estavam certos */
+function segredoConfere(recebido, segredo) {
+  const a = crypto.createHash('sha256').update(String(recebido ?? '')).digest()
+  const b = crypto.createHash('sha256').update(`Bearer ${segredo}`).digest()
+  return crypto.timingSafeEqual(a, b)
+}
+
 /* o "X-Powered-By: Express" so conta a quem procura brecha o que esta
    rodando aqui */
 app.disable('x-powered-by')
@@ -72,8 +81,9 @@ app.use(express.json({ limit: '8mb' }))
 
 app.get('/api/health', async (_req, res) => {
   try {
-    const info = await checarConexao()
-    res.json({ ok: true, ...info })
+    /* a rota e publica: o nome do banco e o estado das tabelas ficam aqui */
+    await checarConexao()
+    res.json({ ok: true })
   } catch (erro) {
     /* o motivo fica no log: a resposta e publica, e o texto do erro do
        banco conta host, usuario e versao a quem perguntar */
@@ -112,7 +122,7 @@ app.use('/api/sharepoint', sharepointRouter)
    O resto e do colaborador logado com a aba Almoxarife. */
 app.get('/api/almox/notificacoes/diarias', async (req, res, next) => {
   const segredo = process.env.CRON_SECRET
-  if (segredo && req.headers.authorization === `Bearer ${segredo}`) return notificacoesDiarias(req, res)
+  if (segredo && segredoConfere(req.headers.authorization, segredo)) return notificacoesDiarias(req, res)
   try {
     const dono = await donoDoToken(tokenDo(req))
     if (dono && (await meuCargo(dono.sub)).acessoTotal) return notificacoesDiarias(req, res)

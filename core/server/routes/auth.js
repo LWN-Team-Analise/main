@@ -13,6 +13,7 @@ import { logger } from '../logger.js'
 import { validarForcaSenha } from '../utils/senha.js'
 import { registrarAtividade } from '../atividade.js'
 import { avisarSenhaPadrao } from '../avisosConta.js'
+import { SENHA_PADRAO } from './equipe.js'
 
 const router = Router()
 
@@ -34,6 +35,8 @@ const ERROS_POR_IP = 40
 const CODIGOS_POR_CONTA = 3
 const CODIGOS_POR_IP = 10
 const PALPITES_POR_IP = 20
+/* quem roubou uma sessao nao pode ficar testando a senha da pessoa */
+const SENHA_ATUAL_POR_CONTA = 8
 const MUITAS = 'Muitas tentativas. Aguarde 15 minutos e tente de novo.'
 
 /* hash de uma senha que ninguem tem: a conta que NAO existe tambem paga
@@ -42,6 +45,11 @@ const HASH_VAZIO = bcrypt.hashSync(crypto.randomBytes(16).toString('hex'), 12)
 
 const soDigitos = (valor) => String(valor ?? '').replace(/\D/g, '')
 const texto = (valor) => String(valor ?? '').trim()
+
+/* O campo de entrada aceita e-mail ou CPF. Sem digito nenhum (ou com um
+   e-mail no campo) nao ha CPF para procurar: o '' acharia quem foi gravado
+   com o CPF vazio. */
+const cpfDe = (identificador) => (String(identificador).includes('@') ? null : soDigitos(identificador) || null)
 
 /** Converte a linha do banco no formato que o front consome. */
 function paraUsuario(linha) {
@@ -94,6 +102,7 @@ const CAMPOS_BASE = `u.id, u.name, u.email, u.cpf, u.data_nascimento, u.telefone
                      u.senha_temporaria`
 
 const CAMPOS_CARGO = `, u.foto, u.cargo_id, u.cargo_titulo, u.outlook_email,
+                      u.outlook_id,
                       c.chave AS cargo_chave, c.nome AS cargo_nome,
                       c.cor AS cargo_cor, c.acesso_total,
                       c.permissoes AS cargo_permissoes,
@@ -151,6 +160,16 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ erro: 'Informe seu e-mail ou CPF e a senha.' })
   }
 
+  /* A 123456 era a senha de toda conta nova e esta escrita no repositorio
+     publico: quem soubesse um e-mail da empresa entrava. Ela nao abre mais
+     conta nenhuma. A resposta vem antes de olhar o banco, entao nao conta
+     se a conta existe. */
+  if (senha === SENHA_PADRAO) {
+    return res.status(401).json({
+      erro: 'A senha padrão 123456 não é mais aceita. Use "Esqueci minha senha" ou entre pelo Outlook.',
+    })
+  }
+
   const contaChave = `login:${chaveDaConta(identificador)}`
   const ip = ipDe(req)
   const ipChave = ip ? `login-ip:${ip}` : null
@@ -167,7 +186,7 @@ router.post('/login', async (req, res) => {
 
     const { rows } = await buscarUsuario(
       'lower(u.email) = lower($1) OR u.cpf = $2',
-      [identificador, soDigitos(identificador)],
+      [identificador, cpfDe(identificador)],
     )
 
     const linha = rows[0]
@@ -251,8 +270,16 @@ router.post('/senha', async (req, res) => {
     const { rows } = await query('SELECT senha_hash FROM usuario WHERE id = $1', [sub])
     if (!rows[0]) return res.status(401).json({ erro: 'Sessão inválida.', sessao: false })
 
+    const freio = `senha-atual:${sub}`
+    if (await estourou([{ chave: freio, maximo: SENHA_ATUAL_POR_CONTA, minutos: JANELA }])) {
+      return res.status(429).json({ erro: MUITAS })
+    }
     const confere = await bcrypt.compare(atual, rows[0].senha_hash)
-    if (!confere) return res.status(401).json({ erro: 'A senha atual não confere.' })
+    if (!confere) {
+      await anotar(freio)
+      return res.status(401).json({ erro: 'A senha atual não confere.' })
+    }
+    await esquecer(freio)
 
     const hash = await bcrypt.hash(nova, 12)
     await query('UPDATE usuario SET senha_hash = $1, senha_temporaria = false WHERE id = $2', [
@@ -305,7 +332,18 @@ router.post('/senha', async (req, res) => {
    da para prever a sequencia dele a partir de saidas anteriores */
 const seisDigitos = () => String(crypto.randomInt(100000, 1000000))
 
+/* A conta que existe gasta o tempo do hash e do envio do e-mail; a que nao
+   existe voltava na hora, e o relogio dizia quem esta cadastrado. Toda
+   resposta sai depois de pelo menos este tanto. */
+const ESPERA_DO_RECUPERAR = 2000
+
 router.post('/recuperar', async (req, res) => {
+  const inicio = Date.now()
+  const responder = async () => {
+    const falta = ESPERA_DO_RECUPERAR - (Date.now() - inicio)
+    if (falta > 0) await new Promise((pronto) => setTimeout(pronto, falta))
+    return res.json(resposta)
+  }
   const identificador = texto(req.body?.identificador)
   if (!identificador) {
     return res.status(400).json({ erro: 'Informe seu e-mail ou CPF.' })
@@ -346,10 +384,10 @@ router.post('/recuperar', async (req, res) => {
     const { rows } = await query(
       `SELECT id, name, email FROM usuario
         WHERE ativo AND (lower(email) = lower($1) OR cpf = $2) LIMIT 1`,
-      [identificador, soDigitos(identificador)],
+      [identificador, cpfDe(identificador)],
     )
     const pessoa = rows[0]
-    if (!pessoa) return res.json(resposta)
+    if (!pessoa) return await responder()
 
     // pedido novo invalida o anterior: so o ultimo codigo funciona
     await query(
@@ -376,7 +414,7 @@ router.post('/recuperar', async (req, res) => {
          diria que a conta existe */
       logger.error('auth/recuperar', `envio falhou: ${envio.motivo}`)
     }
-    return res.json(resposta)
+    return await responder()
   } catch (erro) {
     if (erro.code === '42P01') {
       return res.status(503).json({
@@ -387,6 +425,10 @@ router.post('/recuperar', async (req, res) => {
     return res.status(500).json({ erro: 'Não foi possível enviar o código agora.' })
   }
 })
+
+/* A mesma resposta para conta que nao existe, codigo vencido, codigo errado e
+   tentativas esgotadas: quem esta testando nao aprende quem esta cadastrado. */
+const CODIGO_RECUSADO = 'Código incorreto ou expirado.'
 
 router.post('/codigo', async (req, res) => {
   const identificador = texto(req.body?.identificador)
@@ -406,32 +448,43 @@ router.post('/codigo', async (req, res) => {
     const pessoa = await query(
       `SELECT id FROM usuario
         WHERE ativo AND (lower(email) = lower($1) OR cpf = $2) LIMIT 1`,
-      [identificador, soDigitos(identificador)],
+      [identificador, cpfDe(identificador)],
     )
-    if (!pessoa.rows[0]) return res.status(400).json({ erro: 'Código inválido ou expirado.' })
+    if (!pessoa.rows[0]) {
+      await anotar(ipChave)
+      return res.status(400).json({ erro: CODIGO_RECUSADO })
+    }
 
     const { rows } = await query(
-      `SELECT id, codigo_hash, tentativas FROM senha_codigo
+      `SELECT id, codigo_hash FROM senha_codigo
         WHERE usuario_id = $1 AND usado_em IS NULL AND expira_em > now()
         ORDER BY criado_em DESC LIMIT 1`,
       [pessoa.rows[0].id],
     )
     const guardado = rows[0]
     if (!guardado) {
-      return res.status(400).json({ erro: 'Código expirado. Peça um novo.' })
+      await anotar(ipChave)
+      return res.status(400).json({ erro: CODIGO_RECUSADO })
     }
-    if (guardado.tentativas >= TENTATIVAS_MAXIMAS) {
+    /* O palpite e contado ANTES de conferir, numa conta so no banco. Ler o
+       contador e somar depois deixava varios palpites simultaneos passarem
+       todos pelo mesmo "ainda tem tentativa". */
+    const palpite = await query(
+      `UPDATE senha_codigo SET tentativas = tentativas + 1
+        WHERE id = $1 AND usado_em IS NULL AND tentativas < $2
+        RETURNING id`,
+      [guardado.id, TENTATIVAS_MAXIMAS],
+    )
+    if (!palpite.rows[0]) {
       await query('UPDATE senha_codigo SET usado_em = now() WHERE id = $1', [guardado.id])
-      return res.status(429).json({ erro: 'Muitas tentativas. Peça um código novo.' })
+      await anotar(ipChave)
+      return res.status(400).json({ erro: CODIGO_RECUSADO })
     }
 
     const confere = await bcrypt.compare(codigo, guardado.codigo_hash)
     if (!confere) {
       await anotar(ipChave)
-      await query('UPDATE senha_codigo SET tentativas = tentativas + 1 WHERE id = $1', [
-        guardado.id,
-      ])
-      return res.status(400).json({ erro: 'Código incorreto.' })
+      return res.status(400).json({ erro: CODIGO_RECUSADO })
     }
 
     /* permissao curta para o ultimo passo: 10 minutos, e so serve para
@@ -476,9 +529,13 @@ router.post('/redefinir', async (req, res) => {
       return res.status(401).json({ erro: 'Permissão inválida. Recomece a recuperação.' })
     }
 
+    /* gasta o codigo numa conta so: dois pedidos juntos nao passam os dois,
+       e a permissao so vale para a pessoa do proprio codigo */
     const codigo = await query(
-      'SELECT id FROM senha_codigo WHERE id = $1 AND usado_em IS NULL',
-      [dono.cod],
+      `UPDATE senha_codigo SET usado_em = now()
+        WHERE id = $1 AND usuario_id = $2 AND usado_em IS NULL
+        RETURNING id`,
+      [dono.cod, dono.sub],
     )
     if (!codigo.rows[0]) {
       return res.status(400).json({ erro: 'Este código já foi usado. Peça um novo.' })
@@ -489,7 +546,6 @@ router.post('/redefinir', async (req, res) => {
       'UPDATE usuario SET senha_hash = $1, senha_temporaria = false WHERE id = $2',
       [hash, dono.sub],
     )
-    await query('UPDATE senha_codigo SET usado_em = now() WHERE id = $1', [dono.cod])
     await registrarAtividade(dono.sub, {
       acao: 'senha.redefinida',
       categoria: 'conta',
@@ -574,6 +630,19 @@ router.post('/outlook/entrar', async (req, res) => {
       })
     }
 
+    /* O vinculo e com a CONTA Microsoft (o id dela), e nao com o texto do
+       e-mail: o campo de e-mail do diretorio pode ser preenchido com
+       qualquer coisa, e outra conta com o mesmo texto entraria no lugar. */
+    if (linha.outlook_id && perfil.id && String(linha.outlook_id) !== String(perfil.id)) {
+      logger.error('auth/outlook-entrar', `conta Microsoft diferente da vinculada (usuario ${linha.id})`)
+      return res.status(403).json({ erro: 'Esta conta Microsoft não é a que foi vinculada a este cadastro.' })
+    }
+    if (!linha.outlook_id && perfil.id) {
+      await query('UPDATE usuario SET outlook_id = $1 WHERE id = $2 AND outlook_id IS NULL', [perfil.id, linha.id]).catch(
+        (erro) => logger.error('auth/outlook-entrar', erro.message),
+      )
+    }
+
     // a foto do Outlook e a mais atual; se a conta tiver uma, ela entra
     if (perfil.foto) {
       await query('UPDATE usuario SET foto = $1 WHERE id = $2', [perfil.foto, linha.id])
@@ -586,8 +655,9 @@ router.post('/outlook/entrar', async (req, res) => {
     await avisarSenhaPadrao({ usuarioIds: [linha.id] })
     return res.json(sessao)
   } catch (erro) {
+    /* o texto cru da Microsoft (com identificadores internos) fica no log */
     logger.error('auth/outlook-entrar', erro.message)
-    return res.status(400).json({ erro: erro.message || 'Não foi possível entrar com o Outlook.' })
+    return res.status(400).json({ erro: 'Não foi possível entrar com o Outlook. Tente de novo.' })
   }
 })
 
@@ -661,7 +731,7 @@ router.post('/outlook/vincular', async (req, res) => {
       })
     }
     logger.error('auth/outlook-vincular', erro.message)
-    return res.status(400).json({ erro: erro.message || 'Não foi possível vincular o Outlook.' })
+    return res.status(400).json({ erro: 'Não foi possível vincular o Outlook. Tente de novo.' })
   }
 })
 

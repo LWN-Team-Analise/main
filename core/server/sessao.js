@@ -94,6 +94,11 @@ export function tratar(erro, res, onde) {
         'atualizacao-4.sql.txt e atualizacao-5.sql.txt. Ou, de uma vez: npm run db:atualizar.',
     })
   }
+  /* id que nao e numero, data que nao existe: o pedido e que veio errado,
+     e isso nao e erro do servidor */
+  if (['22P02', '22007', '22008', '22003'].includes(erro.code)) {
+    return res.status(400).json({ erro: 'Dados inválidos.' })
+  }
   logger.error(onde, erro.message, { code: erro.code })
   return res.status(500).json({ erro: 'Não foi possível completar a operação.' })
 }

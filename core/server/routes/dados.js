@@ -96,6 +96,24 @@ async function obraAberta(req, res, next) {
   }
 }
 
+/* Ver a obra POR DENTRO (anexo, chat, ferramentas, observacao): quem abre
+   a aba Obras ou Concluidas, ou quem esta na obra — o membro parcial pode
+   ser de um setor sem a aba. So estar logado nao basta. */
+async function podeVerObra(usuarioId, obraId) {
+  const meu = await meuCargo(usuarioId)
+  if (cargoPode(meu, 'ver_obras') || cargoPode(meu, 'ver_concluidas')) return true
+  return estaNaObra(obraId, usuarioId)
+}
+
+async function verObra(req, res, next) {
+  try {
+    if (await podeVerObra(req.dono.sub, req.params.id)) return next()
+    return res.status(403).json({ erro: 'Seu setor não tem acesso a esta obra.' })
+  } catch (erro) {
+    return tratar(erro, res, 'dados/ver-obra')
+  }
+}
+
 /* ============================================================
    LEITURA — tudo o que o quadro precisa, numa resposta so.
 
@@ -350,6 +368,13 @@ async function lerClientes(imagens) {
  * sem a logo e a capa (so a versao delas).
  */
 export async function lerTudo(usuarioId, { imagens = true } = {}) {
+  /* O quadro vai para toda tela (pagina inicial, TV), mas nem tudo nele e
+     de todo mundo: o contato dos clientes e de quem abre Clientes, e os
+     anexos e as observacoes de quem abre as obras ou esta nelas. */
+  const meu = await meuCargo(usuarioId)
+  const veObras = cargoPode(meu, 'ver_obras') || cargoPode(meu, 'ver_concluidas')
+  const veContatos = cargoPode(meu, 'ver_clientes')
+
   const [
     clientes,
     setores,
@@ -690,7 +715,7 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
 
   return {
     termos,
-    clientes: clientes.rows.map(paraCliente),
+    clientes: clientes.rows.map(paraCliente).map((c) => (veContatos ? c : { ...c, pessoas: [] })),
     setores: setores.rows.map(paraSetor),
     /* o catalogo inteiro, inclusive o que saiu (ativo = false): a obra
        que ja planejou um ensaio retirado continua mostrando o nome dele */
@@ -754,10 +779,10 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
       chatQtd: qtdDoChat[o.id] ?? 0,
       /* check com horario -> [{ dia, hora, membros }] (atualizacao 31) */
       horarios: horariosDaObra[o.id] ?? {},
-      observacoes: obsDaObra[o.id] ?? [],
+      observacoes: veObras || (membrosDaObra[o.id] ?? []).includes(String(usuarioId)) ? (obsDaObra[o.id] ?? []) : [],
       avisos: avisosDaObra[o.id] ?? [],
       etiquetas: etiquetasDaObra[o.id] ?? [],
-      anexos: anexosDaObra[o.id] ?? [],
+      anexos: veObras || (membrosDaObra[o.id] ?? []).includes(String(usuarioId)) ? (anexosDaObra[o.id] ?? []) : [],
       reserva: reservaDaObra[o.id] ?? null,
       notas: notasDaObra[o.id] ?? [],
       avaliacao: media(notasDaObra[o.id]),
@@ -791,7 +816,7 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
    com o fuso; as colunas "timestamp" sem fuso do schema almox guardam o
    horario de Greenwich — dai o AT TIME ZONE 'UTC'.
    ============================================================ */
-router.get('/obras/:id/ferramentas', exigeSessao, async (req, res) => {
+router.get('/obras/:id/ferramentas', exigeSessao, verObra, async (req, res) => {
   if (!/^\d{1,18}$/.test(req.params.id)) return res.status(400).json({ erro: 'Obra inválida.' })
   try {
     const { rows } = await query(
@@ -4271,7 +4296,7 @@ router.delete('/ensaios/:id', exigeSessao, exige('gerenciar_ensaios'), async (re
    Cargo com acesso total continua podendo limpar qualquer uma.
    ------------------------------------------------------------ */
 
-router.post('/obras/:id/observacoes', exigeSessao, obraAberta, async (req, res) => {
+router.post('/obras/:id/observacoes', exigeSessao, verObra, obraAberta, async (req, res) => {
   const conteudo = texto(req.body?.texto)
   if (!conteudo) return res.status(400).json({ erro: 'Escreva a observação.' })
 
@@ -4994,10 +5019,13 @@ router.post('/obras/:id/anexos', exigeSessao, exige('editar_obras'), obraAberta,
 router.get('/anexos/:id', exigeSessao, async (req, res) => {
   try {
     const { rows } = await query(
-      'SELECT nome, tipo, conteudo FROM obra_anexo WHERE id = $1',
+      'SELECT nome, tipo, conteudo, obra_id FROM obra_anexo WHERE id = $1',
       [req.params.id],
     )
-    if (!rows[0]) return res.status(404).json({ erro: 'Anexo não encontrado.' })
+    /* 404, e nao 403: o id nao serve de sonda para saber o que existe */
+    if (!rows[0] || !(await podeVerObra(req.dono.sub, rows[0].obra_id))) {
+      return res.status(404).json({ erro: 'Anexo não encontrado.' })
+    }
     return res.json({
       nome: rows[0].nome,
       tipo: rows[0].tipo ?? '',
@@ -5083,7 +5111,7 @@ const paraMensagem = (l) => {
   }
 }
 
-router.get('/obras/:id/chat', exigeSessao, async (req, res) => {
+router.get('/obras/:id/chat', exigeSessao, verObra, async (req, res) => {
   try {
     const [mensagens, mencoes] = await Promise.all([
       /* o "apagar para mim" e por pessoa: a mensagem escondida por
@@ -5130,7 +5158,7 @@ router.get('/obras/:id/chat', exigeSessao, async (req, res) => {
   }
 })
 
-router.post('/obras/:id/chat', exigeSessao, obraAberta, async (req, res) => {
+router.post('/obras/:id/chat', exigeSessao, verObra, obraAberta, async (req, res) => {
   const conteudo = texto(req.body?.texto)
   const arquivo = req.body?.arquivo ?? null
 
@@ -5210,7 +5238,7 @@ router.post('/obras/:id/chat', exigeSessao, obraAberta, async (req, res) => {
  * O padrao e o menos destrutivo dos dois: uma chamada sem `escopo` nao
  * apaga a mensagem de outras pessoas.
  */
-router.delete('/obras/:id/chat/:mensagemId', exigeSessao, obraAberta, async (req, res) => {
+router.delete('/obras/:id/chat/:mensagemId', exigeSessao, verObra, obraAberta, async (req, res) => {
   const paraTodos = String(req.query?.escopo ?? 'mim') === 'todos'
 
   try {
