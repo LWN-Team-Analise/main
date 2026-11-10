@@ -531,13 +531,14 @@ router.delete('/cards/:id', exigeSessao, exige('editar_cards'), async (req, res)
 
    Os checks do SISTEMA (tipo 'planejamento_ensaios' e
    'execucao_ensaios', atualizacao 14; 'material_gases',
-   atualizacao 17) sustentam o fluxo dos ensaios: nao se excluem,
-   nao mudam de nome e nao viram pergunta. Quem marca e a dica
-   continuam editaveis.
+   atualizacao 17; 'aprovacao_protocolos' e 'analise_faturamento',
+   atualizacao 50) sustentam um fluxo do sistema: nao se excluem, nao
+   mudam de nome e nao viram pergunta. Quem marca e a dica continuam
+   editaveis.
    ------------------------------------------------------------ */
 
 const CHECK_DO_SISTEMA =
-  'Este check é do sistema (fluxo dos ensaios): não pode ser excluído, renomeado nem virar pergunta.'
+  'Este check é do sistema: não pode ser excluído, renomeado nem virar pergunta.'
 
 /** O tipo do check ('comum' num banco sem a atualizacao 14), ou null se nao existe. */
 async function tipoDoCheck(id) {

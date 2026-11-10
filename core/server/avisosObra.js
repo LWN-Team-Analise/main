@@ -107,7 +107,11 @@ async function roteiroDaObra(obraId) {
                            WHERE oe.obra_id = o.id AND en.classificacao = 'gases'))
              AND (ec.tipo <> 'retirada_carro'
                OR EXISTS (SELECT 1 FROM obra_reserva_veiculo rv
-                           WHERE rv.obra_id = o.id AND rv.veiculo_id IS NOT NULL))) AS conta
+                           WHERE rv.obra_id = o.id AND rv.veiculo_id IS NOT NULL))
+             AND (ec.tipo <> 'analise_faturamento'
+               OR EXISTS (SELECT 1 FROM obra_check ap
+                            JOIN etapa_check eap ON eap.id = ap.check_id
+                           WHERE ap.obra_id = o.id AND eap.tipo = 'aprovacao_protocolos'))) AS conta
        FROM obra o
        JOIN etapa_check ec ON CASE WHEN o.checks_proprios
                                    THEN ec.obra_id = o.id AND ec.vigente_ate IS NULL
@@ -260,6 +264,28 @@ export async function avisarEtapasConcluidas(obraId) {
     }
   } catch (erro) {
     logger.error('avisos/etapa', erro.message)
+  }
+}
+
+/* ------------------------------------------------------------
+   Protocolos aprovados
+   ------------------------------------------------------------ */
+
+/** A Qualidade aprovou os protocolos: o Comercial fica sabendo da tarefa no Teams. */
+export async function avisarAnaliseDeFaturamento(obraId, pessoas) {
+  try {
+    const obra = await nomeDaObra(obraId)
+    await mandarNoTeams(pessoas, {
+      titulo: 'Protocolos aprovados',
+      linhas: [
+        `A Qualidade aprovou os protocolos da obra **${obra}**.`,
+        'Sua tarefa: **Análise para liberar para faturamento**.',
+      ],
+      link: linkDaObra(obraId),
+      rotuloLink: 'Abrir a obra',
+    })
+  } catch (erro) {
+    logger.error('avisos/faturamento', erro.message)
   }
 }
 

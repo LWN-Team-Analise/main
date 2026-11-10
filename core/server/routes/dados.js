@@ -5,7 +5,13 @@ import { enviarAviso, temEmail } from '../email.js'
 import { logger } from '../logger.js'
 import { descreverObra, registrarAtividade } from '../atividade.js'
 import { concluidoSemInformacao, informacaoChegou, temSemInformacao } from '../semInformacao.js'
-import { avisarAvaliacao, avisarChat, avisarInclusao, avisarObraConcluida } from '../avisosObra.js'
+import {
+  avisarAnaliseDeFaturamento,
+  avisarAvaliacao,
+  avisarChat,
+  avisarInclusao,
+  avisarObraConcluida,
+} from '../avisosObra.js'
 import { apagarNegocioDaObra, criarNegocioDaObra } from '../negocioDaObra.js'
 import { depoisDeMarcar, incluirNaObra } from '../membrosObra.js'
 import { bytesDoDataUrl, guardarAnexoDaObra, sharepointConfigurado } from '../sharepoint.js'
@@ -2476,7 +2482,9 @@ router.post('/obras/:id/concluir', exigeSessao, exige('editar_obras'), async (re
        O check "Material de gases" (tipo material_gases) so conta na
        obra que tem ensaio de GASES planejado; nas outras e opcional. O
        "Retirada do carro" (retirada_carro, atualizacao 23) so conta na
-       obra que reservou um carro; nas outras ele nem aparece.
+       obra que reservou um carro; nas outras ele nem aparece. A "Análise
+       para liberar para faturamento" (analise_faturamento, atualizacao
+       50) so conta depois de a Qualidade aprovar os protocolos.
 
        Obra com checks PROPRIOS (atualizacao 18) conta os dela, e nao os
        do roteiro. Os tres degraus: 18, 14/17, e a conta de sempre. */
@@ -2508,7 +2516,11 @@ router.post('/obras/:id/concluir', exigeSessao, exige('editar_obras'), async (re
             ? `AND (ec.tipo <> 'material_gases'
                    OR EXISTS (SELECT 1 FROM obra_ensaio oe
                                 JOIN ensaio en ON en.id = oe.ensaio_id
-                               WHERE oe.obra_id = o.id AND en.classificacao = 'gases'))`
+                               WHERE oe.obra_id = o.id AND en.classificacao = 'gases'))
+               AND (ec.tipo <> 'analise_faturamento'
+                   OR EXISTS (SELECT 1 FROM obra_check ap
+                                JOIN etapa_check eap ON eap.id = ap.check_id
+                               WHERE ap.obra_id = o.id AND eap.tipo = 'aprovacao_protocolos'))`
             : ''}
           ${nivel >= 3
             ? `AND (ec.tipo <> 'retirada_carro'
@@ -2908,6 +2920,19 @@ async function faltaNoCheck(obraId, checkId, regra, resposta) {
     return { status: 409, erro: CHECKS_DA_OS[regra.tipo].marcar, falta: CHECKS_DA_OS[regra.tipo].falta }
   }
 
+  /* a analise de faturamento so existe depois da aprovacao dos protocolos */
+  if (regra.tipo === 'analise_faturamento') {
+    const aprovacao = await checkDoSistema(obraId, 'aprovacao_protocolos')
+    const { rows } = await query('SELECT 1 FROM obra_check WHERE obra_id = $1 AND check_id = $2', [obraId, aprovacao])
+    if (!rows[0]) {
+      return {
+        status: 409,
+        erro: 'Esta análise só libera depois que a Qualidade aprovar os protocolos.',
+        falta: 'a aprovação dos protocolos',
+      }
+    }
+  }
+
   /* o check com horario (atualizacao 31) marca no pop-up dele, com as
      datas e os horarios; sem horario nenhum definido, nao fecha */
   const { rows: comHorario } = await query(
@@ -3068,6 +3093,7 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
         })
         /* quem marca sem precisar estar na obra entra nela; a etapa que fechou vai para os membros no Teams */
         await depoisDeMarcar(req.dono.sub, req.params.id)
+        if (regra.tipo === 'aprovacao_protocolos') await avisarComercialDoFaturamento(req, req.params.id)
       }
       return res.json({ ok: true })
     }
@@ -3113,6 +3139,7 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
       })
       /* quem marca sem precisar estar na obra entra nela; a etapa que fechou vai para os membros no Teams */
       if (novo) await depoisDeMarcar(req.dono.sub, req.params.id)
+      if (novo && regra.tipo === 'aprovacao_protocolos') await avisarComercialDoFaturamento(req, req.params.id)
     }
     return res.json({ ok: true })
   } catch (e) {
@@ -4651,6 +4678,88 @@ router.post('/obras/:id/avisos', exigeSessao, exige('enviar_avisos'), obraAberta
     return tratar(e, res, 'dados/aviso-criar')
   }
 })
+
+/* ------------------------------------------------------------
+   Protocolos aprovados: a tarefa e o aviso do Comercial
+
+   A tarefa e o check "Análise para liberar para faturamento" (atualizacao
+   50), que so aparece depois da aprovacao. O aviso e o mesmo de um aviso
+   manual ao setor (sininho, e-mail e celular), mais o Teams.
+
+   Sai uma vez por obra: a Qualidade que desmarca e marca de novo, por
+   engano, nao cobra o Comercial duas vezes. Marcar o check nunca falha
+   por causa do aviso: o que der errado fica no log.
+   ------------------------------------------------------------ */
+const SETOR_DO_FATURAMENTO = 'comercial'
+const AVISO_DO_FATURAMENTO = 'A Qualidade aprovou os protocolos. Faça a análise para liberar para faturamento.'
+
+async function avisarComercialDoFaturamento(req, obraId) {
+  try {
+    const checkId = await checkDoSistema(obraId, 'analise_faturamento')
+    if (!checkId) return
+    const jaTem = await query(
+      `SELECT EXISTS (SELECT 1 FROM obra_check WHERE obra_id = $1 AND check_id = $2)
+           OR EXISTS (SELECT 1 FROM obra_aviso WHERE obra_id = $1 AND mensagem = $3) AS ok`,
+      [obraId, checkId, AVISO_DO_FATURAMENTO],
+    )
+    if (jaTem.rows[0].ok) return
+
+    const etapa = await query(
+      `SELECT et.ordem FROM etapa_check ck
+         JOIN etapa_card kd ON kd.id = ck.card_id
+         JOIN etapa et      ON et.id = kd.etapa_id
+        WHERE ck.id = $1`,
+      [checkId],
+    )
+    const numeroDaEtapa = etapa.rows[0]?.ordem ?? 4
+
+    const { rows } = await query(
+      `INSERT INTO obra_aviso (obra_id, etapa, mensagem, enviado_por)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [obraId, numeroDaEtapa, AVISO_DO_FATURAMENTO, req.dono.sub],
+    )
+    await query(
+      'INSERT INTO obra_aviso_cargo (aviso_id, cargo_id) SELECT $1, id FROM cargo WHERE chave = $2',
+      [rows[0].id, SETOR_DO_FATURAMENTO],
+    )
+    await query('INSERT INTO aviso_leitura (aviso_id, usuario_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [
+      rows[0].id,
+      req.dono.sub,
+    ])
+
+    await avisarPorEmail({
+      obraId,
+      setores: [SETOR_DO_FATURAMENTO],
+      etapa: numeroDaEtapa,
+      mensagem: AVISO_DO_FATURAMENTO,
+      quem: req.dono.sub,
+    }).catch((erro) => logger.error('dados/faturamento-email', erro.message))
+
+    const pessoas = await pessoasDosSetores([SETOR_DO_FATURAMENTO])
+    const sobre = await descreverObra(obraId)
+    await notificar(
+      pessoas,
+      {
+        titulo: `Protocolos aprovados — ${[sobre.obra, sobre.cliente].filter(Boolean).join(' - ') || 'obra'}`,
+        corpo: 'Faça a análise para liberar para faturamento.',
+        url: `/core/app/obras/${obraId}`,
+        tag: `aviso-${rows[0].id}`,
+      },
+      { exceto: req.dono.sub },
+    )
+    await avisarAnaliseDeFaturamento(obraId, pessoas)
+
+    await registrarAtividade(req, {
+      acao: 'aviso.enviado',
+      categoria: 'aviso',
+      entidade: ['obra', obraId],
+      descricao: 'Aviso automático ao Comercial: protocolos aprovados',
+      detalhes: { ...sobre, setores: 'Comercial', texto: AVISO_DO_FATURAMENTO },
+    })
+  } catch (erro) {
+    logger.error('dados/faturamento-aviso', erro.message)
+  }
+}
 
 /** Marca avisos como lidos — e o que zera o selo do sininho. */
 router.post('/avisos/lidos', exigeSessao, async (req, res) => {

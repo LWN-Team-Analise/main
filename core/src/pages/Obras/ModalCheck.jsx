@@ -4,7 +4,7 @@ import Button from '@/components/Button/Button'
 import { SeletorMulti } from '@/components/Seletor/Seletor'
 import { CampoArea, CampoTexto } from '@/components/Campo/Campo'
 import { useDados } from '@/context/DadosContext'
-import { CHECK_GASES, checkDoSistema } from '@/domain/obras'
+import { CHECK_ANALISE_FATURAMENTO, CHECK_APROVACAO_PROTOCOLOS, CHECK_GASES, checkDoSistema } from '@/domain/obras'
 import './ModalRoteiro.css'
 
 /**
@@ -145,7 +145,11 @@ export default function ModalCheck({
           <p className="formrot__sistema" role="note">
             {check?.tipo === CHECK_GASES
               ? 'Check do sistema: obrigatório na obra que tiver ensaio de GASES. '
-              : 'Check do sistema: ele abre o fluxo dos ensaios. '}
+              : check?.tipo === CHECK_APROVACAO_PROTOCOLOS
+                ? 'Check do sistema: ao ser marcado, avisa o Comercial e abre a análise de faturamento. '
+                : check?.tipo === CHECK_ANALISE_FATURAMENTO
+                  ? 'Check do sistema: aparece quando a Qualidade aprova os protocolos. '
+                  : 'Check do sistema: ele abre o fluxo dos ensaios. '}
             O nome fica, e ele não pode ser excluído nem virar pergunta.
           </p>
         )}

@@ -1,0 +1,125 @@
+-- ============================================================
+--  ATUALIZACAO 50 — a aprovacao dos protocolos abre a analise de faturamento
+--
+--  Quando a Qualidade marca "Aprovação dos protocolos" (4a etapa), o
+--  Comercial recebe o aviso e a tarefa "Análise para liberar para
+--  faturamento". Neste sistema tarefa e check de obra, entao:
+--
+--    - "Aprovação dos protocolos" vira check do sistema (tipo
+--      aprovacao_protocolos): e ele que dispara o aviso;
+--    - nasce o check "Análise para liberar para faturamento" (tipo
+--      analise_faturamento) no card do Comercial da 4a etapa, criado se a
+--      etapa nao tiver um. Ele so aparece e so conta depois da aprovacao;
+--    - obra que ja tinha os protocolos aprovados nao ganha tarefa nova: a
+--      analise entra como feita, por quem aprovou e na mesma data.
+--
+--  Banco sem o check "Aprovação dos protocolos" fica como esta.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+--
+--  Rodar de novo nao faz nada.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.etapa_check DROP CONSTRAINT IF EXISTS etapa_check_tipo_valido;
+ALTER TABLE public.etapa_check ADD CONSTRAINT etapa_check_tipo_valido
+    CHECK (tipo IN ('comum', 'planejamento_ensaios', 'execucao_ensaios', 'material_gases',
+                    'prazo_execucao', 'reserva_carro', 'retirada_carro', 'enviar_os',
+                    'separar_os', 'retirada_os', 'devolucao_os',
+                    'aprovacao_protocolos', 'analise_faturamento'));
+
+COMMENT ON COLUMN public.etapa_check.tipo IS
+    'comum, planejamento_ensaios, execucao_ensaios, material_gases, prazo_execucao, reserva_carro, retirada_carro, enviar_os, separar_os, retirada_os, devolucao_os, aprovacao_protocolos ou analise_faturamento';
+
+-- o check da Qualidade: todas as versoes dele e as copias das obras
+UPDATE public.etapa_check k
+   SET tipo = 'aprovacao_protocolos'
+  FROM public.etapa_card kd
+  JOIN public.etapa et ON et.id = kd.etapa_id
+ WHERE kd.id = k.card_id
+   AND et.ordem = 4
+   AND k.tipo = 'comum'
+   AND lower(btrim(k.titulo)) LIKE 'aprova__o dos protocolos';
+
+-- o card do Comercial na 4a etapa, se ainda nao houver
+WITH etapa4 AS (
+    SELECT et.id
+      FROM public.etapa et
+     WHERE et.ordem = 4 AND et.vigente_ate IS NULL
+     ORDER BY et.id
+     LIMIT 1
+),
+setor AS (
+    SELECT id FROM public.cargo WHERE chave = 'comercial'
+),
+novo AS (
+    INSERT INTO public.etapa_card (etapa_id, ordem, vigente_de)
+    SELECT etapa4.id,
+           (SELECT coalesce(max(c.ordem), -1) + 1 FROM public.etapa_card c WHERE c.etapa_id = etapa4.id),
+           '-infinity'::timestamptz
+      FROM etapa4
+     WHERE EXISTS (SELECT 1 FROM public.etapa_check a
+                    WHERE a.tipo = 'aprovacao_protocolos' AND a.obra_id IS NULL AND a.vigente_ate IS NULL)
+       AND NOT EXISTS (SELECT 1
+                         FROM public.etapa_card c
+                         JOIN public.etapa_card_cargo cc ON cc.card_id = c.id
+                         JOIN setor ON setor.id = cc.cargo_id
+                        WHERE c.etapa_id = etapa4.id AND c.vigente_ate IS NULL)
+    RETURNING id
+)
+INSERT INTO public.etapa_card_cargo (card_id, cargo_id, ordem)
+SELECT novo.id, setor.id, 0 FROM novo CROSS JOIN setor;
+
+-- a tarefa, as copias das obras com checks proprios e as obras ja aprovadas,
+-- numa conta so: rodar de novo nao cria o check e, sem ele, nao marca nada
+WITH card AS (
+    SELECT c.id
+      FROM public.etapa_card c
+      JOIN public.etapa et             ON et.id = c.etapa_id
+      JOIN public.etapa_card_cargo cc  ON cc.card_id = c.id
+      JOIN public.cargo s              ON s.id = cc.cargo_id
+     WHERE et.ordem = 4
+       AND et.vigente_ate IS NULL
+       AND c.vigente_ate IS NULL
+       AND s.chave = 'comercial'
+     ORDER BY c.id
+     LIMIT 1
+),
+modelo AS (
+    INSERT INTO public.etapa_check (card_id, ordem, titulo, sim_nao, informacoes, tipo, vigente_de)
+    SELECT card.id,
+           (SELECT coalesce(max(k.ordem), -1) + 1 FROM public.etapa_check k WHERE k.card_id = card.id),
+           'Análise para liberar para faturamento',
+           false,
+           'Aparece quando a Qualidade marca "Aprovação dos protocolos".',
+           'analise_faturamento',
+           '-infinity'::timestamptz
+      FROM card
+     WHERE EXISTS (SELECT 1 FROM public.etapa_check a
+                    WHERE a.tipo = 'aprovacao_protocolos' AND a.obra_id IS NULL AND a.vigente_ate IS NULL)
+       AND NOT EXISTS (SELECT 1 FROM public.etapa_check y
+                        WHERE y.tipo = 'analise_faturamento' AND y.obra_id IS NULL AND y.vigente_ate IS NULL)
+    RETURNING id, card_id, ordem, titulo, sim_nao, informacoes, tipo
+),
+copias AS (
+    INSERT INTO public.etapa_check (card_id, ordem, titulo, sim_nao, informacoes, tipo, obra_id, origem_id)
+    SELECT m.card_id, m.ordem, m.titulo, m.sim_nao, m.informacoes, m.tipo, o.id, m.id
+      FROM modelo m
+      JOIN public.obra o ON o.checks_proprios
+     WHERE EXISTS (SELECT 1 FROM public.etapa_check a
+                    WHERE a.obra_id = o.id AND a.tipo = 'aprovacao_protocolos' AND a.vigente_ate IS NULL)
+    RETURNING id, obra_id
+)
+INSERT INTO public.obra_check (obra_id, check_id, feito_por, feito_em)
+SELECT a.obra_id, coalesce(c.id, m.id), a.feito_por, a.feito_em
+  FROM public.obra_check a
+  JOIN public.etapa_check ap ON ap.id = a.check_id AND ap.tipo = 'aprovacao_protocolos'
+  JOIN public.obra o         ON o.id = a.obra_id
+ CROSS JOIN modelo m
+  LEFT JOIN copias c         ON c.obra_id = o.id
+ WHERE NOT o.checks_proprios OR c.id IS NOT NULL
+ON CONFLICT (obra_id, check_id) DO NOTHING;
+
+COMMIT;
