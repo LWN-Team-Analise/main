@@ -101,8 +101,8 @@ export function rotuloDoCombustivel(valor) {
   return NIVEIS_COMBUSTIVEL.find((nivel) => nivel.valor === Number(valor))?.rotulo ?? ''
 }
 
-export const PERGUNTA_POSTO =
-  'Em qual posto e qual o valor aproximado do abastecimento? (Exemplo: Posto Ipiranga Barueri, R$ 20,50)'
+/* o exemplo que completa a pergunta e sorteado no proprio pop-up */
+export const PERGUNTA_POSTO = 'Em qual posto e qual o valor aproximado do abastecimento?'
 
 /* ---------------- Limites ---------------- */
 

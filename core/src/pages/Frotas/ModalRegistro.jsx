@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
+import ExemploSorteado from '@/components/ExemploSorteado/ExemploSorteado'
 import { CampoArea, CampoSelecao, CampoTexto } from '@/components/Campo/Campo'
 import { CampoData, CampoHora } from '@/components/CampoData/CampoData'
 import { useAuth } from '@/context/AuthContext'
@@ -540,7 +541,11 @@ export default function ModalRegistro({ modo, veiculos, aoFechar, aoRegistrado, 
               />
               {c.chave === 'semParar' && form.checklist.semParar === 'sim' && (
                 <CampoTexto
-                  rotulo={PERGUNTA_POSTO}
+                  rotulo={
+                    <>
+                      {PERGUNTA_POSTO} (Exemplo: <ExemploSorteado chave="Posto Ipiranga Barueri, R$ 20,50" />)
+                    </>
+                  }
                   maxLength={POSTO_MAXIMO}
                   placeholder="Posto Ipiranga Barueri, R$ 20,50"
                   value={form.posto}

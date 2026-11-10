@@ -21,6 +21,7 @@ import { valorCurto } from '@/domain/comercial'
 import { PAIS_PADRAO, ehBrasil, opcoesDePaises } from '@/domain/paises'
 import { carregarImagemDoCliente } from '@/services/dadosService'
 import { buscarCEP, estadosCarregados, listarCidades, listarEstados } from '@/services/enderecoService'
+import { sortearExemplo } from '@/utils/exemplos'
 import { formatarCEP } from '@/utils/formato'
 import { prepararImagem } from '@/utils/imagem'
 import './ModalCliente.css'
@@ -366,7 +367,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
     const novosErros = {}
     if (modoUnidade) {
       if (!form.unidade.trim()) {
-        novosErros.unidade = 'Dê um nome à unidade (ex.: Anápolis).'
+        novosErros.unidade = `Dê um nome à unidade (ex.: ${sortearExemplo('Ex.: Anápolis')}).`
       } else {
         /* a irma com o mesmo nome nao se distinguiria na lista */
         const chave = chaveDaUnidade(matriz?.nome, form.unidade)
@@ -393,7 +394,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
     form.unidades.forEach((u) => {
       const qual = chaveDaUnidade(form.nome, u.unidade)
       const chave = `unidade-${u.chave}`
-      if (qual === '|') novosErros[chave] = 'Dê um nome à unidade (ex.: Anápolis).'
+      if (qual === '|') novosErros[chave] = `Dê um nome à unidade (ex.: ${sortearExemplo('Ex.: Anápolis')}).`
       else if (nomesDasUnidades.has(qual)) novosErros[chave] = 'Já há uma unidade com esse nome.'
       else if (!u.estado.trim() && pedeEstado(u.pais)) novosErros[chave] = 'Escolha o estado da unidade.'
       else if (!u.cidade.trim()) novosErros[chave] = 'Informe a cidade da unidade.'
