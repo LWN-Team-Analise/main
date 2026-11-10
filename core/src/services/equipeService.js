@@ -59,6 +59,9 @@ export async function carregarUsuarios() {
   return usuarios ?? []
 }
 
+/** Um lote de quem ainda esta com a senha padrao: { ids, proximo }. */
+export const carregarSenhaPadrao = (desde = 0) => get(`/equipe/usuarios/senha-padrao?desde=${desde}`)
+
 /** Setores + cargos + usuarios de uma vez, para a carga inicial. */
 export async function carregarEquipe() {
   const [cargos, titulos, usuarios] = await Promise.all([

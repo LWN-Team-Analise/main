@@ -56,7 +56,8 @@ const ROTULO_CAMPO_USUARIO = {
 
 /** A senha com que todo colaborador novo entrava, e que esta escrita no
     repositorio publico. Nao abre mais conta nenhuma (ver /auth/login): fica
-    aqui para o aviso de quem ainda esta com ela (server/avisosConta.js). */
+    aqui para achar quem ainda esta com ela (server/avisosConta.js e o "!"
+    dos cards de Usuarios, em GET /usuarios/senha-padrao). */
 export const SENHA_PADRAO = '123456'
 
 const soDigitos = (valor) => String(valor ?? '').replace(/\D/g, '')
@@ -633,6 +634,55 @@ router.get('/usuarios', exigeSessao, async (req, res) => {
     })
   } catch (erro) {
     return tratar(erro, res, 'equipe/usuarios')
+  }
+})
+
+/* cada conferencia e lenta de proposito (bcrypt custo 12, uns 0,25 s):
+   a tela pede de lote em lote, e nenhuma chamada fica pendurada */
+const LOTE_SENHA_PADRAO = 10
+
+/* o resultado so muda quando o hash muda, entao o hash e a chave: reabrir
+   a aba nao refaz a conta. Numa funcao nova da Vercel ela e refeita. */
+const senhaPadraoPorHash = new Map()
+
+async function usaSenhaPadrao(hash) {
+  if (!senhaPadraoPorHash.has(hash)) {
+    senhaPadraoPorHash.set(hash, await bcrypt.compare(SENHA_PADRAO, hash))
+  }
+  return senhaPadraoPorHash.get(hash)
+}
+
+/**
+ * GET /api/equipe/usuarios/senha-padrao?desde=0 — quem ainda nao trocou a
+ * senha padrao: o "!" dos cards de Usuarios.
+ *
+ * Confere no hash, como server/avisosConta.js: a marca senha_temporaria
+ * nao serve (o vinculo com o Outlook a liga de proposito, e conta antiga
+ * nasceu com ela desligada).
+ *
+ * Devolve { ids, proximo }: `proximo` e o `desde` da chamada seguinte, ou
+ * null quando acabou. So os ids saem daqui, nunca o hash.
+ */
+router.get('/usuarios/senha-padrao', exigeSessao, exige('ver_senha_padrao'), async (req, res) => {
+  const desde = Math.max(0, Number.parseInt(req.query.desde, 10) || 0)
+  try {
+    const { rows } = await query(
+      `SELECT u.id, u.senha_hash
+         FROM usuario u
+         LEFT JOIN cargo c ON c.id = u.cargo_id
+        WHERE coalesce(u.ativo, true) AND u.senha_hash IS NOT NULL
+          AND NOT coalesce((to_jsonb(c) ->> 'painel_tv')::boolean, false)
+        ORDER BY u.id
+       OFFSET $1 LIMIT $2`,
+      [desde, LOTE_SENHA_PADRAO + 1],
+    )
+    const ids = []
+    for (const pessoa of rows.slice(0, LOTE_SENHA_PADRAO)) {
+      if (await usaSenhaPadrao(pessoa.senha_hash)) ids.push(String(pessoa.id))
+    }
+    return res.json({ ids, proximo: rows.length > LOTE_SENHA_PADRAO ? desde + LOTE_SENHA_PADRAO : null })
+  } catch (erro) {
+    return tratar(erro, res, 'equipe/senha-padrao')
   }
 })
 

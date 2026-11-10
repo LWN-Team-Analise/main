@@ -113,6 +113,8 @@ export const ALTERACAO = [
      era trava de setor (so a diretoria); o proprio CPF cada um mexe em
      Configuracoes */
   { chave: 'editar_cpf', rotulo: 'Incluir / editar / excluir CPF', dependeDe: 'ver_usuarios' },
+  /* o "!" nos cards de Usuarios: quem ainda nao trocou a senha padrao */
+  { chave: 'ver_senha_padrao', rotulo: 'Ver quem não alterou a senha padrão', dependeDe: 'ver_usuarios' },
   { chave: 'editar_avaliacoes', rotulo: 'Adicionar / editar avaliações', dependeDe: 'ver_avaliacoes' },
   { chave: 'editar_clientes', rotulo: 'Adicionar / editar clientes', dependeDe: 'ver_clientes' },
   /* a planilha do Excel com o cadastro inteiro (Clientes > Exportar) */

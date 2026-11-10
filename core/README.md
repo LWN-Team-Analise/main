@@ -528,6 +528,7 @@ Senha padrao do sistema: `123456`.
 | `POST /api/auth/outlook/entrar` | entra com a conta Microsoft ja vinculada     |
 | `POST /api/auth/outlook/vincular` | vincula a conta Microsoft ao usuario logado |
 | `GET /api/equipe/usuarios`      | equipe com cargo, cor e media das avaliacoes |
+| `GET /api/equipe/usuarios/senha-padrao` | quem ainda nao trocou a senha padrao, de 10 em 10 (`ver_senha_padrao`) |
 | `POST /api/equipe/usuarios`     | cadastra colaborador (basta e-mail + setor) com senha temporaria |
 | `PATCH /api/equipe/usuarios/:id` | edita o cadastro (CPF dos outros com `editar_cpf`; o proprio, cada um) |
 | `DELETE /api/equipe/usuarios/:id` | desativa o acesso (o historico fica)       |
@@ -599,7 +600,7 @@ esconde o botao e a API recusa a chamada usando exatamente as mesmas chaves.
 | Grupo        | Chaves                                                              |
 | ------------ | ------------------------------------------------------------------- |
 | Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_turnos`, `ver_avaliacoes`, `ver_usuarios`, `ver_avisos` |
-| Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `criar_obras`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `check_todas_obras`, `check_sem_informacao`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
+| Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `ver_senha_padrao`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `criar_obras`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `check_todas_obras`, `check_sem_informacao`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
 
 Alteracao **sempre** depende da visualizacao correspondente: sem "Obras", o
 setor nao edita nada de Obras, e essas linhas ficam travadas ate a
@@ -657,6 +658,10 @@ Tres chaves valem uma nota:
   diretoria; a diretoria continua podendo (`podeEditarCpf`, em
   `src/domain/obras.js`, e o PATCH de `server/routes/equipe.js`). O proprio CPF
   cada um mexe em Configuracoes. Sem atualizacao no banco.
+- **`ver_senha_padrao`** ("Ver quem não alterou a senha padrão", embaixo de
+  Usuarios) poe um "!" no card de quem ainda esta com a senha padrao; o clique
+  abre o pop-up da inconformidade. A API confere no hash, de 10 em 10, e so
+  devolve os ids. Sem atualizacao no banco.
 - **`check_sem_informacao`** ("Concluir check sem preencher a informação",
   embaixo de Obras) deixa o setor concluir o check que PEDE informacao — a
   resposta Sim/Nao, o horario das datas, os ensaios (planejamento e execucao),
