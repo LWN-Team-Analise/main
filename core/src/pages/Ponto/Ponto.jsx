@@ -504,11 +504,7 @@ export default function Ponto() {
           ) : !folha ? (
             <div className="ponto__vazio vidro">
               <strong>Nenhuma marcação importada de {dataBR(dados.inicio)} a {dataBR(dados.fim)}.</strong>
-              <p>
-                {gestor
-                  ? 'Importe o Cálculo Diário do sistema de ponto para este período.'
-                  : 'A folha aparece aqui quando o RH importar as marcações deste período.'}
-              </p>
+              {!gestor && <p>A folha aparece aqui quando o RH importar as marcações deste período.</p>}
               {dados.ultimaData && (
                 <button type="button" className="acao acao--fraca" onClick={() => irParaMesDe(dados.ultimaData)}>
                   Ver {MESES[Number(dados.ultimaData.slice(5, 7)) - 1]} de {dados.ultimaData.slice(0, 4)} (a última folha importada)
