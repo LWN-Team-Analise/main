@@ -283,6 +283,7 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-32.sql.txt` | turno.compartilhado (+ compartilhado_em/por): o turno novo, colado ou copiado da agenda nasce sem compartilhar com a equipe |
 | `db/atualizacao-36.sql.txt` | concluir check sem a informacao: obra_check.sem_informacao e a permissao `check_sem_informacao` (no acesso total) |
 | `db/atualizacao-37.sql.txt` | quem marca check: cargo.regras_check (regra por cargo e por pessoa), as permissoes `check_todas_obras` e `criar_obras`, e o negocio pendente (negocio.proposta, compartilhado_em/por) |
+| `db/atualizacao-51.sql.txt` | a aba Ponto: `ponto_dia` (o Calculo Diario importado) e `ponto_assinatura` (a conferencia assinada). Tambem aposenta a 48 (a obra criada em Obras nao vira mais negocio) |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
 Rode o primeiro na ordem indicada dentro dele; depois rode os outros
@@ -600,7 +601,7 @@ esconde o botao e a API recusa a chamada usando exatamente as mesmas chaves.
 | Grupo        | Chaves                                                              |
 | ------------ | ------------------------------------------------------------------- |
 | Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_turnos`, `ver_avaliacoes`, `ver_usuarios`, `ver_avisos` |
-| Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `ver_senha_padrao`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `criar_obras`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `check_todas_obras`, `check_sem_informacao`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
+| Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `ver_senha_padrao`, `gerenciar_ponto`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `criar_obras`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `check_todas_obras`, `check_sem_informacao`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
 
 Alteracao **sempre** depende da visualizacao correspondente: sem "Obras", o
 setor nao edita nada de Obras, e essas linhas ficam travadas ate a
@@ -662,6 +663,14 @@ Tres chaves valem uma nota:
   Usuarios) poe um "!" no card de quem ainda esta com a senha padrao; o clique
   abre o pop-up da inconformidade. A API confere no hash, de 10 em 10, e so
   devolve os ids. Sem atualizacao no banco.
+- **`gerenciar_ponto`** ("Ver a folha de ponto de todos e importar", embaixo
+  de Usuarios) abre, na aba **Ponto**, o seletor de pessoa (a folha de qualquer
+  um, com o CPF e o PIS que vieram na importacao, como no espelho), o
+  **Importar** do Calculo Diario e o "Excel de todos". Nao assina por ninguem:
+  assinar e so a propria folha. A API confere em `server/routes/ponto.js`.
+  Ninguem ganha sozinho (o acesso total passa por ela). Atualizacao 51.
+- **`ver_concluidas`** continua abrindo a tela **Concluidas**, que saiu do menu:
+  ela abre pelo botao **Concluídas** de Obras, ao lado do Editar.
 - **`check_sem_informacao`** ("Concluir check sem preencher a informação",
   embaixo de Obras) deixa o setor concluir o check que PEDE informacao — a
   resposta Sim/Nao, o horario das datas, os ensaios (planejamento e execucao),
@@ -1266,12 +1275,12 @@ reservados pelos pendentes) e da para corrigir o n° e o cliente; o
 compartilhamento fica carimbado em `negocio.compartilhado_em` e
 `compartilhado_por`.
 
-O caminho contrario tambem existe: toda obra criada na mao em Obras entra
-sozinha no Comercial, no funil **Novos negocios**, em **Demanda Recebida**,
-ja ligada a obra (`server/negocioDaObra.js`; titulo = n° da proposta, a
-descricao na observacao, responsavel = quem criou). As obras abertas que ja
-estavam na 1a etapa vieram pela atualizacao 48. A obra excluida leva o negocio
-que ainda esta como nasceu; o que o Comercial ja fez andar continua la.
+O caminho e so esse, do Comercial para Obras. A obra criada direto em
+**Obras** fica so em Obras: ela **nao** vira negocio no Comercial. Entre as
+atualizacoes 48 e 51 ela virava (Novos negocios > Demanda Recebida, ligada a
+obra e com `compartilhado_em` vazio); os negocios que nasceram assim
+continuam no Comercial, e a obra excluida ainda leva o que nasceu dela e nao
+andou (`server/negocioDaObra.js`), para ele nao ficar "Pendente" sem obra.
 
 - No formulario aparece o bloco da obra com o **N° da proposta**, ja sugerido
   como no "Nova obra" (o da ultima, mais um; `GET /api/comercial/proxima-proposta`,
@@ -1461,6 +1470,77 @@ ou a API fora do ar: o estado e a cidade viram campo livre.
   rodar `npm run db:atualizar`.
 - Nas listas de escolha, digitar as primeiras letras pula para a opcao ("par"
   acha o Paraguai), como no `<select>` do navegador.
+
+## Ponto (a folha de ponto)
+
+A aba **Ponto** (`/app/ponto`, no lugar onde estava Concluidas no menu) mostra a
+folha de ponto de cada um no desenho do **Demonstrativo de Espelho de Ponto** do
+sistema de ponto: a logo, o periodo, os dados da empresa e do funcionario
+(nome, matricula, PIS, CPF, admissao, departamento, cargo), a tabela dos dias
+(Data, Tipo Dia, Jornada Esperada, Marcacoes Originais, Jornada Realizada,
+Horas Realizadas, Horas Positivas, Atrasos e Faltas, Hora Noturna, Horas
+Compensadas Debito/Credito, Eventos) e o rodape com os totais e a assinatura.
+E de todo mundo (menos a TV); cada um ve a propria folha.
+
+- **Periodo**: **Mensal** (setas, mes e ano; abre no mes anterior) ou **Datas
+  especificas** (inicio e fim, ate 370 dias). Periodo sem marcacao oferece ir
+  para o mes da ultima folha importada.
+- **Importar** (so `gerenciar_ponto`): o **Calculo Diario** do sistema de ponto,
+  o .csv separado por `;` com as 22 colunas, nesta ordem: CNPJ, Nome,
+  Matricula, PIS, CPF, Admissao, Demissao, Filial, Departamento, Cargo, Data,
+  Dia, Jornada Esperada, Horas Esperadas, Nome Escala, Natureza Dia, Marcacoes
+  Validas, Jornada Considerada, Horas Trabalhadas, Eventos, Centro Custo,
+  Grupos. Outro arquivo e recusado inteiro, com o motivo (a tela confere antes
+  e o servidor confere de novo, com o mesmo `src/domain/ponto.js`). A linha sem
+  CPF fica de fora com aviso. Importar o mesmo periodo de novo troca so os dias
+  que mudaram (chave CPF + dia). Quem veio no arquivo sem usuario com o mesmo
+  CPF aparece na lista "nao tem usuario": a folha fica guardada e aparece
+  quando o CPF entra no cadastro. Arquivo salvo de novo pelo Excel (em
+  Windows-1252, ou sem o zero da frente do CPF) tambem entra.
+- **Exportar**: **PDF** (o espelho, no formato do PDF do sistema de ponto; o
+  jsPDF e o mesmo do LWN Control, `public/almoxarife/vendor`, e so desce no
+  clique) e **Excel** no formato do Calculo Diario (as mesmas 22 colunas, da
+  para importar de volta). Quem tem `gerenciar_ponto` tambem baixa o Excel de
+  todos do periodo.
+- **Assinar**: a area acima de "Assinatura Funcionário" e clicavel. Abre a
+  confirmacao com **duplo check** (conferi as marcacoes do periodo; concordo e
+  assino como <nome completo>), e so com os dois o botao libera. Assinada, o
+  nome completo (o do sistema de ponto) fica impresso ali, na tela e no PDF,
+  com a data. A assinatura de um mes vale para qualquer pedaco dele. Se uma
+  importacao nova mudar algum dia do periodo, ela fica **desatualizada** (a
+  folha avisa) e a pessoa assina de novo — a assinatura guarda o md5 das
+  marcacoes do momento (`ponto_assinatura.resumo`).
+- **So a propria folha se assina.** Quem tem `gerenciar_ponto` e clica na
+  assinatura da folha de outra pessoa ve o aviso na tela, e a API recusa
+  (`POST /api/ponto/assinar` com o `usuarioId` de outro volta 403; quem assina
+  e sempre quem esta no token).
+
+As contas (`calcularDia` e `montarFolha` em `src/domain/ponto.js`) foram
+conferidas com o espelho de exemplo (Total Trabalhado, Total H. Normais
+Esperadas e Horas a Pagar batem):
+
+| Coluna | De onde sai |
+| ------ | ----------- |
+| Tipo Dia | Natureza Dia: Trabalho = TRAB, Dia util nao trabalhado = DUNT, Folga = FOLG, Feriado = FERIADO |
+| Jornada Esperada | a do arquivo, em pares ("08:00-12:00 13:00-17:00") |
+| Marcacoes Originais / Jornada Realizada | as Marcacoes Validas. O arquivo nao traz as batidas cruas, entao as duas colunas mostram o mesmo (como o espelho faz no dia sem ajuste) |
+| Horas Realizadas | Horas Trabalhadas |
+| Horas Positivas | o que passou das Horas Esperadas |
+| Atrasos e Faltas | o que faltou, menos no dia com atestado, declaracao, ferias ou licenca |
+| Hora Noturna | o trabalho entre 22h e 5h, pelos pares |
+| Credito | as Horas Positivas do dia com "Hora Extra autorizada" |
+| Debito | os Atrasos e Faltas |
+| Eventos | os do arquivo, sem repetir; feriado sem evento leva o nome ("Feriado (Independência)") |
+| Horas a Pagar ou Descontar | creditos menos debitos |
+
+A empresa do cabecalho sai de `src/data/legal.js` (razao social) e
+`src/data/site.js` (endereco de Sao Paulo, sem sala); o CNPJ, do arquivo
+importado. Enquanto a razao social nao for preenchida em `legal.js`, aparece
+"LWN Engenharia".
+
+API: `GET /api/ponto/folha`, `GET /api/ponto/pessoas`, `GET /api/ponto/exportar`,
+`POST /api/ponto/importar`, `POST /api/ponto/assinar` (`server/routes/ponto.js`).
+Precisa de `db/atualizacao-51.sql.txt`.
 
 ## Frotas: a ultima devolucao, na saida
 
@@ -1913,7 +1993,8 @@ db/
 | `/app/obras`                | Quadro de obras          | protegido |
 | `/app/obras/:id`            | Tela da obra (5 etapas)  | protegido |
 | `/app/clientes`             | Clientes                 | protegido |
-| `/app/concluidas`           | Obras concluidas         | protegido |
+| `/app/concluidas`           | Obras concluidas (botao em Obras; fora do menu) | protegido |
+| `/app/ponto`                | Ponto (a folha de ponto) | protegido, de todos |
 | `/app/comercial`            | Comercial (funis de venda) | protegido |
 | `/app/avaliacoes`           | Avaliacoes da equipe     | protegido |
 | `/app/usuarios`             | Usuarios                 | protegido |
@@ -2789,6 +2870,12 @@ Quem responde a segunda e a coluna `obra.concluida_em`, carimbada no clique. A
 view `obra_conclusao` continua existindo e agora responde so a primeira.
 
 ### Concluidas
+
+A tela **nao esta mais no menu lateral**: abre pelo botao **Concluídas** do
+quadro de Obras, ao lado do Editar (para quem tem `ver_concluidas`), e o
+"Obras" fica para voltar. O endereco continua `/app/concluidas` (e
+`/app/concluidas/:id`), entao o link do Teams (`server/avisosObra.js`), a busca
+e qualquer link salvo seguem abrindo; o menu acende Obras nessas telas.
 
 Obra concluida vai para **Concluidas**, agrupada por **ano** (no topo,
 selecionavel) e por **mes** — cada mes ocupa a linha inteira e mostra quantas

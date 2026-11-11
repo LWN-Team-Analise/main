@@ -80,11 +80,13 @@ const ARQUIVOS = [
   'db/atualizacao-45.sql.txt',
   'db/atualizacao-46.sql.txt',
   'db/atualizacao-47.sql.txt',
-  /* so dados (as obras da 1a etapa viram negocio): sem linha na CONFERENCIA,
-     porque um negocio apagado depois nao e falha da atualizacao */
-  'db/atualizacao-48.sql.txt',
+  /* a 48 (as obras da 1a etapa viravam negocio no Comercial) saiu daqui:
+     a 51 desligou essa ligacao, e rodar a 48 de novo transformaria em
+     negocio as obras criadas depois. O arquivo ficou so como historico */
   'db/atualizacao-49.sql.txt',
   'db/atualizacao-50.sql.txt',
+  /* a aba Ponto: as marcacoes importadas e as assinaturas da folha */
+  'db/atualizacao-51.sql.txt',
 ]
 
 /**
@@ -257,6 +259,8 @@ const CONFERENCIA = [
   ['aviso_geral.setor_chave', col('aviso_geral', 'setor_chave')],
   ['aviso_geral.expira_em', col('aviso_geral', 'expira_em')],
   ['aviso_geral.encerrado_em', col('aviso_geral', 'encerrado_em')],
+  ['ponto_dia (a aba Ponto)', "SELECT to_regclass('public.ponto_dia') IS NOT NULL AS ok"],
+  ['ponto_assinatura (a aba Ponto)', "SELECT to_regclass('public.ponto_assinatura') IS NOT NULL AS ok"],
 ]
 
 function col(tabela, coluna) {

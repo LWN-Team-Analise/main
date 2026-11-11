@@ -61,11 +61,21 @@ const ATALHOS = [
     permissao: 'ver_clientes',
     termos: 'clientes empresas cadastro contratante setor endereco',
   },
+  /* a folha de ponto: de todo mundo (cada um ve a sua) */
+  {
+    id: 'tela-ponto',
+    grupo: 'Telas',
+    titulo: 'Ponto',
+    detalhe: 'A folha de ponto: conferir e assinar',
+    rota: '/app/ponto',
+    termos: 'ponto folha de ponto espelho marcacoes horas extras jornada assinatura assinar conferencia batida relogio',
+  },
+  /* saiu do menu (e o botao "Concluídas" de Obras), mas a busca ainda abre */
   {
     id: 'tela-concluidas',
     grupo: 'Telas',
     titulo: 'Concluídas',
-    detalhe: 'As obras já encerradas',
+    detalhe: 'As obras já encerradas (botão em Obras)',
     rota: '/app/concluidas',
     permissao: 'ver_concluidas',
     termos: 'concluidas finalizadas encerradas entregues arquivo historico',

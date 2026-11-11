@@ -471,6 +471,12 @@
     padding-inline: 12px;
   }
 
+  /* com o "Concluídas" sao quatro: no telefone estreito ele desce para a
+     linha de baixo em vez de espremer o "+ Obra emergência" */
+  .barra__criar {
+    flex-wrap: wrap;
+  }
+
   /* Os filtros de PASTILHA tomam a linha inteira; so os dois de
      controle unico (a lista de clientes e o campo de data) e que
      dividem a linha. Espremida em meia tela, uma fila de pastilhas

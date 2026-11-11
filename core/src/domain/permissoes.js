@@ -115,6 +115,12 @@ export const ALTERACAO = [
   { chave: 'editar_cpf', rotulo: 'Incluir / editar / excluir CPF', dependeDe: 'ver_usuarios' },
   /* o "!" nos cards de Usuarios: quem ainda nao trocou a senha padrao */
   { chave: 'ver_senha_padrao', rotulo: 'Ver quem não alterou a senha padrão', dependeDe: 'ver_usuarios' },
+  /* a aba Ponto e de todo mundo: cada um ve e assina a propria folha.
+     Com esta, aparece o seletor de pessoa (ver a folha de qualquer um,
+     com CPF e PIS, como no espelho), o Importar do Calculo Diario e o
+     Excel da empresa inteira. Assinar continua sendo so a propria folha
+     (atualizacao 51; a API confere em server/routes/ponto.js) */
+  { chave: 'gerenciar_ponto', rotulo: 'Ver a folha de ponto de todos e importar', dependeDe: 'ver_usuarios' },
   { chave: 'editar_avaliacoes', rotulo: 'Adicionar / editar avaliações', dependeDe: 'ver_avaliacoes' },
   { chave: 'editar_clientes', rotulo: 'Adicionar / editar clientes', dependeDe: 'ver_clientes' },
   /* a planilha do Excel com o cadastro inteiro (Clientes > Exportar) */

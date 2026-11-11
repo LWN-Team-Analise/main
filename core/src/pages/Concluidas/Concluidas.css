@@ -17,6 +17,28 @@
   flex-wrap: wrap;
 }
 
+/* a volta para Obras: a tela abre pelo botao "Concluídas" de la */
+.concluidas__voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 14px 7px 9px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-base);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.concluidas__voltar:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
 .concluidas__total {
   padding: 4px 13px;
   border-radius: var(--radius-pill);
