@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import AppShell from '@/components/AppShell/AppShell'
 import Seletor from '@/components/Seletor/Seletor'
 import { CampoData } from '@/components/CampoData/CampoData'
@@ -9,6 +10,7 @@ import {
   DIAS_MAXIMOS,
   MESES,
   dataBR,
+  dataValida,
   diasDoPeriodo,
   linhaDoArquivo,
   montarFolha,
@@ -20,6 +22,7 @@ import { carregarFolha, carregarPessoas, diasDaEmpresa } from '@/services/pontoS
 import FolhaPonto from './FolhaPonto'
 import ModalImportarPonto from './ModalImportarPonto'
 import ModalAssinar from './ModalAssinar'
+import ModalAssinaturas from './ModalAssinaturas'
 import { montarPdfDaFolha } from './pdfPonto'
 import './Ponto.css'
 
@@ -38,6 +41,12 @@ const Importar = () => (
 const Exportar = () => (
   <svg viewBox="0 0 24 24" width="16" height="16" {...traco} aria-hidden="true">
     <path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 19.5h14" />
+  </svg>
+)
+const Lista = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" {...traco} aria-hidden="true">
+    <path d="M9 6.5h11M9 12h11M9 17.5h11" />
+    <path d="m3.6 6.4 1.2 1.2 2-2.2M3.6 11.9l1.2 1.2 2-2.2M4 17.5h2" />
   </svg>
 )
 const Pdf = () => (
@@ -66,6 +75,20 @@ function somarMes(mes, n) {
   const d = new Date(Date.UTC(a, m - 1 + n, 1))
   return `${d.getUTCFullYear()}-${doisDigitos(d.getUTCMonth() + 1)}`
 }
+/**
+ * O periodo que veio no endereco (?inicio=&fim=, o link do aviso do Teams):
+ * o mes inteiro abre no Mensal, outro trecho em Datas especificas. Sem ele
+ * (ou com datas que nao existem), null: abre no mes anterior.
+ */
+function periodoDoEndereco(busca) {
+  const inicio = busca.get('inicio')
+  const fim = busca.get('fim')
+  if (!dataValida(inicio) || !dataValida(fim) || fim < inicio || diasDoPeriodo(inicio, fim).length > DIAS_MAXIMOS) return null
+  const doMes = periodoDoMes(inicio.slice(0, 7))
+  if (doMes.inicio === inicio && doMes.fim === fim) return { modo: 'mes', mes: inicio.slice(0, 7), datas: doMes }
+  return { modo: 'datas', mes: inicio.slice(0, 7), datas: { inicio, fim } }
+}
+
 /** 'DD/MM/AAAA HH:MM:SS', o "Documento gerado em" do espelho. */
 function agora() {
   const d = new Date()
@@ -132,9 +155,12 @@ export default function Ponto() {
   const gestor = pode('gerenciar_ponto')
   const meuId = String(user?.id ?? '')
 
-  const [modo, setModo] = useState('mes')
-  const [mes, setMes] = useState(mesAnterior)
-  const [datas, setDatas] = useState(() => periodoDoMes(mesAnterior()))
+  /* o periodo do endereco vale so na abertura (o link do aviso do Teams) */
+  const [busca] = useSearchParams()
+  const [doEndereco] = useState(() => periodoDoEndereco(busca))
+  const [modo, setModo] = useState(doEndereco?.modo ?? 'mes')
+  const [mes, setMes] = useState(() => doEndereco?.mes ?? mesAnterior())
+  const [datas, setDatas] = useState(() => doEndereco?.datas ?? periodoDoMes(mesAnterior()))
   const [usuarioId, setUsuarioId] = useState(meuId)
 
   const [dados, setDados] = useState(null)
@@ -143,6 +169,7 @@ export default function Ponto() {
   const [pessoas, setPessoas] = useState(null)
   const [aviso, setAviso] = useState(null)
   const [importando, setImportando] = useState(false)
+  const [vendoAssinaturas, setVendoAssinaturas] = useState(false)
   const [assinando, setAssinando] = useState(false)
   const [exportando, setExportando] = useState('')
 
@@ -398,6 +425,18 @@ export default function Ponto() {
             {gestor && (
               <button
                 type="button"
+                className="acao acao--fraca"
+                onClick={() => setVendoAssinaturas(true)}
+                disabled={!periodo}
+                title="Ver quem assinou e quem não assinou a folha deste período"
+              >
+                <Lista />
+                Assinaturas
+              </button>
+            )}
+            {gestor && (
+              <button
+                type="button"
                 className="acao acao--padrao"
                 onClick={() => setImportando(true)}
                 title="Importar o Cálculo Diário do sistema de ponto (.csv)"
@@ -526,6 +565,25 @@ export default function Ponto() {
           )}
         </div>
       </section>
+
+      {gestor && periodo && (
+        <ModalAssinaturas
+          aberto={vendoAssinaturas}
+          aoFechar={() => setVendoAssinaturas(false)}
+          inicio={periodo.inicio}
+          fim={periodo.fim}
+          pessoas={pessoas?.pessoas}
+          aoMudar={(id, mudou) =>
+            setPessoas((atual) =>
+              atual ? { ...atual, pessoas: atual.pessoas.map((p) => (p.id === id ? { ...p, ...mudou } : p)) } : atual,
+            )
+          }
+          aoAbrirFolha={(id) => {
+            setUsuarioId(String(id))
+            setVendoAssinaturas(false)
+          }}
+        />
+      )}
 
       {gestor && (
         <ModalImportarPonto

@@ -2,7 +2,16 @@ import { Router } from 'express'
 import { emTransacao, query } from '../db.js'
 import { cargoPode, exige, exigeSessao, meuCargo, tratar } from '../sessao.js'
 import { registrarAtividade } from '../atividade.js'
-import { DIAS_MAXIMOS, dataBR, dataValida, diasDoPeriodo, lerCalculoDiario, resumoDoArquivo } from '../../src/domain/ponto.js'
+import { estadoDoTeams, linkDoSite, mandarNoTeams } from '../teams.js'
+import {
+  DIAS_MAXIMOS,
+  dataBR,
+  dataValida,
+  diasDoPeriodo,
+  lerCalculoDiario,
+  resumoDoArquivo,
+  rotuloDoPeriodo,
+} from '../../src/domain/ponto.js'
 
 /* ============================================================
    /api/ponto — a folha de ponto (db/atualizacao-51.sql.txt)
@@ -19,6 +28,10 @@ import { DIAS_MAXIMOS, dataBR, dataValida, diasDoPeriodo, lerCalculoDiario, resu
                                       (`gerenciar_ponto`)
      POST /assinar                    { usuarioId?, inicio, fim, conferi,
                                       concordo } — a conferencia da folha
+     POST /lembrar                    { usuarioId, inicio, fim } — o "Enviar
+                                      aviso" das Assinaturas: mensagem no
+                                      Teams pedindo para a pessoa assinar
+                                      aquela folha (`gerenciar_ponto`)
 
    ASSINAR e so da propria folha. Quem ve a de todos (`gerenciar_ponto`)
    abre a de qualquer um, mas nao assina por ninguem: o `usuarioId` de
@@ -37,6 +50,13 @@ const GERENCIAR = 'gerenciar_ponto'
 const ARQUIVO_MAXIMO = 7 * 1024 * 1024
 /* linhas por INSERT: 23 parametros cada, longe do teto de 65535 */
 const LOTE = 1000
+
+/* o "Enviar aviso" fica no historico de quem mandou (tabela atividade, como
+   o lembrete da senha padrao em avisosConta.js): e dali que a tela sabe
+   quando foi o ultimo, e e por ele que o mesmo aviso nao sai de novo antes
+   de uma hora */
+const LEMBRETE = 'ponto.lembrete_assinatura'
+const INTERVALO_LEMBRETE = "interval '1 hour'"
 
 const idValido = (valor) => /^\d{1,15}$/.test(String(valor ?? ''))
 
@@ -232,11 +252,12 @@ router.get('/pessoas', exigeSessao, exige(GERENCIAR), async (req, res) => {
       query(
         `SELECT u.id, u.name, u.cpf IS NOT NULL AS tem_cpf,
                 EXISTS (SELECT 1 FROM ponto_dia p WHERE p.cpf = u.cpf AND p.data BETWEEN $1 AND $2) AS tem_folha,
-                a.resumo AS assinada_resumo, r.atual
+                a.resumo AS assinada_resumo, a.assinado_em, r.atual,
+                av.criado_em AS avisado_em, av.por AS avisado_por
            FROM usuario u
            LEFT JOIN cargo c ON c.id = u.cargo_id
            LEFT JOIN LATERAL (
-             SELECT x.resumo, x.inicio, x.fim FROM ponto_assinatura x
+             SELECT x.resumo, x.inicio, x.fim, x.assinado_em FROM ponto_assinatura x
               WHERE x.cpf = u.cpf AND x.inicio <= $1 AND x.fim >= $2
               ORDER BY x.assinado_em DESC, x.id DESC LIMIT 1
            ) a ON true
@@ -244,6 +265,14 @@ router.get('/pessoas', exigeSessao, exige(GERENCIAR), async (req, res) => {
              SELECT ${RESUMO} AS atual FROM ponto_dia p
               WHERE a.resumo IS NOT NULL AND p.cpf = u.cpf AND p.data BETWEEN a.inicio AND a.fim
            ) r ON true
+           /* o ultimo "Enviar aviso" desta folha (o mesmo periodo) */
+           LEFT JOIN LATERAL (
+             SELECT t.criado_em, quem.name AS por FROM atividade t
+               LEFT JOIN usuario quem ON quem.id = t.usuario_id
+              WHERE t.acao = '${LEMBRETE}' AND t.entidade_tipo = 'usuario' AND t.entidade_id = u.id::text
+                AND t.detalhes ->> 'inicio' = $1::text AND t.detalhes ->> 'fim' = $2::text
+              ORDER BY t.criado_em DESC LIMIT 1
+           ) av ON true
           WHERE u.ativo AND NOT coalesce(c.painel_tv, false)
           ORDER BY u.name`,
         [inicio, fim],
@@ -265,6 +294,11 @@ router.get('/pessoas', exigeSessao, exige(GERENCIAR), async (req, res) => {
         temCpf: l.tem_cpf,
         temFolha: l.tem_folha,
         assinada: Boolean(l.assinada_resumo) && l.assinada_resumo === l.atual,
+        assinadaEm: l.assinado_em ?? null,
+        /* assinou, mas uma importacao nova mudou a folha: precisa assinar de novo */
+        desatualizada: Boolean(l.assinada_resumo) && l.assinada_resumo !== l.atual,
+        avisadoEm: l.avisado_em ?? null,
+        avisadoPor: l.avisado_por ?? null,
       })),
       semUsuario: soltos.rows.map((l) => l.nome).sort((a, b) => a.localeCompare(b, 'pt-BR')),
     })
@@ -286,6 +320,84 @@ router.get('/exportar', exigeSessao, exige(GERENCIAR), async (req, res) => {
     return res.json({ dias: rows.map(paraDia) })
   } catch (erro) {
     return tratar(erro, res, 'ponto/exportar')
+  }
+})
+
+/* ------------------------------------------------------------
+   Cobrar a assinatura (o "Enviar aviso" das Assinaturas)
+   ------------------------------------------------------------ */
+
+router.post('/lembrar', exigeSessao, exige(GERENCIAR), async (req, res) => {
+  const periodo = lerPeriodo(req.body)
+  if (periodo.erro) return res.status(400).json({ erro: periodo.erro })
+  const { inicio, fim } = periodo
+  const alvo = String(req.body?.usuarioId ?? '')
+  if (!idValido(alvo)) return res.status(400).json({ erro: 'Escolha o funcionário.' })
+
+  try {
+    const pessoa = await usuarioPorId(alvo)
+    if (!pessoa || pessoa.ativo === false) return res.status(404).json({ erro: 'Funcionário não encontrado.' })
+    if (!pessoa.cpf) {
+      return res.status(400).json({ erro: `${pessoa.name} não tem CPF no cadastro: não há folha para assinar.` })
+    }
+
+    const atual = await resumoDe(pessoa.cpf, inicio, fim)
+    if (atual.dias === 0) {
+      return res.status(400).json({ erro: `${pessoa.name} não tem marcações importadas neste período.` })
+    }
+    const assinatura = await assinaturaDe(pessoa.cpf, inicio, fim)
+    if (assinatura?.valida) return res.status(409).json({ erro: `${pessoa.name} já assinou esta folha de ponto.` })
+
+    const recente = await query(
+      `SELECT 1 FROM atividade
+        WHERE acao = $1 AND entidade_tipo = 'usuario' AND entidade_id = $2
+          AND detalhes ->> 'inicio' = $3 AND detalhes ->> 'fim' = $4
+          AND criado_em > now() - ${INTERVALO_LEMBRETE}
+        LIMIT 1`,
+      [LEMBRETE, String(pessoa.id), inicio, fim],
+    )
+    if (recente.rows.length) {
+      return res.status(429).json({ erro: `O aviso desta folha já foi enviado para ${pessoa.name} há menos de uma hora.` })
+    }
+
+    const teams = await estadoDoTeams()
+    if (!teams.appConfigurado || !teams.conectado) {
+      return res.status(503).json({
+        erro: 'O envio pelo Teams não está ligado: em Configurações > Notificações no Teams, conecte a conta da empresa.',
+      })
+    }
+
+    const { rows: euRows } = await query('SELECT name FROM usuario WHERE id = $1', [req.dono.sub])
+    const quemPede = euRows[0]?.name ?? null
+    const rotulo = rotuloDoPeriodo(inicio, fim)
+    const { enviados } = await mandarNoTeams([pessoa.id], {
+      titulo: 'Assine a sua folha de ponto',
+      linhas: [
+        assinatura
+          ? `A sua folha de ponto de **${dataBR(inicio)} a ${dataBR(fim)}** (${rotulo}) mudou depois da sua assinatura e precisa ser assinada de novo.`
+          : `A sua folha de ponto de **${dataBR(inicio)} a ${dataBR(fim)}** (${rotulo}) está esperando a sua assinatura.`,
+        'Abra a aba Ponto, confira as marcações e clique em "Assinatura Funcionário", no rodapé da folha, para assinar.',
+        quemPede ? `Aviso enviado por ${quemPede}.` : null,
+      ],
+      link: linkDoSite(`/core/app/ponto?inicio=${inicio}&fim=${fim}`),
+      rotuloLink: 'Abrir a folha de ponto',
+    })
+    if (enviados === 0) {
+      return res.status(502).json({
+        erro: `A mensagem no Teams não saiu para ${pessoa.name}. Confira se a pessoa tem a conta Microsoft (Outlook) vinculada ou o e-mail da empresa no cadastro.`,
+      })
+    }
+
+    await registrarAtividade(req, {
+      acao: LEMBRETE,
+      categoria: 'ponto',
+      entidade: ['usuario', pessoa.id],
+      descricao: 'Aviso para assinar a folha de ponto enviado no Teams',
+      detalhes: { pessoa: pessoa.name, periodo: `${dataBR(inicio)} a ${dataBR(fim)}`, inicio, fim },
+    })
+    return res.status(201).json({ avisadoEm: new Date().toISOString(), avisadoPor: quemPede })
+  } catch (erro) {
+    return tratar(erro, res, 'ponto/lembrar')
   }
 })
 

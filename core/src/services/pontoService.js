@@ -35,6 +35,14 @@ export function importarCalculo({ conteudo, arquivo }) {
   return post('/ponto/importar', { conteudo, arquivo })
 }
 
+/**
+ * O "Enviar aviso" das Assinaturas: a mensagem no Teams pedindo para a
+ * pessoa assinar a folha do periodo. Volta { avisadoEm, avisadoPor }.
+ */
+export function lembrarAssinatura({ usuarioId, inicio, fim }) {
+  return post('/ponto/lembrar', { usuarioId, inicio, fim })
+}
+
 /** Assina a propria folha do periodo (o duplo check vai junto). */
 export async function assinarFolha({ usuarioId, inicio, fim, conferi, concordo }) {
   const { assinatura } = await post('/ponto/assinar', { usuarioId, inicio, fim, conferi, concordo })

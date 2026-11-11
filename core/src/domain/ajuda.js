@@ -219,6 +219,7 @@ export const ASSUNTOS = [
       'sistema de ponto. Para assinar a conferência, clique na área acima de "Assinatura Funcionário", marque as ' +
       'duas confirmações e assine: o seu nome completo fica impresso ali. O Exportar baixa a folha em PDF e em ' +
       'Excel. Quem tem a permissão "Ver a folha de ponto de todos e importar" (em Usuários) escolhe a pessoa e ' +
-      'importa o Cálculo Diário (.csv), mas não assina a folha de outra pessoa.',
+      'importa o Cálculo Diário (.csv), mas não assina a folha de outra pessoa. Em Assinaturas vê quem assinou ' +
+      'e quem falta, e o "Enviar aviso" manda no Teams o pedido para a pessoa assinar.',
   },
 ]

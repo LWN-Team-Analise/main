@@ -1514,6 +1514,19 @@ E de todo mundo (menos a TV); cada um ve a propria folha.
   assinatura da folha de outra pessoa ve o aviso na tela, e a API recusa
   (`POST /api/ponto/assinar` com o `usuarioId` de outro volta 403; quem assina
   e sempre quem esta no token).
+- **Assinaturas** (so `gerenciar_ponto`, botao na barra): quem assinou e quem
+  nao assinou a folha do periodo escolhido, com a contagem e os filtros Nao
+  assinaram / Assinaram / Todos. Quem assinou mostra a data; quem assinou e
+  teve a folha mudada por uma importacao nova volta para "nao assinaram"; quem
+  nao tem folha no periodo (ou nao tem CPF) fica em Todos, sem botao. O nome
+  abre a folha da pessoa. Ao lado de quem falta, **Enviar aviso** manda no
+  Teams, pela conta da empresa (`server/teams.js`), o pedido para a pessoa
+  assinar aquela folha, com o link que abre o mesmo periodo
+  (`/core/app/ponto?inicio=...&fim=...`). O aviso fica no historico de quem
+  mandou (`atividade`, acao `ponto.lembrete_assinatura`, sem tabela nova): e
+  dali que a lista mostra o ultimo aviso e quem mandou, e o mesmo aviso nao sai
+  de novo antes de uma hora (429). Sem a conta do Teams conectada (Configuracoes
+  > Notificacoes no Teams) o botao responde com esse recado (503).
 
 As contas (`calcularDia` e `montarFolha` em `src/domain/ponto.js`) foram
 conferidas com o espelho de exemplo (Total Trabalhado, Total H. Normais
@@ -1539,7 +1552,7 @@ importado. Enquanto a razao social nao for preenchida em `legal.js`, aparece
 "LWN Engenharia".
 
 API: `GET /api/ponto/folha`, `GET /api/ponto/pessoas`, `GET /api/ponto/exportar`,
-`POST /api/ponto/importar`, `POST /api/ponto/assinar` (`server/routes/ponto.js`).
+`POST /api/ponto/importar`, `POST /api/ponto/assinar`, `POST /api/ponto/lembrar` (`server/routes/ponto.js`).
 Precisa de `db/atualizacao-51.sql.txt`.
 
 ## Frotas: a ultima devolucao, na saida
