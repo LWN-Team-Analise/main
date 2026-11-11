@@ -25,6 +25,8 @@ export const salvarAnotacao = (dia, texto) => put(`/turnos/anotacoes/${encodeURI
 export const criarCronograma = (campos) => post('/turnos/cronogramas', campos)
 export const editarCronograma = (id, campos) => put(`/turnos/cronogramas/${encodeURIComponent(id)}`, campos)
 export const apagarCronograma = (id) => del(`/turnos/cronogramas/${encodeURIComponent(id)}`)
+/** A ordem das pessoas no cronograma (arrastar na tela): os ids, na ordem nova. */
+export const ordenarCronograma = (id, membros) => put(`/turnos/cronogramas/${encodeURIComponent(id)}/ordem`, { membros })
 
 /* ---- copiar, colar e compartilhar (atualizacao 32): o que chega aqui nasce sem compartilhar ---- */
 

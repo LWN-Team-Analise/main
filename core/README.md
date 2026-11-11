@@ -1324,6 +1324,18 @@ linha dos dias (pessoas e horas de cada dia), as **Anotacoes do dia** e os **cro
 Cronograma Anapolis, e os que forem criados no "Adicionar cronograma". Cada cronograma
 abre e fecha e tem os "Turnos abertos" (sem pessoa) e uma linha por pessoa.
 
+**A ordem das pessoas** e a que quem tem `editar_turnos` escolher: cada linha
+tem uma alca (os seis pontos ao lado da foto) para arrastar a pessoa para
+cima ou para baixo dentro do cronograma — com o mouse ou o dedo, ou com as
+setas do teclado na alca. A tela muda na hora e grava no servidor
+(`PUT /api/turnos/cronogramas/:id/ordem`), e todo mundo passa a ver a mesma
+ordem. Ela fica em `configuracao` (chave `turnos_ordem:<id do cronograma>`, a
+lista dos ids), sem atualizacao no banco; sem ordem guardada continua a
+alfabetica. Quem entra depois no cronograma vai para o fim; quem sai some da
+ordem. Com o filtro ligado a alca some (a lista na tela nao e a inteira). Se as
+pessoas do cronograma mudaram enquanto a tela estava aberta, a gravacao e
+recusada (409) e a tela recarrega.
+
 O turno e um bloco de fundo transparente, so com a borda na cor. Tem titulo,
 linha de baixo, dias (um ou um trecho, como uma folga), horario (ou o dia
 inteiro) e pode vir de uma tarefa de obra (a obra e o check). As horas contam
