@@ -162,31 +162,65 @@
 /* o "!" da inconformidade, no mesmo canto, ao lado do "v". O nome cede
    espaco a ele, para as reticencias nao correrem por baixo */
 .pessoa.is-inconforme .pessoa__topo {
-  padding-right: 54px;
+  padding-right: 50px;
 }
 
+/* vermelho meio transparente, pequeno e piscando devagar: chama a atencao
+   sem tomar o card. Os tons sao os do vermelho do Quadro, que ja tem a
+   versao do modo noturno */
 .pessoa__sinal {
   position: absolute;
-  top: 11px;
-  right: 40px;
+  /* centrado na altura do "v" (top 9px + 28px de altura) */
+  top: 14px;
+  right: 42px;
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   padding: 0;
-  border: 1px solid var(--obra-aviso-borda);
+  border: 1px solid var(--quadro-vermelho-borda);
   border-radius: 50%;
-  background: var(--obra-aviso);
-  color: var(--obra-aviso-fg);
-  font-size: 0.86rem;
+  background: var(--quadro-vermelho-bg);
+  color: var(--quadro-vermelho-acento);
+  font-size: 0.7rem;
   font-weight: 800;
   line-height: 1;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  animation: pessoa-sinal-pisca 1.6s ease-in-out infinite;
 }
 
-.pessoa__sinal:hover {
+/* o circulo ficou pequeno para o dedo: a area de toque continua maior */
+.pessoa__sinal::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+}
+
+/* com o ponteiro ou o foco em cima ele para, para ninguem clicar no vazio */
+.pessoa__sinal:hover,
+.pessoa__sinal:focus-visible {
+  animation-play-state: paused;
+  opacity: 1;
   filter: brightness(1.06);
+}
+
+@keyframes pessoa-sinal-pisca {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* quem pediu menos movimento no aparelho ve o sinal parado */
+@media (prefers-reduced-motion: reduce) {
+  .pessoa__sinal {
+    animation: none;
+  }
 }
 
 /* o pop-up que o "!" abre */
@@ -202,10 +236,10 @@
   place-items: center;
   width: 38px;
   height: 38px;
-  border: 1px solid var(--obra-aviso-borda);
+  border: 1px solid var(--quadro-vermelho-borda);
   border-radius: 50%;
-  background: var(--obra-aviso);
-  color: var(--obra-aviso-fg);
+  background: var(--quadro-vermelho-bg);
+  color: var(--quadro-vermelho-acento);
   font-size: 1.25rem;
   font-weight: 800;
 }
