@@ -102,7 +102,6 @@ export default function ModalImportarPonto({ aberto, aoFechar, aoImportado }) {
       aberto={aberto}
       aoFechar={aoFechar}
       titulo="Importar folha de ponto"
-      subtitulo="Cálculo Diário do sistema de ponto (.csv separado por ;)"
       largura={620}
     >
       <div className="pontoimp">
@@ -119,7 +118,6 @@ export default function ModalImportarPonto({ aberto, aoFechar, aoImportado }) {
             setErro('')
             setDetalhes([])
           }}
-          dica="Só entra o Cálculo Diário, com as 22 colunas do modelo (CNPJ; Nome; Matrícula; ... Grupos). Importar o mesmo mês de novo atualiza os dias que mudaram."
         />
 
         {lido && (

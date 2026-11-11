@@ -318,11 +318,9 @@ export default function Ponto() {
         <header className="ponto__topo">
           <div>
             <h1 className="tela__titulo">Ponto</h1>
-            <p className="tela__lead">
-              {gestor
-                ? 'A folha de ponto de cada funcionário. Escolha a pessoa e o período; cada um assina a própria folha.'
-                : 'A sua folha de ponto. Confira as marcações do período e assine no rodapé.'}
-            </p>
+            {!gestor && (
+              <p className="tela__lead">A sua folha de ponto. Confira as marcações do período e assine no rodapé.</p>
+            )}
           </div>
         </header>
 
