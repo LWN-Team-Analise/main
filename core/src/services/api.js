@@ -143,6 +143,8 @@ export async function chamar(caminho, opcoes = {}) {
     /* a rota que sabe QUAL campo recusou manda `campo` junto, e o
        formulario acende o campo certo em vez de so mostrar o recado */
     if (corpo?.campo) falha.campo = corpo.campo
+    /* a lista do que estava errado (a importacao do ponto manda as linhas) */
+    if (Array.isArray(corpo?.detalhes)) falha.detalhes = corpo.detalhes
     throw falha
   }
 

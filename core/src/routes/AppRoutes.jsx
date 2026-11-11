@@ -6,6 +6,7 @@ import Obras from '@/pages/Obras/Obras'
 import ObraDetalhe from '@/pages/Obras/ObraDetalhe'
 import Clientes from '@/pages/Clientes/Clientes'
 import Concluidas from '@/pages/Concluidas/Concluidas'
+import Ponto from '@/pages/Ponto/Ponto'
 import Avaliacoes from '@/pages/Avaliacoes/Avaliacoes'
 import Usuarios from '@/pages/Usuarios/Usuarios'
 import SetorPagina from '@/pages/Usuarios/SetorPagina'
@@ -95,6 +96,9 @@ export default function AppRoutes() {
           </Interna>
         }
       />
+      {/* Concluidas nao esta mais no menu: abre pelo botao "Concluídas" de
+          Obras. O endereco continua o mesmo, e os links antigos (o do Teams,
+          em server/avisosObra.js, e a busca) seguem abrindo a tela */}
       <Route
         path="/app/concluidas"
         element={
@@ -111,6 +115,16 @@ export default function AppRoutes() {
         element={
           <Interna permissao="ver_concluidas">
             <ObraDetalhe somenteLeitura voltarPara="/app/concluidas" />
+          </Interna>
+        }
+      />
+      {/* a folha de ponto (atualizacao 51): de todo mundo, cada um ve a sua.
+          Ver a dos outros e importar e `gerenciar_ponto`, que a API confere */}
+      <Route
+        path="/app/ponto"
+        element={
+          <Interna>
+            <Ponto />
           </Interna>
         }
       />

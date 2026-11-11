@@ -1162,3 +1162,55 @@ button.turnos__celula:hover {
     font-size: 0.6rem;
   }
 }
+
+/* ---- arrastar as pessoas para escolher a ordem (so quem edita) ---- */
+
+.turnos__alca {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 34px;
+  margin-left: -6px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: grab;
+  touch-action: none;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.turnos__alca:hover,
+.turnos__alca:focus-visible {
+  outline: none;
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.turnos__alca:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.turnos__alca:active {
+  cursor: grabbing;
+}
+
+/* a pessoa arrastada fica apagada; a linha que vai recebe-la, com a marca */
+.turnos__linha.is-arrastada {
+  opacity: 0.45;
+}
+
+.turnos__linha.is-alvo {
+  box-shadow: inset 0 3px 0 var(--accent);
+}
+
+.turnos__linha.is-alvo-fim {
+  box-shadow: inset 0 -3px 0 var(--accent);
+}
+
+.turnos__linha.is-alvo > .turnos__canto,
+.turnos__linha.is-alvo-fim > .turnos__canto {
+  box-shadow: inherit;
+}

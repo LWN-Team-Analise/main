@@ -195,6 +195,8 @@ export default function Obras() {
   /* sem a permissao, o botao nem aparece — e a API recusa igual */
   const podeCriarObra = pode('criar_obras')
   const podeModelo = pode('editar_etapa') || pode('editar_cards') || pode('editar_checks')
+  /* a tela das obras encerradas abre por um botao daqui (saiu do menu) */
+  const podeConcluidas = pode('ver_concluidas')
 
   const [prioridade, setPrioridade] = useState(null)
   const [ateData, setAteData] = useState('')
@@ -512,26 +514,31 @@ export default function Obras() {
               mesma linha de um telefone, e o que sobrava era um botao
               embaixo do outro ocupando duas alturas para dizer quase a
               mesma coisa. O "+" na frente ja diz que e para adicionar. */}
-          {podeCriarObra && (
+          {(podeCriarObra || podeModelo || podeConcluidas) && (
             <div className="barra__criar">
-              <button
-                type="button"
-                className="acao acao--obra-padrao"
-                onClick={() => setModalObra('padrao')}
-                title="Adicionar obra padrão"
-              >
-                <Mais />
-                Obra padrão
-              </button>
-              <button
-                type="button"
-                className="acao acao--obra-emergencia"
-                onClick={() => setModalObra('emergencia')}
-                title="Adicionar obra emergência"
-              >
-                <Mais />
-                Obra emergência
-              </button>
+              {podeCriarObra && (
+                <>
+                  <button
+                    type="button"
+                    className="acao acao--obra-padrao"
+                    onClick={() => setModalObra('padrao')}
+                    title="Adicionar obra padrão"
+                  >
+                    <Mais />
+                    Obra padrão
+                  </button>
+                  <button
+                    type="button"
+                    className="acao acao--obra-emergencia"
+                    onClick={() => setModalObra('emergencia')}
+                    title="Adicionar obra emergência"
+                  >
+                    <Mais />
+                    Obra emergência
+                  </button>
+                </>
+              )}
+              {/* sem permissao de criar obra, o Editar (e o Concluídas) ficam sozinhos */}
               {podeModelo && (
                 <button
                   type="button"
@@ -542,20 +549,22 @@ export default function Obras() {
                   Editar
                 </button>
               )}
-            </div>
-          )}
-
-          {/* sem permissao de criar obra, o Editar fica sozinho */}
-          {!podeCriarObra && podeModelo && (
-            <div className="barra__criar">
-              <button
-                type="button"
-                className="acao acao--modelo"
-                onClick={() => setModelo(true)}
-                title="Editar as etapas, os cards e os checks das próximas obras"
-              >
-                Editar
-              </button>
+              {/* as obras encerradas: era a aba Concluídas do menu, e agora
+                  abre daqui. O endereco (/app/concluidas) e o mesmo */}
+              {podeConcluidas && (
+                <button
+                  type="button"
+                  className="acao acao--modelo acao--concluidas"
+                  onClick={() => navigate('/app/concluidas')}
+                  title="Ver as obras concluídas"
+                >
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="m8 12.2 2.8 2.8L16 9.6" />
+                  </svg>
+                  Concluídas
+                </button>
+              )}
             </div>
           )}
 

@@ -67,7 +67,7 @@ const TOPICOS = [
   {
     id: 'concluidas',
     rotulo: 'Concluídas',
-    pergunta: 'Como funciona a aba de obras concluídas?',
+    pergunta: 'Como funcionam as obras concluídas?',
   },
   { id: 'etapas', rotulo: 'Etapas', pergunta: 'Como funcionam as etapas do roteiro?' },
   {

@@ -1,4 +1,13 @@
 -- ============================================================
+--  APOSENTADA PELA ATUALIZACAO 51 — NAO FAZ MAIS NADA
+--
+--  A obra criada em Obras deixou de virar negocio no Comercial. Esta
+--  atualizacao ja rodou no banco de producao e no local; rodada de novo,
+--  ela transformaria em negocio as obras criadas depois da 51. Por isso o
+--  INSERT abaixo ficou com "AND false" (nao grava nada) e o arquivo saiu
+--  da lista do `npm run db:atualizar`. Fica aqui so como historico.
+-- ============================================================
+--
 --  ATUALIZACAO 48 — as obras da 1a ETAPA entram no Comercial
 --
 --  Toda obra criada na mao em Obras passa a entrar sozinha no Comercial,
@@ -61,7 +70,8 @@ INSERT INTO public.negocio (funil, etapa, titulo, cliente_id, responsavel_id, ob
 SELECT 'novos', 'demanda_recebida', left(btrim(p.proposta), 200), p.cliente_id, p.criado_por,
        nullif(btrim(p.descricao), ''), btrim(p.proposta), p.id, p.criado_por, p.criado_em
   FROM na_primeira p
- WHERE btrim(coalesce(p.proposta, '')) <> '';
+ WHERE btrim(coalesce(p.proposta, '')) <> ''
+   AND false;  -- aposentada pela atualizacao 51: nao grava mais nada
 
 COMMIT;
 

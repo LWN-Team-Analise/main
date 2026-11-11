@@ -102,6 +102,18 @@ export default function Concluidas() {
     <AppShell>
       <section className="concluidas">
         <header className="concluidas__topo">
+          {/* a tela saiu do menu e abre pelo botao "Concluídas" de Obras:
+              a volta e para la */}
+          <button
+            type="button"
+            className="concluidas__voltar"
+            onClick={() => navigate('/app/obras')}
+            aria-label="Voltar para Obras"
+            title="Voltar para Obras"
+          >
+            <SetaEsq />
+            Obras
+          </button>
           <h1 className="tela__titulo">Concluídas</h1>
           <span className="concluidas__total">
             {total} obra{total === 1 ? '' : 's'}

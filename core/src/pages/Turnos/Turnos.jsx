@@ -289,6 +289,73 @@ function acharConflitos(turnos, dias) {
   return { ids, lista }
 }
 
+/**
+ * ARRASTAR as pessoas de um cronograma para a ordem que se quiser.
+ *
+ * E pela alca (os seis pontos ao lado da foto), com eventos de ponteiro, e
+ * nao com o arrastar do HTML: assim vale igual no mouse, no dedo e na
+ * caneta. Enquanto arrasta, a linha que vai receber a pessoa ganha a marca
+ * em cima (ou a ultima, embaixo) e a pessoa arrastada fica apagada. As
+ * linhas do cronograma sao achadas pelo `data-arrasto-grupo`.
+ *
+ * `aoSoltar(grupo, id, posicao)`: `posicao` e o lugar na lista ANTES de
+ * tirar a pessoa de onde estava (0 = antes da primeira).
+ */
+function useArrastoDePessoas(aoSoltar) {
+  const [arrasto, setArrasto] = useState(null) // { grupo, id, alvo }
+  const soltarRef = useRef(aoSoltar)
+  useEffect(() => {
+    soltarRef.current = aoSoltar
+  }, [aoSoltar])
+
+  const comecar = useCallback((evento, grupo, id) => {
+    if (evento.pointerType === 'mouse' && evento.button !== 0) return
+    evento.preventDefault()
+    const alca = evento.currentTarget
+    try {
+      alca.setPointerCapture(evento.pointerId)
+    } catch {
+      /* sem captura o arrasto segue pelos eventos da propria alca */
+    }
+    const linhas = () => Array.from(document.querySelectorAll(`[data-arrasto-grupo="${grupo}"]`))
+    const lugarDe = (y) => {
+      const lista = linhas()
+      const i = lista.findIndex((l) => {
+        const r = l.getBoundingClientRect()
+        return y < r.top + r.height / 2
+      })
+      return i === -1 ? lista.length : i
+    }
+    let alvo = linhas().findIndex((l) => l.dataset.arrastoId === id)
+    setArrasto({ grupo, id, alvo })
+
+    const mover = (e) => {
+      /* perto da borda de cima ou de baixo a pagina rola junto */
+      if (e.clientY < 70) window.scrollBy(0, -14)
+      else if (e.clientY > window.innerHeight - 70) window.scrollBy(0, 14)
+      const novo = lugarDe(e.clientY)
+      if (novo !== alvo) {
+        alvo = novo
+        setArrasto((a) => (a ? { ...a, alvo } : a))
+      }
+    }
+    const fim = (confirma) => () => {
+      alca.removeEventListener('pointermove', mover)
+      alca.removeEventListener('pointerup', soltar)
+      alca.removeEventListener('pointercancel', cancelar)
+      setArrasto(null)
+      if (confirma) soltarRef.current?.(grupo, id, alvo)
+    }
+    const soltar = fim(true)
+    const cancelar = fim(false)
+    alca.addEventListener('pointermove', mover)
+    alca.addEventListener('pointerup', soltar)
+    alca.addEventListener('pointercancel', cancelar)
+  }, [])
+
+  return { arrasto, comecar }
+}
+
 /** Fecha o menu (Conflitos, Exibir) no clique fora dele e no Esc. */
 function useFechaFora(aberto, fechar) {
   const ref = useRef(null)
@@ -349,6 +416,18 @@ const IconeExibir = () => (
   </Icone>
 )
 const IconeGrupo = () => <Icone d="M12 5v14M5 12h14" />
+/* a alca de arrastar: seis pontos */
+const IconeAlca = () => (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+    <circle cx="9" cy="6" r="1.6" />
+    <circle cx="15" cy="6" r="1.6" />
+    <circle cx="9" cy="12" r="1.6" />
+    <circle cx="15" cy="12" r="1.6" />
+    <circle cx="9" cy="18" r="1.6" />
+    <circle cx="15" cy="18" r="1.6" />
+  </svg>
+)
+
 const IconeMembro = () => (
   <Icone>
     <circle cx="10" cy="8.5" r="3.2" />
@@ -374,10 +453,10 @@ const IconeMais = () => (
  * se e a escolhida. Sem `aoCelula` (a secao Obras, ou quem so ve) os
  * dias nao se clicam.
  */
-function Linha({ quem, linha, turnos, dias, hoje, celula, selecao, conflitos, escolhe, aoCelula, aoTurno }) {
+function Linha({ quem, linha, turnos, dias, hoje, celula, selecao, conflitos, escolhe, aoCelula, aoTurno, classe = '', atributos }) {
   const { colocados, faixas } = colocar(turnos, dias)
   return (
-    <div className="turnos__linha">
+    <div className={`turnos__linha ${classe}`.trim()} {...atributos}>
       <div className="turnos__canto">{quem}</div>
       <div className="turnos__faixa" style={{ gridTemplateRows: `repeat(${faixas}, minmax(64px, auto))` }}>
         {dias.map((dia, i) => {
@@ -826,6 +905,40 @@ export default function Turnos() {
   const passa = (usuarioId, turnos) =>
     !procura || simples(nomeDe(usuarioId)).includes(procura) || turnos.some((t) => simples(t.titulo).includes(procura))
 
+  /* ---- a ordem das pessoas: arrastar pela alca (ou as setas do teclado nela) ----
+     A tela muda na hora e grava no servidor; se a gravacao falhar, volta o
+     que esta no banco. Com o filtro ligado nao se arrasta: a lista na tela
+     nao e a lista inteira do cronograma. */
+  const reordenar = useCallback(
+    async (grupoId, usuarioId, novoLugar) => {
+      const grupo = dados?.cronogramas?.find((c) => c.id === grupoId)
+      if (!grupo) return
+      const lista = [...grupo.membros]
+      const de = lista.indexOf(usuarioId)
+      const para = Math.max(0, Math.min(lista.length - 1, novoLugar))
+      if (de === -1 || de === para) return
+      lista.splice(para, 0, ...lista.splice(de, 1))
+      setDados((atual) =>
+        atual ? { ...atual, cronogramas: atual.cronogramas.map((c) => (c.id === grupoId ? { ...c, membros: lista } : c)) } : atual,
+      )
+      try {
+        await turnosApi.ordenarCronograma(grupoId, lista)
+      } catch (e) {
+        setErro(e.message)
+        recarregar()
+      }
+    },
+    [dados, recarregar],
+  )
+  const { arrasto, comecar: comecarArrasto } = useArrastoDePessoas((grupoId, usuarioId, posicao) => {
+    const grupo = dados?.cronogramas?.find((c) => c.id === grupoId)
+    const de = grupo ? grupo.membros.indexOf(usuarioId) : -1
+    if (de === -1) return
+    /* a posicao conta a pessoa ainda no lugar antigo: abaixo dela, um a menos */
+    reordenar(grupoId, usuarioId, posicao > de ? posicao - 1 : posicao)
+  })
+  const arrastaPessoas = edita && !procura
+
   const nConflitos = contas?.conflitos.lista.length ?? 0
   const nRascunhos = contas?.rascunhos.length ?? 0
 
@@ -1229,14 +1342,43 @@ export default function Turnos() {
                             aoCelula={edita ? (dia) => clicarCelula(g.id, null, dia) : undefined}
                           />
                         )}
-                        {pessoas.map((p) => {
+                        {pessoas.map((p, i) => {
                           const pessoa = pessoaPorId(p.id)
+                          const nesteGrupo = arrasto?.grupo === g.id
+                          const marca = !nesteGrupo
+                            ? ''
+                            : [
+                                arrasto.id === p.id && 'is-arrastada',
+                                arrasto.alvo === i && arrasto.id !== p.id && 'is-alvo',
+                                arrasto.alvo === pessoas.length && i === pessoas.length - 1 && arrasto.id !== p.id && 'is-alvo-fim',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')
                           return (
                             <Linha
                               key={p.id}
                               {...daGrade}
+                              classe={marca}
+                              atributos={arrastaPessoas ? { 'data-arrasto-grupo': g.id, 'data-arrasto-id': p.id } : undefined}
                               quem={
                                 <span className="turnos__quem">
+                                  {arrastaPessoas && pessoas.length > 1 && (
+                                    <button
+                                      type="button"
+                                      className="turnos__alca"
+                                      onPointerDown={(e) => comecarArrasto(e, g.id, p.id)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                                          e.preventDefault()
+                                          reordenar(g.id, p.id, i + (e.key === 'ArrowUp' ? -1 : 1))
+                                        }
+                                      }}
+                                      aria-label={`Mudar ${pessoa?.nome ?? 'a pessoa'} de lugar (arraste, ou use as setas para cima e para baixo)`}
+                                      title="Arraste para mudar a ordem"
+                                    >
+                                      <IconeAlca />
+                                    </button>
+                                  )}
                                   <Avatar nome={pessoa?.nome} foto={pessoa?.foto} tamanho={34} titulo={pessoa?.nome} />
                                   <span className="turnos__nome">
                                     <strong title={pessoa?.nome}>{pessoa?.nome ?? 'Pessoa'}</strong>

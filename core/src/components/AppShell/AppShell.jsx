@@ -51,10 +51,13 @@ const Icone = {
       <path d="M3 13h18M10.5 13v1.6h3V13" />
     </svg>
   ),
-  concluidas: () => (
+  /* Ponto: a folha com o relogio no canto (a folha de ponto) */
+  ponto: () => (
     <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
-      <circle cx="12" cy="12" r="9" />
-      <path d="m8 12.2 2.8 2.8L16 9.6" />
+      <path d="M13 20.5H6a1.5 1.5 0 0 1-1.5-1.5V5A1.5 1.5 0 0 1 6 3.5h9A1.5 1.5 0 0 1 16.5 5v4" />
+      <path d="M8 8h5M8 11.5h3" />
+      <circle cx="16.5" cy="16.5" r="4.5" />
+      <path d="M16.5 14.2v2.3l1.6 1" />
     </svg>
   ),
   avaliacoes: () => (
@@ -192,13 +195,17 @@ const Icone = {
  * Usuarios nao tem permissao de VISUALIZACAO propria: quem entra la e
  * quem pode mexer em usuario ou em cargo.
  *
- * Item SEM `permissao` nem `permissoes` seria de todo mundo.
+ * Item SEM `permissao` nem `permissoes` e de todo mundo (`semTv`: menos
+ * da TV da empresa). `tambem` sao as outras rotas que acendem o item.
  */
 const MENU = [
   { id: 'inicio', rotulo: 'Página inicial', rota: '/app', exato: true, permissao: 'ver_inicio' },
-  { id: 'obras', rotulo: 'Obras', rota: '/app/obras', permissao: 'ver_obras' },
+  /* Concluidas saiu do menu: virou o botao "Concluídas" de Obras, e a tela
+     dela (/app/concluidas) acende Obras aqui */
+  { id: 'obras', rotulo: 'Obras', rota: '/app/obras', permissao: 'ver_obras', tambem: ['/app/concluidas'] },
   { id: 'clientes', rotulo: 'Clientes', rota: '/app/clientes', permissao: 'ver_clientes' },
-  { id: 'concluidas', rotulo: 'Concluídas', rota: '/app/concluidas', permissao: 'ver_concluidas' },
+  /* a folha de ponto: de todo mundo (cada um ve a sua), menos da TV */
+  { id: 'ponto', rotulo: 'Ponto', rota: '/app/ponto', semTv: true },
   { id: 'despesas', rotulo: 'Reembolso', rota: '/app/despesas', permissao: 'ver_despesas' },
   { id: 'frotas', rotulo: 'Frotas', rota: '/app/frotas', permissao: 'ver_frotas' },
   /* o Almoxarife (o antigo lwncontrol) abre a tela dele, em /almoxarife */
@@ -260,7 +267,11 @@ let ultimaRolagem = 0
 
 /** Qual item do menu corresponde ao endereco — a mesma regra do NavLink. */
 function itemDaRota(abas, caminho) {
-  const item = abas.find((i) => matchPath({ path: i.rota, end: Boolean(i.exato) }, caminho))
+  const item = abas.find(
+    (i) =>
+      matchPath({ path: i.rota, end: Boolean(i.exato) }, caminho) ||
+      (i.tambem ?? []).some((rota) => matchPath({ path: rota, end: false }, caminho)),
+  )
   return item?.id ?? null
 }
 
@@ -943,10 +954,11 @@ export default function AppShell({
   const abas = useMemo(
     () =>
       MENU.filter((item) => {
+        if (item.semTv && user?.painelTv) return false
         if (item.permissoes) return item.permissoes.some((p) => pode(p))
         return item.permissao ? pode(item.permissao) : true
       }),
-    [pode],
+    [pode, user?.painelTv],
   )
 
   /* as que saem da barra no celular e vao para o menu lateral */

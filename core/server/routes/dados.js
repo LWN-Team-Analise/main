@@ -12,7 +12,7 @@ import {
   avisarInclusao,
   avisarObraConcluida,
 } from '../avisosObra.js'
-import { apagarNegocioDaObra, criarNegocioDaObra } from '../negocioDaObra.js'
+import { apagarNegocioDaObra } from '../negocioDaObra.js'
 import { depoisDeMarcar, incluirNaObra } from '../membrosObra.js'
 import { bytesDoDataUrl, guardarAnexoDaObra, sharepointConfigurado } from '../sharepoint.js'
 import { notificar, pessoasDosSetores, todosAtivos } from '../push.js'
@@ -2303,8 +2303,9 @@ router.post('/obras', exigeSessao, exige('criar_obras'), async (req, res) => {
     })
     /* quem cria a obra ja faz parte dela: nao precisa se incluir em Membros */
     await incluirNaObra(rows[0].id, req.dono.sub)
-    /* a obra criada aqui entra sozinha no Comercial, em Demanda Recebida */
-    await criarNegocioDaObra(req, { obraId: rows[0].id, clienteId, proposta, descricao })
+    /* a obra criada aqui fica so em Obras: nao vira negocio no Comercial
+       (atualizacao 51). O caminho e o contrario — o negocio compartilhado
+       no Comercial e que vira obra (POST /api/comercial/negocios/:id/compartilhar) */
     return res.status(201).json({ id: String(rows[0].id), tipo })
   } catch (e) {
     if (e.code === '23503') return res.status(400).json({ erro: 'Cliente não encontrado.' })
@@ -2421,6 +2422,8 @@ router.delete('/obras/:id', exigeSessao, async (req, res) => {
 
     /* o nome e lido ANTES: depois do DELETE nao ha mais o que ler */
     const antes = await descreverObra(req.params.id)
+    /* o negocio que nasceu desta obra antes da atualizacao 51 e ainda nao
+       andou vai junto (ver server/negocioDaObra.js) */
     await apagarNegocioDaObra(req.params.id)
     const { rowCount } = await query('DELETE FROM obra WHERE id = $1', [req.params.id])
     if (rowCount === 0) return res.status(404).json({ erro: 'Obra não encontrada.' })

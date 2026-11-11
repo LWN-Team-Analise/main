@@ -207,7 +207,19 @@ export const ASSUNTOS = [
     titulo: 'Obras concluídas',
     gatilhos: ['concluida', 'terminada', 'encerrada', 'finalizada', 'arquivo', 'passado'],
     resposta:
-      'Vão para a aba Concluídas e continuam abrindo — só que travadas. Obra encerrada é registro: dá para ' +
-      'ver tudo, não dá para mexer em nada.',
+      'Vão para a tela Concluídas, que abre pelo botão "Concluídas" em Obras (ao lado do Editar), e ' +
+      'continuam abrindo — só que travadas. Obra encerrada é registro: dá para ver tudo, não dá para mexer em nada.',
+  },
+  {
+    id: 'ponto',
+    titulo: 'Folha de ponto',
+    gatilhos: ['ponto', 'folha de ponto', 'espelho', 'marcacao', 'marcacoes', 'hora extra', 'assinar folha', 'assinatura'],
+    resposta:
+      'Na aba Ponto cada um vê a própria folha de ponto, do mês ou de datas escolhidas, no desenho do espelho do ' +
+      'sistema de ponto. Para assinar a conferência, clique na área acima de "Assinatura Funcionário", marque as ' +
+      'duas confirmações e assine: o seu nome completo fica impresso ali. O Exportar baixa a folha em PDF e em ' +
+      'Excel. Quem tem a permissão "Ver a folha de ponto de todos e importar" (em Usuários) escolhe a pessoa e ' +
+      'importa o Cálculo Diário (.csv), mas não assina a folha de outra pessoa. Em Assinaturas vê quem assinou ' +
+      'e quem falta, e o "Enviar aviso" manda no Teams o pedido para a pessoa assinar.',
   },
 ]

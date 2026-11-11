@@ -1,57 +1,27 @@
 /**
- * A OBRA CRIADA NA MAO ENTRA NO COMERCIAL.
+ * O QUE SOBROU DA OBRA QUE ENTRAVA NO COMERCIAL.
  *
- * O caminho contrario ja existia: o negocio de Novos negocios, quando e
- * compartilhado, vira obra. Agora a obra cadastrada direto em Obras
- * tambem aparece no Comercial, no funil Novos negocios, em Demanda
- * Recebida, ja ligada a obra (`obra_id`). O titulo e o n° da proposta,
- * que e o que identifica a obra; a descricao vai para a observacao.
+ * Entre a atualizacao 48 e a 51, toda obra criada na mao em Obras entrava
+ * sozinha no Comercial, em Novos negocios > Demanda Recebida, ligada a obra
+ * (`obra_id`) e com `compartilhado_em` vazio. Essa ligacao foi desligada:
+ * agora o caminho e um so, o do Comercial para Obras — o negocio de Novos
+ * negocios vira obra quando e compartilhado com a equipe. A obra criada em
+ * Obras fica so em Obras.
  *
- * `compartilhado_em` fica vazio de proposito: nada foi compartilhado, a
- * obra nasceu primeiro. E assim que se sabe que o negocio veio da obra.
- *
- * Falhar aqui nao derruba o cadastro da obra: ela ja foi gravada, e o
- * Comercial e consequencia. As obras que ja existiam quando isto entrou
- * vieram pela atualizacao 48.
+ * Os negocios que nasceram naquele intervalo continuam no Comercial. Fica
+ * so a limpeza deles: a obra excluida leva o negocio que nasceu dela,
+ * enquanto ele ainda esta como nasceu (aberto, em Demanda Recebida). Sem
+ * isso ele ficaria no Comercial como "Pendente", sem obra — e um
+ * "Compartilhar com a equipe" ali criaria a obra de novo. O que o Comercial
+ * ja fez andar, ou que veio do proprio Comercial (`compartilhado_em`
+ * preenchido), continua la.
  */
 import { query } from './db.js'
 import { logger } from './logger.js'
-import { registrarAtividade } from './atividade.js'
-import { FUNIL_PADRAO, TITULO_MAXIMO, funilPorId, rotuloDaEtapa } from '../src/domain/comercial.js'
+import { FUNIL_PADRAO } from '../src/domain/comercial.js'
 
 const ETAPA = 'demanda_recebida'
 
-export async function criarNegocioDaObra(req, { obraId, clienteId, proposta, descricao }) {
-  try {
-    const titulo = String(proposta).slice(0, TITULO_MAXIMO)
-    const { rows } = await query(
-      `INSERT INTO negocio (funil, etapa, titulo, cliente_id, responsavel_id, observacao, proposta, obra_id, criado_por)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $5)
-       RETURNING id`,
-      [FUNIL_PADRAO, ETAPA, titulo, clienteId, req.dono.sub, descricao || null, proposta, obraId],
-    )
-    await registrarAtividade(req, {
-      acao: 'negocio.criado',
-      categoria: 'comercial',
-      entidade: ['negocio', rows[0].id],
-      descricao: 'Novo negócio no Comercial, a partir de uma obra',
-      detalhes: {
-        negocio: titulo,
-        funil: funilPorId(FUNIL_PADRAO)?.rotulo,
-        etapa: rotuloDaEtapa(FUNIL_PADRAO, ETAPA),
-      },
-    })
-  } catch (erro) {
-    logger.error('comercial/negocio-da-obra', erro.message)
-  }
-}
-
-/**
- * A obra excluida leva o negocio que nasceu dela, enquanto ele ainda esta
- * como nasceu (aberto, em Demanda Recebida): sem isso ele ficava no
- * Comercial como "Pendente", sem obra e sem ninguem ter pedido. O que o
- * Comercial ja fez andar, ou que veio do proprio Comercial, continua la.
- */
 export async function apagarNegocioDaObra(obraId) {
   try {
     await query(

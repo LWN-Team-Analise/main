@@ -32,6 +32,8 @@ import {
      PUT    /anotacoes/:dia        a "Anotacao do dia" (vazia apaga)
      POST   /cronogramas           cria um cronograma
      PUT    /cronogramas/:id       renomeia e/ou troca as pessoas
+     PUT    /cronogramas/:id/ordem { membros: [ids] } — a ordem das pessoas
+                                   no cronograma (arrastar na tela)
      DELETE /cronogramas/:id       apaga (com os turnos dele)
 
    Os turnos que vem das OBRAS nao moram aqui: sao lidos das proprias
@@ -125,6 +127,44 @@ const SELECT_TURNO = `
 
 /* ---------------- leitura ---------------- */
 
+/* ---------------- a ordem das pessoas em cada cronograma ----------------
+
+   Quem edita arrasta as pessoas na tela para a ordem que quiser. A ordem
+   fica em `configuracao` (uma linha por cronograma, chave
+   "turnos_ordem:<id>", a lista dos ids em JSON), e nao numa coluna nova:
+   assim ela nao depende de atualizacao no banco. Quem nao esta na lista
+   (entrou no cronograma depois) vem no fim, em ordem alfabetica; quem saiu
+   do cronograma e ignorado. */
+const chaveDaOrdem = (cronogramaId) => `turnos_ordem:${cronogramaId}`
+
+async function ordensGuardadas() {
+  try {
+    const { rows } = await query("SELECT chave, valor FROM configuracao WHERE chave LIKE 'turnos_ordem:%'")
+    const ordens = {}
+    for (const l of rows) {
+      try {
+        const lista = JSON.parse(l.valor)
+        if (Array.isArray(lista)) ordens[l.chave.slice('turnos_ordem:'.length)] = lista.map(String)
+      } catch {
+        /* valor estragado: fica a ordem alfabetica */
+      }
+    }
+    return ordens
+  } catch (erro) {
+    if (erro.code === '42P01') return {}
+    throw erro
+  }
+}
+
+/** Os membros (ja em ordem alfabetica) na ordem guardada; os de fora dela, no fim. */
+function naOrdem(membros, guardada) {
+  if (!guardada?.length) return membros
+  const presentes = new Set(membros)
+  const primeiro = guardada.filter((id) => presentes.has(id))
+  const ja = new Set(primeiro)
+  return [...primeiro, ...membros.filter((id) => !ja.has(id))]
+}
+
 router.get('/', exigeSessao, exige(VER), async (req, res) => {
   /* o rascunho (ainda nao compartilhado) so aparece para quem edita */
   let edita = false
@@ -138,7 +178,7 @@ router.get('/', exigeSessao, exige(VER), async (req, res) => {
   if (!dataValida(de) || !dataValida(ate) || ate < de) return res.status(400).json({ erro: 'Período inválido.' })
   if (diasEntre(de, ate) > PERIODO_MAXIMO) return res.status(400).json({ erro: 'Período longo demais.' })
   try {
-    const [cronogramas, membros, turnos, daObra, anotacoes, execucoes, reservas, prazos] = await Promise.all([
+    const [cronogramas, membros, turnos, daObra, anotacoes, execucoes, reservas, prazos, ordens] = await Promise.all([
       query('SELECT id, nome, ordem FROM cronograma ORDER BY ordem, id'),
       query(
         `SELECT m.cronograma_id, m.usuario_id
@@ -202,6 +242,7 @@ router.get('/', exigeSessao, exige(VER), async (req, res) => {
           ORDER BY p.prazo`,
         [de, ate],
       ).catch(vazioSeFaltar),
+      ordensGuardadas(),
     ])
 
     /* a execucao de cada obra, em trechos de dias seguidos */
@@ -262,7 +303,7 @@ router.get('/', exigeSessao, exige(VER), async (req, res) => {
         id: String(c.id),
         nome: c.nome,
         ordem: c.ordem,
-        membros: pessoasDo[c.id] ?? [],
+        membros: naOrdem(pessoasDo[c.id] ?? [], ordens[String(c.id)]),
       })),
       turnos: [
         ...turnos.rows.map(paraTurno),
@@ -730,11 +771,48 @@ router.put('/cronogramas/:id', exigeSessao, exige(EDITAR), async (req, res) => {
   }
 })
 
+/* a ordem das pessoas, como ficou depois de arrastar na tela. A lista tem de
+   ser exatamente quem esta no cronograma agora: se alguem entrou ou saiu
+   enquanto a tela estava aberta, a tela recarrega e tenta de novo */
+router.put('/cronogramas/:id/ordem', exigeSessao, exige(EDITAR), async (req, res) => {
+  if (!idValido(req.params.id)) return res.status(400).json({ erro: 'Cronograma inválido.' })
+  const bruto = req.body?.membros
+  if (!Array.isArray(bruto) || bruto.length > 500) return res.status(400).json({ erro: 'Lista de pessoas inválida.' })
+  const ordem = bruto.map(String)
+  if (ordem.some((id) => !idValido(id)) || new Set(ordem).size !== ordem.length) {
+    return res.status(400).json({ erro: 'Lista de pessoas inválida.' })
+  }
+  try {
+    const existe = await query('SELECT 1 FROM cronograma WHERE id = $1', [req.params.id])
+    if (!existe.rows[0]) return res.status(404).json({ erro: 'Cronograma não encontrado.' })
+    const { rows } = await query(
+      `SELECT m.usuario_id FROM cronograma_membro m
+         JOIN usuario u ON u.id = m.usuario_id AND coalesce(u.ativo, true)
+        WHERE m.cronograma_id = $1`,
+      [req.params.id],
+    )
+    const atuais = new Set(rows.map((l) => String(l.usuario_id)))
+    if (atuais.size !== ordem.length || ordem.some((id) => !atuais.has(id))) {
+      return res.status(409).json({ erro: 'As pessoas deste cronograma mudaram enquanto a tela estava aberta. Recarregue e arraste de novo.' })
+    }
+    await query(
+      `INSERT INTO configuracao (chave, valor, atualizado_em, atualizado_por) VALUES ($1, $2, now(), $3)
+       ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor, atualizado_em = now(), atualizado_por = EXCLUDED.atualizado_por`,
+      [chaveDaOrdem(req.params.id), JSON.stringify(ordem), req.dono.sub],
+    )
+    return res.json({ ok: true, membros: ordem })
+  } catch (erro) {
+    return falhou(erro, res, 'turnos/cronograma-ordem')
+  }
+})
+
 router.delete('/cronogramas/:id', exigeSessao, exige(EDITAR), async (req, res) => {
   if (!idValido(req.params.id)) return res.status(400).json({ erro: 'Cronograma inválido.' })
   try {
     const { rows } = await query('DELETE FROM cronograma WHERE id = $1 RETURNING nome', [req.params.id])
     if (!rows[0]) return res.status(404).json({ erro: 'Cronograma não encontrado.' })
+    /* a ordem guardada vai junto */
+    await query('DELETE FROM configuracao WHERE chave = $1', [chaveDaOrdem(req.params.id)]).catch(() => {})
     await registrarAtividade(req, {
       acao: 'cronograma.excluido',
       categoria: 'turno',
