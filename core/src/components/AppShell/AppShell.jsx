@@ -60,6 +60,25 @@ const Icone = {
       <path d="M14 3v5h5M12 17.5v-6M9 14.5h6" />
     </svg>
   ),
+  /* Administrativo (a area, no menu largo): a pasta de trabalho */
+  administrativo: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M3 12.5h18M10.5 12.5v1.5h3v-1.5" />
+    </svg>
+  ),
+  /* o "Mais" do alto da barra: a seta que alarga o menu (e encolhe, virada) */
+  seta: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco} strokeWidth="1.9">
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  ),
+  /* a setinha das areas com submenu (Almoxarife, Administrativo) */
+  chevron: () => (
+    <svg viewBox="0 0 24 24" width="15" height="15" {...traco} strokeWidth="2">
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  ),
   /* Meu painel (o inicio do painel do setor): os cards */
   painel: () => (
     <svg viewBox="0 0 24 24" width="17" height="17" {...traco}>
@@ -322,6 +341,94 @@ const ALMOX_ABAS = [
   { id: 'almox-remanejamento', rotulo: 'Remanejamento', caminho: '/remanejamento', permissoes: ['almox_remanejamento'] },
   { id: 'almox-calibracao', rotulo: 'Calibração', caminho: '/calibracao', permissoes: ['almox_calibracao'] },
 ]
+
+/* Os icones das abas do Almoxarife, os mesmos do menu dele
+   (public/almoxarife/almoxarife.html) — e o submenu do menu largo. */
+const glifoAlmox = (conteudo) => () => (
+  <svg viewBox="0 0 24 24" width="19" height="19" {...traco}>
+    {conteudo}
+  </svg>
+)
+const ICONE_ALMOX = {
+  'almox-painel': glifoAlmox(
+    <>
+      <rect x="3" y="3" width="7" height="9" />
+      <rect x="14" y="3" width="7" height="5" />
+      <rect x="14" y="12" width="7" height="9" />
+      <rect x="3" y="16" width="7" height="5" />
+    </>,
+  ),
+  'almox-retirada': glifoAlmox(
+    <>
+      <path d="M12 21l-8-4.5v-9l8-4.5 8 4.5v4.5" />
+      <path d="M12 12l8-4.5M12 12v9M12 12 4 7.5M15 18h7M19 15l3 3-3 3" />
+    </>,
+  ),
+  'almox-devolutiva': glifoAlmox(
+    <>
+      <path d="M9 10 4 15l5 5" />
+      <path d="M20 4v7a4 4 0 0 1-4 4H4" />
+    </>,
+  ),
+  'almox-concluidos': glifoAlmox(
+    <>
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <path d="M22 4 12 14.01l-3-3" />
+    </>,
+  ),
+  'almox-certificados': glifoAlmox(
+    <>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6M16 13H8M16 17H8" />
+    </>,
+  ),
+  'almox-localizacao': glifoAlmox(
+    <>
+      <circle cx="12" cy="10" r="3" />
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+    </>,
+  ),
+  'almox-inventario': glifoAlmox(<path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18" />),
+  'almox-manutencao': glifoAlmox(
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />,
+  ),
+  'almox-remanejamento': glifoAlmox(
+    <>
+      <path d="m17 1 4 4-4 4" />
+      <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+      <path d="m7 23-4-4 4-4" />
+      <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+    </>,
+  ),
+  'almox-calibracao': glifoAlmox(
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
+    </>,
+  ),
+}
+
+/* ------------------------------------------------------------
+   O MENU LARGO (o "Mais" do alto da barra, no computador)
+
+   A barra continua a mesma; o "Mais" a alarga, com o nome de cada aba ao
+   lado do icone, e a PAGINA se ajusta a largura dela — nada fica atras de
+   veu. Almoxarife e Administrativo viram areas com submenu: o clique abre,
+   ao lado, as abas delas (SubmenuArea). A escolha fica guardada no aparelho
+   e vale para todas as telas.
+   ------------------------------------------------------------ */
+const CHAVE_MENU_LARGO = 'customers.menu-largo'
+let menuLargo = (() => {
+  try {
+    return localStorage.getItem(CHAVE_MENU_LARGO) === 'sim'
+  } catch {
+    return false
+  }
+})()
+
+/* as areas com submenu no menu largo, e o item que o Administrativo ganha ali */
+const AREAS_COM_SUBMENU = ['almoxarife', 'administrativo']
+const ITEM_ADMINISTRATIVO = { id: 'administrativo', rotulo: 'Administrativo', rota: '/app/administrativo', permissao: 'painel:administrativo', semTv: true }
 
 /** O item entra no menu de quem esta logado? A mesma regra para todo menu. */
 function itemVisivel(item, pode, painelTv) {
@@ -672,6 +779,91 @@ function Notificacoes() {
             </ul>
           )}
         </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * O SUBMENU de uma area no menu largo: o cartao que abre ao lado da barra,
+ * na altura do item clicado, com as abas da area (Almoxarife ou
+ * Administrativo) — so as que a permissao da pessoa abre. O titulo leva ao
+ * inicio da area. Fecha no clique fora, no Esc, na setinha e ao trocar de
+ * tela. As abas do Almoxarife sao links de pagina inteira.
+ */
+function SubmenuArea({ area, ancora, aoFechar }) {
+  const { user } = useAuth()
+  const { pode } = useDados()
+  const caixa = useRef(null)
+
+  useEffect(() => {
+    const fora = (e) => {
+      if (caixa.current?.contains(e.target) || e.target.closest?.('[data-submenu]')) return
+      aoFechar()
+    }
+    const tecla = (e) => e.key === 'Escape' && aoFechar()
+    document.addEventListener('mousedown', fora)
+    document.addEventListener('keydown', tecla)
+    /* a janela mudou: a altura do item de onde ele saiu tambem */
+    window.addEventListener('resize', aoFechar)
+    return () => {
+      document.removeEventListener('mousedown', fora)
+      document.removeEventListener('keydown', tecla)
+      window.removeEventListener('resize', aoFechar)
+    }
+  }, [aoFechar])
+
+  const ve = (item) => itemVisivel(item, pode, user?.painelTv)
+  const almox = area === 'almoxarife'
+  const itens = almox
+    ? ALMOX_ABAS.filter(ve).map((aba) => ({ ...aba, href: `/core/app/control${aba.caminho}`, Glifo: ICONE_ALMOX[aba.id] }))
+    : MENU_ADM.filter((i) => i.id !== 'adm-voltar' && ve(i)).map((i) => ({ ...i, Glifo: Icone[i.icone ?? i.id] }))
+  const Titulo = Icone[area]
+
+  /* na altura do item; perto do pe da tela, sobe ate caber */
+  const alto = 64 + itens.length * 38
+  const top = Math.max(12, Math.min(ancora.top - 6, window.innerHeight - alto - 12))
+  const classe = ({ isActive }) => `submenu__item ${isActive ? 'is-atual' : ''}`.trim()
+
+  return (
+    <div className="submenu" role="menu" ref={caixa} style={{ top, left: ancora.right + 12 }}>
+      <header className="submenu__topo">
+        <span className="submenu__icone" aria-hidden="true">
+          <Titulo />
+        </span>
+        {almox ? (
+          <a href="/core/app/control" className="submenu__titulo">
+            Almoxarife
+          </a>
+        ) : (
+          <Link to="/app/administrativo" className="submenu__titulo" onClick={aoFechar}>
+            Administrativo
+          </Link>
+        )}
+        <button type="button" className="submenu__fechar" onClick={aoFechar} aria-label="Fechar o submenu">
+          <Icone.chevron />
+        </button>
+      </header>
+      {itens.length === 0 ? (
+        <p className="submenu__vazio">Nenhuma aba liberada para você aqui.</p>
+      ) : (
+        <ul className="submenu__lista">
+          {itens.map(({ id, rotulo, href, rota, exato, Glifo }) => (
+            <li key={id}>
+              {href ? (
+                <a href={href} className="submenu__item" role="menuitem">
+                  <span className="submenu__glifo">{Glifo && <Glifo />}</span>
+                  {rotulo}
+                </a>
+              ) : (
+                <NavLink to={rota} end={exato} className={classe} role="menuitem" onClick={aoFechar}>
+                  <span className="submenu__glifo">{Glifo && <Glifo />}</span>
+                  {rotulo}
+                </NavLink>
+              )}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   )
@@ -1099,6 +1291,34 @@ export default function AppShell({
     [pode, user?.painelTv, administrativa],
   )
 
+  /* O MENU LARGO (o "Mais"): a barra com o nome das abas e a pagina
+     ajustada a ela. A escolha fica guardada no aparelho. */
+  const [largo, setLargo] = useState(menuLargo)
+  const alternarLargo = () =>
+    setLargo((atual) => {
+      const novo = !atual
+      menuLargo = novo
+      try {
+        localStorage.setItem(CHAVE_MENU_LARGO, novo ? 'sim' : 'nao')
+      } catch {
+        /* sem storage, vale ate recarregar */
+      }
+      return novo
+    })
+  /* no menu largo o Administrativo entra como area, antes do Almoxarife,
+     para quem entra nele */
+  const abasNaBarra = useMemo(() => {
+    if (!largo || administrativa || !itemVisivel(ITEM_ADMINISTRATIVO, pode, user?.painelTv)) return abas
+    const lista = [...abas]
+    const onde = lista.findIndex((i) => i.id === 'almoxarife')
+    lista.splice(onde === -1 ? lista.length : onde, 0, ITEM_ADMINISTRATIVO)
+    return lista
+  }, [abas, largo, administrativa, pode, user?.painelTv])
+  /* o submenu aberto de uma area: { area, ancora } */
+  const [submenu, setSubmenu] = useState(null)
+  const fecharSubmenu = useCallback(() => setSubmenu(null), [])
+  const comSubmenu = (item) => largo && !administrativa && AREAS_COM_SUBMENU.includes(item.id)
+
   /* A ilha do aviso de senha. So no modo APLICATIVO — ver o comentario
      la embaixo, onde ela e desenhada. O shell precisa saber disso aqui
      em cima porque e ele quem reserva o espaco dela no alto da tela. */
@@ -1165,7 +1385,13 @@ export default function AppShell({
      pessoa acabou de escolher */
   useEffect(() => {
     setGaveta(false)
+    setSubmenu(null)
   }, [local.pathname])
+
+  /* o menu encolheu: o submenu fica sem a area de onde saiu */
+  useEffect(() => {
+    if (!largo) setSubmenu(null)
+  }, [largo])
 
   /* a lista do computador volta rolada onde a anterior estava */
   useLayoutEffect(() => {
@@ -1251,11 +1477,11 @@ export default function AppShell({
     observador.observe(nav)
     observador.observe(caixa)
     return () => observador.disconnect()
-  }, [mostrado, abas])
+  }, [mostrado, abasNaBarra])
 
   return (
     <div
-      className={`shell ${avisoDeSenha ? 'tem-ilha' : ''} ${gaveta ? 'tem-gaveta' : ''}`
+      className={`shell ${avisoDeSenha ? 'tem-ilha' : ''} ${gaveta ? 'tem-gaveta' : ''} ${largo ? 'tem-menu-largo' : ''}`
         .replace(/\s+/g, ' ')
         .trim()}
     >
@@ -1298,21 +1524,20 @@ export default function AppShell({
           aria-hidden="true"
         />
 
-        {/* O hamburguer do computador, no alto da barra: abre o menu
-            completo (MenuCompleto), com as areas Atmosfera, Administrativo
-            e Almoxarife. No celular quem abre e o Menu da barra de baixo. */}
+        {/* O "Mais" do computador, no alto da barra: alarga o menu, com o
+            nome de cada aba, e a pagina se ajusta (o "Menos" volta). No
+            celular quem abre o menu inteiro e o Menu da barra de baixo. */}
         <button
           type="button"
           className="rail__btn rail__tudo"
-          onClick={() => setGaveta((v) => !v)}
-          aria-expanded={gaveta}
-          aria-controls="menu-completo"
-          title="Menu completo"
+          onClick={alternarLargo}
+          aria-expanded={largo}
+          title={largo ? 'Encolher o menu' : 'Mostrar o menu com os nomes das abas'}
         >
-          <span className="rail__glifo">
-            <Icone.hamburguer />
+          <span className="rail__glifo rail__seta">
+            <Icone.seta />
           </span>
-          <span className="rail__rotulo">Menu</span>
+          <span className="rail__rotulo">{largo ? 'Menos' : 'Mais'}</span>
         </button>
 
         <ul className="rail__lista" ref={lista}>
@@ -1327,8 +1552,35 @@ export default function AppShell({
             <span className="rail__marca-anel" />
           </span>
 
-          {abas.map((item) => {
+          {abasNaBarra.map((item) => {
             const Glifo = Icone[item.icone ?? item.id]
+            /* no menu largo, Almoxarife e Administrativo abrem o submenu */
+            if (comSubmenu(item)) {
+              const aberto = submenu?.area === item.id
+              return (
+                <li key={item.id} data-id={item.id} data-principal="nao">
+                  <button
+                    type="button"
+                    className={`rail__btn rail__area ${aberto ? 'is-aberta' : ''}`.trim()}
+                    data-submenu
+                    aria-haspopup="menu"
+                    aria-expanded={aberto}
+                    onClick={(e) => {
+                      const ancora = e.currentTarget.getBoundingClientRect()
+                      setSubmenu((atual) => (atual?.area === item.id ? null : { area: item.id, ancora }))
+                    }}
+                  >
+                    <span className="rail__glifo">
+                      <Glifo />
+                    </span>
+                    <span className="rail__rotulo">{item.rotulo}</span>
+                    <span className="rail__chevron" aria-hidden="true">
+                      <Icone.chevron />
+                    </span>
+                  </button>
+                </li>
+              )
+            }
             return (
               /* `data-principal` e o que o CSS le para esconder, no
                  celular, quem nao e uma das tres */
@@ -1378,6 +1630,8 @@ export default function AppShell({
       </nav>
 
       <MenuCompleto aberto={gaveta} aoFechar={fecharGaveta} />
+
+      {submenu && <SubmenuArea area={submenu.area} ancora={submenu.ancora} aoFechar={fecharSubmenu} />}
 
       <MenuUsuario />
 

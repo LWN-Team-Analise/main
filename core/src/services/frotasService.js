@@ -73,6 +73,10 @@ export const reservar = (obraId, campos) => put(`/frotas/reservas/${encodeURICom
 
 export const cancelarReserva = (obraId) => del(`/frotas/reservas/${encodeURIComponent(obraId)}`)
 
+/** Conceder o carro: libera (ou trava de novo) a retirada na vespera da obra (conceder_carro). */
+export const liberarRetirada = (obraId) => put(`/frotas/reservas/${encodeURIComponent(obraId)}/liberar`, {})
+export const travarRetirada = (obraId) => del(`/frotas/reservas/${encodeURIComponent(obraId)}/liberar`)
+
 /* ---- o rodizio de Sao Paulo ---- */
 
 /** { hoje, dias, horarios, area, agora, fonte } — ver GET /frotas/rodizio. */

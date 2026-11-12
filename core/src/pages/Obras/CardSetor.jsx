@@ -8,6 +8,7 @@ import {
   CHECK_PRAZO_EXECUCAO,
   CHECK_RESERVA,
   CHECK_RETIRADA,
+  CHECK_TIPO_ENSAIO,
   CHECK_ENVIAR_OS,
   CHECK_SEPARAR_OS,
   CHECK_RETIRADA_OS,
@@ -251,7 +252,9 @@ export default function CardSetor({
           const situacaoPrazo = estadoDoPrazo(prazo, hoje, { feito })
           const planejamento = check.tipo === CHECK_PLANEJAMENTO
           const execucaoDosEnsaios = check.tipo === CHECK_EXECUCAO
-          const doSistema = planejamento || execucaoDosEnsaios
+          /* o "Tipo de ensaio" do Comercial (atualizacao 54) abre o pop-up dele */
+          const tipoDeEnsaio = check.tipo === CHECK_TIPO_ENSAIO
+          const doSistema = planejamento || execucaoDosEnsaios || tipoDeEnsaio
           /* a proposta tecnica (1a etapa) abre o pop-up do documento */
           const proposta = !modelo && ehPropostaTecnica(etapa, check)
           const documento = proposta ? anexoDaProposta(obra) : null

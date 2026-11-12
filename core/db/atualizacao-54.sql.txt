@@ -1,0 +1,105 @@
+-- ============================================================
+--  ATUALIZACAO 54 — o Tipo de ensaio do Comercial, a retirada do carro
+--  na vespera e duas permissoes novas
+--
+--  1. TIPO DE ENSAIO. Nasce o check "Tipo de ensaio" (tipo tipo_ensaio)
+--     no card do Comercial da 1a etapa. Nele o Comercial escolhe o que a
+--     obra vai ensaiar (ambiente, equipamento, sistema, ponto de uso), e o
+--     Planejamento de ensaios so cadastra item desses tipos
+--     (obra.tipos_ensaio). Vale para as obras criadas daqui em diante: as
+--     que ja existem seguem como estao, com o tipo do item livre.
+--
+--  2. O CARRO NA VESPERA. O carro reservado para a obra so sai a partir do
+--     primeiro dia da execucao; quem tem `conceder_carro` libera a retirada
+--     na vespera (obra_reserva_veiculo.liberada_por e liberada_em).
+--
+--  3. AS PERMISSOES, uma vez so (a marca 'marco_atualizacao_54'):
+--       ordenar_turnos  arrastar as pessoas nos turnos: o setor Admin e
+--                       quem ja editava turnos (que arrastava ate agora);
+--       conceder_carro  liberar a retirada na vespera: o setor Admin.
+--     O acesso total ja passa por elas; entram na lista dele so para a tela
+--     de Setores mostrar a caixa marcada.
+--
+--  So acrescenta. SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon. Rodar de novo nao
+--  faz nada.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.obra ADD COLUMN IF NOT EXISTS tipos_ensaio text[];
+
+COMMENT ON COLUMN public.obra.tipos_ensaio IS
+    'O Tipo de ensaio do Comercial: os tipos de item (ambiente, equipamento, sistema, ponto_uso) que o planejamento pode usar.';
+
+ALTER TABLE public.obra_reserva_veiculo ADD COLUMN IF NOT EXISTS liberada_por bigint REFERENCES public.usuario (id) ON DELETE SET NULL;
+ALTER TABLE public.obra_reserva_veiculo ADD COLUMN IF NOT EXISTS liberada_em timestamptz;
+
+COMMENT ON COLUMN public.obra_reserva_veiculo.liberada_em IS
+    'Quando quem concede o carro liberou a retirada na vespera do primeiro dia da execucao.';
+
+ALTER TABLE public.etapa_check DROP CONSTRAINT IF EXISTS etapa_check_tipo_valido;
+ALTER TABLE public.etapa_check ADD CONSTRAINT etapa_check_tipo_valido
+    CHECK (tipo IN ('comum', 'planejamento_ensaios', 'execucao_ensaios', 'material_gases',
+                    'prazo_execucao', 'reserva_carro', 'retirada_carro', 'enviar_os',
+                    'separar_os', 'retirada_os', 'devolucao_os',
+                    'aprovacao_protocolos', 'analise_faturamento', 'tipo_ensaio'));
+
+COMMENT ON COLUMN public.etapa_check.tipo IS
+    'comum, planejamento_ensaios, execucao_ensaios, material_gases, prazo_execucao, reserva_carro, retirada_carro, enviar_os, separar_os, retirada_os, devolucao_os, aprovacao_protocolos, analise_faturamento ou tipo_ensaio';
+
+-- o check no card do Comercial da 1a etapa, no fim dele
+INSERT INTO public.etapa_check (card_id, ordem, titulo, tipo, vigente_de)
+SELECT card.id,
+       (SELECT coalesce(max(x.ordem), -1) + 1
+          FROM public.etapa_check x
+         WHERE x.card_id = card.id AND x.vigente_ate IS NULL AND x.obra_id IS NULL),
+       'Tipo de ensaio', 'tipo_ensaio', now()
+  FROM (SELECT c.id
+          FROM public.etapa_card c
+          JOIN public.etapa et             ON et.id = c.etapa_id
+          JOIN public.etapa_card_cargo cc  ON cc.card_id = c.id
+          JOIN public.cargo g              ON g.id = cc.cargo_id
+         WHERE et.ordem = 1 AND et.vigente_ate IS NULL AND c.vigente_ate IS NULL
+           AND g.chave = 'comercial'
+         ORDER BY c.ordem, c.id
+         LIMIT 1) card
+ WHERE NOT EXISTS (SELECT 1 FROM public.etapa_check y
+                    WHERE y.tipo = 'tipo_ensaio' AND y.vigente_ate IS NULL AND y.obra_id IS NULL);
+
+-- as permissoes, uma vez so
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['ordenar_turnos']
+ WHERE NOT ('ordenar_turnos' = ANY (permissoes))
+   AND NOT coalesce(painel_tv, false)
+   AND (acesso_total OR chave = 'admin' OR 'editar_turnos' = ANY (permissoes))
+   AND (acesso_total OR 'ver_turnos' = ANY (permissoes))
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_54');
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['conceder_carro']
+ WHERE NOT ('conceder_carro' = ANY (permissoes))
+   AND NOT coalesce(painel_tv, false)
+   AND (acesso_total OR chave = 'admin')
+   AND (acesso_total OR 'ver_frotas' = ANY (permissoes))
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_54');
+
+INSERT INTO public.configuracao (chave, valor)
+VALUES ('marco_atualizacao_54', 'ordenar_turnos e conceder_carro distribuidas')
+ON CONFLICT (chave) DO NOTHING;
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA
+-- ============================================================
+
+SELECT 'check Tipo de ensaio no card do Comercial (1a etapa)' AS item,
+       EXISTS (SELECT 1 FROM public.etapa_check
+                WHERE tipo = 'tipo_ensaio' AND vigente_ate IS NULL AND obra_id IS NULL) AS ok
+UNION ALL
+SELECT 'setores com ordenar_turnos: ' || coalesce(string_agg(nome, ', '), 'nenhum'), true
+  FROM public.cargo WHERE 'ordenar_turnos' = ANY (permissoes)
+UNION ALL
+SELECT 'setores com conceder_carro: ' || coalesce(string_agg(nome, ', '), 'nenhum'), true
+  FROM public.cargo WHERE 'conceder_carro' = ANY (permissoes);

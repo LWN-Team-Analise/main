@@ -183,6 +183,10 @@ export const ALTERACAO = [
   { chave: 'editar_veiculos', rotulo: 'Adicionar / editar veículos', dependeDe: 'ver_frotas' },
   /* apagar uma saida, troca ou devolucao registrada (Saidas e devolucoes) */
   { chave: 'excluir_registro_frota', rotulo: 'Excluir saída e devolução', dependeDe: 'ver_frotas' },
+  /* o carro RESERVADO para a obra so sai a partir do primeiro dia da
+     execucao; quem tem esta concede o carro antes, liberando a retirada na
+     vespera (atualizacao 54, o check "Reserva de carro") */
+  { chave: 'conceder_carro', rotulo: 'Conceder o carro: liberar a retirada na véspera da obra', dependeDe: 'ver_frotas' },
   /* quem RECEBE no Teams o aviso da devolucao com o tanque abaixo da
      metade (atualizacao 39). E aviso, e nao acesso: vale so para o setor
      que tem a chave marcada — o acesso total nao entra sozinho */
@@ -203,6 +207,9 @@ export const ALTERACAO = [
   /* Turnos (atualizacao 31): ver a aba e `ver_turnos`; criar e mudar
      turnos, anotacoes do dia e cronogramas e `editar_turnos` */
   { chave: 'editar_turnos', rotulo: 'Adicionar / editar turnos e cronogramas', dependeDe: 'ver_turnos' },
+  /* arrastar as pessoas para a ordem de cada cronograma (a alca de seis
+     pontos ao lado da foto). Permissao propria (atualizacao 54) */
+  { chave: 'ordenar_turnos', rotulo: 'Arrastar e ordenar as pessoas nos turnos', dependeDe: 'ver_turnos' },
 ]
 
 /**

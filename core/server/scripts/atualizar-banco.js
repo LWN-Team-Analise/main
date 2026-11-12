@@ -92,6 +92,9 @@ const ARQUIVOS = [
   /* Meu painel (o painel de cada setor), as permissoes da pessoa (quadro de
      avisos e agenda), o aviso do cadastro incompleto e o bonus apartamento */
   'db/atualizacao-53.sql.txt',
+  /* o check Tipo de ensaio do Comercial, a retirada do carro na vespera e as
+     permissoes ordenar_turnos e conceder_carro */
+  'db/atualizacao-54.sql.txt',
 ]
 
 /**
@@ -272,6 +275,11 @@ const CONFERENCIA = [
   ['usuario.permissoes_pessoais', col('usuario', 'permissoes_pessoais')],
   ['usuario.aviso_cadastro_dispensado', col('usuario', 'aviso_cadastro_dispensado')],
   ['cliente.bonus_apartamento', col('cliente', 'bonus_apartamento')],
+  ['obra.tipos_ensaio', col('obra', 'tipos_ensaio')],
+  ['obra_reserva_veiculo.liberada_em', col('obra_reserva_veiculo', 'liberada_em')],
+  ['check Tipo de ensaio (Comercial, 1a etapa)', "SELECT EXISTS (SELECT 1 FROM etapa_check WHERE tipo = 'tipo_ensaio' AND vigente_ate IS NULL AND obra_id IS NULL) AS ok"],
+  ['ordenar_turnos no acesso total', permissaoNoAcessoTotal('ordenar_turnos')],
+  ['conceder_carro no acesso total', permissaoNoAcessoTotal('conceder_carro')],
 ]
 
 function col(tabela, coluna) {

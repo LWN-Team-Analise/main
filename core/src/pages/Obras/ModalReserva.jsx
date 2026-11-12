@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
 import { kmLegivel } from '@/domain/frotas'
+import { janelaDaRetirada } from '@/domain/obras'
 import { diaDaSemana, finaisLegiveis, finalDaPlaca, horariosLegiveis } from '@/domain/rodizio'
 import * as frotasApi from '@/services/frotasService'
 import { dataBR, dataHora } from '@/utils/formato'
@@ -27,6 +28,10 @@ import './ModalReserva.css'
 
    Depois que o carro sai, a reserva nao muda mais. Quem nao e
    supervisor so ve o que foi reservado.
+
+   CONCEDER O CARRO (atualizacao 54): o carro reservado so sai a partir do
+   primeiro dia da execucao. Quem tem `conceder_carro` libera a retirada na
+   vespera, por aqui — e tira a liberacao, se mudar de ideia.
    ------------------------------------------------------------ */
 
 const SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
@@ -64,10 +69,12 @@ function situacaoDoCarro(v) {
   return { tom: 'livre', texto: 'Livre no período' }
 }
 
-export default function ModalReserva({ aberto, obra, check, nomeCard, podeReservar, aoFechar, aoMudou }) {
+export default function ModalReserva({ aberto, obra, check, nomeCard, podeReservar, podeConceder, aoFechar, aoMudou }) {
   const reserva = obra?.reserva ?? null
   const retirado = Boolean(reserva?.retirada)
   const mexe = podeReservar && !retirado
+  /* desde quando o carro reservado sai: o primeiro dia, ou a vespera liberada */
+  const janela = reserva?.veiculoId && !retirado ? janelaDaRetirada(obra) : null
 
   const [frota, setFrota] = useState(null)
   const [escolhido, setEscolhido] = useState('')
@@ -150,6 +157,45 @@ export default function ModalReserva({ aberto, obra, check, nomeCard, podeReserv
                 </span>
               )}
             </span>
+          </div>
+        )}
+
+        {/* quando o carro sai, e a liberacao da vespera para quem concede */}
+        {janela && (
+          <div className="reservacar__liberacao" data-liberada={janela.liberada ? 'sim' : undefined}>
+            <p>
+              {janela.liberada ? (
+                <>
+                  <strong>Retirada liberada a partir de {dataBR(janela.aPartirDe)}</strong>, a véspera da obra
+                  {reserva.liberada?.porNome ? ` (por ${reserva.liberada.porNome})` : ''}.
+                </>
+              ) : (
+                <>
+                  O carro sai a partir de <strong>{dataBR(janela.primeiro)}</strong>, o primeiro dia da execução.
+                  {podeConceder ? '' : ' Para retirar na véspera, peça a quem concede o carro.'}
+                </>
+              )}
+            </p>
+            {podeConceder &&
+              (janela.liberada ? (
+                <button
+                  type="button"
+                  className="proposta__desmarcar"
+                  onClick={() => fazer(() => frotasApi.travarRetirada(obra.id), 'travar')}
+                  disabled={Boolean(salvando)}
+                >
+                  Tirar a liberação
+                </button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  onClick={() => fazer(() => frotasApi.liberarRetirada(obra.id), 'liberar')}
+                  loading={salvando === 'liberar'}
+                  disabled={Boolean(salvando)}
+                >
+                  Liberar a retirada na véspera ({dataBR(janela.vespera).slice(0, 5)})
+                </Button>
+              ))}
           </div>
         )}
 

@@ -1,0 +1,74 @@
+/* "Tipo de ensaio" (ModalTipoEnsaio.jsx, atualizacao 54): os tipos de item da obra */
+
+.tipoensaio__opcoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.tipoensaio__opcao {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--control-border);
+  border-radius: 14px;
+  background: var(--control-bg);
+  color: var(--text-base);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.tipoensaio__opcao:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+.tipoensaio__opcao[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+}
+
+.tipoensaio__opcao:disabled {
+  cursor: default;
+}
+
+.tipoensaio__opcao:disabled:not([aria-pressed='true']) {
+  opacity: 0.55;
+}
+
+.tipoensaio__marca {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--control-border);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.tipoensaio__opcao[aria-pressed='true'] .tipoensaio__marca {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.tipoensaio__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tipoensaio__texto strong {
+  font-size: 0.9rem;
+  color: var(--text-strong);
+}
+
+.tipoensaio__texto span {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}

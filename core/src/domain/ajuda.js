@@ -135,9 +135,9 @@ export const ASSUNTOS = [
     resposta:
       'Se o seu setor tem um painel (Administrativo ou Almoxarife), ele aparece como "Meu painel" no menu da ' +
       'sua foto, logo acima de Configurações. O painel de cada setor é escolhido por quem tem acesso total, na ' +
-      'tela do setor. O botão de três barras no alto do menu abre o sistema inteiro, dividido em Atmosfera, ' +
-      'Administrativo e Almoxarife, só com o que você pode ver. O Solicitar abre direto a solicitação de OS ' +
-      'do Almoxarife.',
+      'tela do setor. No computador, o "Mais" no alto do menu mostra o nome de cada aba, e o Almoxarife e o ' +
+      'Administrativo abrem ao lado as abas deles; no celular, o Menu da barra de baixo abre o sistema inteiro. ' +
+      'O Solicitar abre direto a solicitação de OS do Almoxarife.',
   },
   {
     id: 'emergencia',

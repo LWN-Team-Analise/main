@@ -123,6 +123,13 @@ placa x dia da semana, sem fim de semana e feriado; `GET
 que cai mostra os dias. Sem o prazo da execucao, a tela pede para definir o
 periodo; carro sem placa vai para o fim, sem conferencia.
 
+**A retirada na vespera (atualizacao 54).** O carro reservado para a obra so sai a
+partir do **primeiro dia da execucao**: a saida dele para a obra antes disso volta 409
+(e o check "Retirada do carro" ja avisa). Quem tem `conceder_carro` concede o carro
+antes, no pop-up da "Reserva de carro": **Liberar a retirada na vespera** (e "Tirar a
+liberação"), em `PUT/DELETE /api/frotas/reservas/:obraId/liberar`. Reservar de novo
+desfaz a liberacao. Reserva antiga, sem periodo, nao tem trava.
+
 **Uso da frota no Dashboard.** A pagina inicial (aba Dashboard, para quem tambem
 tem Frotas) mostra os km rodados por mes, quem mais dirigiu e a tabela de km
 por carro e por mes, sempre em doze meses (`GET /api/frotas/uso`). Cada
@@ -285,6 +292,7 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-37.sql.txt` | quem marca check: cargo.regras_check (regra por cargo e por pessoa), as permissoes `check_todas_obras` e `criar_obras`, e o negocio pendente (negocio.proposta, compartilhado_em/por) |
 | `db/atualizacao-52.sql.txt` | a permissao `ver_administrativo` (a area Administrativo), dada uma vez a quem revisava despesa geral ou gerenciava o ponto e ao acesso total |
 | `db/atualizacao-53.sql.txt` | o **Meu painel** (`cargo.painel` e `cargo.painel_exclusivo`, com o Administrativo dado uma vez a quem tinha `ver_administrativo`), as permissoes da pessoa (`usuario.permissoes_pessoais`), o "Nao me mostrar" do aviso do cadastro (`usuario.aviso_cadastro_dispensado`) e o bonus apartamento no cliente (`cliente.bonus_apartamento`) |
+| `db/atualizacao-54.sql.txt` | o check **Tipo de ensaio** no card do Comercial da 1a etapa (`tipo_ensaio`, `obra.tipos_ensaio`; so nas obras criadas depois), a retirada do carro na vespera (`obra_reserva_veiculo.liberada_por` e `liberada_em`) e as permissoes `ordenar_turnos` (Admin e quem editava turnos) e `conceder_carro` (Admin), dadas uma vez |
 | `db/atualizacao-51.sql.txt` | a aba Ponto: `ponto_dia` (o Calculo Diario importado) e `ponto_assinatura` (a conferencia assinada). Tambem aposenta a 48 (a obra criada em Obras nao vira mais negocio) |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
@@ -603,7 +611,7 @@ esconde o botao e a API recusa a chamada usando exatamente as mesmas chaves.
 | Grupo        | Chaves                                                              |
 | ------------ | ------------------------------------------------------------------- |
 | Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_turnos`, `ver_avaliacoes`, `ver_usuarios`, `ver_avisos` |
-| Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `ver_senha_padrao`, `gerenciar_ponto`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `criar_obras`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `check_todas_obras`, `check_sem_informacao`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
+| Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `ver_senha_padrao`, `gerenciar_ponto`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `criar_obras`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `check_todas_obras`, `check_sem_informacao`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails`, `ordenar_turnos` (arrastar as pessoas nos turnos), `conceder_carro` (liberar a retirada do carro na vespera) |
 | Da pessoa    | `publicar_avisos` (quadro de avisos), `publicar_agenda` (agenda da empresa) — em `usuario.permissoes_pessoais`, marcadas so por quem tem acesso total em Usuarios > editar; o acesso total **nao** passa por elas sozinho |
 
 Alem das listas, cada setor pode ter um **painel** (`cargo.painel`, "Meu painel" — ver a secao Administrativo): `podeFazer(usuario, 'painel:administrativo')` e a pergunta das telas da area.
@@ -1517,8 +1525,17 @@ link do aviso do Teams (que aponta para `/core/app/ponto`). A atualizacao 53 deu
 painel Administrativo, uma vez so, aos setores que tinham a `ver_administrativo` (52)
 sem acesso total; a chave antiga ficou na lista sem valer e sai quando o setor e salvo.
 
-**O menu completo (o hamburguer).** No alto da barra da esquerda (no celular, o Menu
-da barra de baixo) fica o hamburguer, que abre o sistema inteiro dividido por area:
+**O menu largo (o "Mais").** No computador, o alto da barra da esquerda tem a seta
+**Mais**: ela alarga a barra, com o nome de cada aba ao lado do icone, e a pagina se
+ajusta a largura nova — nada fica atras de veu. A barra de sempre continua igual com o
+menu encolhido (o **Menos** volta), e a escolha fica guardada no aparelho
+(`customers.menu-largo`). No menu largo, **Almoxarife** e **Administrativo** (para quem
+entra nele) ganham a setinha: o clique abre ao lado o cartao com as abas da area
+(`SubmenuArea`, no AppShell), cada uma pela permissao dela; o titulo do cartao leva ao
+inicio da area.
+
+**O menu completo (o hamburguer).** No celular, o Menu da barra de baixo abre o
+sistema inteiro dividido por area:
 **Atmosfera** (as abas de sempre), **Administrativo** (para quem entra nele) e
 **Almoxarife** (as abas dele, cada uma pela permissao `almox_*`, com o link que abre a
 aba direto em `/core/app/control/...`). So aparece o que a permissao de visualizacao
@@ -2694,6 +2711,19 @@ como antes.
 a pessoa **arrasta** os ensaios do catalogo para a caixa da obra (e de volta
 para tirar; dentro da caixa, arrastar muda a ordem). Fica em `obra_ensaio`.
 O check so fecha com ao menos um ensaio.
+
+**Tipo de ensaio (1a etapa, Comercial — atualizacao 54).** No card do Comercial, o
+check "Tipo de ensaio" abre os tipos de item (ambiente, equipamento, sistema, ponto de
+uso) e o Comercial marca um ou mais; salvar marca o check (`PUT
+/api/dados/obras/:id/tipo-ensaio`). No Planejamento de ensaios por item, o "Tipo do
+item" fica travado nesses tipos (os outros aparecem apagados) e, antes da escolha, nao
+se cadastra item novo; o item que ja existia fica com o tipo dele. A API recusa igual
+(409). Vale para as obras criadas depois da atualizacao 54: as anteriores nao tem o
+check e seguem livres.
+
+**Nao conforme pede justificativa.** Na execucao por item, marcar "Não conforme" abre
+o campo **Justificativa**, obrigatorio (fica na observacao da linha, e aparece na
+leitura); a API recusa o nao conforme sem ela.
 
 **Execucao dos ensaios (3a etapa).** O check abre so os ensaios planejados.
 Dentro do periodo de execucao, o responsavel escolhe um **dia** e diz quanto

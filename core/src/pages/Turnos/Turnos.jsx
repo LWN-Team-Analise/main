@@ -937,7 +937,9 @@ export default function Turnos() {
     /* a posicao conta a pessoa ainda no lugar antigo: abaixo dela, um a menos */
     reordenar(grupoId, usuarioId, posicao > de ? posicao - 1 : posicao)
   })
-  const arrastaPessoas = edita && !procura
+  /* arrastar as pessoas e permissao propria (atualizacao 54), e nao a de
+     editar turnos; com a busca ligada a lista nao e a inteira e a alca some */
+  const arrastaPessoas = pode('ordenar_turnos') && !procura
 
   const nConflitos = contas?.conflitos.lista.length ?? 0
   const nRascunhos = contas?.rascunhos.length ?? 0

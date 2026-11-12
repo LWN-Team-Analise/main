@@ -74,6 +74,8 @@ const VER = 'ver_frotas'
 const REGISTRAR = 'registrar_frota'
 const EDITAR = 'editar_veiculos'
 const EXCLUIR = 'excluir_registro_frota'
+/* conceder o carro reservado: liberar a retirada na vespera (atualizacao 54) */
+const CONCEDER = 'conceder_carro'
 
 const texto = (valor) => String(valor ?? '').trim()
 
@@ -652,7 +654,7 @@ router.post('/saidas', exigeSessao, exige(REGISTRAR), async (req, res) => {
       await cliente.query('UPDATE veiculo SET km_atual = $2 WHERE id = $1', [v.id, dados.km])
       /* a saida do carro RESERVADO para esta obra e a retirada dele:
          liga a saida a reserva e marca o "Retirada do carro" da obra */
-      const retirada = await ligarRetirada(cliente, obra.id, v.id, rows[0].id, req.dono.sub)
+      const retirada = await ligarRetirada(cliente, obra.id, v.id, rows[0].id, req.dono.sub, dados.data)
       return { registroId: rows[0].id, tipo: tipoRegistro, veiculo: v, condutor: c, destino: destinoObra, retirada }
     })
 
@@ -878,16 +880,70 @@ async function checkDaObra(db, obraId, tipo) {
   return rows[0]?.id ?? null
 }
 
+/* A coluna da liberacao (atualizacao 54) existe? Conferido ANTES de usar:
+   dentro da transacao da saida, um erro de coluna anularia tudo. */
+let temLiberacao = null
+async function bancoTemLiberacao(db) {
+  if (temLiberacao) return true
+  const { rows } = await db.query(
+    `SELECT EXISTS (SELECT 1 FROM information_schema.columns
+                     WHERE table_name = 'obra_reserva_veiculo' AND column_name = 'liberada_em') AS ok`,
+  )
+  temLiberacao = rows[0]?.ok === true
+  return temLiberacao
+}
+
+/* ------------------------------------------------------------
+   QUANDO o carro reservado pode sair (atualizacao 54)
+
+   O carro reservado para a obra so sai a partir do PRIMEIRO DIA da
+   execucao dela. Quem tem `conceder_carro` concede o carro antes: libera
+   a retirada na vespera — e so na vespera, nunca antes. A data que conta e
+   a da saida registrada. Reserva sem periodo (antiga) nao tem trava.
+   ------------------------------------------------------------ */
+
+/** { primeiro, aPartirDe, liberada } da reserva, ou null quando nao ha trava. */
+async function janelaDaRetirada(db, obraId) {
+  const dias = await diasDaExecucao(obraId, db)
+  if (!dias?.length) return null
+  let liberada = false
+  if (await bancoTemLiberacao(db)) {
+    const { rows } = await db.query('SELECT liberada_em FROM obra_reserva_veiculo WHERE obra_id = $1', [obraId])
+    liberada = Boolean(rows[0]?.liberada_em)
+  }
+  return { primeiro: dias[0], aPartirDe: liberada ? somarDiasIso(dias[0], -1) : dias[0], liberada }
+}
+
+/** 'AAAA-MM-DD' -> 'dd/mm', como o recado mostra. */
+const diaCurtoBr = (iso) => String(iso).slice(0, 10).split('-').reverse().slice(0, 2).join('/')
+
 /**
  * A saida de um carro reservado para a obra de destino E a retirada
  * dele: grava a saida na reserva e marca o check "Retirada do carro".
  * Roda dentro da transacao da saida. Devolve true quando era a retirada.
+ * Antes do dia em que a retirada abre, recusa a saida inteira.
  */
-async function ligarRetirada(cliente, obraId, veiculoId, registroId, usuarioId) {
+async function ligarRetirada(cliente, obraId, veiculoId, registroId, usuarioId, data) {
   /* banco sem a atualizacao 23: confere ANTES, porque um erro aqui
      dentro anularia a transacao da saida inteira */
   const { rows: tabela } = await cliente.query("SELECT to_regclass('public.obra_reserva_veiculo') IS NOT NULL AS ok")
   if (!tabela[0]?.ok) return false
+  const { rows: reservado } = await cliente.query(
+    'SELECT 1 FROM obra_reserva_veiculo WHERE obra_id = $1 AND veiculo_id = $2 AND registro_id IS NULL',
+    [obraId, veiculoId],
+  )
+  if (reservado[0] && data && (await bancoTemLiberacao(cliente))) {
+    const janela = await janelaDaRetirada(cliente, obraId)
+    if (janela && data < janela.aPartirDe) {
+      throw new Recusa(
+        'data',
+        janela.liberada
+          ? `A retirada deste carro foi liberada a partir de ${diaCurtoBr(janela.aPartirDe)}, a véspera da obra.`
+          : `Este carro está reservado para a obra e só sai a partir de ${diaCurtoBr(janela.primeiro)}, o primeiro dia da execução. Para retirar na véspera, peça a quem concede o carro para liberar.`,
+        409,
+      )
+    }
+  }
   const { rows } = await cliente.query(
     `UPDATE obra_reserva_veiculo SET registro_id = $3
       WHERE obra_id = $1 AND veiculo_id = $2 AND registro_id IS NULL
@@ -1164,6 +1220,13 @@ router.put('/reservas/:obraId', exigeSessao, exigeReservador, async (req, res) =
                 reservado_em = now(), registro_id = NULL`,
         [obraId, veiculoId, req.dono.sub],
       )
+      /* reservar de novo (outro carro, ou sem carro) desfaz a liberacao da vespera */
+      if (await bancoTemLiberacao(cliente)) {
+        await cliente.query(
+          'UPDATE obra_reserva_veiculo SET liberada_por = NULL, liberada_em = NULL WHERE obra_id = $1',
+          [obraId],
+        )
+      }
       await cliente.query(
         `INSERT INTO obra_check (obra_id, check_id, feito_por) VALUES ($1, $2, $3)
          ON CONFLICT (obra_id, check_id) DO UPDATE SET feito_por = EXCLUDED.feito_por, feito_em = now()`,
@@ -1222,6 +1285,58 @@ router.delete('/reservas/:obraId', exigeSessao, exigeReservador, async (req, res
     return falhou(erro, res, 'frotas/reserva-cancelar')
   }
 })
+
+/* ------------------------------------------------------------
+   Conceder o carro: a retirada na VESPERA (atualizacao 54)
+
+     PUT    /reservas/:obraId/liberar   libera a retirada um dia antes
+     DELETE /reservas/:obraId/liberar   volta a valer so o primeiro dia
+
+   So com `conceder_carro`, so com um carro reservado e ainda nao
+   retirado.
+   ------------------------------------------------------------ */
+
+async function mudarLiberacao(req, res, liberar) {
+  const { obraId } = req.params
+  if (!idValido(obraId)) return res.status(404).json({ erro: 'Obra não encontrada.' })
+  try {
+    if (!(await bancoTemLiberacao({ query }))) {
+      return res.status(503).json({ erro: 'O banco ainda não tem a liberação do carro. Rode npm run db:atualizar (atualização 54).' })
+    }
+    const { rows } = await query(
+      `SELECT rv.veiculo_id, rv.registro_id, v.nome AS veiculo,
+              concat_ws(' - ', cl.nome, nullif(btrim(o.proposta), '')) AS obra
+         FROM obra_reserva_veiculo rv
+         JOIN obra o     ON o.id = rv.obra_id
+         JOIN cliente cl ON cl.id = o.cliente_id
+         LEFT JOIN veiculo v ON v.id = rv.veiculo_id
+        WHERE rv.obra_id = $1`,
+      [obraId],
+    )
+    const reserva = rows[0]
+    if (!reserva?.veiculo_id) return res.status(409).json({ erro: 'Esta obra não tem carro reservado.' })
+    if (reserva.registro_id) return res.status(409).json({ erro: 'O carro desta obra já foi retirado.' })
+    await query(
+      liberar
+        ? 'UPDATE obra_reserva_veiculo SET liberada_por = $2, liberada_em = now() WHERE obra_id = $1'
+        : 'UPDATE obra_reserva_veiculo SET liberada_por = NULL, liberada_em = NULL WHERE obra_id = $1',
+      liberar ? [obraId, req.dono.sub] : [obraId],
+    )
+    await registrarAtividade(req, {
+      acao: liberar ? 'frota.retirada_liberada' : 'frota.retirada_travada',
+      categoria: 'frota',
+      entidade: ['obra', obraId],
+      descricao: liberar ? 'Retirada do carro liberada na véspera' : 'Liberação da véspera retirada',
+      detalhes: { obra: reserva.obra, veiculo: reserva.veiculo },
+    })
+    return res.json({ ok: true })
+  } catch (erro) {
+    return falhou(erro, res, 'frotas/reserva-liberar')
+  }
+}
+
+router.put('/reservas/:obraId/liberar', exigeSessao, exige(CONCEDER), (req, res) => mudarLiberacao(req, res, true))
+router.delete('/reservas/:obraId/liberar', exigeSessao, exige(CONCEDER), (req, res) => mudarLiberacao(req, res, false))
 
 /* ------------------------------------------------------------
    Os registros

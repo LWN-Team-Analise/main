@@ -342,3 +342,9 @@
   color: var(--danger);
   background: var(--danger-bg);
 }
+
+/* a pastilha travada (`travada` na opcao): continua a vista, nao se escolhe */
+.pastilha:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}

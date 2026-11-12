@@ -608,6 +608,12 @@ export function DadosProvider({ children }) {
     [gravar],
   )
 
+  /** O "Tipo de ensaio" do Comercial (atualizacao 54): os tipos de item da obra. */
+  const definirTipoEnsaio = useCallback(
+    (obraId, tipos) => gravar(() => dados.definirTipoEnsaio(obraId, tipos)),
+    [gravar],
+  )
+
   /** O resultado de linhas do planejamento por item; { id, apagar: true } volta a pendente. */
   const registrarLinhas = useCallback(
     (obraId, linhas) => gravar(() => dados.registrarLinhas(obraId, linhas)),
@@ -1311,6 +1317,7 @@ export function DadosProvider({ children }) {
       registrarExecucaoDia,
       planejarItens,
       registrarLinhas,
+      definirTipoEnsaio,
       adicionarEnsaio,
       atualizarEnsaio,
       removerEnsaio,
@@ -1438,6 +1445,7 @@ export function DadosProvider({ children }) {
       registrarExecucaoDia,
       planejarItens,
       registrarLinhas,
+      definirTipoEnsaio,
       adicionarEnsaio,
       atualizarEnsaio,
       removerEnsaio,

@@ -48,7 +48,8 @@ import {
                            do prazo, na secao "Obras".
 
    Quem pode: ver_turnos ve; editar_turnos cria e muda turnos,
-   anotacoes e cronogramas.
+   anotacoes e cronogramas; ordenar_turnos arrasta as pessoas para a
+   ordem de cada cronograma (atualizacao 54).
 
    COMPARTILHAR (atualizacao 32), como no Teams: o turno criado, colado
    ou copiado da agenda anterior nasce como RASCUNHO — quem edita ve (em
@@ -61,6 +62,7 @@ const router = Router()
 
 const VER = 'ver_turnos'
 const EDITAR = 'editar_turnos'
+const ORDENAR = 'ordenar_turnos'
 
 const texto = (valor) => String(valor ?? '').trim()
 const idValido = (valor) => /^\d{1,15}$/.test(String(valor ?? ''))
@@ -129,7 +131,8 @@ const SELECT_TURNO = `
 
 /* ---------------- a ordem das pessoas em cada cronograma ----------------
 
-   Quem edita arrasta as pessoas na tela para a ordem que quiser. A ordem
+   Quem tem `ordenar_turnos` arrasta as pessoas na tela para a ordem que
+   quiser. A ordem
    fica em `configuracao` (uma linha por cronograma, chave
    "turnos_ordem:<id>", a lista dos ids em JSON), e nao numa coluna nova:
    assim ela nao depende de atualizacao no banco. Quem nao esta na lista
@@ -774,7 +777,7 @@ router.put('/cronogramas/:id', exigeSessao, exige(EDITAR), async (req, res) => {
 /* a ordem das pessoas, como ficou depois de arrastar na tela. A lista tem de
    ser exatamente quem esta no cronograma agora: se alguem entrou ou saiu
    enquanto a tela estava aberta, a tela recarrega e tenta de novo */
-router.put('/cronogramas/:id/ordem', exigeSessao, exige(EDITAR), async (req, res) => {
+router.put('/cronogramas/:id/ordem', exigeSessao, exige(ORDENAR), async (req, res) => {
   if (!idValido(req.params.id)) return res.status(400).json({ erro: 'Cronograma inválido.' })
   const bruto = req.body?.membros
   if (!Array.isArray(bruto) || bruto.length > 500) return res.status(400).json({ erro: 'Lista de pessoas inválida.' })

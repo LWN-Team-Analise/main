@@ -40,6 +40,7 @@ import {
   TIPOS_DE_ITEM,
   rotuloDaCondicao,
   rotuloDoServico,
+  tipoDoItem,
 } from '../../src/domain/itensEnsaio.js'
 import { MOTIVO_DA_TRAVA, regraDoUsuario, regraLibera } from '../../src/domain/regrasCheck.js'
 
@@ -490,13 +491,17 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
              FROM obra_ensaio_progresso p ORDER BY p.dia`).catch(semTabelaVazia),
     /* a reserva de carro de cada obra (atualizacao 23) e a saida que
        retirou o carro. Sem a tabela, nenhuma obra tem reserva */
+    /* a liberacao da vespera (atualizacao 54) vem pelo to_jsonb: sem a
+       coluna no banco ela so nao aparece, e as reservas continuam */
     query(`SELECT r.obra_id, r.veiculo_id, r.reservado_em, r.registro_id,
                   v.nome AS veiculo_nome, v.placa, u.name AS reservado_por_nome,
                   vr.data AS retirada_data, to_char(vr.hora, 'HH24:MI') AS retirada_hora,
-                  vr.condutor_nome AS retirada_condutor, vr.km AS retirada_km
+                  vr.condutor_nome AS retirada_condutor, vr.km AS retirada_km,
+                  (to_jsonb(r) ->> 'liberada_em') AS liberada_em, ul.name AS liberada_por_nome
              FROM obra_reserva_veiculo r
              LEFT JOIN veiculo v           ON v.id = r.veiculo_id
              LEFT JOIN usuario u           ON u.id = r.reservado_por
+             LEFT JOIN usuario ul          ON ul.id = (to_jsonb(r) ->> 'liberada_por')::bigint
              LEFT JOIN veiculo_registro vr ON vr.id = r.registro_id`).catch(semTabelaVazia),
     /* os ensaios POR ITEM (atualizacao 25): os itens de cada obra e as
        linhas (item + ensaio + condicao), com o resultado da execucao.
@@ -705,6 +710,8 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
         placa: l.placa ?? '',
         reservadoPorNome: l.reservado_por_nome ?? null,
         reservadoEm: l.reservado_em,
+        /* o carro concedido antes: a retirada liberada na vespera (atualizacao 54) */
+        liberada: l.liberada_em ? { em: l.liberada_em, porNome: l.liberada_por_nome ?? null } : null,
         retirada: l.registro_id
           ? {
               registroId: String(l.registro_id),
@@ -798,6 +805,9 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
       /* o tipo de servico (atualizacao 25) e os itens com as linhas.
          itens vazio = a obra nao planeja por item */
       servico: o.servico ?? null,
+      /* o "Tipo de ensaio" do Comercial (atualizacao 54): os tipos de item
+         que o planejamento pode usar. null = ainda nao escolhido */
+      tiposEnsaio: Array.isArray(o.tipos_ensaio) ? o.tipos_ensaio : null,
       itens: itensDaObra[o.id] ?? [],
       membros: membrosDaObra[o.id] ?? [],
       /* os incluidos a mao: pendente, aceito ou recusado (com o motivo) */
@@ -3004,6 +3014,17 @@ async function faltaNoCheck(obraId, checkId, regra, resposta) {
     }
   }
 
+  /* O "Tipo de ensaio" do Comercial (atualizacao 54) marca quando os
+     tipos sao escolhidos no proprio check */
+  if (regra.tipo === 'tipo_ensaio') {
+    const { rows } = await query('SELECT tipos_ensaio FROM obra WHERE id = $1', [obraId]).catch((erro) =>
+      erro.code === '42703' ? { rows: [] } : Promise.reject(erro),
+    )
+    if (!(rows[0]?.tipos_ensaio?.length > 0)) {
+      return { status: 409, erro: 'Escolha o tipo de ensaio no próprio check.', falta: 'o tipo de ensaio' }
+    }
+  }
+
   /* A reserva e a retirada do carro (atualizacao 23) nao se marcam no
      clique: a reserva marca quando o supervisor escolhe o carro, e a
      retirada quando a saida do carro e registrada (ver
@@ -3896,6 +3917,15 @@ router.put('/obras/:id/planejamento-itens', exigeSessao, obraAberta, async (req,
     }
     if (await recusouMarcar(res, req.dono.sub, checkId, obraId, 'O Planejamento de ensaios é de outro setor.')) return
 
+    /* O TIPO DO ITEM e do Comercial (atualizacao 54): na obra com o check
+       "Tipo de ensaio", o item novo (ou que mudou de tipo) so entra com um
+       dos tipos que o Comercial escolheu. O item que ja existia fica com o
+       tipo dele. Obra sem o check segue livre, como antes. */
+    if (await checkDoSistema(obraId, 'tipo_ensaio').catch(() => null)) {
+      const recusado = await tipoForaDoComercial(obraId, itens)
+      if (recusado) return res.status(409).json({ erro: recusado })
+    }
+
     /* a lista solta com execucao registrada nao passa para itens */
     const jaPorItem = await usaItens(obraId)
     if (!jaPorItem && itens.length > 0) {
@@ -4071,6 +4101,75 @@ router.put('/obras/:id/planejamento-itens', exigeSessao, obraAberta, async (req,
   }
 })
 
+/**
+ * O recado de recusa quando algum item usa um tipo que o Comercial nao
+ * escolheu no "Tipo de ensaio" (ou null quando todos passam).
+ */
+async function tipoForaDoComercial(obraId, itens) {
+  const [{ rows: obra }, { rows: atuais }] = await Promise.all([
+    query('SELECT tipos_ensaio FROM obra WHERE id = $1', [obraId]).catch((e) =>
+      e.code === '42703' ? { rows: [{ tipos_ensaio: null }] } : Promise.reject(e),
+    ),
+    query('SELECT id, tipo FROM obra_item WHERE obra_id = $1', [obraId]),
+  ])
+  const permitidos = obra[0]?.tipos_ensaio ?? []
+  const tipoAntes = new Map(atuais.map((l) => [String(l.id), l.tipo]))
+  const fora = itens.find((i) => !(i.id && tipoAntes.get(i.id) === i.tipo) && !permitidos.includes(i.tipo))
+  if (!fora) return null
+  if (permitidos.length === 0) {
+    return 'O tipo do item é definido pelo Comercial, no check "Tipo de ensaio" do card dele, e ainda não foi escolhido.'
+  }
+  const nomes = permitidos.map((t) => tipoDoItem(t)?.rotulo ?? t).join(', ')
+  return `O tipo do item é definido pelo Comercial (check "Tipo de ensaio"): esta obra usa ${nomes}.`
+}
+
+/* ------------------------------------------------------------
+   TIPO DE ENSAIO (1a etapa, card do Comercial — atualizacao 54)
+
+   Corpo: { tipos: ['ambiente', 'equipamento', ...] }, os tipos de item
+   desta obra (TIPOS_DE_ITEM). Quem pode e quem marca o check (o Comercial,
+   pela regra de sempre). Gravar ja marca o check; o Planejamento de
+   ensaios passa a so aceitar item destes tipos.
+   ------------------------------------------------------------ */
+
+router.put('/obras/:id/tipo-ensaio', exigeSessao, obraAberta, async (req, res) => {
+  const obraId = req.params.id
+  const brutos = Array.isArray(req.body?.tipos) ? req.body.tipos.map(texto) : null
+  if (!brutos) return res.status(400).json({ erro: 'Escolha o tipo de ensaio.' })
+  const tipos = TIPOS_DE_ITEM.map((t) => t.id).filter((id) => brutos.includes(id))
+  if (tipos.length === 0) return res.status(400).json({ erro: 'Escolha ao menos um tipo de ensaio.' })
+  try {
+    const checkId = await checkDoSistema(obraId, 'tipo_ensaio')
+    if (!checkId) return res.status(409).json({ erro: 'Esta obra não tem o check "Tipo de ensaio".' })
+    if (await recusouMarcar(res, req.dono.sub, checkId, obraId, 'O Tipo de ensaio é do Comercial.')) return
+
+    await query('UPDATE obra SET tipos_ensaio = $2, atualizado_por = $3 WHERE id = $1', [obraId, tipos, req.dono.sub])
+    const marcou = await query(
+      `INSERT INTO obra_check (obra_id, check_id, feito_por) VALUES ($1, $2, $3)
+       ON CONFLICT (obra_id, check_id) DO NOTHING`,
+      [obraId, checkId, req.dono.sub],
+    )
+    await informacaoChegou(obraId, checkId)
+    await registrarAtividade(req, {
+      acao: 'check.tipo_ensaio',
+      categoria: 'check',
+      entidade: ['obra', obraId],
+      descricao: 'Tipo de ensaio escolhido',
+      detalhes: {
+        ...(await descreverObra(obraId)),
+        tipos: tipos.map((t) => tipoDoItem(t)?.rotulo ?? t).join(', '),
+      },
+    })
+    if (marcou.rowCount > 0) await depoisDeMarcar(req.dono.sub, obraId)
+    return res.json({ ok: true, tipos })
+  } catch (e) {
+    if (e.code === '42703') {
+      return res.status(501).json({ erro: 'O banco ainda não tem o Tipo de ensaio. Rode npm run db:atualizar (atualização 54).' })
+    }
+    return tratar(e, res, 'dados/tipo-ensaio')
+  }
+})
+
 /* ------------------------------------------------------------
    Execucao POR LINHA (3a etapa)
 
@@ -4115,6 +4214,10 @@ router.put('/obras/:id/execucao-itens', exigeSessao, obraAberta, async (req, res
     const observacao = opcional(l.observacao)
     if (observacao && observacao.length > LIMITES_ITEM.observacao) {
       return res.status(400).json({ erro: `A observação passa de ${LIMITES_ITEM.observacao} caracteres.` })
+    }
+    /* "Nao conforme" sempre com o porque: a justificativa e a observacao */
+    if (l.conforme === false && !observacao) {
+      return res.status(400).json({ erro: 'Justifique por que o ensaio ficou não conforme.' })
     }
     linhas.push({ id, data, resultado, conforme: l.conforme, observacao })
   }

@@ -96,6 +96,12 @@ function resultadosQueSaem(item, rascunho) {
  *
  * "Concluir planejamento" pede o servico, ao menos um item e todo
  * item com ensaio — a mesma regra do servidor.
+ *
+ * O TIPO DO ITEM e do Comercial (atualizacao 54): na obra com o check
+ * "Tipo de ensaio", `tiposDoComercial` traz os tipos que ele escolheu e as
+ * outras pastilhas ficam travadas (com um tipo so, ele ja vem escolhido).
+ * Antes da escolha, nao se cadastra item novo. O item que ja existia fica
+ * com o tipo dele. null = obra sem o check, tudo livre como antes.
  */
 export default function ModalPlanejamentoItens({
   aberto,
@@ -105,8 +111,12 @@ export default function ModalPlanejamentoItens({
   marcado,
   aoDesmarcar,
   aoFechar,
+  tiposDoComercial = null,
 }) {
   const { ensaios: catalogo, ensaiosAtivos, ensaioPorId, planejarItens, pode } = useDados()
+  /* null = livre; [] = o Comercial ainda nao escolheu; senao os tipos dele */
+  const travaTipo = Array.isArray(tiposDoComercial)
+  const semTipoDoComercial = travaTipo && tiposDoComercial.length === 0
 
   /* null = a lista; { ...rascunho } = editando um item */
   const [rascunho, setRascunho] = useState(null)
@@ -162,7 +172,12 @@ export default function ModalPlanejamentoItens({
   /* ---- o editor de item ---- */
   const novoItem = () => {
     const ultimo = itens.at(-1)
-    setRascunho(rascunhoDe(null, ultimo?.tipo ?? 'ambiente'))
+    const inicial = !travaTipo
+      ? (ultimo?.tipo ?? 'ambiente')
+      : tiposDoComercial.includes(ultimo?.tipo)
+        ? ultimo.tipo
+        : tiposDoComercial[0]
+    setRascunho(rascunhoDe(null, inicial))
     setErrosItem({})
     setErro('')
   }
@@ -312,7 +327,21 @@ export default function ModalPlanejamentoItens({
             rotulo="Tipo do item"
             valor={rascunho.tipo}
             aoMudar={mudarCampo('tipo')}
-            opcoes={TIPOS_DE_ITEM.map((t) => ({ valor: t.id, rotulo: t.rotulo, tom: 'neutro' }))}
+            dica={
+              travaTipo
+                ? 'Definido pelo Comercial, no check "Tipo de ensaio". Os outros tipos ficam travados.'
+                : undefined
+            }
+            opcoes={TIPOS_DE_ITEM.map((t) => ({
+              valor: t.id,
+              rotulo: t.rotulo,
+              tom: 'neutro',
+              /* o tipo que o item ja tinha continua escolhivel */
+              travada:
+                travaTipo && !tiposDoComercial.includes(t.id) && t.id !== original?.tipo
+                  ? 'Este tipo não foi escolhido pelo Comercial no check "Tipo de ensaio".'
+                  : false,
+            }))}
             largo
           />
 
@@ -612,9 +641,21 @@ export default function ModalPlanejamentoItens({
             )}
 
             {podeEditar && (
-              <button type="button" className="itens__novo" onClick={novoItem} disabled={salvando}>
+              <button
+                type="button"
+                className="itens__novo"
+                onClick={novoItem}
+                disabled={salvando || semTipoDoComercial}
+                title={semTipoDoComercial ? 'Espere o Comercial escolher o tipo de ensaio.' : undefined}
+              >
                 + Adicionar item
               </button>
+            )}
+            {podeEditar && semTipoDoComercial && (
+              <p className="formrot__dica formrot__dica--colada">
+                O tipo do item é definido pelo Comercial, no check "Tipo de ensaio" do card dele. Os itens novos
+                liberam depois dessa escolha.
+              </p>
             )}
           </section>
 
