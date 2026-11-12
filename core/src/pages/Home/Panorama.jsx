@@ -8,7 +8,6 @@ import useCorDaLogo from '@/hooks/useCorDaLogo'
 import ModalAvisoGeral, { ModalHistoricoAvisos, ModalLerAviso } from '@/components/AvisoGeral/ModalAvisoGeral'
 import * as agendaApi from '@/services/agendaService'
 import * as avisosApi from '@/services/avisosService'
-import GloboClientes from './GloboClientes'
 import { Evento, ModalAgenda, ModalEvento } from './ModalAgenda'
 import './Panorama.css'
 
@@ -120,8 +119,8 @@ export default function Panorama() {
         <CardAgenda />
         <CardDestaques />
       </div>
-      {/* embaixo da Agenda e dos Destaques, no meio: onde estao os clientes */}
-      <GloboClientes />
+      {/* o globo dos clientes, que morava aqui embaixo, foi para o fim da aba
+          Clientes (src/pages/Clientes/GloboClientes.jsx) */}
     </div>
   )
 }
@@ -190,7 +189,7 @@ function Vazio({ Icone, titulo, texto, children }) {
      o GERAL     o "Enviar aviso" do botao + (atualizacoes 46 e 47,
                  /api/avisos): um recado para a empresa inteira ou para o
                  SEU setor, enquanto nao expira nem e encerrado. O clique
-                 abre ele inteiro; quem tem `enviar_avisos` encerra e
+                 abre ele inteiro; quem tem `publicar_avisos` encerra e
                  exclui por la. Terminado, ele fica no historico (o link
                  no pe do card);
      o de OBRA   os mesmos do sininho, com a mesma regra: so o que foi
@@ -208,7 +207,7 @@ const AVISOS_NO_CARD = 3
 function CardAvisos() {
   const { minhasNotificacoes, clientePorId, rotuloEtapa, pode } = useDados()
   const navigate = useNavigate()
-  const podeAvisar = pode('enviar_avisos')
+  const podeAvisar = pode('publicar_avisos')
   const [todos, setTodos] = useState(false)
   const [gerais, setGerais] = useState([])
   const [lendo, setLendo] = useState(null)
@@ -445,7 +444,7 @@ function CardAniversarios() {
 
    O cadastro novo (atualizacao 44, server/routes/agenda.js): os
    proximos tres eventos numa linha do tempo, com o dia num bloco. O
-   "Ver calendario" abre a lista inteira; quem tem `enviar_avisos`
+   "Ver calendario" abre a lista inteira; quem tem `publicar_agenda`
    cria, edita e exclui por la (e pelo vazio do card, direto).
    ============================================================ */
 
@@ -453,7 +452,7 @@ const EVENTOS_NO_CARD = 3
 
 function CardAgenda() {
   const { pode } = useDados()
-  const podeEditar = pode('enviar_avisos')
+  const podeEditar = pode('publicar_agenda')
   /* null = ainda carregando */
   const [eventos, setEventos] = useState(null)
   const [erro, setErro] = useState('')

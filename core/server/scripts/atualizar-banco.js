@@ -89,6 +89,9 @@ const ARQUIVOS = [
   'db/atualizacao-51.sql.txt',
   /* a permissao da area Administrativo, para quem ja usava o que foi para la */
   'db/atualizacao-52.sql.txt',
+  /* Meu painel (o painel de cada setor), as permissoes da pessoa (quadro de
+     avisos e agenda), o aviso do cadastro incompleto e o bonus apartamento */
+  'db/atualizacao-53.sql.txt',
 ]
 
 /**
@@ -264,6 +267,11 @@ const CONFERENCIA = [
   ['ponto_dia (a aba Ponto)', "SELECT to_regclass('public.ponto_dia') IS NOT NULL AS ok"],
   ['ponto_assinatura (a aba Ponto)', "SELECT to_regclass('public.ponto_assinatura') IS NOT NULL AS ok"],
   ['ver_administrativo no acesso total', permissaoNoAcessoTotal('ver_administrativo')],
+  ['cargo.painel (Meu painel)', col('cargo', 'painel')],
+  ['cargo.painel_exclusivo', col('cargo', 'painel_exclusivo')],
+  ['usuario.permissoes_pessoais', col('usuario', 'permissoes_pessoais')],
+  ['usuario.aviso_cadastro_dispensado', col('usuario', 'aviso_cadastro_dispensado')],
+  ['cliente.bonus_apartamento', col('cliente', 'bonus_apartamento')],
 ]
 
 function col(tabela, coluna) {

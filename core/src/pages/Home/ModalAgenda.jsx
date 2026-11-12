@@ -12,7 +12,7 @@ import './Panorama.css'
    A AGENDA INTEIRA e o cadastro de evento (aba Panorama)
 
    ModalAgenda — o "Ver calendario" do card: todos os eventos de hoje
-                 em diante, separados por mes. Quem tem `enviar_avisos`
+                 em diante, separados por mes. Quem tem `publicar_agenda`
                  ve o "Novo evento" e, em cada linha, editar e excluir.
    ModalEvento — o formulario: titulo, dia, hora e local. So o titulo
                  e o dia sao obrigatorios; evento sem hora e "dia

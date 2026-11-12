@@ -31,7 +31,7 @@ function fimDoAviso(aviso) {
 /**
  * O aviso geral inteiro, aberto pelo card do Panorama ou pelo historico.
  *
- * Quem tem `enviar_avisos` encerra por aqui (ele sai do Panorama e fica
+ * Quem tem `publicar_avisos` encerra por aqui (ele sai do Panorama e fica
  * no historico) e exclui (some de vez). Excluir tem duplo check: a
  * confirmacao so libera o botao depois de marcar a caixinha, porque
  * excluir e o unico gesto que tira o aviso do historico.
@@ -160,7 +160,7 @@ function LinhaDoHistorico({ aviso, aoAbrir }) {
  * O historico de avisos: todos os avisos que nao foram excluidos, os que
  * ainda estao valendo em cima e os que ja sairam do Panorama embaixo.
  *
- * Quem tem `enviar_avisos` ve os de todos os setores (a API decide) e e
+ * Quem tem `publicar_avisos` ve os de todos os setores (a API decide) e e
  * por aqui que encerra o aviso mandado para um setor que nao e o dele.
  */
 export function ModalHistoricoAvisos({ aberto, podeApagar, aoFechar }) {
@@ -240,7 +240,7 @@ const CAMPOS_VAZIOS = { titulo: '', mensagem: '', importante: false, setor: '', 
  * ate o fim daquele dia e vai sozinho para o historico; sem ela, fica
  * ate alguem encerrar.
  *
- * Quem ve o botao e quem tem `enviar_avisos`; a API confere de novo.
+ * Quem ve o botao e quem tem `publicar_avisos`; a API confere de novo.
  */
 export default function ModalAvisoGeral({ aberto, aoFechar }) {
   const navegar = useNavigate()

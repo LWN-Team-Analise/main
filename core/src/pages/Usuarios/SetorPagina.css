@@ -316,3 +316,139 @@
     width: 100%;
   }
 }
+
+/* ============================================================
+   "Meu painel" (PainelDoSetor.jsx, atualizacao 53): a primeira linha do
+   quadro de permissoes e a escolha do painel, no pop-up
+   ============================================================ */
+
+.painelset__atual {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0;
+  min-height: 32px;
+  font-size: 0.82rem;
+  color: var(--text-base);
+}
+
+.painelset__atual strong {
+  color: var(--text-strong);
+}
+
+.painelset__atual span {
+  color: var(--text-muted);
+}
+
+.painelset__trocar {
+  padding: 4px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.painelset__trocar:hover {
+  background: var(--control-bg-hover);
+}
+
+.painelset {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.painelset__grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.painelset__grupo:disabled {
+  opacity: 0.55;
+}
+
+.painelset__grupo legend {
+  margin-bottom: 6px;
+  padding: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.painelset__opcao {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  background: var(--control-bg);
+  cursor: pointer;
+}
+
+.painelset__opcao:has(input:checked) {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.painelset__opcao input {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  cursor: inherit;
+}
+
+.painelset__opcao span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 0.86rem;
+  color: var(--text-strong);
+}
+
+.painelset__opcao em {
+  font-style: normal;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.painelset__opcao.is-travada {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.painelset__acoes {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.painelset__nota {
+  margin: -8px 0 0;
+  text-align: right;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.painelset__dica {
+  margin: 0;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}

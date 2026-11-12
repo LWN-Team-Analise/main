@@ -7,7 +7,7 @@ import { apagarSessao, donoDoToken, gravarSessao, marcaDaSenha, revogarSessao, S
 import { anotar, chaveDaConta, esquecer, estourou, ipDe } from '../limite.js'
 import { enviarCodigo, temEmail } from '../email.js'
 import { configurado as temOutlook, perfilDoCodigo, urlDeEntrada } from '../outlook.js'
-import { normalizar } from '../../src/domain/permissoes.js'
+import { CHAVES_PAINEL, normalizar, normalizarPessoais } from '../../src/domain/permissoes.js'
 import { regraDoUsuario } from '../../src/domain/regrasCheck.js'
 import { logger } from '../logger.js'
 import { validarForcaSenha } from '../utils/senha.js'
@@ -94,8 +94,21 @@ function paraUsuario(linha) {
     painelTv: linha.painel_tv === true,
     // cadastrado so pelo e-mail: falta a pessoa completar nome, nascimento e CPF
     cadastroPendente: !linha.cpf,
+    // o "Nao me mostrar essa mensagem novamente" do aviso do cadastro (atualizacao 53)
+    avisoCadastroDispensado: linha.aviso_cadastro_dispensado === true,
+    // o painel do setor, o "Meu painel" do menu da foto (atualizacao 53): null = nenhum
+    painel: painelValido(linha.cargo_painel),
+    // as permissoes da PESSOA (quadro de avisos e agenda). null = o banco
+    // ainda nao tem a coluna, e vale a `enviar_avisos` do setor
+    permissoesPessoais:
+      linha.permissoes_pessoais === undefined || linha.permissoes_pessoais === null
+        ? null
+        : normalizarPessoais(linha.permissoes_pessoais),
   }
 }
+
+/** O painel gravado no setor, se ainda e um painel que existe. */
+const painelValido = (chave) => (CHAVES_PAINEL.includes(chave) ? chave : null)
 
 const CAMPOS_BASE = `u.id, u.name, u.email, u.cpf, u.data_nascimento, u.telefone,
                      u.cargo, u.permissoes, u.avaliacao, u.outlook, u.senha_hash, u.ativo,
@@ -108,7 +121,10 @@ const CAMPOS_CARGO = `, u.foto, u.cargo_id, u.cargo_titulo, u.outlook_email,
                       c.permissoes AS cargo_permissoes,
                       (to_jsonb(u) ->> 'cargo_titulo_id') AS cargo_titulo_id,
                       (to_jsonb(c) -> 'regras_check') AS cargo_regras_check,
-                      (to_jsonb(c) ->> 'painel_tv')::boolean AS painel_tv`
+                      (to_jsonb(c) ->> 'painel_tv')::boolean AS painel_tv,
+                      (to_jsonb(c) ->> 'painel') AS cargo_painel,
+                      (to_jsonb(u) -> 'permissoes_pessoais') AS permissoes_pessoais,
+                      (to_jsonb(u) ->> 'aviso_cadastro_dispensado')::boolean AS aviso_cadastro_dispensado`
 
 /**
  * Busca o usuario ja com o cargo. Se db/sistema.sql.txt ainda nao foi
@@ -301,6 +317,28 @@ router.post('/migrar', async (req, res) => {
   } catch (erro) {
     logger.error('auth/migrar', erro.message)
     return res.status(503).json({ erro: 'Não foi possível conferir a sessão agora.' })
+  }
+})
+
+/**
+ * POST /api/auth/aviso-cadastro — o "Não me mostrar essa mensagem
+ * novamente" do aviso de cadastro incompleto, que aparece ao entrar no
+ * site (atualizacao 53). Vale para a propria conta, em todo aparelho.
+ * Completar o cadastro continua tirando o aviso de qualquer jeito.
+ */
+router.post('/aviso-cadastro', async (req, res) => {
+  const token = tokenDo(req)
+  if (!token) return res.status(401).json({ erro: 'Sessão não informada.', sessao: false })
+  try {
+    const dono = await donoDoToken(token)
+    if (!dono) return res.status(401).json({ erro: 'Sessão expirada. Entre de novo.', sessao: false })
+    await query('UPDATE usuario SET aviso_cadastro_dispensado = true WHERE id = $1', [dono.sub])
+    return res.json({ ok: true })
+  } catch (erro) {
+    /* banco sem a atualizacao 53: o aviso volta na proxima entrada */
+    if (erro.code === '42703') return res.json({ ok: false })
+    logger.error('auth/aviso-cadastro', erro.message)
+    return res.status(500).json({ erro: 'Não foi possível guardar a escolha agora.' })
   }
 })
 

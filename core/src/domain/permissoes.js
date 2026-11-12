@@ -73,10 +73,9 @@ export const VISUALIZACAO = [
   { chave: 'ver_inicio', rotulo: 'Página inicial', rota: '/app' },
   { chave: 'ver_obras', rotulo: 'Obras', rota: '/app/obras' },
   { chave: 'ver_clientes', rotulo: 'Clientes', rota: '/app/clientes' },
-  /* a area administrativa (os cards: Reembolso, Ponto, Pontos de encontro,
-     Frotas, Turnos). Quem nao tem ve no menu so o Ponto, a propria folha
-     (atualizacao 52 deu a quem ja revisava despesa ou gerenciava o ponto) */
-  { chave: 'ver_administrativo', rotulo: 'Administrativo', rota: '/app/administrativo' },
+  /* a area Administrativo nao tem mais chave aqui: ela e o PAINEL de um
+     setor (PAINEIS, mais abaixo). A `ver_administrativo` (atualizacao 52)
+     saiu; a atualizacao 53 deu o painel a quem a tinha */
   { chave: 'ver_concluidas', rotulo: 'Concluídas', rota: '/app/concluidas' },
   { chave: 'ver_despesas', rotulo: 'Reembolso', rota: '/app/despesas' },
   { chave: 'ver_frotas', rotulo: 'Frotas', rota: '/app/frotas' },
@@ -162,7 +161,9 @@ export const ALTERACAO = [
      mao (atualizacao 30). Incluir qualquer um pode — a pessoa aceita
      ou recusa; TIRAR da obra depois e so com esta */
   { chave: 'excluir_membro_parcial', rotulo: 'Excluir membro parcial da obra', dependeDe: 'ver_obras' },
-  { chave: 'enviar_avisos', rotulo: 'Enviar avisos', dependeDe: 'ver_avisos' },
+  /* o aviso de pendencia dentro da obra (o sininho dos setores). O quadro
+     de avisos e a agenda da pagina inicial sao da PESSOA (PESSOAIS) */
+  { chave: 'enviar_avisos', rotulo: 'Enviar avisos de pendência nas obras', dependeDe: 'ver_avisos' },
   /* Despesas: ver a aba (e os proprios envios) e `ver_despesas`;
      ENVIAR despesa, refeicao ou bonus e `alterar_despesas`; abrir os
      envios dos OUTROS (Administrativo > Reembolso) e `revisar_despesa_geral`;
@@ -319,6 +320,56 @@ export function dependentes(chaveVisualizacao) {
 }
 
 /* ------------------------------------------------------------
+   MEU PAINEL (atualizacao 53)
+
+   Cada setor pode ter UM painel: a area com menu proprio que e dele (o
+   Administrativo, o Almoxarife). Quem esta no setor ve "Meu painel" no
+   menu da foto, logo acima de Configuracoes, e ele abre o inicio desse
+   painel. Quem escolhe e quem tem acesso total, na tela do setor
+   (cargo.painel), e e opcional: setor sem painel nao ve o botao.
+
+   `exclusivo` (cargo.painel_exclusivo): o painel so pode ser daquele
+   setor. Nos outros ele aparece travado ate o setor principal mudar.
+
+   O Administrativo nao tem outra chave: entra nele so quem e de um setor
+   que o tem como painel (e o acesso total, que passa por tudo). O
+   Almoxarife continua com as permissoes dele (almox_*) e so pode ser o
+   painel de um setor que ve a aba (`exige`).
+   ------------------------------------------------------------ */
+export const PAINEIS = [
+  { chave: 'administrativo', rotulo: 'Administrativo', rota: '/app/administrativo' },
+  { chave: 'almoxarife', rotulo: 'Almoxarife', rota: '/app/control', exige: 'ver_almoxarife' },
+]
+
+export const CHAVES_PAINEL = PAINEIS.map((p) => p.chave)
+
+/** O painel pela chave ('administrativo'), ou null. */
+export const painelPorChave = (chave) => PAINEIS.find((p) => p.chave === chave) ?? null
+
+/* ------------------------------------------------------------
+   As permissoes da PESSOA (atualizacao 53)
+
+   Quase tudo e do setor. Estas sao de cada pessoa, marcadas no cadastro
+   dela (Usuarios > editar) e so por quem tem acesso total: o quadro de
+   avisos e a agenda da pagina inicial falam com a empresa inteira, e a
+   lista de quem publica e curta e com nome. O acesso total NAO passa por
+   elas sozinho.
+
+   Banco sem a atualizacao 53 (`permissoesPessoais` null): vale a regra de
+   antes, a `enviar_avisos` do setor.
+   ------------------------------------------------------------ */
+export const PESSOAIS = [
+  { chave: 'publicar_avisos', rotulo: 'Colocar informações no quadro de avisos' },
+  { chave: 'publicar_agenda', rotulo: 'Colocar informações na agenda da empresa' },
+]
+
+export const CHAVES_PESSOAIS = PESSOAIS.map((p) => p.chave)
+
+/** So as chaves pessoais que existem, na ordem. */
+export const normalizarPessoais = (lista) =>
+  CHAVES_PESSOAIS.filter((c) => (Array.isArray(lista) ? lista : []).includes(c))
+
+/* ------------------------------------------------------------
    Leitura no resto do sistema
    ------------------------------------------------------------ */
 
@@ -328,9 +379,20 @@ export function dependentes(chaveVisualizacao) {
  * Setor com acesso total passa sempre — e a diretoria, e ela nao
  * fica travada por lista. Fora isso, vale o que esta marcado no
  * setor. Sem setor nenhum, nao pode nada.
+ *
+ * Duas excecoes: as chaves da PESSOA (PESSOAIS), que so valem marcadas
+ * nela, e `painel:<chave>` ('painel:administrativo'), que e o painel do
+ * setor (o acesso total abre todos).
  */
 export function podeFazer(usuario, chave) {
   if (!usuario) return false
+  if (CHAVES_PESSOAIS.includes(chave)) {
+    if (!Array.isArray(usuario.permissoesPessoais)) return podeFazer(usuario, 'enviar_avisos')
+    return usuario.permissoesPessoais.includes(chave)
+  }
+  if (String(chave).startsWith('painel:')) {
+    return Boolean(usuario.acessoTotal) || (Boolean(usuario.painel) && usuario.painel === chave.slice(7))
+  }
   if (usuario.acessoTotal) return true
   return (usuario.cargoPermissoes ?? usuario.permissoes ?? []).includes(chave)
 }

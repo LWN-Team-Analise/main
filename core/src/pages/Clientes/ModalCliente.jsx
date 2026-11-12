@@ -58,6 +58,9 @@ const VAZIO = {
   /* "Oferece alimentação?" (atualizacao 39): true, false ou null (sem
      resposta). Quem oferece nao recebe "Enviar refeição" no Reembolso */
   ofereceAlimentacao: null,
+  /* "O colaborador tem direito a bônus apartamento?" (atualizacao 53):
+     true, false ou null. Com o nao, o Reembolso nao aceita bonus para ele */
+  bonusApartamento: null,
   /* as unidades (atualizacao 33): Einstein Anapolis, Einstein Alphaville... */
   unidades: [],
   /* a UNIDADE cadastrada ou editada sozinha: o cliente dela (o "Unidade
@@ -157,6 +160,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
               proprietarioId: cliente.proprietarioId ?? '',
               proximoContato: cliente.proximoContato ?? '',
               ofereceAlimentacao: typeof cliente.ofereceAlimentacao === 'boolean' ? cliente.ofereceAlimentacao : null,
+              bonusApartamento: typeof cliente.bonusApartamento === 'boolean' ? cliente.bonusApartamento : null,
               pessoas: (cliente.pessoas ?? []).map((p) => ({ ...PESSOA_VAZIA, ...p })),
               matrizId: cliente.matrizId ?? '',
               unidade: cliente.unidade ?? '',
@@ -222,6 +226,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
       proprietarioId: escolhido.proprietarioId ?? (user?.id ? String(user.id) : ''),
       proximoContato: escolhido.proximoContato ?? '',
       ofereceAlimentacao: typeof escolhido.ofereceAlimentacao === 'boolean' ? escolhido.ofereceAlimentacao : null,
+      bonusApartamento: typeof escolhido.bonusApartamento === 'boolean' ? escolhido.bonusApartamento : null,
       /* copias: as pessoas da unidade sao dela, sem mexer nas do cliente */
       pessoas: (escolhido.pessoas ?? []).map((p) => ({ ...PESSOA_VAZIA, ...p, id: null })),
     })
@@ -436,6 +441,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
         proprietarioId: form.proprietarioId || null,
         proximoContato: form.proximoContato || null,
         ofereceAlimentacao: form.ofereceAlimentacao,
+        bonusApartamento: form.bonusApartamento,
       })
       aoFechar()
       return
@@ -459,6 +465,7 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
     }))
     campos.fixado = Boolean(form.fixado)
     campos.ofereceAlimentacao = form.ofereceAlimentacao
+    campos.bonusApartamento = form.bonusApartamento
     campos.proprietarioId = form.proprietarioId || null
     campos.proximoContato = form.proximoContato || null
     /* a imagem viaja em bloco, e SO quando alguem mexeu nela: os dois
@@ -643,6 +650,28 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
                 checked={form.ofereceAlimentacao === opcao.valor}
                 onChange={(e) =>
                   setForm((atual) => ({ ...atual, ofereceAlimentacao: e.target.checked ? opcao.valor : null }))
+                }
+              />
+              <span>{opcao.rotulo}</span>
+            </label>
+          ))}
+        </div>
+
+        {/* "O colaborador tem direito a bônus apartamento?" (atualizacao 53):
+            o nao tira este cliente do "Enviar bônus" do Reembolso; marcar de
+            novo o que ja estava marcado volta a "sem resposta" */}
+        <div className="formcli__alimentacao" role="group" aria-label="O colaborador tem direito a bônus apartamento?">
+          <span className="campo__rotulo">O colaborador tem direito a bônus apartamento?</span>
+          {[
+            { valor: true, rotulo: 'sim' },
+            { valor: false, rotulo: 'não' },
+          ].map((opcao) => (
+            <label key={opcao.rotulo} className="formcli__fixar">
+              <input
+                type="checkbox"
+                checked={form.bonusApartamento === opcao.valor}
+                onChange={(e) =>
+                  setForm((atual) => ({ ...atual, bonusApartamento: e.target.checked ? opcao.valor : null }))
                 }
               />
               <span>{opcao.rotulo}</span>

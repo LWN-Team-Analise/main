@@ -124,7 +124,20 @@ export const ASSUNTOS = [
     gatilhos: ['aviso', 'avisar', 'sino', 'sininho', 'notificacao', 'cobrar', 'email'],
     resposta:
       'Na coluna "Enviar aviso" do quadro, clicar no card cobra o setor que está devendo: acende o sininho ' +
-      'dele e sai um e-mail. Precisa da permissão "enviar avisos" — sem ela o botão nem aparece.',
+      'dele e sai um e-mail. Precisa da permissão "Enviar avisos de pendência nas obras" — sem ela o botão nem ' +
+      'aparece. O quadro de avisos e a agenda da página inicial são de quem foi liberado, pessoa por pessoa, ' +
+      'em Usuários (só quem tem acesso total libera).',
+  },
+  {
+    id: 'meu-painel',
+    titulo: 'Meu painel e o menu completo',
+    gatilhos: ['meu painel', 'painel', 'administrativo', 'hamburguer', 'menu completo', 'menu', 'solicitar'],
+    resposta:
+      'Se o seu setor tem um painel (Administrativo ou Almoxarife), ele aparece como "Meu painel" no menu da ' +
+      'sua foto, logo acima de Configurações. O painel de cada setor é escolhido por quem tem acesso total, na ' +
+      'tela do setor. O botão de três barras no alto do menu abre o sistema inteiro, dividido em Atmosfera, ' +
+      'Administrativo e Almoxarife, só com o que você pode ver. O Solicitar abre direto a solicitação de OS ' +
+      'do Almoxarife.',
   },
   {
     id: 'emergencia',
@@ -184,10 +197,11 @@ export const ASSUNTOS = [
     resposta:
       'Na aba Reembolso, escolha Enviar despesa, Enviar refeição ou Enviar bônus. O cliente é obrigatório. ' +
       'Combustível e outros precisam do comprovante (imagem, PDF, ZIP ou documento); a refeição e o bônus ' +
-      'apartamento têm valor pré-definido. O que você enviou fica em ' +
+      'apartamento têm valor pré-definido. A refeição vai para o cliente que não oferece alimentação, e o ' +
+      'bônus, para o cliente em que o colaborador tem direito ao bônus apartamento. O que você enviou fica em ' +
       '"Meus envios", por mês (dia a dia) ou por ano (mês a mês), com os totais e o filtro por tipo. Quem ' +
-      'tem a permissão "Revisar despesa geral" vê os envios de cada pessoa da equipe na aba Administrativo, ' +
-      'no card Reembolso.',
+      'tem a permissão "Revisar despesa geral" vê, na área Administrativo, no Reembolso, quanto cada pessoa ' +
+      'enviou, com o filtro por tipo e por período.',
   },
   {
     id: 'frotas',
@@ -215,7 +229,7 @@ export const ASSUNTOS = [
     titulo: 'Folha de ponto',
     gatilhos: ['ponto', 'folha de ponto', 'espelho', 'marcacao', 'marcacoes', 'hora extra', 'assinar folha', 'assinatura'],
     resposta:
-      'Na aba Administrativo, no card Ponto, cada um vê a própria folha de ponto, do mês ou de datas escolhidas, no desenho do espelho do ' +
+      'Na aba Ponto (ou no Ponto da área Administrativo), cada um vê a própria folha de ponto, do mês ou de datas escolhidas, no desenho do espelho do ' +
       'sistema de ponto. Para assinar a conferência, clique na área acima de "Assinatura Funcionário", marque as ' +
       'duas confirmações e assine: o seu nome completo fica impresso ali. O Exportar baixa a folha em PDF e em ' +
       'Excel. Quem tem a permissão "Ver a folha de ponto de todos e importar" (em Usuários) escolhe a pessoa e ' +

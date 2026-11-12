@@ -1160,7 +1160,7 @@ function Quadro({ tarefas, hoje, mes, nomeDoCargo, corDoCargo, pessoaPorId, aoAb
  * O vazio das abas: um recado, e nao uma tela em branco.
  *
  * O globo dos clientes, que morava aqui no vazio da Grade, foi para o
- * pe do Panorama (ver `GloboClientes`).
+ * pe do Panorama e de la para o fim da aba Clientes (ver `GloboClientes`).
  */
 export function Vazio({ titulo, texto }) {
   return (

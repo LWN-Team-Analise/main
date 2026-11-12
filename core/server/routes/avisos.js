@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { query } from '../db.js'
-import { cargoPode, exige, exigeSessao, meuCargo, tratar } from '../sessao.js'
+import { exigePessoal, exigeSessao, meuCargo, podePessoal, tratar } from '../sessao.js'
 import { registrarAtividade } from '../atividade.js'
 
 /* ============================================================
@@ -23,16 +23,18 @@ import { registrarAtividade } from '../atividade.js'
    e enquanto ninguem o encerra. Depois disso ele so existe no historico.
 
    A regra do setor e a do sininho: chega so o que foi enderecado ao SEU
-   setor, inclusive para a diretoria. No historico, quem tem
-   `enviar_avisos` ve os de todos os setores: e por la que se encerra o
-   aviso mandado para um setor que nao e o seu.
+   setor, inclusive para a diretoria. No historico, quem pode publicar
+   (`publicar_avisos`) ve os de todos os setores: e por la que se encerra
+   o aviso mandado para um setor que nao e o seu.
 
-   Enviar, encerrar e excluir e de quem tem `enviar_avisos`.
+   Enviar, encerrar e excluir e de quem tem `publicar_avisos`, uma
+   permissao da PESSOA e nao do setor (atualizacao 53; sem ela no banco,
+   vale a `enviar_avisos` do setor).
    ============================================================ */
 
 const router = Router()
 
-const EDITAR = 'enviar_avisos'
+const EDITAR = 'publicar_avisos'
 
 const TITULO_MAXIMO = 120
 const MENSAGEM_MAXIMA = 2000
@@ -130,7 +132,7 @@ router.get('/historico', exigeSessao, async (req, res) => {
         WHERE ($2::boolean OR a.setor_chave IS NULL OR a.setor_chave = $3)
         ORDER BY coalesce(a.encerrado_em::date, a.expira_em, a.enviado_em::date) DESC, a.enviado_em DESC, a.id DESC
         LIMIT ${LIMITE_HISTORICO}`,
-      [hojeNoBrasil(), cargoPode(cargo, EDITAR), cargo.chave],
+      [hojeNoBrasil(), await podePessoal(req.dono.sub, EDITAR), cargo.chave],
     )
     const avisos = rows.map(paraAviso)
     return res.json({
@@ -151,7 +153,7 @@ router.get('/historico', exigeSessao, async (req, res) => {
   }
 })
 
-router.post('/', exigeSessao, exige(EDITAR), async (req, res) => {
+router.post('/', exigeSessao, exigePessoal(EDITAR), async (req, res) => {
   const titulo = texto(req.body?.titulo)
   const mensagem = texto(req.body?.mensagem)
   const importante = req.body?.importante === true
@@ -205,7 +207,7 @@ router.post('/', exigeSessao, exige(EDITAR), async (req, res) => {
   }
 })
 
-router.post('/:id/encerrar', exigeSessao, exige(EDITAR), async (req, res) => {
+router.post('/:id/encerrar', exigeSessao, exigePessoal(EDITAR), async (req, res) => {
   if (!idValido(req.params.id)) return res.status(404).json({ erro: 'Aviso não encontrado.' })
   try {
     /* so o que ainda esta valendo: o aviso expirado ja esta no historico,
@@ -238,7 +240,7 @@ router.post('/:id/encerrar', exigeSessao, exige(EDITAR), async (req, res) => {
   }
 })
 
-router.delete('/:id', exigeSessao, exige(EDITAR), async (req, res) => {
+router.delete('/:id', exigeSessao, exigePessoal(EDITAR), async (req, res) => {
   if (!idValido(req.params.id)) return res.status(404).json({ erro: 'Aviso não encontrado.' })
   try {
     const { rows } = await query('DELETE FROM aviso_geral WHERE id = $1 RETURNING titulo', [req.params.id])

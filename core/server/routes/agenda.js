@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { query } from '../db.js'
-import { exige, exigeSessao, tratar } from '../sessao.js'
+import { exigePessoal, exigeSessao, tratar } from '../sessao.js'
 import { registrarAtividade } from '../atividade.js'
 
 /* ============================================================
@@ -12,14 +12,15 @@ import { registrarAtividade } from '../atividade.js'
      PUT    /:id         os mesmos campos, troca o evento inteiro
      DELETE /:id         apaga
 
-   Gravar e de quem tem `enviar_avisos`: a agenda e um aviso com data
-   marcada, e quem ja manda recado para a empresa e quem marca a
-   reuniao geral. O card fica na aba Panorama da pagina inicial.
+   Gravar e de quem tem `publicar_agenda`, uma permissao da PESSOA (e
+   nao do setor), marcada em Usuarios por quem tem acesso total
+   (atualizacao 53; sem ela no banco, vale a `enviar_avisos` do setor).
+   O card fica na aba Panorama da pagina inicial.
    ============================================================ */
 
 const router = Router()
 
-const EDITAR = 'enviar_avisos'
+const EDITAR = 'publicar_agenda'
 
 const TITULO_MAXIMO = 120
 const LOCAL_MAXIMO = 120
@@ -115,7 +116,7 @@ router.get('/', exigeSessao, async (_req, res) => {
   }
 })
 
-router.post('/', exigeSessao, exige(EDITAR), async (req, res) => {
+router.post('/', exigeSessao, exigePessoal(EDITAR), async (req, res) => {
   const campos = lerCampos(req.body)
   if (campos.erro) return res.status(400).json(campos)
 
@@ -143,7 +144,7 @@ router.post('/', exigeSessao, exige(EDITAR), async (req, res) => {
   }
 })
 
-router.put('/:id', exigeSessao, exige(EDITAR), async (req, res) => {
+router.put('/:id', exigeSessao, exigePessoal(EDITAR), async (req, res) => {
   if (!idValido(req.params.id)) return res.status(404).json({ erro: 'Evento não encontrado.' })
   const campos = lerCampos(req.body)
   if (campos.erro) return res.status(400).json(campos)
@@ -174,7 +175,7 @@ router.put('/:id', exigeSessao, exige(EDITAR), async (req, res) => {
   }
 })
 
-router.delete('/:id', exigeSessao, exige(EDITAR), async (req, res) => {
+router.delete('/:id', exigeSessao, exigePessoal(EDITAR), async (req, res) => {
   if (!idValido(req.params.id)) return res.status(404).json({ erro: 'Evento não encontrado.' })
   try {
     const { rows } = await query(

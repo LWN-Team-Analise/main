@@ -52,6 +52,9 @@ export const enviar = (campos) => post('/despesas/envios', campos)
  */
 export const carregarClientesDaRefeicao = () => get('/despesas/refeicao/clientes')
 
+/** Os clientes sem direito a bonus apartamento: { regra, semDireito } (atualizacao 53). */
+export const carregarClientesDoBonus = () => get('/despesas/bonus/clientes')
+
 /**
  * Os envios de um mes ('AAAA-MM'), com os totais do dia, do mes e por
  * pessoa — cada categoria no periodo dela. Sem mes, a API escolhe o de
@@ -64,9 +67,14 @@ export const carregarMes = (mes, filtros) =>
 export const carregarAno = (ano, filtros) =>
   get(consulta('/despesas/resumo', filtros, [`ano=${encodeURIComponent(ano)}`]))
 
-/** Quem ja enviou alguma coisa — a lista de Envios gerais (so revisor). */
-export async function carregarPessoas() {
-  const { pessoas } = await get('/despesas/pessoas')
+/**
+ * Quem ja enviou alguma coisa — a lista do Reembolso da area Administrativo
+ * (so revisor), com o total de cada tipo em `porCategoria`. `mes`
+ * ('AAAA-MM') ou `ano` recortam o periodo; nenhum = desde sempre.
+ */
+export async function carregarPessoas({ mes, ano } = {}) {
+  const filtro = mes ? `?mes=${encodeURIComponent(mes)}` : ano ? `?ano=${encodeURIComponent(ano)}` : ''
+  const { pessoas } = await get(`/despesas/pessoas${filtro}`)
   return pessoas ?? []
 }
 

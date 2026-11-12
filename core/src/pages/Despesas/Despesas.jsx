@@ -23,7 +23,7 @@ import './Despesas.css'
    A da refeicao diz o valor quando almoco e janta tem o mesmo, pre-definido. */
 function descricao(categoria, valores) {
   if (categoria === 'despesa') return 'Transporte, combustível e outros gastos'
-  if (categoria === 'bonus') return 'Bônus viagem ou bônus apartamento'
+  if (categoria === 'bonus') return 'Bônus apartamento'
   const almoco = valorFixo('almoco', valores)
   return almoco !== null && almoco === valorFixo('janta', valores)
     ? `Almoço ou janta — ${reais(almoco)}`

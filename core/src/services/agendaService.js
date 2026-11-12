@@ -2,7 +2,7 @@
  * A agenda da empresa (server/routes/agenda.js, atualizacao 44) — o card
  * "Agenda da Empresa" da aba Panorama e o "Marcar evento" do botao "+".
  *
- * Quem decide se pode gravar e a API: sem `enviar_avisos`, criar, editar
+ * Quem decide se pode gravar e a API: sem `publicar_agenda`, criar, editar
  * ou excluir volta erro e a tela mostra o recado.
  */
 

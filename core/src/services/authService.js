@@ -130,6 +130,9 @@ async function falar(caminho, corpo) {
   return dados ?? {}
 }
 
+/** O "Não me mostrar essa mensagem novamente" do aviso do cadastro incompleto. */
+export const dispensarAvisoCadastro = () => falar('aviso-cadastro', {})
+
 /** 1º passo: manda o codigo para o e-mail do cadastro. */
 export const pedirCodigo = (identificador) => falar('recuperar', { identificador })
 

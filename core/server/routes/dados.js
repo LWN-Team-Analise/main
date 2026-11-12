@@ -233,6 +233,10 @@ const paraCliente = (l) => ({
      refeicao, e o Reembolso nao aceita "Enviar refeição" para ele. A
      unidade sem resposta propria vale a do cliente */
   ofereceAlimentacao: typeof l.oferece_alimentacao === 'boolean' ? l.oferece_alimentacao : null,
+  /* "O colaborador tem direito a bônus apartamento?" (atualizacao 53):
+     false = o Reembolso nao aceita bonus para ele. A unidade sem resposta
+     propria vale a do cliente */
+  bonusApartamento: typeof l.bonus_apartamento === 'boolean' ? l.bonus_apartamento : null,
   criadoEm: l.criado_em,
 })
 
@@ -282,6 +286,12 @@ const COLUNAS_CLIENTE = COLUNAS_CLIENTE_38.replace(
   ' c.servico, coalesce(c.oferece_alimentacao, i.oferece_alimentacao) AS oferece_alimentacao,',
 )
 
+/* com o bonus apartamento (atualizacao 53) */
+const COLUNAS_CLIENTE_53 = COLUNAS_CLIENTE.replace(
+  ' c.servico,',
+  ' c.servico, coalesce(c.bonus_apartamento, i.bonus_apartamento) AS bonus_apartamento,',
+)
+
 /* banco com o servico das unidades e sem o pais (sem a atualizacao 35) */
 const COLUNAS_CLIENTE_34 = COLUNAS_CLIENTE_38.replace(' c.pais,', '')
 
@@ -302,11 +312,21 @@ async function lerClientes(imagens) {
     query(
       /* os prioritarios (as unidades da LWN, atualizacao 23) primeiro, na
          ordem deles; cada unidade logo depois do cliente dela */
-      `SELECT ${COLUNAS_CLIENTE}${imagens ? ', i.logo, i.capa' : ''}
+      `SELECT ${COLUNAS_CLIENTE_53}${imagens ? ', i.logo, i.capa' : ''}
          FROM cliente c
          JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
         ${ORDEM_CLIENTES}`,
     )
+      .catch((erro) => {
+        /* banco sem o bonus apartamento (atualizacao 53) */
+        if (erro.code !== '42703') throw erro
+        return query(
+          `SELECT ${COLUNAS_CLIENTE}${imagens ? ', i.logo, i.capa' : ''}
+             FROM cliente c
+             JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
+            ${ORDEM_CLIENTES}`,
+        )
+      })
       .catch((erro) => {
         /* banco sem o "Oferece alimentação?" (atualizacao 39) */
         if (erro.code !== '42703') throw erro
@@ -1445,12 +1465,26 @@ function lerExtrasDoCliente(corpo) {
           ? corpo.ofereceAlimentacao
           : null
         : undefined,
+    /* "O colaborador tem direito a bônus apartamento?", do mesmo jeito */
+    bonusApartamento:
+      corpo && 'bonusApartamento' in corpo
+        ? typeof corpo.bonusApartamento === 'boolean'
+          ? corpo.bonusApartamento
+          : null
+        : undefined,
   }
 }
 
 /* banco sem a atualizacao 39: o resto do cadastro grava, sem a resposta */
 async function gravarAlimentacao(clienteId, valor) {
   await query('UPDATE cliente SET oferece_alimentacao = $2 WHERE id = $1', [clienteId, valor]).catch((erro) => {
+    if (erro.code !== '42703') throw erro
+  })
+}
+
+/* banco sem a atualizacao 53: o resto do cadastro grava, sem a resposta */
+async function gravarBonusApartamento(clienteId, valor) {
+  await query('UPDATE cliente SET bonus_apartamento = $2 WHERE id = $1', [clienteId, valor]).catch((erro) => {
     if (erro.code !== '42703') throw erro
   })
 }
@@ -1484,6 +1518,7 @@ async function gravarExtrasDoCliente(clienteId, extras, { novo, usuarioId }) {
       }
     })
     if (extras.ofereceAlimentacao !== undefined) await gravarAlimentacao(clienteId, extras.ofereceAlimentacao)
+    if (extras.bonusApartamento !== undefined) await gravarBonusApartamento(clienteId, extras.bonusApartamento)
   } catch (erro) {
     /* banco ainda sem a atualizacao 27: o cadastro em si ja foi gravado */
     if (erro.code === '42P01' || erro.code === '42703') return

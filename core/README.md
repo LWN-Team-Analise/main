@@ -284,6 +284,7 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-36.sql.txt` | concluir check sem a informacao: obra_check.sem_informacao e a permissao `check_sem_informacao` (no acesso total) |
 | `db/atualizacao-37.sql.txt` | quem marca check: cargo.regras_check (regra por cargo e por pessoa), as permissoes `check_todas_obras` e `criar_obras`, e o negocio pendente (negocio.proposta, compartilhado_em/por) |
 | `db/atualizacao-52.sql.txt` | a permissao `ver_administrativo` (a area Administrativo), dada uma vez a quem revisava despesa geral ou gerenciava o ponto e ao acesso total |
+| `db/atualizacao-53.sql.txt` | o **Meu painel** (`cargo.painel` e `cargo.painel_exclusivo`, com o Administrativo dado uma vez a quem tinha `ver_administrativo`), as permissoes da pessoa (`usuario.permissoes_pessoais`), o "Nao me mostrar" do aviso do cadastro (`usuario.aviso_cadastro_dispensado`) e o bonus apartamento no cliente (`cliente.bonus_apartamento`) |
 | `db/atualizacao-51.sql.txt` | a aba Ponto: `ponto_dia` (o Calculo Diario importado) e `ponto_assinatura` (a conferencia assinada). Tambem aposenta a 48 (a obra criada em Obras nao vira mais negocio) |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
@@ -601,8 +602,11 @@ esconde o botao e a API recusa a chamada usando exatamente as mesmas chaves.
 
 | Grupo        | Chaves                                                              |
 | ------------ | ------------------------------------------------------------------- |
-| Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_administrativo`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_turnos`, `ver_avaliacoes`, `ver_usuarios`, `ver_avisos` |
+| Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_turnos`, `ver_avaliacoes`, `ver_usuarios`, `ver_avisos` |
 | Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `ver_senha_padrao`, `gerenciar_ponto`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `criar_obras`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `check_todas_obras`, `check_sem_informacao`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
+| Da pessoa    | `publicar_avisos` (quadro de avisos), `publicar_agenda` (agenda da empresa) — em `usuario.permissoes_pessoais`, marcadas so por quem tem acesso total em Usuarios > editar; o acesso total **nao** passa por elas sozinho |
+
+Alem das listas, cada setor pode ter um **painel** (`cargo.painel`, "Meu painel" — ver a secao Administrativo): `podeFazer(usuario, 'painel:administrativo')` e a pergunta das telas da area.
 
 Alteracao **sempre** depende da visualizacao correspondente: sem "Obras", o
 setor nao edita nada de Obras, e essas linhas ficam travadas ate a
@@ -1478,31 +1482,52 @@ ou a API fora do ar: o estado e a cidade viram campo livre.
 - A lista de paises e fixa (`src/domain/paises.js`), com os nomes em portugues
   do proprio navegador (`Intl.DisplayNames`).
 - Na tela, "Miami/Florida (Estados Unidos)"; o Excel ganhou as colunas Estado e
-  Pais. O globo da tela inicial so marca cliente do Brasil.
+  Pais. O globo dos clientes (no fim da aba Clientes) so marca cliente do Brasil.
 - Banco sem a atualizacao 35: endereco fora do Brasil devolve o recado para
   rodar `npm run db:atualizar`.
 - Nas listas de escolha, digitar as primeiras letras pula para a opcao ("par"
   acha o Paraguai), como no `<select>` do navegador.
 
-## Administrativo (a area administrativa)
+## Administrativo e o Meu painel
 
-A aba **Administrativo** (`/app/administrativo`, no lugar onde estava Concluidas no
-menu; antes se chamava Ponto) funciona como a do Almoxarife: **entrar nela troca o
-menu da esquerda** pelo menu da area (`MENU_ADM`, no AppShell), e o ultimo item,
-**Atmosfera** (o globo, como no LWN Control), volta para a pagina inicial. No celular
-a barra de baixo fica com Inicio, Ponto e Atmosfera; o resto vai para o Menu.
+A area **Administrativo** (`/app/administrativo`) nao e mais uma aba do menu: ela e o
+**painel de um setor**. Como no Almoxarife, **entrar nela troca o menu da esquerda**
+pelo da area (`MENU_ADM`, no AppShell: Reembolso, Ponto, Pontos de encontro, Frotas,
+Turnos), e o ultimo item, **Atmosfera**, volta para a pagina inicial. O inicio dela (os
+cards) saiu do menu: chega-se nele pelo **Meu painel**.
 
-**Quem ve a area:** quem tem `ver_administrativo` ("Administrativo", na Visualizacao do
-quadro de permissoes do setor). Quem nao tem ve, no mesmo lugar do menu, so o **Ponto**
-(a propria folha, em `/app/ponto`, com o menu de sempre) — assinar continua sendo de
-todo mundo. Cada endereco do Ponto leva ao certo pela permissao, com o periodo do link
-do aviso do Teams (que aponta para `/core/app/ponto`). A **atualizacao 52** deu a
-permissao, uma vez so, a quem ja revisava a despesa geral (o Envios gerais mudou para
-ca) ou gerenciava o ponto, e ao acesso total; os outros setores, quem administra marca.
+**Meu painel** (atualizacao 53). Cada setor pode ter UM painel (`PAINEIS`, em
+`src/domain/permissoes.js`: o Administrativo ou o Almoxarife), escolhido na tela do
+setor, na primeira linha do quadro de permissoes (`PainelDoSetor.jsx`). Marcar "Meu
+painel" pede o painel e se ele **pode ser incluido em outros setores**: com "Nao"
+(`cargo.painel_exclusivo`) ele e so daquele setor, e nos outros fica travado ate o
+principal mudar (desmarcar, trocar ou liberar). So quem tem acesso total escolhe, e a
+API recusa igual (`conferirPainel`, em `server/routes/equipe.js`: 403 sem acesso total,
+409 para o exclusivo de outro setor ou para deixar exclusivo um painel que outro setor
+ja tem). O Almoxarife so e painel de quem ve a aba dele, e cai junto se a aba for
+desmarcada. Quem esta num setor com painel ve **Meu painel** no menu da foto, logo
+acima de Configuracoes, e ele abre o inicio do painel (`/app/administrativo` ou
+`/app/control`). Setor sem painel nao ve o botao.
+
+**Quem entra na area Administrativo:** quem e de um setor que a tem como painel, e o
+acesso total (`podeFazer(usuario, 'painel:administrativo')`). Quem nao entra ve, no menu,
+so o **Ponto** (a propria folha, em `/app/ponto`, com o menu de sempre) — assinar
+continua sendo de todo mundo. Cada endereco do Ponto leva ao certo, com o periodo do
+link do aviso do Teams (que aponta para `/core/app/ponto`). A atualizacao 53 deu o
+painel Administrativo, uma vez so, aos setores que tinham a `ver_administrativo` (52)
+sem acesso total; a chave antiga ficou na lista sem valer e sai quando o setor e salvo.
+
+**O menu completo (o hamburguer).** No alto da barra da esquerda (no celular, o Menu
+da barra de baixo) fica o hamburguer, que abre o sistema inteiro dividido por area:
+**Atmosfera** (as abas de sempre), **Administrativo** (para quem entra nele) e
+**Almoxarife** (as abas dele, cada uma pela permissao `almox_*`, com o link que abre a
+aba direto em `/core/app/control/...`). So aparece o que a permissao de visualizacao
+da pessoa abre (`MenuCompleto`, no AppShell). O **Solicitar** do Atmosfera abre direto o
+"Solicitar OS" do Almoxarife (`/core/app/control/solicitar`, `almox_solicitacoes`).
 
 O inicio da area e uma grade de **cards**, e cada um abre a sua tela. Dentro, cada
 um ve so os cards — e os itens do menu — que a permissao abre; a rota de cada tela
-pede `ver_administrativo` E a permissao dela:
+pede o painel E a permissao dela:
 
 | Card | Tela | Permissao |
 | ---- | ---- | --------- |
@@ -1514,7 +1539,7 @@ pede `ver_administrativo` E a permissao dela:
 
 Os cards de Pontos de encontro e Frotas trazem o numero do momento (encontros de hoje
 e dos proximos 7 dias; carros em uso e com atencao): os encontros vem com as obras (a
-carga) e a frota de `GET /api/frotas/veiculos`. Do banco, so a permissao (atualizacao 52).
+carga) e a frota de `GET /api/frotas/veiculos`. Do banco, so o painel do setor (atualizacao 53).
 Arquivos: `src/pages/Administrativo/`.
 
 ## Ponto (a folha de ponto)
@@ -2054,9 +2079,9 @@ db/
 | `/app/obras/:id`            | Tela da obra (5 etapas)  | protegido |
 | `/app/clientes`             | Clientes                 | protegido |
 | `/app/concluidas`           | Obras concluidas (botao em Obras; fora do menu) | protegido |
-| `/app/administrativo`       | Administrativo (os cards; o menu muda para o da area) | `ver_administrativo` |
+| `/app/administrativo`       | Administrativo (os cards; o menu muda para o da area). E o Meu painel de quem tem esse painel | `painel:administrativo` (o painel do setor, ou acesso total) |
 | `/app/administrativo/reembolso` | Reembolso da equipe (era Envios gerais) | `revisar_despesa_geral` |
-| `/app/administrativo/ponto` | Ponto, dentro da area | `ver_administrativo` (sem ela, vai para `/app/ponto`) |
+| `/app/administrativo/ponto` | Ponto, dentro da area | `painel:administrativo` (sem ele, vai para `/app/ponto`) |
 | `/app/ponto`                | Ponto, para quem nao tem a area (com ela, vai para a area) | protegido, de todos |
 | `/app/administrativo/encontros` | Pontos de encontro das obras | `ver_obras` |
 | `/app/administrativo/frotas` | Frotas: em uso e com atencao | `ver_frotas` |
@@ -2098,16 +2123,23 @@ cards (consulta de conteiner), e nao a da janela:
 
 | Card | De onde vem |
 |---|---|
-| **Avisos e Comunicados** | o **aviso geral** (atualizacoes 46 e 47, `aviso_geral` em `/api/avisos`): o "Enviar aviso" do botao **+**, para todos os setores ou um so, com titulo, texto opcional, data de expiracao opcional e "importante" (pingo laranja, sempre no topo). So aparece para o setor dele, inclusive para a diretoria. Vale ate o fim do dia da expiracao; sem ela, ate alguem encerrar. Terminado, fica no **Historico de avisos** (link no pe do card); quem tem `enviar_avisos` ve la os de todos os setores. O clique abre ele inteiro, e quem tem a permissao encerra e exclui por la. So o excluido (com duplo check) some do historico. Junto, por data, os avisos de obra do sininho (`minhasNotificacoes`: so os do seu setor e os sem setor); o clique abre a obra e nao marca nada como lido |
+| **Avisos e Comunicados** | o **aviso geral** (atualizacoes 46 e 47, `aviso_geral` em `/api/avisos`): o "Enviar aviso" do botao **+**, para todos os setores ou um so, com titulo, texto opcional, data de expiracao opcional e "importante" (pingo laranja, sempre no topo). So aparece para o setor dele, inclusive para a diretoria. Vale ate o fim do dia da expiracao; sem ela, ate alguem encerrar. Terminado, fica no **Historico de avisos** (link no pe do card); quem tem `publicar_avisos` ve la os de todos os setores. O clique abre ele inteiro, e quem tem a permissao encerra e exclui por la. So o excluido (com duplo check) some do historico. Junto, por data, os avisos de obra do sininho (`minhasNotificacoes`: so os do seu setor e os sem setor); o clique abre a obra e nao marca nada como lido |
 | **Aniversariantes do Mes** | o `aniversario` de cada pessoa da equipe: so o dia e o mes (`'MM-DD'`), que a API manda para todos. A data inteira continua so para quem edita usuario. Quem faz aniversario hoje ganha o anel e os confetes |
-| **Agenda da Empresa** | a tabela nova `agenda_evento` (titulo, dia, hora e local opcionais), em `/api/agenda` (`server/routes/agenda.js`). Todos veem os eventos de hoje em diante; quem tem `enviar_avisos` cria, edita e exclui pelo "Ver calendario" |
+| **Agenda da Empresa** | a tabela nova `agenda_evento` (titulo, dia, hora e local opcionais), em `/api/agenda` (`server/routes/agenda.js`). Todos veem os eventos de hoje em diante; quem tem `publicar_agenda` cria, edita e exclui pelo "Ver calendario" |
+
+Enviar, encerrar e excluir aviso geral e de quem tem `publicar_avisos`; mexer na agenda,
+de quem tem `publicar_agenda`. As duas sao da **pessoa**, e nao do setor (atualizacao 53,
+`usuario.permissoes_pessoais`): quem tem acesso total marca em Usuarios > editar, no
+bloco "Página inicial". O acesso total nao passa por elas sozinho. Banco sem a 53: vale
+a `enviar_avisos` do setor, como antes. A `enviar_avisos` ficou so para o aviso de
+pendencia dentro da obra (o sininho).
 | **Destaques e Conquistas** | as avaliacoes: as obras com nota 4 ou mais (ate 5, a melhor primeiro) e um slide com as tres melhores medias da equipe. Carrossel com pontinhos, que anda sozinho e para com o mouse em cima |
 
-Embaixo dos quatro cards, no meio, fica o **globo dos clientes**
-(`src/pages/Home/GloboClientes.jsx`): um pingo azul por estado com cliente e o
-total de clientes embaixo. Ele morava no vazio da Grade ("Nada pendente por
-aqui", que agora mostra so o sol). Como anima sem parar e fica abaixo da
-dobra, so e desenhado quando esta perto da tela.
+O **globo dos clientes** saiu da pagina inicial: mora no fim da aba Clientes
+(`src/pages/Clientes/GloboClientes.jsx`), com um pingo azul por estado com cliente e o
+total de clientes embaixo. A terra e so de **pontinhos reforcados**, sem as letras do
+desenho original (`globe.letters: 0` e a prop `pontos` do `Globo`). Como anima sem parar
+e fica abaixo da dobra, so e desenhado quando esta perto da tela.
 
 Sem a atualizacao 44 no banco, a agenda so sai vazia (o `GET` devolve
 `semTabela: true`); o resto da pagina nao depende dela. Sem a 46, o card de
@@ -2115,7 +2147,7 @@ avisos mostra so os de obra. A TV continua abrindo na Grade e nao tem o
 Panorama.
 
 O botao flutuante do canto (AppShell) e sempre o **+** com menu, em todas as
-abas: "Chat da equipe", "Enviar aviso" e "Marcar evento" para quem tem `enviar_avisos` e o que a
+abas: "Chat da equipe", "Enviar aviso" (`publicar_avisos`), "Marcar evento" (`publicar_agenda`) e o que a
 tela acrescentar (a observacao do quadro, em Obras). Antes, sem opcao extra,
 ele era so o balao do chat. Dentro da obra continua o + proprio dela.
 
@@ -2978,10 +3010,14 @@ passam a ser obrigatorios. Preenchidos, os campos continuam sendo validados: o
 que a validacao deve pegar e o dedo trocado, nao a ausencia.
 
 Colaborador novo entra com a **senha padrao 123456** e com `senha_temporaria`
-ligado. A coluna continua sendo gravada, mas **nenhuma tela cobra mais a
-troca**: a faixa amarela que aparecia no alto de todas as paginas e o alerta que
-ficava dentro de Configuracoes > Senha foram removidos. Trocar a senha continua
-sendo em Configuracoes > Senha, por quem quiser.
+ligado. Enquanto ela estiver ligada, **a cada entrada no site** (sessao do navegador)
+aparece o aviso "Troque a sua senha", com **Trocar** (leva a Configuracoes > Senha) e
+**Não agora** (`src/components/AvisoEntrada/AvisoEntrada.jsx`). Nao ha como dispensar de
+vez. Depois dele, para quem esta com o **cadastro incompleto** (sem CPF), vem "Complete
+o seu cadastro", com **Completar**, **Não agora** e a caixa **"Não me mostrar essa
+mensagem novamente"**, que grava `usuario.aviso_cadastro_dispensado`
+(`POST /api/auth/aviso-cadastro`, atualizacao 53). A TV nao ve nenhum, e Configuracoes
+tambem nao.
 
 Excluir **desativa** o acesso (`ativo = false`) em vez de apagar, para o
 historico das obras nao perder quem marcou o que.
@@ -3101,7 +3137,7 @@ formularios abrem em pop-up, por cima dela.
 | -------- | ---------------------------------------------------------------------- |
 | Despesa  | data, cliente, obra (opcional), tipo (Vale Transporte, Transporte Intermunicipal, Combustível, Outros — este com justificativa opcional), valor, **comprovante obrigatorio**, observacao |
 | Refeição | data, cliente, obra (opcional), tipo (Almoço, Janta), valor **fixo** (R$ 41,50), observacao |
-| Bônus    | data, tipo (Bônus viagem, Bônus apartamento), cliente, obra (opcional), valor, observacao |
+| Bônus    | data, cliente, obra (opcional), valor (Bônus apartamento, **fixo**), observacao. O Bônus viagem nao existe mais (`aposentado`: os envios antigos continuam com o nome e na planilha). O cliente com "O colaborador tem direito a bônus apartamento?" = **não** sai da lista e a API recusa (atualizacao 53) |
 
 **Os tipos e os valores fixos moram num arquivo so**, `src/domain/despesas.js`,
 importado pela tela e pela API — o mesmo esquema de `permissoes.js`. Mudar o
@@ -3148,6 +3184,13 @@ equipe moram na area **Administrativo**, no card **Reembolso**
 quem tem `revisar_despesa_geral`. A lista traz so quem ja enviou alguma coisa (foto, nome, setor, cargo,
 e-mail, total), mais um cartao "Todos os usuarios". Clicar numa pessoa abre os
 envios dela com os mesmos filtros de Meus envios.
+
+Em cima da lista, o **filtro**: o periodo (todo, um dos ultimos 12 meses ou um ano —
+cada categoria no periodo dela, como em Meus envios) e o tipo **Todos / Despesa /
+Refeição / Bônus**. O tipo troca na hora o total, a quantidade e o ultimo envio de cada
+pessoa (a API manda os tres em `porCategoria`, em `GET /api/despesas/pessoas?mes=` ou
+`?ano=`); quem nao tem envio daquele tipo sai da lista. O filtro fica no endereco, e o
+clique numa pessoa abre os envios dela no mesmo recorte.
 
 A trava e **na API**, a cada chamada: sem a permissao, `/pessoas`,
 `?usuarios=todos` ou o id de outra pessoa voltam **403**, e o comprovante de

@@ -15,11 +15,13 @@ import {
   dependentes,
   limparGuardadas,
   normalizar,
+  painelPorChave,
   separar,
   travada,
 } from '@/domain/permissoes'
 import { lerRegrasCheck } from '@/domain/obras'
 import RegrasCheck from './RegrasCheck'
+import PainelDoSetor from './PainelDoSetor'
 import { CORES_SETOR } from './ModalCargos'
 import './ModalCargos.css'
 import './SetorPagina.css'
@@ -88,6 +90,9 @@ export default function SetorPagina() {
       acessoTotal: Boolean(cargo.acessoTotal),
       painelTv: Boolean(cargo.painelTv),
       marcadas: marcadasDo(cargo),
+      /* "Meu painel" (atualizacao 53): o painel do setor e se ele e so dele */
+      painel: cargo.painel ?? null,
+      painelExclusivo: Boolean(cargo.painelExclusivo),
       /* null = o banco ainda nao tem a atualizacao 37: a parte some */
       regrasCheck: cargo.regrasCheck ? lerRegrasCheck(cargo.regrasCheck) : null,
     })
@@ -135,6 +140,11 @@ export default function SetorPagina() {
 
   /* o que vale e o que fica guardado, como vai para o banco */
   const { permissoes: valem, guardadas: guardadasAgora } = separar(form.marcadas)
+
+  /* o painel como vai para o banco: o que pede uma aba cai sem ela */
+  const defPainel = painelPorChave(form.painel)
+  const painelFinal =
+    defPainel && (!defPainel.exige || form.acessoTotal || valem.includes(defPainel.exige)) ? form.painel : null
 
   /* desmarcar uma visualizacao tira SO ela: as alteracoes de dentro
      ficam marcadas (guardadas) e voltam a valer junto com a aba */
@@ -190,11 +200,14 @@ export default function SetorPagina() {
   const gravar = async () => {
     setSalvando(true)
     try {
-      const { regrasCheck, marcadas: _marcadas, ...resto } = form
+      const { regrasCheck, marcadas: _marcadas, painel: _painel, painelExclusivo: _exclusivo, ...resto } = form
       await atualizarCargo(cargo.id, {
         ...resto,
         nome: form.nome.trim(),
         permissoes: valem,
+        ...(cargo.painelDisponivel
+          ? { painel: painelFinal, painelExclusivo: Boolean(painelFinal) && form.painelExclusivo }
+          : {}),
         ...(guarda ? { permissoesGuardadas: guardadasAgora } : {}),
         ...(regrasCheck ? { regrasCheck: lerRegrasCheck(regrasCheck) } : {}),
       })
@@ -374,6 +387,24 @@ export default function SetorPagina() {
                   <h4>Alteração</h4>
                 </div>
 
+                {/* "Meu painel" (atualizacao 53): a area que e do setor */}
+                {cargo.painelDisponivel && !form.painelTv && (
+                  <PainelDoSetor
+                    cargo={cargo}
+                    cargos={cargos}
+                    painel={form.painel}
+                    exclusivo={form.painelExclusivo}
+                    acessoTotal={form.acessoTotal}
+                    valem={valem}
+                    souTotal={souTotal}
+                    aoMudar={(painel, exclusivo) => {
+                      setForm((atual) => ({ ...atual, painel, painelExclusivo: Boolean(painel) && exclusivo }))
+                      setErro('')
+                      setRecado('')
+                    }}
+                  />
+                )}
+
                 {GRUPOS.map((grupo) => {
                   const aba = grupo.visualizacao
                   const travadas = grupo.alteracoes.some((p) => travada(p.chave, form.marcadas))
@@ -513,6 +544,17 @@ export default function SetorPagina() {
               <>
                 <dt>Tela da TV</dt>
                 <dd>Sim — página inicial automática, sem Outlook</dd>
+              </>
+            )}
+
+            {cargo.painelDisponivel && (painelFinal || cargo.painel) && (
+              <>
+                <dt>Meu painel</dt>
+                <dd>
+                  {painelFinal
+                    ? `${painelPorChave(painelFinal).rotulo} — ${form.painelExclusivo ? 'só deste setor' : 'pode ser de outros setores'}`
+                    : 'Nenhum'}
+                </dd>
               </>
             )}
 

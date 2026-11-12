@@ -1,0 +1,45 @@
+/* Os avisos de entrada (AvisoEntrada.jsx): senha padrao e cadastro incompleto */
+
+.avisoentrada {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.avisoentrada__texto {
+  margin: 0;
+  color: var(--text-base);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.avisoentrada__marca {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.avisoentrada__marca input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.avisoentrada__acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .avisoentrada__acoes > .btn {
+    flex: 1 1 140px;
+  }
+}

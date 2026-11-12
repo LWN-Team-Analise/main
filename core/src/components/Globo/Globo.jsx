@@ -158,6 +158,10 @@ export default function Globo(props) {
         phrase = "everypointonthisballisapathbacktoanotherone",
         density = 53,
         glyphSize = 90,
+        /* o reforco dos pontinhos da terra (100 = o desenho original). Acima
+           de 100 eles engrossam, escurecem e viram bolinhas: e o que fica no
+           lugar das letras quando `globe.letters` e 0 (o globo de Clientes) */
+        pontos = 100,
         speed = 100,
         hover = 100,
         globe,
@@ -212,6 +216,7 @@ export default function Globo(props) {
         phrase: String(phrase || "").length ? String(phrase) : "globe",
         density: clampN(num(density, 100), 40, 200) / 100,
         glyphSize: clampN(num(glyphSize, 100), 20, 300) / 100,
+        pontos: clampN(num(pontos, 100), 50, 300) / 100,
         speed: clampN(num(speed, 50), 0, 100) / 50,
         hover: clampN(num(hover, 100), 0, 200) / 100,
         radius: clampN(num(globe_.radius, 100), 40, 200) / 100,
@@ -552,7 +557,9 @@ export default function Globo(props) {
             }
 
             const dmin = Math.max(0.7, u * 0.0029)
-            const dots = (list, baseA, gain, grow) => {
+            /* `redondo`: bolinhas em vez de quadradinhos (os pontos
+               reforcados da terra); o mar continua no quadrado, mais leve */
+            const dots = (list, baseA, gain, grow, redondo) => {
                 for (let lvl = 0; lvl < 6; lvl++) {
                     const z = (lvl + 0.5) / 6
                     const dsz = dmin * grow * (0.55 + 0.75 * z)
@@ -561,13 +568,19 @@ export default function Globo(props) {
                     for (let q = 0; q < list.length; q += 3) {
                         const lv = list[q + 2] >= 1 ? 5 : (list[q + 2] * 6) | 0
                         if (lv !== lvl) continue
-                        ctx.rect(list[q] - dsz / 2, list[q + 1] - dsz / 2, dsz, dsz)
+                        if (redondo) {
+                            ctx.moveTo(list[q] + dsz / 2, list[q + 1])
+                            ctx.arc(list[q], list[q + 1], dsz / 2, 0, VOLTA)
+                        } else {
+                            ctx.rect(list[q] - dsz / 2, list[q + 1] - dsz / 2, dsz, dsz)
+                        }
                     }
                     ctx.fill()
                 }
             }
             dots(sea, 0.1, 0.22, 1.0)
-            dots(soil, 0.34, 0.46, 1.7)
+            const reforco = v.pontos
+            dots(soil, Math.min(0.85, 0.34 * reforco), 0.46, 1.7 * reforco, reforco > 1)
 
             for (let bi = 0; bi < 8; bi++) {
                 const arr = land8[bi]

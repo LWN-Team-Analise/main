@@ -138,18 +138,25 @@ export default function ModalEnvio({ categoria, valores = VALORES_FIXOS, aoFecha
   const [salvando, setSalvando] = useState(false)
   /* a refeicao (atualizacao 39): os clientes em que a pessoa pode lancar */
   const [daRefeicao, setDaRefeicao] = useState(null)
+  /* o bonus (atualizacao 53): os clientes sem direito a bonus apartamento */
+  const [doBonus, setDoBonus] = useState(null)
+
+  /* o tipo unico (o bonus, que so tem o apartamento) ja vem escolhido e
+     o campo nem aparece */
+  const tipos = tiposDa(categoria)
+  const tipoUnico = tipos.length === 1 ? tipos[0].chave : ''
 
   /* abriu: comeca limpo, com a data de hoje */
   useEffect(() => {
     if (!aberto) return
-    setForm({ ...VAZIO, data: hojeISO() })
+    setForm({ ...VAZIO, data: hojeISO(), tipo: tipoUnico })
     setAnexo(null)
     setErros({})
     setPreparando(false)
-  }, [aberto, categoria])
+  }, [aberto, categoria, tipoUnico])
 
-  /* "Enviar refeição" so para o cliente que NAO oferece alimentacao, e so
-     de quem esta numa obra dele (o servidor confere igual) */
+  /* "Enviar refeição" so para o cliente que NAO oferece alimentacao (o
+     servidor confere igual) */
   useEffect(() => {
     if (!aberto || categoria !== 'refeicao') return undefined
     let vivo = true
@@ -163,6 +170,21 @@ export default function ModalEnvio({ categoria, valores = VALORES_FIXOS, aoFecha
     }
   }, [aberto, categoria])
 
+  /* "Enviar bônus" nao vai para o cliente em que o colaborador nao tem
+     direito ao bonus apartamento (o servidor confere igual) */
+  useEffect(() => {
+    if (!aberto || categoria !== 'bonus') return undefined
+    let vivo = true
+    setDoBonus(null)
+    despesasApi
+      .carregarClientesDoBonus()
+      .then((r) => vivo && setDoBonus(r))
+      .catch(() => vivo && setDoBonus({ regra: false, semDireito: [] }))
+    return () => {
+      vivo = false
+    }
+  }, [aberto, categoria])
+
   /* ---- cliente ----
      Obrigatorio. As unidades da LWN (prioritarias) vem primeiro: a
      ordem e a do servidor. O cliente com unidades e so a vitrine delas
@@ -170,10 +192,12 @@ export default function ModalEnvio({ categoria, valores = VALORES_FIXOS, aoFecha
   const opcoesCliente = useMemo(() => {
     const regra = categoria === 'refeicao' && daRefeicao?.regra
     const pode = new Set(daRefeicao?.permitidos ?? [])
+    const semBonus = new Set(categoria === 'bonus' ? doBonus?.semDireito ?? [] : [])
     return clientesParaEscolher(clientes, form.clienteId)
       .filter((c) => !regra || pode.has(String(c.id)))
+      .filter((c) => !semBonus.has(String(c.id)))
       .map((c) => ({ valor: String(c.id), rotulo: c.nome }))
-  }, [clientes, form.clienteId, categoria, daRefeicao])
+  }, [clientes, form.clienteId, categoria, daRefeicao, doBonus])
 
   const mudar = (campo) => (evento) => {
     const valor = evento?.target ? evento.target.value : evento
@@ -296,7 +320,7 @@ export default function ModalEnvio({ categoria, valores = VALORES_FIXOS, aoFecha
     )
 
   const campoObra =
-    categoria === 'refeicao' && !daRefeicao ? (
+    (categoria === 'refeicao' && !daRefeicao) || (categoria === 'bonus' && !doBonus) ? (
       <div key="obra" className="campo">
         <span className="campo__rotulo">Cliente</span>
         <p className="formdesp__aviso">Carregando os clientes...</p>
@@ -306,8 +330,10 @@ export default function ModalEnvio({ categoria, valores = VALORES_FIXOS, aoFecha
         <span className="campo__rotulo">Cliente</span>
         <p className="formdesp__aviso">
           {categoria === 'refeicao' && daRefeicao?.regra
-            ? 'A refeição só pode ser enviada para o cliente que não oferece alimentação, e por quem está em uma obra dele. Você não está em nenhuma obra assim.'
-            : 'Nenhum cliente cadastrado ainda. Os envios são lançados para um cliente.'}
+            ? 'A refeição só pode ser enviada para o cliente que não oferece alimentação, e todos os clientes cadastrados oferecem.'
+            : categoria === 'bonus' && doBonus?.regra
+              ? 'Nenhum cliente dá direito a bônus apartamento.'
+              : 'Nenhum cliente cadastrado ainda. Os envios são lançados para um cliente.'}
         </p>
       </div>
     ) : (
@@ -325,7 +351,7 @@ export default function ModalEnvio({ categoria, valores = VALORES_FIXOS, aoFecha
       </div>
     )
 
-  const campoTipo = (
+  const campoTipo = tipoUnico ? null : (
     <CampoSelecao
       key="tipo"
       rotulo={
@@ -335,7 +361,7 @@ export default function ModalEnvio({ categoria, valores = VALORES_FIXOS, aoFecha
       onChange={mudar('tipo')}
       erro={erros.tipo}
       vazio="Escolha o tipo..."
-      opcoes={tiposDa(categoria).map((t) => ({ valor: t.chave, rotulo: t.rotulo }))}
+      opcoes={tipos.map((t) => ({ valor: t.chave, rotulo: t.rotulo }))}
     />
   )
 

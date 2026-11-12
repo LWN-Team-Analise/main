@@ -61,14 +61,14 @@ const ATALHOS = [
     permissao: 'ver_clientes',
     termos: 'clientes empresas cadastro contratante setor endereco',
   },
-  /* a area administrativa (era a aba Ponto) e as telas dela */
+  /* a area Administrativo (o painel do setor, atualizacao 53) e as telas dela */
   {
     id: 'tela-administrativo',
     grupo: 'Telas',
     titulo: 'Administrativo',
     detalhe: 'Reembolso, ponto, pontos de encontro, frotas e turnos',
     rota: '/app/administrativo',
-    permissao: 'ver_administrativo',
+    permissao: 'painel:administrativo',
     termos: 'administrativo area administrativa adm rh recursos humanos',
   },
   {
@@ -85,7 +85,7 @@ const ATALHOS = [
     titulo: 'Pontos de encontro',
     detalhe: 'O horário e o local de encontro das obras (Administrativo)',
     rota: '/app/administrativo/encontros',
-    todas: ['ver_administrativo', 'ver_obras'],
+    todas: ['painel:administrativo', 'ver_obras'],
     termos: 'pontos de encontro ponto de encontro horario encontro saida obra local endereco quem vai',
   },
   {
@@ -94,7 +94,7 @@ const ATALHOS = [
     titulo: 'Frotas em uso e com atenção',
     detalhe: 'Os carros em uso e os que voltaram com problema (Administrativo)',
     rota: '/app/administrativo/frotas',
-    todas: ['ver_administrativo', 'ver_frotas'],
+    todas: ['painel:administrativo', 'ver_frotas'],
     termos: 'frotas carros em uso atencao tanque combustivel oleo pneus devolvido problema',
   },
   /* saiu do menu (e o botao "Concluídas" de Obras), mas a busca ainda abre */
@@ -123,7 +123,7 @@ const ATALHOS = [
     detalhe: 'Enviar despesa, refeição ou bônus',
     rota: '/app/despesas',
     permissao: 'ver_despesas',
-    termos: 'despesas despesa reembolso gasto recibo comprovante nota fiscal vale transporte combustivel refeicao almoco janta bonus viagem apartamento',
+    termos: 'despesas despesa reembolso gasto recibo comprovante nota fiscal vale transporte combustivel refeicao almoco janta bonus apartamento',
   },
   {
     id: 'tela-turnos',
@@ -149,7 +149,7 @@ const ATALHOS = [
     titulo: 'Reembolso da equipe',
     detalhe: 'As despesas, refeições e bônus de cada pessoa (Administrativo)',
     rota: '/app/administrativo/reembolso',
-    todas: ['ver_administrativo', 'revisar_despesa_geral'],
+    todas: ['painel:administrativo', 'revisar_despesa_geral'],
     termos: 'envios gerais despesas da equipe revisar despesa geral reembolsos de todos',
   },
   {

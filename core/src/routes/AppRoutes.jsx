@@ -63,29 +63,33 @@ function Mudou({ para }) {
   return <Navigate to={{ pathname: destino, search }} replace />
 }
 
-/** A tela da area administrativa: pede `ver_administrativo` e, se vier, a permissao da tela. */
+/**
+ * A tela da area Administrativo: pede o painel dela (o setor que tem o
+ * Administrativo como painel, ou o acesso total — atualizacao 53) e, se
+ * vier, a permissao da tela.
+ */
 function NaArea({ permissao, children }) {
   return (
-    <ProtectedRoute permissao="ver_administrativo">
+    <ProtectedRoute permissao="painel:administrativo">
       {permissao ? <ProtectedRoute permissao={permissao}>{children}</ProtectedRoute> : children}
     </ProtectedRoute>
   )
 }
 
 /**
- * O Ponto mora em dois enderecos, pela permissao da area: quem tem
- * `ver_administrativo` abre em /app/administrativo/ponto (com o menu da
+ * O Ponto mora em dois enderecos, pelo painel do setor: quem tem a area
+ * Administrativo abre em /app/administrativo/ponto (com o menu da
  * area); quem nao tem, em /app/ponto (com o menu de sempre). Cada endereco
  * leva ao certo, com o periodo do link do aviso do Teams.
  */
 function PontoDaArea() {
   const { user } = useAuth()
-  return podeFazer(user, 'ver_administrativo') ? <Ponto /> : <Mudou para="/app/ponto" />
+  return podeFazer(user, 'painel:administrativo') ? <Ponto /> : <Mudou para="/app/ponto" />
 }
 
 function PontoForaDaArea() {
   const { user } = useAuth()
-  return podeFazer(user, 'ver_administrativo') ? <Mudou para="/app/administrativo/ponto" /> : <Ponto />
+  return podeFazer(user, 'painel:administrativo') ? <Mudou para="/app/administrativo/ponto" /> : <Ponto />
 }
 
 /**
@@ -159,9 +163,9 @@ export default function AppRoutes() {
           </Interna>
         }
       />
-      {/* A AREA ADMINISTRATIVA (era a aba Ponto), com `ver_administrativo`.
-          Entrar nela troca o menu pelo dela (MENU_ADM, no AppShell). O inicio
-          e os cards; cada tela pede a permissao da area E a dela */}
+      {/* A AREA ADMINISTRATIVA: o painel do setor ("Meu painel", atualizacao
+          53). Entrar nela troca o menu pelo dela (MENU_ADM, no AppShell). O
+          inicio e os cards; cada tela pede o painel E a permissao dela */}
       <Route
         path="/app/administrativo"
         element={
