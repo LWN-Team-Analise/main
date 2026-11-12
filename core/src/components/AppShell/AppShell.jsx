@@ -228,7 +228,8 @@ const Icone = {
  * quem pode mexer em usuario ou em cargo.
  *
  * Item SEM `permissao` nem `permissoes` e de todo mundo (`semTv`: menos
- * da TV da empresa). `tambem` sao as outras rotas que acendem o item.
+ * da TV da empresa; `quandoNao`: so para quem NAO tem aquela permissao).
+ * `tambem` sao as outras rotas que acendem o item.
  */
 const MENU = [
   { id: 'inicio', rotulo: 'Página inicial', rota: '/app', exato: true, permissao: 'ver_inicio' },
@@ -236,9 +237,11 @@ const MENU = [
      dela (/app/concluidas) acende Obras aqui */
   { id: 'obras', rotulo: 'Obras', rota: '/app/obras', permissao: 'ver_obras', tambem: ['/app/concluidas'] },
   { id: 'clientes', rotulo: 'Clientes', rota: '/app/clientes', permissao: 'ver_clientes' },
-  /* a area administrativa (era a aba Ponto): de todo mundo, menos da TV —
-     cada um ve dentro so os cards que a permissao dele abre (MENU_ADM) */
-  { id: 'administrativo', rotulo: 'Administrativo', rota: '/app/administrativo', semTv: true },
+  /* a area administrativa (era a aba Ponto): so com `ver_administrativo`;
+     dentro, cada um ve os cards que a permissao dele abre (MENU_ADM). Quem
+     nao tem a area ve o Ponto (a propria folha) no mesmo lugar */
+  { id: 'administrativo', rotulo: 'Administrativo', rota: '/app/administrativo', permissao: 'ver_administrativo', semTv: true },
+  { id: 'ponto', rotulo: 'Ponto', rota: '/app/ponto', semTv: true, quandoNao: 'ver_administrativo' },
   { id: 'despesas', rotulo: 'Reembolso', rota: '/app/despesas', permissao: 'ver_despesas' },
   { id: 'frotas', rotulo: 'Frotas', rota: '/app/frotas', permissao: 'ver_frotas' },
   /* o Almoxarife (o antigo lwncontrol) abre a tela dele, em /almoxarife */
@@ -1016,6 +1019,7 @@ export default function AppShell({
     () =>
       (administrativa ? MENU_ADM : MENU).filter((item) => {
         if (item.semTv && user?.painelTv) return false
+        if (item.quandoNao && pode(item.quandoNao)) return false
         if (item.permissoes) return item.permissoes.some((p) => pode(p))
         return item.permissao ? pode(item.permissao) : true
       }),

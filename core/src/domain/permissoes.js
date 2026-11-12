@@ -73,6 +73,10 @@ export const VISUALIZACAO = [
   { chave: 'ver_inicio', rotulo: 'Página inicial', rota: '/app' },
   { chave: 'ver_obras', rotulo: 'Obras', rota: '/app/obras' },
   { chave: 'ver_clientes', rotulo: 'Clientes', rota: '/app/clientes' },
+  /* a area administrativa (os cards: Reembolso, Ponto, Pontos de encontro,
+     Frotas, Turnos). Quem nao tem ve no menu so o Ponto, a propria folha
+     (atualizacao 52 deu a quem ja revisava despesa ou gerenciava o ponto) */
+  { chave: 'ver_administrativo', rotulo: 'Administrativo', rota: '/app/administrativo' },
   { chave: 'ver_concluidas', rotulo: 'Concluídas', rota: '/app/concluidas' },
   { chave: 'ver_despesas', rotulo: 'Reembolso', rota: '/app/despesas' },
   { chave: 'ver_frotas', rotulo: 'Frotas', rota: '/app/frotas' },

@@ -68,14 +68,15 @@ const ATALHOS = [
     titulo: 'Administrativo',
     detalhe: 'Reembolso, ponto, pontos de encontro, frotas e turnos',
     rota: '/app/administrativo',
+    permissao: 'ver_administrativo',
     termos: 'administrativo area administrativa adm rh recursos humanos',
   },
   {
     id: 'tela-ponto',
     grupo: 'Telas',
     titulo: 'Ponto',
-    detalhe: 'A folha de ponto: conferir e assinar (Administrativo)',
-    rota: '/app/administrativo/ponto',
+    detalhe: 'A sua folha de ponto: conferir e assinar',
+    rota: '/app/ponto',
     termos: 'ponto folha de ponto espelho marcacoes horas extras jornada assinatura assinar conferencia batida relogio',
   },
   {
@@ -84,7 +85,7 @@ const ATALHOS = [
     titulo: 'Pontos de encontro',
     detalhe: 'O horário e o local de encontro das obras (Administrativo)',
     rota: '/app/administrativo/encontros',
-    permissao: 'ver_obras',
+    todas: ['ver_administrativo', 'ver_obras'],
     termos: 'pontos de encontro ponto de encontro horario encontro saida obra local endereco quem vai',
   },
   {
@@ -93,7 +94,7 @@ const ATALHOS = [
     titulo: 'Frotas em uso e com atenção',
     detalhe: 'Os carros em uso e os que voltaram com problema (Administrativo)',
     rota: '/app/administrativo/frotas',
-    permissao: 'ver_frotas',
+    todas: ['ver_administrativo', 'ver_frotas'],
     termos: 'frotas carros em uso atencao tanque combustivel oleo pneus devolvido problema',
   },
   /* saiu do menu (e o botao "Concluídas" de Obras), mas a busca ainda abre */
@@ -148,7 +149,7 @@ const ATALHOS = [
     titulo: 'Reembolso da equipe',
     detalhe: 'As despesas, refeições e bônus de cada pessoa (Administrativo)',
     rota: '/app/administrativo/reembolso',
-    permissao: 'revisar_despesa_geral',
+    todas: ['ver_administrativo', 'revisar_despesa_geral'],
     termos: 'envios gerais despesas da equipe revisar despesa geral reembolsos de todos',
   },
   {
@@ -395,11 +396,13 @@ export function procurar(termo, dados) {
 
   /* ---------------- telas, aparencia e ajustes ---------------- */
   for (const a of ATALHOS) {
-    const liberado = a.permissoes
-      ? a.permissoes.some((p) => pode(p))
-      : a.permissao
-        ? pode(a.permissao)
-        : true
+    const liberado = a.todas
+      ? a.todas.every((p) => pode(p))
+      : a.permissoes
+        ? a.permissoes.some((p) => pode(p))
+        : a.permissao
+          ? pode(a.permissao)
+          : true
     if (!liberado) continue
 
     const peso = Math.max(nota(a.titulo, alvo), nota(a.termos, alvo) ? 2 : 0)

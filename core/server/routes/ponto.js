@@ -379,7 +379,7 @@ router.post('/lembrar', exigeSessao, exige(GERENCIAR), async (req, res) => {
         'Abra a aba Ponto, confira as marcações e clique em "Assinatura Funcionário", no rodapé da folha, para assinar.',
         quemPede ? `Aviso enviado por ${quemPede}.` : null,
       ],
-      link: linkDoSite(`/core/app/administrativo/ponto?inicio=${inicio}&fim=${fim}`),
+      link: linkDoSite(`/core/app/ponto?inicio=${inicio}&fim=${fim}`),
       rotuloLink: 'Abrir a folha de ponto',
     })
     if (enviados === 0) {

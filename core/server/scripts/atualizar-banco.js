@@ -87,6 +87,8 @@ const ARQUIVOS = [
   'db/atualizacao-50.sql.txt',
   /* a aba Ponto: as marcacoes importadas e as assinaturas da folha */
   'db/atualizacao-51.sql.txt',
+  /* a permissao da area Administrativo, para quem ja usava o que foi para la */
+  'db/atualizacao-52.sql.txt',
 ]
 
 /**
@@ -261,6 +263,7 @@ const CONFERENCIA = [
   ['aviso_geral.encerrado_em', col('aviso_geral', 'encerrado_em')],
   ['ponto_dia (a aba Ponto)', "SELECT to_regclass('public.ponto_dia') IS NOT NULL AS ok"],
   ['ponto_assinatura (a aba Ponto)', "SELECT to_regclass('public.ponto_assinatura') IS NOT NULL AS ok"],
+  ['ver_administrativo no acesso total', permissaoNoAcessoTotal('ver_administrativo')],
 ]
 
 function col(tabela, coluna) {

@@ -283,6 +283,7 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-32.sql.txt` | turno.compartilhado (+ compartilhado_em/por): o turno novo, colado ou copiado da agenda nasce sem compartilhar com a equipe |
 | `db/atualizacao-36.sql.txt` | concluir check sem a informacao: obra_check.sem_informacao e a permissao `check_sem_informacao` (no acesso total) |
 | `db/atualizacao-37.sql.txt` | quem marca check: cargo.regras_check (regra por cargo e por pessoa), as permissoes `check_todas_obras` e `criar_obras`, e o negocio pendente (negocio.proposta, compartilhado_em/por) |
+| `db/atualizacao-52.sql.txt` | a permissao `ver_administrativo` (a area Administrativo), dada uma vez a quem revisava despesa geral ou gerenciava o ponto e ao acesso total |
 | `db/atualizacao-51.sql.txt` | a aba Ponto: `ponto_dia` (o Calculo Diario importado) e `ponto_assinatura` (a conferencia assinada). Tambem aposenta a 48 (a obra criada em Obras nao vira mais negocio) |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
@@ -600,7 +601,7 @@ esconde o botao e a API recusa a chamada usando exatamente as mesmas chaves.
 
 | Grupo        | Chaves                                                              |
 | ------------ | ------------------------------------------------------------------- |
-| Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_turnos`, `ver_avaliacoes`, `ver_usuarios`, `ver_avisos` |
+| Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_administrativo`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_turnos`, `ver_avaliacoes`, `ver_usuarios`, `ver_avisos` |
 | Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `ver_senha_padrao`, `gerenciar_ponto`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `criar_obras`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `check_todas_obras`, `check_sem_informacao`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
 
 Alteracao **sempre** depende da visualizacao correspondente: sem "Obras", o
@@ -1491,9 +1492,17 @@ menu da esquerda** pelo menu da area (`MENU_ADM`, no AppShell), e o ultimo item,
 **Atmosfera** (o globo, como no LWN Control), volta para a pagina inicial. No celular
 a barra de baixo fica com Inicio, Ponto e Atmosfera; o resto vai para o Menu.
 
-O inicio da area e uma grade de **cards**, e cada um abre a sua tela. A area e de
-todo mundo (menos a TV), mas cada um ve so os cards — e os itens do menu — que a
-permissao abre; a rota de cada tela tem a mesma trava:
+**Quem ve a area:** quem tem `ver_administrativo` ("Administrativo", na Visualizacao do
+quadro de permissoes do setor). Quem nao tem ve, no mesmo lugar do menu, so o **Ponto**
+(a propria folha, em `/app/ponto`, com o menu de sempre) — assinar continua sendo de
+todo mundo. Cada endereco do Ponto leva ao certo pela permissao, com o periodo do link
+do aviso do Teams (que aponta para `/core/app/ponto`). A **atualizacao 52** deu a
+permissao, uma vez so, a quem ja revisava a despesa geral (o Envios gerais mudou para
+ca) ou gerenciava o ponto, e ao acesso total; os outros setores, quem administra marca.
+
+O inicio da area e uma grade de **cards**, e cada um abre a sua tela. Dentro, cada
+um ve so os cards — e os itens do menu — que a permissao abre; a rota de cada tela
+pede `ver_administrativo` E a permissao dela:
 
 | Card | Tela | Permissao |
 | ---- | ---- | --------- |
@@ -1504,8 +1513,8 @@ permissao abre; a rota de cada tela tem a mesma trava:
 | **Turnos** | a mesma tela da aba Turnos, dentro da area (quem tem `editar_turnos` edita daqui) | `ver_turnos` |
 
 Os cards de Pontos de encontro e Frotas trazem o numero do momento (encontros de hoje
-e dos proximos 7 dias; carros em uso e com atencao). Nada disso pediu atualizacao no
-banco: os encontros vem com as obras (a carga) e a frota de `GET /api/frotas/veiculos`.
+e dos proximos 7 dias; carros em uso e com atencao): os encontros vem com as obras (a
+carga) e a frota de `GET /api/frotas/veiculos`. Do banco, so a permissao (atualizacao 52).
 Arquivos: `src/pages/Administrativo/`.
 
 ## Ponto (a folha de ponto)
@@ -2045,9 +2054,10 @@ db/
 | `/app/obras/:id`            | Tela da obra (5 etapas)  | protegido |
 | `/app/clientes`             | Clientes                 | protegido |
 | `/app/concluidas`           | Obras concluidas (botao em Obras; fora do menu) | protegido |
-| `/app/administrativo`       | Administrativo (os cards; o menu muda para o da area) | protegido, de todos |
+| `/app/administrativo`       | Administrativo (os cards; o menu muda para o da area) | `ver_administrativo` |
 | `/app/administrativo/reembolso` | Reembolso da equipe (era Envios gerais) | `revisar_despesa_geral` |
-| `/app/administrativo/ponto` | Ponto (a folha de ponto; `/app/ponto` redireciona) | protegido, de todos |
+| `/app/administrativo/ponto` | Ponto, dentro da area | `ver_administrativo` (sem ela, vai para `/app/ponto`) |
+| `/app/ponto`                | Ponto, para quem nao tem a area (com ela, vai para a area) | protegido, de todos |
 | `/app/administrativo/encontros` | Pontos de encontro das obras | `ver_obras` |
 | `/app/administrativo/frotas` | Frotas: em uso e com atencao | `ver_frotas` |
 | `/app/administrativo/turnos` | Turnos (a mesma tela da aba Turnos) | `ver_turnos` |
