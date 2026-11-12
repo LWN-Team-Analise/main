@@ -1483,9 +1483,35 @@ ou a API fora do ar: o estado e a cidade viram campo livre.
 - Nas listas de escolha, digitar as primeiras letras pula para a opcao ("par"
   acha o Paraguai), como no `<select>` do navegador.
 
+## Administrativo (a area administrativa)
+
+A aba **Administrativo** (`/app/administrativo`, no lugar onde estava Concluidas no
+menu; antes se chamava Ponto) funciona como a do Almoxarife: **entrar nela troca o
+menu da esquerda** pelo menu da area (`MENU_ADM`, no AppShell), e o ultimo item,
+**Atmosfera** (o globo, como no LWN Control), volta para a pagina inicial. No celular
+a barra de baixo fica com Inicio, Ponto e Atmosfera; o resto vai para o Menu.
+
+O inicio da area e uma grade de **cards**, e cada um abre a sua tela. A area e de
+todo mundo (menos a TV), mas cada um ve so os cards — e os itens do menu — que a
+permissao abre; a rota de cada tela tem a mesma trava:
+
+| Card | Tela | Permissao |
+| ---- | ---- | --------- |
+| **Reembolso** | os envios da equipe (o antigo Envios gerais do Reembolso) | `revisar_despesa_geral` |
+| **Ponto** | a folha de ponto (secao seguinte) | todos (a propria folha) |
+| **Pontos de encontro** | os horarios dos checks com horario das obras: por dia, a hora, a obra, o local (endereco do cliente, com o atalho do mapa) e quem vai. Proximos ou ultimos 30 dias. O horario continua sendo marcado na obra | `ver_obras` |
+| **Frotas** | os carros **em uso** (condutor, desde quando, destino, KM) e os que **pedem atencao**: a ultima devolucao com o tanque abaixo da metade ou com um "Nao" que importa (oleo, pneus, agua, farois, limpeza, abastecido). O cadastro e os registros continuam na aba Frotas | `ver_frotas` |
+| **Turnos** | a mesma tela da aba Turnos, dentro da area (quem tem `editar_turnos` edita daqui) | `ver_turnos` |
+
+Os cards de Pontos de encontro e Frotas trazem o numero do momento (encontros de hoje
+e dos proximos 7 dias; carros em uso e com atencao). Nada disso pediu atualizacao no
+banco: os encontros vem com as obras (a carga) e a frota de `GET /api/frotas/veiculos`.
+Arquivos: `src/pages/Administrativo/`.
+
 ## Ponto (a folha de ponto)
 
-A aba **Ponto** (`/app/ponto`, no lugar onde estava Concluidas no menu) mostra a
+O **Ponto** (`/app/administrativo/ponto`, um card da area Administrativo — ver a
+secao seguinte; o endereco antigo `/app/ponto` redireciona, com o periodo) mostra a
 folha de ponto de cada um no desenho do **Demonstrativo de Espelho de Ponto** do
 sistema de ponto: a logo, o periodo, os dados da empresa e do funcionario
 (nome, matricula, PIS, CPF, admissao, departamento, cargo), a tabela dos dias
@@ -1534,7 +1560,7 @@ E de todo mundo (menos a TV); cada um ve a propria folha.
   abre a folha da pessoa. Ao lado de quem falta, **Enviar aviso** manda no
   Teams, pela conta da empresa (`server/teams.js`), o pedido para a pessoa
   assinar aquela folha, com o link que abre o mesmo periodo
-  (`/core/app/ponto?inicio=...&fim=...`). O aviso fica no historico de quem
+  (`/core/app/administrativo/ponto?inicio=...&fim=...`). O aviso fica no historico de quem
   mandou (`atividade`, acao `ponto.lembrete_assinatura`, sem tabela nova): e
   dali que a lista mostra o ultimo aviso e quem mandou, e o mesmo aviso nao sai
   de novo antes de uma hora (429). Sem a conta do Teams conectada (Configuracoes
@@ -2019,7 +2045,12 @@ db/
 | `/app/obras/:id`            | Tela da obra (5 etapas)  | protegido |
 | `/app/clientes`             | Clientes                 | protegido |
 | `/app/concluidas`           | Obras concluidas (botao em Obras; fora do menu) | protegido |
-| `/app/ponto`                | Ponto (a folha de ponto) | protegido, de todos |
+| `/app/administrativo`       | Administrativo (os cards; o menu muda para o da area) | protegido, de todos |
+| `/app/administrativo/reembolso` | Reembolso da equipe (era Envios gerais) | `revisar_despesa_geral` |
+| `/app/administrativo/ponto` | Ponto (a folha de ponto; `/app/ponto` redireciona) | protegido, de todos |
+| `/app/administrativo/encontros` | Pontos de encontro das obras | `ver_obras` |
+| `/app/administrativo/frotas` | Frotas: em uso e com atencao | `ver_frotas` |
+| `/app/administrativo/turnos` | Turnos (a mesma tela da aba Turnos) | `ver_turnos` |
 | `/app/comercial`            | Comercial (funis de venda) | protegido |
 | `/app/avaliacoes`           | Avaliacoes da equipe     | protegido |
 | `/app/usuarios`             | Usuarios                 | protegido |
@@ -3053,7 +3084,7 @@ As duas de baixo dependem de `ver_despesas`. Quem so visualiza ve a tela com
 
 A tela abre com tres botoes — **Enviar despesa**, **Enviar refeição**,
 **Enviar bônus** —, lado a lado no computador e um embaixo do outro no celular
-(com a descricao), e **Meus envios** / **Envios gerais** embaixo. Os
+(com a descricao), e **Meus envios** embaixo. Os
 formularios abrem em pop-up, por cima dela.
 
 | Envio    | Campos                                                                 |
@@ -3099,10 +3130,12 @@ escreve o que recebe. O mes e o ano ficam no endereco
 Os dois tem o filtro de tipo **Todos / Despesa / Refeição / Bônus**, que se soma
 ao periodo — quem filtra e o banco.
 
-### Envios gerais
+### Envios gerais (agora Administrativo > Reembolso)
 
-Quem tem `revisar_despesa_geral` ganha o botao **Envios gerais** ao lado de Meus
-envios. A lista traz so quem ja enviou alguma coisa (foto, nome, setor, cargo,
+O botao **Envios gerais** saiu do Reembolso (la ficou so **Meus envios**): os envios da
+equipe moram na area **Administrativo**, no card **Reembolso**
+(`/app/administrativo/reembolso`; o endereco antigo `/app/despesas/gerais` redireciona), para
+quem tem `revisar_despesa_geral`. A lista traz so quem ja enviou alguma coisa (foto, nome, setor, cargo,
 e-mail, total), mais um cartao "Todos os usuarios". Clicar numa pessoa abre os
 envios dela com os mesmos filtros de Meus envios.
 

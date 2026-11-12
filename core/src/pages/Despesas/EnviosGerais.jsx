@@ -15,8 +15,8 @@ import './Despesas.css'
  *
  * Duas telas:
  *
- *   /app/despesas/gerais            quem ja enviou alguma coisa;
- *   /app/despesas/gerais/:pessoa    os envios dessa pessoa, com os
+ *   /app/administrativo/reembolso            quem ja enviou alguma coisa;
+ *   /app/administrativo/reembolso/:pessoa    os envios dessa pessoa, com os
  *                                   mesmos filtros de Meus envios
  *                                   (mensal/anual e tipo).
  *
@@ -74,13 +74,13 @@ export default function EnviosGerais() {
     <AppShell>
       <section className="envios">
         <header className="envios__topo">
-          <Link to="/app/despesas" className="envios__voltar">
+          <Link to="/app/administrativo" className="envios__voltar">
             <IconeVoltar />
-            Reembolso
+            Administrativo
           </Link>
           <div className="envios__titulo">
             <div>
-              <h1 className="tela__titulo">Envios gerais</h1>
+              <h1 className="tela__titulo">Reembolso</h1>
               <p className="tela__lead">
                 Quem já enviou despesa, refeição ou bônus. Clique numa pessoa para ver os envios dela.
               </p>
@@ -130,7 +130,7 @@ export default function EnviosGerais() {
 
             <ul className="gerais">
               <li>
-                <Link to="/app/despesas/gerais/todos" className="gerais__pessoa gerais__pessoa--todos">
+                <Link to="/app/administrativo/reembolso/todos" className="gerais__pessoa gerais__pessoa--todos">
                   <span className="gerais__todosicone" aria-hidden="true">
                     {pessoas.length}
                   </span>
@@ -142,7 +142,7 @@ export default function EnviosGerais() {
               </li>
               {lista.map((p) => (
                 <li key={p.usuarioId}>
-                  <Link to={`/app/despesas/gerais/${p.usuarioId}`} className="gerais__pessoa">
+                  <Link to={`/app/administrativo/reembolso/${p.usuarioId}`} className="gerais__pessoa">
                     <Avatar nome={p.nome} foto={pessoaPorId(p.usuarioId)?.foto} tamanho={44} />
                     <span className="gerais__quem">
                       <strong>
@@ -199,9 +199,9 @@ export function EnviosDaPessoa() {
     <AppShell>
       <section className="envios">
         <header className="envios__topo">
-          <Link to="/app/despesas/gerais" className="envios__voltar">
+          <Link to="/app/administrativo/reembolso" className="envios__voltar">
             <IconeVoltar />
-            Envios gerais
+            Reembolso
           </Link>
 
           {todos ? (

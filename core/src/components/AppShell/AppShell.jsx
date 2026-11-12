@@ -51,6 +51,38 @@ const Icone = {
       <path d="M3 13h18M10.5 13v1.6h3V13" />
     </svg>
   ),
+  /* Administrativo: a pasta de trabalho */
+  administrativo: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M3 12.5h18M10.5 12.5v1.5h3v-1.5" />
+    </svg>
+  ),
+  /* o inicio da area administrativa: os cards */
+  admInicio: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.6" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1.6" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1.6" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="1.6" />
+    </svg>
+  ),
+  /* pontos de encontro das obras: o alfinete do mapa */
+  encontro: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
+      <circle cx="12" cy="10" r="2.4" />
+    </svg>
+  ),
+  /* volta para o Atmosfera: o mesmo globo do LWN Control */
+  atmosfera: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <path d="M21.54 15H17a2 2 0 0 0-2 2v4.54" />
+      <path d="M7 3.34V5a3 3 0 0 0 3 3a2 2 0 0 1 2 2c0 1.1.9 2 2 2a2 2 0 0 0 2-2c0-1.1.9-2 2-2h3.17" />
+      <path d="M11 21.95V18a2 2 0 0 0-2-2a2 2 0 0 1-2-2v-1a2 2 0 0 0-2-2H2.05" />
+      <circle cx="12" cy="12" r="10" />
+    </svg>
+  ),
   /* Ponto: a folha com o relogio no canto (a folha de ponto) */
   ponto: () => (
     <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
@@ -204,8 +236,9 @@ const MENU = [
      dela (/app/concluidas) acende Obras aqui */
   { id: 'obras', rotulo: 'Obras', rota: '/app/obras', permissao: 'ver_obras', tambem: ['/app/concluidas'] },
   { id: 'clientes', rotulo: 'Clientes', rota: '/app/clientes', permissao: 'ver_clientes' },
-  /* a folha de ponto: de todo mundo (cada um ve a sua), menos da TV */
-  { id: 'ponto', rotulo: 'Ponto', rota: '/app/ponto', semTv: true },
+  /* a area administrativa (era a aba Ponto): de todo mundo, menos da TV —
+     cada um ve dentro so os cards que a permissao dele abre (MENU_ADM) */
+  { id: 'administrativo', rotulo: 'Administrativo', rota: '/app/administrativo', semTv: true },
   { id: 'despesas', rotulo: 'Reembolso', rota: '/app/despesas', permissao: 'ver_despesas' },
   { id: 'frotas', rotulo: 'Frotas', rota: '/app/frotas', permissao: 'ver_frotas' },
   /* o Almoxarife (o antigo lwncontrol) abre a tela dele, em /almoxarife */
@@ -221,6 +254,26 @@ const MENU = [
   },
 ]
 
+/**
+ * O menu da AREA ADMINISTRATIVA. Como no LWN Control (o Almoxarife), entrar
+ * nela troca o menu inteiro pelos itens dela, e o ultimo volta para o
+ * Atmosfera. `icone` e a chave do glifo (varios repetem o da aba do menu
+ * principal). Cada item segue a mesma regra de permissao do MENU, e a rota
+ * tem a mesma trava (src/routes/AppRoutes.jsx).
+ */
+const MENU_ADM = [
+  { id: 'adm-inicio', icone: 'admInicio', rotulo: 'Início', rota: '/app/administrativo', exato: true },
+  { id: 'adm-reembolso', icone: 'despesas', rotulo: 'Reembolso', rota: '/app/administrativo/reembolso', permissao: 'revisar_despesa_geral' },
+  { id: 'adm-ponto', icone: 'ponto', rotulo: 'Ponto', rota: '/app/administrativo/ponto' },
+  { id: 'adm-encontros', icone: 'encontro', rotulo: 'Pontos de encontro', rota: '/app/administrativo/encontros', permissao: 'ver_obras' },
+  { id: 'adm-frotas', icone: 'frotas', rotulo: 'Frotas', rota: '/app/administrativo/frotas', permissao: 'ver_frotas' },
+  { id: 'adm-turnos', icone: 'turnos', rotulo: 'Turnos', rota: '/app/administrativo/turnos', permissao: 'ver_turnos' },
+  { id: 'adm-voltar', icone: 'atmosfera', rotulo: 'Atmosfera', rota: '/app', exato: true },
+]
+
+/** true quando o endereco e da area administrativa. */
+const naAreaAdministrativa = (caminho) => caminho === '/app/administrativo' || caminho.startsWith('/app/administrativo/')
+
 /* ------------------------------------------------------------
    As que ficam na barra do celular
 
@@ -235,6 +288,8 @@ const MENU = [
    avaliacao de quem esta logado, Configuracoes e as outras abas.
    ------------------------------------------------------------ */
 const PRINCIPAIS = ['inicio', 'obras', 'despesas']
+/* na area administrativa: o inicio dela, o Ponto e a volta para o Atmosfera */
+const PRINCIPAIS_ADM = ['adm-inicio', 'adm-ponto', 'adm-voltar']
 
 /* ------------------------------------------------------------
    Onde o indicador estava na tela anterior
@@ -626,7 +681,7 @@ function MenuLateral({ aberto, aoFechar, abas }) {
 
         <nav className="menulado__lista" aria-label="Mais telas">
           {abas.map((item, i) => {
-            const Glifo = Icone[item.id]
+            const Glifo = Icone[item.icone ?? item.id]
             return (
               <NavLink
                 key={item.id}
@@ -950,19 +1005,25 @@ export default function AppShell({
      sistema e abre a lista de resultados por conta propria */
   const controlada = typeof busca === 'string'
 
+  /* dentro da area administrativa o menu e o dela (MENU_ADM), como no LWN
+     Control; o ultimo item volta para o Atmosfera */
+  const { pathname } = useLocation()
+  const administrativa = naAreaAdministrativa(pathname)
+  const principais = administrativa ? PRINCIPAIS_ADM : PRINCIPAIS
+
   /* cada cargo enxerga so as abas que a permissao dele abre */
   const abas = useMemo(
     () =>
-      MENU.filter((item) => {
+      (administrativa ? MENU_ADM : MENU).filter((item) => {
         if (item.semTv && user?.painelTv) return false
         if (item.permissoes) return item.permissoes.some((p) => pode(p))
         return item.permissao ? pode(item.permissao) : true
       }),
-    [pode, user?.painelTv],
+    [pode, user?.painelTv, administrativa],
   )
 
   /* as que saem da barra no celular e vao para o menu lateral */
-  const escondidas = useMemo(() => abas.filter((i) => !PRINCIPAIS.includes(i.id)), [abas])
+  const escondidas = useMemo(() => abas.filter((i) => !principais.includes(i.id)), [abas, principais])
 
   /* A ilha do aviso de senha. So no modo APLICATIVO — ver o comentario
      la embaixo, onde ela e desenhada. O shell precisa saber disso aqui
@@ -1175,14 +1236,14 @@ export default function AppShell({
           </span>
 
           {abas.map((item) => {
-            const Glifo = Icone[item.id]
+            const Glifo = Icone[item.icone ?? item.id]
             return (
               /* `data-principal` e o que o CSS le para esconder, no
                  celular, quem nao e uma das tres */
               <li
                 key={item.id}
                 data-id={item.id}
-                data-principal={PRINCIPAIS.includes(item.id) ? 'sim' : 'nao'}
+                data-principal={principais.includes(item.id) ? 'sim' : 'nao'}
               >
                 <NavLink
                   to={item.rota}

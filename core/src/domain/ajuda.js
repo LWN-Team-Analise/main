@@ -186,8 +186,8 @@ export const ASSUNTOS = [
       'Combustível e outros precisam do comprovante (imagem, PDF, ZIP ou documento); a refeição e o bônus ' +
       'apartamento têm valor pré-definido. O que você enviou fica em ' +
       '"Meus envios", por mês (dia a dia) ou por ano (mês a mês), com os totais e o filtro por tipo. Quem ' +
-      'tem a permissão "Revisar despesa geral" ganha também "Envios gerais", com os envios de cada pessoa ' +
-      'da equipe.',
+      'tem a permissão "Revisar despesa geral" vê os envios de cada pessoa da equipe na aba Administrativo, ' +
+      'no card Reembolso.',
   },
   {
     id: 'frotas',
@@ -215,7 +215,7 @@ export const ASSUNTOS = [
     titulo: 'Folha de ponto',
     gatilhos: ['ponto', 'folha de ponto', 'espelho', 'marcacao', 'marcacoes', 'hora extra', 'assinar folha', 'assinatura'],
     resposta:
-      'Na aba Ponto cada um vê a própria folha de ponto, do mês ou de datas escolhidas, no desenho do espelho do ' +
+      'Na aba Administrativo, no card Ponto, cada um vê a própria folha de ponto, do mês ou de datas escolhidas, no desenho do espelho do ' +
       'sistema de ponto. Para assinar a conferência, clique na área acima de "Assinatura Funcionário", marque as ' +
       'duas confirmações e assine: o seu nome completo fica impresso ali. O Exportar baixa a folha em PDF e em ' +
       'Excel. Quem tem a permissão "Ver a folha de ponto de todos e importar" (em Usuários) escolhe a pessoa e ' +

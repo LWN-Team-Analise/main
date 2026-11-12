@@ -115,7 +115,7 @@ export const ALTERACAO = [
   { chave: 'editar_cpf', rotulo: 'Incluir / editar / excluir CPF', dependeDe: 'ver_usuarios' },
   /* o "!" nos cards de Usuarios: quem ainda nao trocou a senha padrao */
   { chave: 'ver_senha_padrao', rotulo: 'Ver quem não alterou a senha padrão', dependeDe: 'ver_usuarios' },
-  /* a aba Ponto e de todo mundo: cada um ve e assina a propria folha.
+  /* o Ponto (na area Administrativo) e de todo mundo: cada um ve e assina a propria folha.
      Com esta, aparece o seletor de pessoa (ver a folha de qualquer um,
      com CPF e PIS, como no espelho), o Importar do Calculo Diario e o
      Excel da empresa inteira. Assinar continua sendo so a propria folha
@@ -161,7 +161,7 @@ export const ALTERACAO = [
   { chave: 'enviar_avisos', rotulo: 'Enviar avisos', dependeDe: 'ver_avisos' },
   /* Despesas: ver a aba (e os proprios envios) e `ver_despesas`;
      ENVIAR despesa, refeicao ou bonus e `alterar_despesas`; abrir os
-     envios dos OUTROS (Despesas > Envios gerais) e `revisar_despesa_geral`;
+     envios dos OUTROS (Administrativo > Reembolso) e `revisar_despesa_geral`;
      EXCLUIR um lancamento e a ultima — os proprios, ou os de qualquer um
      quando o setor tambem revisa. */
   { chave: 'alterar_despesas', rotulo: 'Alterar despesas', dependeDe: 'ver_despesas' },

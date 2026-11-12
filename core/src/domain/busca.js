@@ -61,14 +61,40 @@ const ATALHOS = [
     permissao: 'ver_clientes',
     termos: 'clientes empresas cadastro contratante setor endereco',
   },
-  /* a folha de ponto: de todo mundo (cada um ve a sua) */
+  /* a area administrativa (era a aba Ponto) e as telas dela */
+  {
+    id: 'tela-administrativo',
+    grupo: 'Telas',
+    titulo: 'Administrativo',
+    detalhe: 'Reembolso, ponto, pontos de encontro, frotas e turnos',
+    rota: '/app/administrativo',
+    termos: 'administrativo area administrativa adm rh recursos humanos',
+  },
   {
     id: 'tela-ponto',
     grupo: 'Telas',
     titulo: 'Ponto',
-    detalhe: 'A folha de ponto: conferir e assinar',
-    rota: '/app/ponto',
+    detalhe: 'A folha de ponto: conferir e assinar (Administrativo)',
+    rota: '/app/administrativo/ponto',
     termos: 'ponto folha de ponto espelho marcacoes horas extras jornada assinatura assinar conferencia batida relogio',
+  },
+  {
+    id: 'tela-encontros',
+    grupo: 'Telas',
+    titulo: 'Pontos de encontro',
+    detalhe: 'O horário e o local de encontro das obras (Administrativo)',
+    rota: '/app/administrativo/encontros',
+    permissao: 'ver_obras',
+    termos: 'pontos de encontro ponto de encontro horario encontro saida obra local endereco quem vai',
+  },
+  {
+    id: 'tela-frotas-adm',
+    grupo: 'Telas',
+    titulo: 'Frotas em uso e com atenção',
+    detalhe: 'Os carros em uso e os que voltaram com problema (Administrativo)',
+    rota: '/app/administrativo/frotas',
+    permissao: 'ver_frotas',
+    termos: 'frotas carros em uso atencao tanque combustivel oleo pneus devolvido problema',
   },
   /* saiu do menu (e o botao "Concluídas" de Obras), mas a busca ainda abre */
   {
@@ -119,9 +145,9 @@ const ATALHOS = [
   {
     id: 'tela-envios-gerais',
     grupo: 'Telas',
-    titulo: 'Envios gerais',
-    detalhe: 'As despesas, refeições e bônus de cada pessoa da equipe',
-    rota: '/app/despesas/gerais',
+    titulo: 'Reembolso da equipe',
+    detalhe: 'As despesas, refeições e bônus de cada pessoa (Administrativo)',
+    rota: '/app/administrativo/reembolso',
     permissao: 'revisar_despesa_geral',
     termos: 'envios gerais despesas da equipe revisar despesa geral reembolsos de todos',
   },

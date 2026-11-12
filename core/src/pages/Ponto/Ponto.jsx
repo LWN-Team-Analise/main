@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import AppShell from '@/components/AppShell/AppShell'
 import Seletor from '@/components/Seletor/Seletor'
 import { CampoData } from '@/components/CampoData/CampoData'
@@ -25,6 +25,7 @@ import ModalAssinar from './ModalAssinar'
 import ModalAssinaturas from './ModalAssinaturas'
 import { montarPdfDaFolha } from './pdfPonto'
 import './Ponto.css'
+import '../Administrativo/Administrativo.css'
 
 /* ---- icones ---- */
 const traco = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }
@@ -344,6 +345,11 @@ export default function Ponto() {
       <section className="ponto">
         <header className="ponto__topo">
           <div>
+            {/* o Ponto mora na area administrativa: a volta e para o inicio dela */}
+            <Link to="/app/administrativo" className="adm__voltar">
+              <Seta lado="esq" />
+              Administrativo
+            </Link>
             <h1 className="tela__titulo">Ponto</h1>
             {!gestor && (
               <p className="tela__lead">A sua folha de ponto. Confira as marcações do período e assine no rodapé.</p>

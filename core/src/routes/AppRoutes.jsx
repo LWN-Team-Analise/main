@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import Login from '@/pages/Login/Login'
 import Home from '@/pages/Home/Home'
 import Privacy from '@/pages/Privacy/Privacy'
@@ -7,6 +7,9 @@ import ObraDetalhe from '@/pages/Obras/ObraDetalhe'
 import Clientes from '@/pages/Clientes/Clientes'
 import Concluidas from '@/pages/Concluidas/Concluidas'
 import Ponto from '@/pages/Ponto/Ponto'
+import Administrativo from '@/pages/Administrativo/Administrativo'
+import Encontros from '@/pages/Administrativo/Encontros'
+import FrotasAdm from '@/pages/Administrativo/FrotasAdm'
 import Avaliacoes from '@/pages/Avaliacoes/Avaliacoes'
 import Usuarios from '@/pages/Usuarios/Usuarios'
 import SetorPagina from '@/pages/Usuarios/SetorPagina'
@@ -45,6 +48,17 @@ function LwnControl() {
   if (tentou) return <p style={{ padding: 24 }}>Não foi possível abrir o LWN Control. Recarregue a página.</p>
   window.location.replace(destino)
   return null
+}
+
+/**
+ * O endereco que mudou de lugar: leva para o novo com o que vinha depois
+ * do "?" (o periodo do link do aviso do Ponto, no Teams) e o :usuarioId.
+ */
+function Mudou({ para }) {
+  const { search } = useLocation()
+  const { usuarioId } = useParams()
+  const destino = usuarioId ? `${para}/${encodeURIComponent(usuarioId)}` : para
+  return <Navigate to={{ pathname: destino, search }} replace />
 }
 
 /**
@@ -118,16 +132,76 @@ export default function AppRoutes() {
           </Interna>
         }
       />
+      {/* A AREA ADMINISTRATIVA (era a aba Ponto). Entrar nela troca o menu
+          pelo dela (MENU_ADM, no AppShell). O inicio e os cards; cada card
+          abre uma tela com a mesma trava do item do menu. A area e de todo
+          mundo: cada um ve so os cards que a permissao dele abre */}
+      <Route
+        path="/app/administrativo"
+        element={
+          <Interna>
+            <Administrativo />
+          </Interna>
+        }
+      />
       {/* a folha de ponto (atualizacao 51): de todo mundo, cada um ve a sua.
           Ver a dos outros e importar e `gerenciar_ponto`, que a API confere */}
       <Route
-        path="/app/ponto"
+        path="/app/administrativo/ponto"
         element={
           <Interna>
             <Ponto />
           </Interna>
         }
       />
+      {/* o antigo "Envios gerais" do Reembolso: os envios da equipe */}
+      <Route
+        path="/app/administrativo/reembolso"
+        element={
+          <Interna permissao="revisar_despesa_geral">
+            <EnviosGerais />
+          </Interna>
+        }
+      />
+      <Route
+        path="/app/administrativo/reembolso/:usuarioId"
+        element={
+          <Interna permissao="revisar_despesa_geral">
+            <EnviosDaPessoa />
+          </Interna>
+        }
+      />
+      {/* os horarios dos checks com horario das obras (o ponto de encontro) */}
+      <Route
+        path="/app/administrativo/encontros"
+        element={
+          <Interna permissao="ver_obras">
+            <Encontros />
+          </Interna>
+        }
+      />
+      {/* os carros em uso e os que voltaram pedindo atencao */}
+      <Route
+        path="/app/administrativo/frotas"
+        element={
+          <Interna permissao="ver_frotas">
+            <FrotasAdm />
+          </Interna>
+        }
+      />
+      {/* a mesma tela da aba Turnos, com o menu da area (quem edita, edita daqui) */}
+      <Route
+        path="/app/administrativo/turnos"
+        element={
+          <Interna permissao="ver_turnos">
+            <Turnos />
+          </Interna>
+        }
+      />
+      {/* os enderecos antigos */}
+      <Route path="/app/ponto" element={<Mudou para="/app/administrativo/ponto" />} />
+      <Route path="/app/despesas/gerais" element={<Mudou para="/app/administrativo/reembolso" />} />
+      <Route path="/app/despesas/gerais/:usuarioId" element={<Mudou para="/app/administrativo/reembolso" />} />
       {/* os funis de venda (os negocios do Pipedrive); a API confere a
           mesma chave em cada chamada de /api/comercial */}
       <Route
@@ -191,25 +265,9 @@ export default function AppRoutes() {
           </Interna>
         }
       />
-      {/* Envios gerais: so quem revisa. revisar_despesa_geral depende de
-          ver_despesas (sem ela, a lista do setor ja chega sem esta), e a
-          API confere as duas em cada chamada. */}
-      <Route
-        path="/app/despesas/gerais"
-        element={
-          <Interna permissao="revisar_despesa_geral">
-            <EnviosGerais />
-          </Interna>
-        }
-      />
-      <Route
-        path="/app/despesas/gerais/:usuarioId"
-        element={
-          <Interna permissao="revisar_despesa_geral">
-            <EnviosDaPessoa />
-          </Interna>
-        }
-      />
+      {/* Envios gerais mudou para a area administrativa (card Reembolso):
+          /app/administrativo/reembolso. revisar_despesa_geral depende de
+          ver_despesas, e a API confere as duas em cada chamada. */}
       {/* Frotas abre com ver_frotas, e a lista de registros tambem: a API
           confere a mesma chave em cada chamada de /api/frotas. */}
       <Route
