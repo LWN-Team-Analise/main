@@ -2731,7 +2731,11 @@ e quem marca escolhe uma delas — com busca quando passa de 8 (`ModalFocalPoint
 Escolhida a pessoa, o check fica marcado com o nome dela no card (`obra_check.escolhido_id`,
 em `PUT /api/dados/obras/:id/focal-point/:checkId`); da para trocar ou desmarcar. A API
 recusa pessoa de outro setor (400) e o marcar comum do check (409). A 55 converte os
-checks com o titulo "Determinar Focal Point" que ja existiam.
+checks com o titulo "Determinar Focal Point" que ja existiam, e o check novo com esse
+nome ja nasce assim. Diferente dos outros checks do sistema, ele pode estar em **mais de
+um card** (a 55 tira o `focal_point` dos indices `etapa_check_tipo_unico` e
+`etapa_check_tipo_da_obra`) e **pode ser excluido** do roteiro; o nome continua travado e
+ele nao vira pergunta. Mover o check para o card de outro setor muda de quem a lista sai.
 
 **Solicitar OS sem sair da obra.** O check "Solicitar OS" (2a etapa) abre a Solicitacao
 de OS do Almoxarife num pop-up por cima da obra (`ModalSolicitarOS.jsx`): a mesma tela,

@@ -4,7 +4,13 @@ import Button from '@/components/Button/Button'
 import { SeletorMulti } from '@/components/Seletor/Seletor'
 import { CampoArea, CampoTexto } from '@/components/Campo/Campo'
 import { useDados } from '@/context/DadosContext'
-import { CHECK_ANALISE_FATURAMENTO, CHECK_APROVACAO_PROTOCOLOS, CHECK_GASES, checkDoSistema } from '@/domain/obras'
+import {
+  CHECK_ANALISE_FATURAMENTO,
+  CHECK_APROVACAO_PROTOCOLOS,
+  CHECK_FOCAL_POINT,
+  CHECK_GASES,
+  checkDoSistema,
+} from '@/domain/obras'
 import './ModalRoteiro.css'
 
 /**
@@ -70,6 +76,9 @@ export default function ModalCheck({
 
   const editando = Boolean(check)
   const doSistema = checkDoSistema(check)
+  /* o Determinar Focal Point e do sistema, mas pode sair do roteiro (ele
+     mora em mais de um card e nenhum fluxo depende dele) */
+  const focalPoint = check?.tipo === CHECK_FOCAL_POINT
   const doCard = (card?.cargos ?? []).map(nomeDoCargo).join(' e ')
   /* o prazo e por obra: fora de uma obra nao ha onde gravar */
   const podePrazo = Boolean(obraId) && pode('definir_prazos')
@@ -141,7 +150,13 @@ export default function ModalCheck({
       largura={500}
     >
       <form className="formrot" onSubmit={salvar} noValidate>
-        {doSistema && (
+        {doSistema && focalPoint && (
+          <p className="formrot__sistema" role="note">
+            Check do sistema: quem marca escolhe o focal point entre as pessoas do setor dono dele. O nome
+            fica e ele não vira pergunta, mas pode ser excluído.
+          </p>
+        )}
+        {doSistema && !focalPoint && (
           <p className="formrot__sistema" role="note">
             {check?.tipo === CHECK_GASES
               ? 'Check do sistema: obrigatório na obra que tiver ensaio de GASES. '
@@ -241,7 +256,7 @@ export default function ModalCheck({
 
         <footer className="formobra__acoes">
           {editando &&
-            !doSistema &&
+            (!doSistema || focalPoint) &&
             (confirmando ? (
               <button
                 type="button"

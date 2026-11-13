@@ -540,6 +540,16 @@ router.delete('/cards/:id', exigeSessao, exige('editar_cards'), async (req, res)
 const CHECK_DO_SISTEMA =
   'Este check é do sistema: não pode ser excluído, renomeado nem virar pergunta.'
 
+/* Os checks do sistema que podem SAIR do roteiro: o Determinar Focal Point
+   (atualizacao 55) mora em mais de um card e nenhum fluxo depende dele */
+const SISTEMA_QUE_SAI = new Set(['focal_point'])
+const naoSai = (tipo) => Boolean(tipo) && tipo !== 'comum' && !SISTEMA_QUE_SAI.has(tipo)
+
+/* O check novo chamado "Determinar Focal Point" ja nasce check do sistema,
+   como os que a atualizacao 55 converteu */
+const tipoPeloTitulo = (titulo) =>
+  String(titulo ?? '').trim().toLowerCase().startsWith('determinar focal point') ? 'focal_point' : 'comum'
+
 /** O tipo do check ('comum' num banco sem a atualizacao 14), ou null se nao existe. */
 async function tipoDoCheck(id) {
   try {
@@ -792,28 +802,29 @@ router.post('/cards/:id/checks', exigeSessao, exige('editar_checks'), async (req
     const horario = req.body?.horario === true
     if (simNao && horario) return res.status(400).json({ erro: SIM_NAO_E_HORARIO })
     const informacoes = informacoesDoCorpo(req.body?.informacoes)
+    const tipoNovo = tipoPeloTitulo(titulo)
 
     let rows
     if (obraId) {
       /* dentro da obra: o check nasce SO nela */
       await garantirChecksProprios(obraId)
       ;({ rows } = await query(
-        `INSERT INTO etapa_check (card_id, ordem, titulo, sim_nao, informacoes, vigente_de, obra_id)
+        `INSERT INTO etapa_check (card_id, ordem, titulo, sim_nao, informacoes, vigente_de, obra_id, tipo)
          VALUES ($1, coalesce((SELECT max(ordem) FROM etapa_check
                                 WHERE card_id = $1 AND obra_id = $6), -1) + 1,
-                 $2, $3, $4, $5, $6)
-         RETURNING id, ordem, titulo, vigente_de`,
-        [req.params.id, titulo, simNao, informacoes, desde, obraId],
+                 $2, $3, $4, $5, $6, $7)
+         RETURNING id, ordem, titulo, vigente_de, tipo`,
+        [req.params.id, titulo, simNao && tipoNovo === 'comum', informacoes, desde, obraId, tipoNovo],
       ))
     } else {
       /* no modelo: vale para as obras criadas daqui em diante. Sem as
          atualizacoes 13/18 o check nasce comum e sem dica — mas nasce */
       ;({ rows } = await query(
-        `INSERT INTO etapa_check (card_id, ordem, titulo, sim_nao, informacoes, vigente_de)
+        `INSERT INTO etapa_check (card_id, ordem, titulo, sim_nao, informacoes, vigente_de, tipo)
          VALUES ($1, coalesce((SELECT max(ordem) FROM etapa_check
-                                WHERE card_id = $1 AND obra_id IS NULL), -1) + 1, $2, $3, $4, $5)
-         RETURNING id, ordem, titulo, vigente_de`,
-        [req.params.id, titulo, simNao, informacoes, desde],
+                                WHERE card_id = $1 AND obra_id IS NULL), -1) + 1, $2, $3, $4, $5, $6)
+         RETURNING id, ordem, titulo, vigente_de, tipo`,
+        [req.params.id, titulo, simNao && tipoNovo === 'comum', informacoes, desde, tipoNovo],
       ).catch((erro) => {
         if (erro.code !== '42703') throw erro
         return query(
@@ -832,7 +843,7 @@ router.post('/cards/:id/checks', exigeSessao, exige('editar_checks'), async (req
         return res.status(400).json({ erro: posto.erro })
       }
     }
-    if (horario) {
+    if (horario && tipoNovo === 'comum') {
       try {
         await gravarHorarioDoCheck(rows[0].id, true)
       } catch (erro) {
@@ -852,10 +863,10 @@ router.post('/cards/:id/checks', exigeSessao, exige('editar_checks'), async (req
         ordem: rows[0].ordem,
         titulo: rows[0].titulo,
         cargos: req.body?.cargos ?? [],
-        simNao,
-        horario,
+        simNao: simNao && tipoNovo === 'comum',
+        horario: horario && tipoNovo === 'comum',
         informacoes: informacoes ?? '',
-        tipo: 'comum',
+        tipo: rows[0].tipo ?? 'comum',
         obraId: obraId ? String(obraId) : null,
         vigenteDe: rows[0].vigente_de,
         vigenteAte: null,
@@ -1062,7 +1073,7 @@ router.delete('/checks/:id', exigeSessao, exige('editar_checks'), async (req, re
       await garantirChecksProprios(obraId)
       const copia = await checkDaObra(obraId, req.params.id)
       if (!copia || copia.vigente_ate) return res.status(404).json({ erro: 'Check não encontrado.' })
-      if (copia.tipo && copia.tipo !== 'comum') return res.status(409).json({ erro: CHECK_DO_SISTEMA })
+      if (naoSai(copia.tipo)) return res.status(409).json({ erro: CHECK_DO_SISTEMA })
       await query('UPDATE etapa_check SET vigente_ate = now() WHERE id = $1', [copia.id])
       await registrarRoteiro(req, 'check.excluido', 'Check removido desta obra', {
         ...(await nomesDoCard(copia.card_id)),
@@ -1072,7 +1083,7 @@ router.delete('/checks/:id', exigeSessao, exige('editar_checks'), async (req, re
     }
 
     const tipo = await tipoDoCheck(req.params.id)
-    if (tipo && tipo !== 'comum') return res.status(409).json({ erro: CHECK_DO_SISTEMA })
+    if (naoSai(tipo)) return res.status(409).json({ erro: CHECK_DO_SISTEMA })
     const ate = await momento(null)
     const { rows } = await query(
       `UPDATE etapa_check SET vigente_ate = $1 WHERE id = $2 AND vigente_ate IS NULL

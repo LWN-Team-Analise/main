@@ -14,7 +14,9 @@
 --  2. FOCAL POINT. Os checks "Determinar Focal Point" (2a etapa: o do
 --     Almoxarife e o do Time Tecnico) viram check do sistema (tipo
 --     focal_point): o setor escolhe uma pessoa DELE como focal point, e
---     escolher marca o check (obra_check.escolhido_id).
+--     escolher marca o check (obra_check.escolhido_id). Diferente dos
+--     outros checks do sistema, ele pode estar em mais de um card, e
+--     pode ser excluido do roteiro.
 --
 --  As permissoes entram uma vez so (a marca 'marco_atualizacao_55').
 --  So acrescenta. SQL simples, sem bloco DO: roda igual no psql, no
@@ -49,6 +51,19 @@ ALTER TABLE public.etapa_check ADD CONSTRAINT etapa_check_tipo_valido
 
 COMMENT ON COLUMN public.etapa_check.tipo IS
     'comum, planejamento_ensaios, execucao_ensaios, material_gases, prazo_execucao, reserva_carro, retirada_carro, enviar_os, separar_os, retirada_os, devolucao_os, aprovacao_protocolos, analise_faturamento, tipo_ensaio ou focal_point';
+
+-- O Focal Point mora em MAIS DE UM card (o do Almoxarife e o do Time
+-- Tecnico): ele sai da regra de "um check de cada tipo do sistema" no
+-- roteiro (atualizacao 18) e nas copias de cada obra
+DROP INDEX IF EXISTS public.etapa_check_tipo_unico;
+CREATE UNIQUE INDEX etapa_check_tipo_unico
+    ON public.etapa_check (tipo)
+    WHERE tipo NOT IN ('comum', 'focal_point') AND vigente_ate IS NULL AND obra_id IS NULL;
+
+DROP INDEX IF EXISTS public.etapa_check_tipo_da_obra;
+CREATE UNIQUE INDEX etapa_check_tipo_da_obra
+    ON public.etapa_check (obra_id, tipo)
+    WHERE tipo NOT IN ('comum', 'focal_point') AND vigente_ate IS NULL AND obra_id IS NOT NULL;
 
 -- todas as versoes do check e as copias das obras
 UPDATE public.etapa_check
