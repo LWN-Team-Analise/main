@@ -282,8 +282,16 @@
 }
 .rail__marca-anel {
   position: absolute;
-  /* bem maior que o botao: girando, as pontas nunca deixam canto vazio */
-  inset: -60%;
+  /* Um QUADRADO centrado no botao, com o lado do tamanho da largura mais a
+     altura dele (mais que a diagonal): girando, ele cobre o botao inteiro em
+     qualquer angulo. Antes era o botao esticado 60% para cada lado — no menu
+     largo (210x44) isso dava um retangulo de 462x97 que, de pe, deixava as
+     pontas do botao descobertas, e as cores piscavam nas laterais. */
+  left: 50%;
+  top: 50%;
+  width: calc(var(--marca-l) + var(--marca-a));
+  aspect-ratio: 1;
+  translate: -50% -50%;
   background: conic-gradient(
     from 220deg,
     var(--anel-1) 0%,
