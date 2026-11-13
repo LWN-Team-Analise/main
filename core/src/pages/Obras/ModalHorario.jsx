@@ -5,12 +5,15 @@ import Avatar from '@/components/Avatar/Avatar'
 import Seletor from '@/components/Seletor/Seletor'
 import { CampoData, CampoHora } from '@/components/CampoData/CampoData'
 import { useDados } from '@/context/DadosContext'
-import { diasDaExecucao } from '@/domain/obras'
+import { LOCAIS_DO_ENCONTRO, diasDaExecucao, etapaSeguinteComCheck, recadoEtapaSeguinte } from '@/domain/obras'
+import { enderecoCompleto } from '@/domain/clientes'
 import { dataBR } from '@/utils/formato'
 import './ModalHorario.css'
+import './ModalProposta.css'
 
 const SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 const diaDaSemana = (iso) => SEMANA[new Date(`${iso}T12:00:00`).getDay()]
+const ENDERECO_MAXIMO = 300
 
 /**
  * O CHECK COM HORARIO (atualizacao 31) — ex.: "Ponto de encontro".
@@ -19,19 +22,26 @@ const diaDaSemana = (iso) => SEMANA[new Date(`${iso}T12:00:00`).getDay()]
  * "Prazo da execucao") e as datas que alguem acrescentou aqui. Em cada
  * uma, o HORARIO (06:30) e QUEM VAI naquele dia.
  *
+ * Em cima, ONDE e o encontro (atualizacao 56): no local da obra (o
+ * endereco do cliente), na empresa (LWN) ou em outro lugar, com o
+ * endereco escrito. Vale para todas as datas.
+ *
  *   - quem vai e ainda nao e membro da obra recebe a solicitacao de
  *     inclusao (o membro parcial) — e o "adicionar membros" por aqui;
  *   - cada pessoa de cada data vira um turno na aba Turnos;
- *   - o check e obrigatorio ter horario: ele fica MARCADO sozinho
- *     enquanto houver ao menos uma data com horario, e desmarca quando
- *     nao sobra nenhuma.
+ *   - "Salvar e marcar" grava e marca o check; com o check ja marcado,
+ *     "Salvar" so grava (e, sem nenhuma data com horario, desmarca);
+ *   - "Desmarcar o check" tira a marca e guarda os horarios — so enquanto
+ *     as etapas seguintes estao sem check (a API recusa igual).
  *
  * Data sem horario nao e gravada. Quem nao marca o check (outro setor,
  * obra fechada) ve tudo, sem mexer.
  */
 export default function ModalHorario({ aberto, obra, check, somenteLeitura = false, aoFechar }) {
-  const { equipe, pessoaPorId, cargoPorChave, definirHorarios } = useDados()
+  const { equipe, pessoaPorId, cargoPorChave, clientePorId, roteiroDaObra, definirHorarios, desmarcarCheck } = useDados()
   const [linhas, setLinhas] = useState([])
+  const [local, setLocal] = useState('obra')
+  const [endereco, setEndereco] = useState('')
   const [novaData, setNovaData] = useState('')
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -48,6 +58,9 @@ export default function ModalHorario({ aberto, obra, check, somenteLeitura = fal
         return { dia, hora: salvo?.hora ?? '', membros: salvo?.membros ?? [] }
       }),
     )
+    /* o local e o mesmo em todas as datas: o da primeira salva */
+    setLocal(salvos[0]?.local ?? 'obra')
+    setEndereco(salvos.find((h) => h.local === 'outro')?.endereco ?? '')
     setNovaData('')
     setErro('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -63,6 +76,11 @@ export default function ModalHorario({ aberto, obra, check, somenteLeitura = fal
   )
 
   if (!obra || !check) return null
+
+  const marcado = Boolean(obra.checks?.[check.id])
+  const enderecoDoCliente = enderecoCompleto(clientePorId(obra.clienteId))
+  /* a etapa seguinte com check marcado trava o desmarcar */
+  const etapaDepois = marcado ? etapaSeguinteComCheck(roteiroDaObra(obra), obra, check.id) : null
 
   const mudar = (dia, campo, valor) => {
     setLinhas((atual) => atual.map((l) => (l.dia === dia ? { ...l, [campo]: valor } : l)))
@@ -82,25 +100,44 @@ export default function ModalHorario({ aberto, obra, check, somenteLeitura = fal
 
   const comHorario = linhas.filter((l) => l.hora)
 
-  const salvar = async (evento) => {
-    evento.preventDefault()
+  /* `marcar`: true marca junto; sem ele, o check fica como esta (e sai
+     se nao sobrar nenhuma data com horario) */
+  const salvar = async (marcar) => {
     const semHora = linhas.find((l) => !l.hora && l.membros.length > 0)
     if (semHora) {
       setErro(`Informe o horário de ${dataBR(semHora.dia).slice(0, 5)}: há pessoas nesse dia.`)
       return
     }
+    if (local === 'outro' && !endereco.trim()) {
+      setErro('Escreva o endereço do encontro.')
+      return
+    }
+    if (marcar && comHorario.length === 0) {
+      setErro('Defina o horário de ao menos uma data antes de marcar o check.')
+      return
+    }
     setSalvando(true)
     try {
-      /* com horario, o check fica marcado; sem nenhum, desmarca. O
-         concluido SEM o horario (atualizacao 36) ja esta marcado de
+      /* o concluido SEM o horario (atualizacao 36) ja esta marcado de
          proposito: continua marcado, e o horario que vier tira a marca
          de "sem informacao" no servidor */
       const marca = obra.checks?.[check.id]
-      const jaEstava = Boolean(marca)
-      const marcar = comHorario.length > 0
+      const pedido = marca?.semInformacao
+        ? undefined
+        : marcar && !marca
+          ? true
+          : marca && comHorario.length === 0
+            ? false
+            : undefined
       await definirHorarios(obra.id, check.id, {
-        dias: comHorario.map(({ dia, hora, membros }) => ({ dia, hora, membros })),
-        marcar: marca?.semInformacao ? undefined : marcar !== jaEstava ? marcar : undefined,
+        dias: comHorario.map(({ dia, hora, membros }) => ({
+          dia,
+          hora,
+          membros,
+          local,
+          endereco: local === 'outro' ? endereco.trim() : '',
+        })),
+        marcar: pedido,
       })
       aoFechar()
     } catch (e) {
@@ -110,9 +147,78 @@ export default function ModalHorario({ aberto, obra, check, somenteLeitura = fal
     }
   }
 
+  const desmarcar = async () => {
+    setSalvando(true)
+    try {
+      await desmarcarCheck(obra.id, check.id)
+      aoFechar()
+    } catch (e) {
+      setErro(e.message)
+    } finally {
+      setSalvando(false)
+    }
+  }
+
   return (
-    <Modal aberto={aberto} aoFechar={aoFechar} titulo={check.titulo} subtitulo="O horário de cada data e quem vai" largura={640}>
-      <form className="horario" onSubmit={salvar} noValidate>
+    <Modal aberto={aberto} aoFechar={aoFechar} titulo={check.titulo} subtitulo="Onde, o horário de cada data e quem vai" largura={640}>
+      <form
+        className="horario"
+        onSubmit={(e) => {
+          e.preventDefault()
+          salvar(!marcado)
+        }}
+        noValidate
+      >
+        {/* onde e o encontro: o mesmo em todas as datas */}
+        <fieldset className="horario__local">
+          <legend>Local do encontro</legend>
+          {somenteLeitura ? (
+            <p className="horario__localtexto">
+              {LOCAIS_DO_ENCONTRO.find((l) => l.id === local)?.rotulo}
+              {local === 'obra' && enderecoDoCliente ? ` · ${enderecoDoCliente}` : ''}
+              {local === 'outro' && endereco ? ` · ${endereco}` : ''}
+            </p>
+          ) : (
+            <>
+              <div className="horario__locais" role="radiogroup" aria-label="Local do encontro">
+                {LOCAIS_DO_ENCONTRO.map((l) => (
+                  <label key={l.id} className={`chip ${local === l.id ? 'is-atual' : ''}`.trim()}>
+                    <input
+                      type="radio"
+                      name="local-encontro"
+                      value={l.id}
+                      checked={local === l.id}
+                      onChange={() => {
+                        setLocal(l.id)
+                        setErro('')
+                      }}
+                    />
+                    {l.rotulo}
+                  </label>
+                ))}
+              </div>
+              {local === 'obra' && (
+                <p className="horario__localtexto">
+                  {enderecoDoCliente || 'O cliente desta obra ainda não tem endereço no cadastro.'}
+                </p>
+              )}
+              {local === 'outro' && (
+                <input
+                  className="horario__endereco"
+                  value={endereco}
+                  onChange={(e) => {
+                    setEndereco(e.target.value)
+                    setErro('')
+                  }}
+                  placeholder="Rua, número, bairro e cidade"
+                  maxLength={ENDERECO_MAXIMO}
+                  aria-label="Endereço do encontro"
+                />
+              )}
+            </>
+          )}
+        </fieldset>
+
         {linhas.length === 0 ? (
           <p className="horario__vazio">
             A obra ainda não tem as datas da execução. Defina o período de execução ou acrescente uma data abaixo.
@@ -206,13 +312,29 @@ export default function ModalHorario({ aberto, obra, check, somenteLeitura = fal
           </p>
         )}
 
-        <footer className="formobra__acoes">
-          {!somenteLeitura && (
+        {!somenteLeitura && (
+          <footer className="formobra__acoes horario__acoes">
+            {marcado ? (
+              <button
+                type="button"
+                className="proposta__desmarcar"
+                onClick={desmarcar}
+                disabled={salvando || Boolean(etapaDepois)}
+                title={etapaDepois ? recadoEtapaSeguinte(etapaDepois) : 'Tira a marca do check e guarda os horários'}
+              >
+                Desmarcar o check
+              </button>
+            ) : (
+              <button type="button" className="formobra__cancelar" onClick={() => salvar(false)} disabled={salvando}>
+                Só salvar
+              </button>
+            )}
             <Button type="submit" loading={salvando}>
-              Salvar
+              {marcado ? 'Salvar' : 'Salvar e marcar'}
             </Button>
-          )}
-        </footer>
+          </footer>
+        )}
+        {etapaDepois && !somenteLeitura && <p className="horario__trava">{recadoEtapaSeguinte(etapaDepois)}</p>}
       </form>
     </Modal>
   )

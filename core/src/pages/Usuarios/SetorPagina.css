@@ -452,3 +452,111 @@
   line-height: 1.4;
   color: var(--text-muted);
 }
+
+/* o "Meu painel" no quadro centralizado: o texto no meio, como as abas */
+.perm__grupo--painel .painelset__atual,
+.perm__grupo--painel .painelset__dica {
+  justify-content: center;
+  text-align: center;
+}
+
+/* ---------------- A confirmacao: so o que mudou ----------------
+   Os dados trocados em cima e, embaixo, duas colunas: o que entra e o
+   que sai. A caixa e larga (880px) para as duas caberem lado a lado. */
+.setorconf {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.setorconf__dados {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 14px;
+  margin: 0;
+}
+
+.setorconf__cores {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.setorconf__cores i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+}
+
+.setorconf__colunas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.setorconf__coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  min-width: 0;
+}
+
+.setorconf__coluna h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.setorconf__coluna h4 b {
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  color: #fff;
+  background: var(--text-faint);
+}
+
+.setorconf__coluna.is-mais h4 b {
+  background: var(--success);
+}
+
+.setorconf__coluna.is-menos h4 b {
+  background: var(--danger);
+}
+
+.setorconf__coluna.is-mais li {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+}
+
+.setorconf__coluna.is-menos li {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+.setorconf__coluna li em {
+  font-weight: 500;
+  font-style: normal;
+  color: var(--text-muted);
+}
+
+.setorconf__nada,
+.setorconf__nota {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+  .setorconf__colunas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -402,6 +402,15 @@ export const CHECK_TIPO_ENSAIO = 'tipo_ensaio'
    uma pessoa dele, e escolher marca o check */
 export const CHECK_FOCAL_POINT = 'focal_point'
 
+/* onde o Ponto de encontro acontece (atualizacao 56): no local da obra (o
+   endereco do cliente), na empresa ou num endereco escrito */
+export const LOCAIS_DO_ENCONTRO = [
+  { id: 'obra', rotulo: 'No local da obra' },
+  { id: 'empresa', rotulo: 'Na empresa (LWN)' },
+  { id: 'outro', rotulo: 'Outro lugar' },
+]
+export const LOCAL_DO_ENCONTRO = Object.fromEntries(LOCAIS_DO_ENCONTRO.map((l) => [l.id, l.rotulo]))
+
 /**
  * Os tipos de item que o Planejamento desta obra pode usar: null quando o
  * roteiro dela nao tem o check "Tipo de ensaio" (obra antiga: livre, como
@@ -427,6 +436,27 @@ export function checkDoPrazoDaExecucao(roteiro) {
   }
   return null
 }
+
+/**
+ * A primeira etapa DEPOIS da do check que ja tem algum check marcado nesta
+ * obra (ou null). O Prazo da execucao e o Ponto de encontro so se
+ * desmarcam enquanto as etapas seguintes estao sem check — a API recusa
+ * igual (etapaSeguinteMarcada, em server/routes/dados.js).
+ */
+export function etapaSeguinteComCheck(roteiro, obra, checkId) {
+  const marcados = obra?.checks ?? {}
+  const daqui = (roteiro ?? []).find((e) => (e.cards ?? []).some((c) => (c.checks ?? []).some((k) => String(k.id) === String(checkId))))
+  if (!daqui) return null
+  return (
+    (roteiro ?? []).find(
+      (e) => e.numero > daqui.numero && (e.cards ?? []).some((c) => (c.checks ?? []).some((k) => marcados[k.id])),
+    ) ?? null
+  )
+}
+
+/** O recado de quando o check nao desmarca por causa da etapa seguinte. */
+export const recadoEtapaSeguinte = (etapa) =>
+  `A ${etapa.numero}ª etapa já tem check marcado. Para desmarcar este, desmarque antes os checks das etapas seguintes.`
 
 /* ------------------------------------------------------------
    A "Proposta tecnica" (1a etapa)

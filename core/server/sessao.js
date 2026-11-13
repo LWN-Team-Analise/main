@@ -263,11 +263,13 @@ export function exige(chave) {
 
 /**
  * As permissoes da PESSOA (atualizacao 53): colocar informacoes no quadro
- * de avisos e na agenda da pagina inicial. Nao sao do setor, e o acesso
- * total nao passa por elas (ver PESSOAIS em src/domain/permissoes.js).
+ * de avisos e na agenda da pagina inicial. Nao sao do setor: valem para
+ * quem tem a marca no cadastro e para o acesso total (a diretoria nao
+ * fica sem o "+"; ver PESSOAIS em src/domain/permissoes.js).
  * Banco sem a coluna: vale a `enviar_avisos` do setor, como antes.
  */
 export async function podePessoal(usuarioId, chave) {
+  if ((await meuCargo(usuarioId))?.acessoTotal) return true
   try {
     const { rows } = await query('SELECT permissoes_pessoais FROM usuario WHERE id = $1', [usuarioId])
     return normalizarPessoais(rows[0]?.permissoes_pessoais).includes(chave)

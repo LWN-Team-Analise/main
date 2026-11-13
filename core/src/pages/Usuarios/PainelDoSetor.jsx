@@ -83,7 +83,7 @@ export default function PainelDoSetor({ cargo, cargos, painel, exclusivo, acesso
         )}
         {caiu && (
           <p className="perm__trava">
-            O painel {def.rotulo} sai ao salvar: marque “{rotuloDaAba(def.exige)}” em Visualização para mantê-lo.
+            O painel {def.rotulo} sai ao salvar: marque a aba “{rotuloDaAba(def.exige)}” para mantê-lo.
           </p>
         )}
       </div>
@@ -108,7 +108,7 @@ export default function PainelDoSetor({ cargo, cargos, painel, exclusivo, acesso
                   <span>
                     <strong>{p.rotulo}</strong>
                     {dono && <em>Só do setor {dono.nome}. Para usar aqui, libere lá primeiro.</em>}
-                    {!dono && semAba && <em>Marque “{rotuloDaAba(p.exige)}” em Visualização primeiro.</em>}
+                    {!dono && semAba && <em>Marque a aba “{rotuloDaAba(p.exige)}” primeiro.</em>}
                   </span>
                 </label>
               )

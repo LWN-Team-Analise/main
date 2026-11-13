@@ -379,6 +379,14 @@ export function DadosProvider({ children }) {
     [gravar],
   )
 
+  /* desmarcar de dentro de um pop-up (o Ponto de encontro, o Prazo da
+     execucao): sem a ida otimista do alternarCheck, e o erro volta para
+     quem chamou mostrar ali mesmo */
+  const desmarcarCheck = useCallback(
+    (obraId, checkId) => gravar(() => dados.desmarcarCheck(obraId, checkId)),
+    [gravar],
+  )
+
   const atualizarObra = useCallback(
     (id, campos) => gravar(() => dados.editarObra(id, campos)),
     [gravar],
@@ -1348,6 +1356,7 @@ export function DadosProvider({ children }) {
       responderInclusao,
       tirarMembroParcial,
       definirHorarios,
+      desmarcarCheck,
 
       adicionarAvaliacao,
       atualizarAvaliacao,
@@ -1475,6 +1484,7 @@ export function DadosProvider({ children }) {
       responderInclusao,
       tirarMembroParcial,
       definirHorarios,
+      desmarcarCheck,
       adicionarAvaliacao,
       atualizarAvaliacao,
       removerAvaliacao,

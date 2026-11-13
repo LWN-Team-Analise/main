@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AppShell from '@/components/AppShell/AppShell'
 import Button from '@/components/Button/Button'
@@ -8,6 +8,7 @@ import Seletor from '@/components/Seletor/Seletor'
 import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
 import {
+  ALMOX_SUBABAS,
   ALTERACAO,
   CHAVES,
   GRUPOS,
@@ -182,9 +183,62 @@ export default function SetorPagina() {
 
   const fontes = cargos.filter((c) => c.id !== cargo.id)
 
-  /* o "Salvar" so confere e abre a confirmacao */
+  /* O QUE MUDOU em relacao ao setor como esta gravado: e so isso que a
+     confirmacao mostra, e sem mudanca nenhuma nao ha o que salvar */
+  const antesValem = normalizar(cargo.permissoes ?? [])
+  const antesGuardadas = guarda ? limparGuardadas(cargo.permissoesGuardadas ?? [], antesValem) : []
+  const incluidas = valem.filter((c) => !antesValem.includes(c))
+  const retiradas = antesValem.filter((c) => !valem.includes(c))
+  /* guardadas que saem de vez (desmarcadas com a aba ainda desmarcada) */
+  const naoGuardadas = antesGuardadas.filter((c) => !guardadasAgora.includes(c) && !valem.includes(c))
+  const novasGuardadas = guardadasAgora.filter((c) => !antesGuardadas.includes(c) && !retiradas.includes(c))
+  const dadosMudados = []
+  if (form.nome.trim() !== cargo.nome) dadosMudados.push(['Nome', `${cargo.nome} → ${form.nome.trim()}`])
+  if (String(form.curto ?? '').trim() !== String(cargo.curto ?? '').trim()) {
+    dadosMudados.push(['Sigla', `${cargo.curto || '—'} → ${String(form.curto ?? '').trim() || '—'}`])
+  }
+  if (String(form.cor ?? '').toLowerCase() !== String(cargo.cor ?? '').toLowerCase()) {
+    dadosMudados.push([
+      'Cor',
+      <span key="cor" className="setorconf__cores">
+        <i style={{ background: cargo.cor }} /> → <i style={{ background: form.cor }} />
+      </span>,
+    ])
+  }
+  if (form.acessoTotal !== Boolean(cargo.acessoTotal)) {
+    dadosMudados.push(['Acesso total', form.acessoTotal ? 'Ligado: passa por qualquer permissão' : 'Desligado'])
+  }
+  if (form.painelTv !== Boolean(cargo.painelTv)) {
+    dadosMudados.push(['Tela da TV', form.painelTv ? 'Ligada: página inicial automática, sem Outlook' : 'Desligada'])
+  }
+  if (
+    cargo.painelDisponivel &&
+    (painelFinal !== (cargo.painel ?? null) ||
+      (Boolean(painelFinal) && Boolean(form.painelExclusivo) !== Boolean(cargo.painelExclusivo)))
+  ) {
+    dadosMudados.push([
+      'Meu painel',
+      painelFinal
+        ? `${painelPorChave(painelFinal).rotulo}: ${form.painelExclusivo ? 'só deste setor' : 'pode ser de outros setores'}`
+        : 'Nenhum',
+    ])
+  }
+  if (
+    form.regrasCheck &&
+    JSON.stringify(lerRegrasCheck(form.regrasCheck)) !== JSON.stringify(lerRegrasCheck(cargo.regrasCheck ?? {}))
+  ) {
+    dadosMudados.push(['Checks por cargo', resumoDasRegras(form.regrasCheck)])
+  }
+  const mudou =
+    dadosMudados.length + incluidas.length + retiradas.length + naoGuardadas.length + novasGuardadas.length > 0
+
+  /* o "Salvar" so confere e abre a confirmacao — e so se algo mudou */
   const enviar = (evento) => {
     evento.preventDefault()
+    if (!mudou) {
+      setRecado('Nada mudou: não há o que salvar.')
+      return
+    }
     const nome = form.nome.trim()
     if (!nome) {
       setErro('Informe o nome do setor.')
@@ -378,15 +432,13 @@ export default function SetorPagina() {
                 </p>
               )}
 
-              {/* Uma linha por aba: a visualizacao a esquerda e, ao lado, as
-                  alteracoes dela uma na frente da outra, quebrando a linha
-                  quando chegam ao fim. */}
+              {/* Uma aba por bloco, centralizada, e as permissoes de dentro dela
+                  logo abaixo. O Almoxarife abre as abas dele embaixo (Painel,
+                  Retirada, Devolutiva...), cada uma com as permissoes dela. */}
+              <p className="perm__legenda">
+                Marque a aba para ela aparecer no menu. Embaixo de cada aba fica o que o setor pode fazer dentro dela.
+              </p>
               <div className="perm__grupos">
-                <div className="perm__cabeca" aria-hidden="true">
-                  <h4>Visualização</h4>
-                  <h4>Alteração</h4>
-                </div>
-
                 {/* "Meu painel" (atualizacao 53): a area que e do setor */}
                 {cargo.painelDisponivel && !form.painelTv && (
                   <PainelDoSetor
@@ -407,69 +459,42 @@ export default function SetorPagina() {
 
                 {GRUPOS.map((grupo) => {
                   const aba = grupo.visualizacao
+                  const areas = aba?.chave === 'ver_almoxarife'
                   const travadas = grupo.alteracoes.some((p) => travada(p.chave, form.marcadas))
                   /* as marcadas desta aba que estao guardadas (aba desmarcada) */
                   const guardadasAqui = grupo.alteracoes.filter((p) => guardadasAgora.includes(p.chave)).length
                   return (
-                    <div key={aba?.chave ?? grupo.rotulo} className="perm__grupo">
+                    <section key={aba?.chave ?? grupo.rotulo} className={`perm__grupo ${areas ? 'perm__grupo--areas' : ''}`.trim()}>
                       <div className="perm__aba">
                         {aba ? (
-                          <label className="perm__chip perm__chip--aba">
-                            <input
-                              type="checkbox"
-                              checked={form.marcadas.includes(aba.chave)}
-                              onChange={() => alternar(aba.chave)}
-                            />
-                            <span>{aba.rotulo}</span>
-                          </label>
+                          <ChipPermissao chave={aba.chave} tipo="aba" marcadas={form.marcadas} aoAlternar={alternar} />
                         ) : (
                           <span className="perm__chip perm__chip--fixo">{grupo.rotulo}</span>
                         )}
                       </div>
 
-                      {grupo.alteracoes.length > 0 && (
-                        <div className="perm__alts">
+                      {areas ? (
+                        <SubAbas alteracoes={grupo.alteracoes} marcadas={form.marcadas} aoAlternar={alternar} />
+                      ) : (
+                        grupo.alteracoes.length > 0 && (
                           <ul className="perm__chips">
-                            {grupo.alteracoes.map((p) => {
-                              const bloqueada = travada(p.chave, form.marcadas)
-                              const marcada = form.marcadas.includes(p.chave)
-                              /* guardada: marcada, mas a aba esta desmarcada — nao
-                                 vale agora e volta a valer com a aba */
-                              const guardada = bloqueada && marcada
-                              return (
-                                <li key={p.chave}>
-                                  <label
-                                    className={`perm__chip ${bloqueada ? 'is-travada' : ''} ${guardada ? 'is-guardada' : ''}`.trim()}
-                                    title={
-                                      guardada
-                                        ? `Guardada: não vale enquanto "${aba?.rotulo}" estiver desmarcada, e volta a valer junto com ela.`
-                                        : bloqueada
-                                          ? `Marque "${aba?.rotulo}" em Visualização primeiro.`
-                                          : undefined
-                                    }
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={marcada}
-                                      onChange={() => alternar(p.chave)}
-                                      disabled={bloqueada}
-                                    />
-                                    <span>{p.rotulo}</span>
-                                  </label>
-                                </li>
-                              )
-                            })}
+                            {grupo.alteracoes.map((p) => (
+                              <li key={p.chave}>
+                                <ChipPermissao chave={p.chave} marcadas={form.marcadas} aoAlternar={alternar} />
+                              </li>
+                            ))}
                           </ul>
-                          {travadas && (
-                            <p className="perm__trava">
-                              {guardadasAqui > 0
-                                ? `“${aba?.rotulo}” está desmarcada: as ${guardadasAqui === 1 ? 'marcada fica guardada' : `${guardadasAqui} marcadas ficam guardadas`} e ${guardadasAqui === 1 ? 'volta' : 'voltam'} a valer quando a aba for marcada de novo.`
-                                : `Marque “${aba?.rotulo}” para liberar estas.`}
-                            </p>
-                          )}
-                        </div>
+                        )
                       )}
-                    </div>
+
+                      {travadas && (
+                        <p className="perm__trava">
+                          {guardadasAqui > 0
+                            ? `“${aba?.rotulo}” está desmarcada: as ${guardadasAqui === 1 ? 'marcada fica guardada' : `${guardadasAqui} marcadas ficam guardadas`} e ${guardadasAqui === 1 ? 'volta' : 'voltam'} a valer quando a aba for marcada de novo.`
+                            : `Marque “${aba?.rotulo}” para liberar estas.`}
+                        </p>
+                      )}
+                    </section>
                   )
                 })}
               </div>
@@ -521,82 +546,83 @@ export default function SetorPagina() {
           <button type="button" className="formobra__cancelar" onClick={voltar}>
             Voltar
           </button>
-          <Button type="submit" loading={salvando}>
+          <Button type="submit" loading={salvando} disabled={!mudou} title={mudou ? undefined : 'Nada mudou: não há o que salvar'}>
             Salvar
           </Button>
         </footer>
       </form>
 
+      {/* a conferencia mostra SO o que mudou: o que entra, o que sai e os
+          dados do setor que foram trocados */}
       <Confirma
         aberto={conferindo}
         tom="acao"
+        largura={880}
         titulo={`Salvar ${cargo.nome}?`}
-        mensagem={`As permissões abaixo passam a valer para as ${emUso} pessoa(s) neste setor.`}
+        mensagem={`As mudanças abaixo passam a valer para ${emUso === 1 ? 'a 1 pessoa' : `as ${emUso} pessoas`} deste setor.`}
         detalhes={
-          <dl>
-            <dt>Setor</dt>
-            <dd>{form.nome.trim() || '—'}</dd>
-
-            <dt>Acesso total</dt>
-            <dd>{form.acessoTotal ? 'Sim — passa por qualquer permissão' : 'Não'}</dd>
-
-            {form.painelTv && (
-              <>
-                <dt>Tela da TV</dt>
-                <dd>Sim — página inicial automática, sem Outlook</dd>
-              </>
+          <div className="setorconf">
+            {dadosMudados.length > 0 && (
+              <dl className="setorconf__dados">
+                {dadosMudados.map(([rotulo, valor]) => (
+                  <Fragment key={rotulo}>
+                    <dt>{rotulo}</dt>
+                    <dd>{valor}</dd>
+                  </Fragment>
+                ))}
+              </dl>
             )}
 
-            {cargo.painelDisponivel && (painelFinal || cargo.painel) && (
-              <>
-                <dt>Meu painel</dt>
-                <dd>
-                  {painelFinal
-                    ? `${painelPorChave(painelFinal).rotulo} — ${form.painelExclusivo ? 'só deste setor' : 'pode ser de outros setores'}`
-                    : 'Nenhum'}
-                </dd>
-              </>
+            {(incluidas.length > 0 || retiradas.length > 0) && (
+              <div className="setorconf__colunas">
+                <section className="setorconf__coluna is-mais">
+                  <h4>
+                    Incluídas <b>{incluidas.length}</b>
+                  </h4>
+                  {incluidas.length === 0 ? (
+                    <p className="setorconf__nada">Nenhuma</p>
+                  ) : (
+                    <ul>
+                      {incluidas.map((chave) => (
+                        <li key={chave}>{rotuloComAba(chave)}</li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+                <section className="setorconf__coluna is-menos">
+                  <h4>
+                    Retiradas <b>{retiradas.length}</b>
+                  </h4>
+                  {retiradas.length === 0 ? (
+                    <p className="setorconf__nada">Nenhuma</p>
+                  ) : (
+                    <ul>
+                      {retiradas.map((chave) => (
+                        <li key={chave}>
+                          {rotuloComAba(chave)}
+                          {guardadasAgora.includes(chave) && <em> (fica guardada: volta com {rotuloDaAba(chave)})</em>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              </div>
             )}
 
-            {form.regrasCheck && (
-              <>
-                <dt>Checks por cargo</dt>
-                <dd>{resumoDasRegras(form.regrasCheck)}</dd>
-              </>
+            {novasGuardadas.length > 0 && (
+              <p className="setorconf__nota">
+                Passam a ficar guardadas, sem valer até a aba voltar: {novasGuardadas.map(rotuloComAba).join(', ')}.
+              </p>
             )}
-
-            <dt>Permissões</dt>
-            <dd>
-              {valem.length === 0 ? (
-                <em>Nenhuma marcada</em>
-              ) : (
-                <ul>
-                  {valem.map((chave) => (
-                    <li key={chave}>{rotuloDaPermissao(chave)}</li>
-                  ))}
-                </ul>
-              )}
-            </dd>
-
-            {/* o que fica guardado, sem valer, ate a aba voltar */}
-            {guardadasAgora.length > 0 && (
-              <>
-                <dt>Guardadas</dt>
-                <dd>
-                  <ul>
-                    {guardadasAgora.map((chave) => (
-                      <li key={chave}>
-                        {rotuloDaPermissao(chave)} <em>(volta com {rotuloDaAba(chave)})</em>
-                      </li>
-                    ))}
-                  </ul>
-                </dd>
-              </>
+            {naoGuardadas.length > 0 && (
+              <p className="setorconf__nota">
+                Deixam de ficar guardadas: {naoGuardadas.map(rotuloComAba).join(', ')}.
+              </p>
             )}
-          </dl>
+          </div>
         }
         aviso={
-          form.acessoTotal
+          form.acessoTotal && !cargo.acessoTotal
             ? 'Acesso total é permissão de diretoria: quem estiver neste setor passa por todas as travas do sistema.'
             : undefined
         }
@@ -606,6 +632,81 @@ export default function SetorPagina() {
       />
     </AppShell>
   )
+}
+
+/* cada permissao pela chave, com o rotulo da tela */
+const PERMISSAO = Object.fromEntries([...VISUALIZACAO, ...ALTERACAO].map((p) => [p.chave, p]))
+
+/**
+ * Uma caixa do quadro (a aba, a aba do Almoxarife ou uma permissao de
+ * dentro). Travada quando a aba de que ela depende esta desmarcada; se
+ * estava marcada, fica GUARDADA (tracejada) e volta a valer com a aba.
+ */
+function ChipPermissao({ chave, rotulo, tipo, marcadas, aoAlternar }) {
+  const p = PERMISSAO[chave]
+  const bloqueada = travada(chave, marcadas)
+  const marcada = marcadas.includes(chave)
+  const guardada = bloqueada && marcada
+  const daAba = p?.dependeDe ? PERMISSAO[p.dependeDe]?.rotulo : ''
+  return (
+    <label
+      className={`perm__chip ${tipo ? `perm__chip--${tipo}` : ''} ${bloqueada ? 'is-travada' : ''} ${guardada ? 'is-guardada' : ''}`
+        .replace(/\s+/g, ' ')
+        .trim()}
+      title={
+        guardada
+          ? `Guardada: não vale enquanto "${daAba}" estiver desmarcada, e volta a valer junto com ela.`
+          : bloqueada
+            ? `Marque a aba "${daAba}" primeiro.`
+            : undefined
+      }
+    >
+      <input type="checkbox" checked={marcada} onChange={() => aoAlternar(chave)} disabled={bloqueada} />
+      <span>{rotulo ?? p?.rotulo ?? chave}</span>
+    </label>
+  )
+}
+
+/**
+ * As abas de DENTRO do Almoxarife (ALMOX_SUBABAS), lado a lado e
+ * quebrando a linha: cada uma com a caixa da aba em cima e as permissoes
+ * dela embaixo. A permissao do Almoxarife que nao estiver em nenhuma aba
+ * vai para o "Geral", para nada sumir da tela.
+ */
+function SubAbas({ alteracoes, marcadas, aoAlternar }) {
+  const usadas = new Set(ALMOX_SUBABAS.flatMap((s) => [s.chave, ...s.alteracoes]).filter(Boolean))
+  const soltas = alteracoes.map((p) => p.chave).filter((c) => !usadas.has(c))
+  const abas = ALMOX_SUBABAS.map((s) => (s.chave ? s : { ...s, alteracoes: [...s.alteracoes, ...soltas] }))
+  return (
+    <div className="perm__subabas">
+      {abas.map((sub) => (
+        <div key={sub.chave ?? sub.rotulo} className="perm__subaba">
+          {sub.chave ? (
+            <ChipPermissao chave={sub.chave} rotulo={sub.rotulo} tipo="subaba" marcadas={marcadas} aoAlternar={aoAlternar} />
+          ) : (
+            <span className="perm__chip perm__chip--fixo perm__chip--subaba">{sub.rotulo}</span>
+          )}
+          {sub.alteracoes.length > 0 && (
+            <ul className="perm__chips">
+              {sub.alteracoes.map((chave) => (
+                <li key={chave}>
+                  <ChipPermissao chave={chave} marcadas={marcadas} aoAlternar={aoAlternar} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** "Obras › Criar obra"; a aba sozinha vira "Aba Obras". */
+function rotuloComAba(chave) {
+  const p = PERMISSAO[chave]
+  if (!p) return chave
+  if (!p.dependeDe) return `Aba ${p.rotulo}`
+  return `${PERMISSAO[p.dependeDe]?.rotulo ?? 'Aba'} › ${p.rotulo}`
 }
 
 function BotaoVoltar({ aoClicar }) {

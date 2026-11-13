@@ -3,9 +3,10 @@ import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
 import CalendarioDias, { diaDaSemana } from '@/components/CalendarioDias/CalendarioDias'
 import { useDados } from '@/context/DadosContext'
-import { diasDaExecucao, resumoDosDias } from '@/domain/obras'
+import { diasDaExecucao, etapaSeguinteComCheck, recadoEtapaSeguinte, resumoDosDias } from '@/domain/obras'
 import { dataBR, hojeISO } from '@/utils/formato'
 import './ModalRoteiro.css'
+import './ModalProposta.css'
 
 const fimDeSemana = (dia) => {
   const semana = diaDaSemana(dia)
@@ -37,9 +38,14 @@ const fimDeSemana = (dia) => {
  *
  * Quem define e quem tem "Pode definir prazo para checks"
  * (definir_prazos), ou o dono do check "Prazo da execucao".
+ *
+ * Com o check "Prazo da execucao" marcado, quem marca ele (`podeDesmarcar`)
+ * ve o "Desmarcar o check": a marca sai e os dias ficam guardados;
+ * salvar os dias de novo marca outra vez. So enquanto as etapas seguintes
+ * estao sem check (a API recusa igual).
  */
-export default function ModalPeriodo({ aberto, obra, aoFechar }) {
-  const { definirExecucao } = useDados()
+export default function ModalPeriodo({ aberto, obra, checkDoPrazo = null, podeDesmarcar = false, aoFechar }) {
+  const { definirExecucao, desmarcarCheck, roteiroDaObra } = useDados()
   const [dias, setDias] = useState([])
   /* o calendario nasce de novo a cada abertura, ja com os dias da obra
      — e assim que ele abre no mes certo */
@@ -62,6 +68,21 @@ export default function ModalPeriodo({ aberto, obra, aoFechar }) {
   }, [aberto, obra?.id])
 
   const nosFins = dias.filter(fimDeSemana).length
+
+  const marcado = Boolean(checkDoPrazo && obra?.checks?.[checkDoPrazo.id])
+  const etapaDepois = marcado && obra ? etapaSeguinteComCheck(roteiroDaObra(obra), obra, checkDoPrazo.id) : null
+
+  const desmarcar = async () => {
+    setSalvando(true)
+    try {
+      await desmarcarCheck(obra.id, checkDoPrazo.id)
+      aoFechar()
+    } catch (e) {
+      setErro(e.message)
+    } finally {
+      setSalvando(false)
+    }
+  }
 
   const salvar = async (evento) => {
     evento.preventDefault()
@@ -143,11 +164,23 @@ export default function ModalPeriodo({ aberto, obra, aoFechar }) {
           </p>
         )}
 
-        <footer className="formobra__acoes">
+        <footer className={`formobra__acoes ${marcado && podeDesmarcar ? 'periodo__acoes' : ''}`.trim()}>
+          {marcado && podeDesmarcar && (
+            <button
+              type="button"
+              className="proposta__desmarcar"
+              onClick={desmarcar}
+              disabled={salvando || Boolean(etapaDepois)}
+              title={etapaDepois ? recadoEtapaSeguinte(etapaDepois) : 'Tira a marca do check "Prazo da execução" e guarda os dias'}
+            >
+              Desmarcar o check
+            </button>
+          )}
           <Button type="submit" loading={salvando} disabled={dias.length === 0}>
             Salvar dias
           </Button>
         </footer>
+        {marcado && podeDesmarcar && etapaDepois && <p className="periodo__trava">{recadoEtapaSeguinte(etapaDepois)}</p>}
       </form>
     </Modal>
   )

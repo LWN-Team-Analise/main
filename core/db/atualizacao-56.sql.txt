@@ -1,0 +1,45 @@
+-- ============================================================
+--  ATUALIZACAO 56 — o LOCAL do Ponto de encontro
+--
+--  Cada data do check com horario (o "Ponto de encontro", atualizacao
+--  31) ganha ONDE o encontro acontece:
+--
+--    local     'obra'     no local da obra (o endereco do cliente);
+--              'empresa'  na empresa (LWN);
+--              'outro'    em outro lugar, com o endereco escrito.
+--    endereco  so no 'outro': o endereco digitado.
+--
+--  As datas que ja existem ficam no local da obra, que era o que a tela
+--  dos Pontos de encontro mostrava.
+--
+--  So acrescenta. SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.obra_horario ADD COLUMN IF NOT EXISTS local text NOT NULL DEFAULT 'obra';
+ALTER TABLE public.obra_horario ADD COLUMN IF NOT EXISTS endereco text;
+
+ALTER TABLE public.obra_horario DROP CONSTRAINT IF EXISTS obra_horario_local_ok;
+ALTER TABLE public.obra_horario ADD CONSTRAINT obra_horario_local_ok
+    CHECK (local IN ('obra', 'empresa', 'outro'));
+
+ALTER TABLE public.obra_horario DROP CONSTRAINT IF EXISTS obra_horario_endereco_ok;
+ALTER TABLE public.obra_horario ADD CONSTRAINT obra_horario_endereco_ok
+    CHECK (endereco IS NULL OR char_length(endereco) <= 300);
+
+COMMENT ON COLUMN public.obra_horario.local IS
+    'Onde e o encontro: obra (endereco do cliente), empresa (LWN) ou outro (o endereco escrito).';
+COMMENT ON COLUMN public.obra_horario.endereco IS
+    'O endereco escrito, quando o local e outro.';
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA
+-- ============================================================
+
+SELECT 'datas de ponto de encontro: ' || count(*) || ' (' ||
+       count(*) FILTER (WHERE local = 'obra') || ' na obra)' AS item
+  FROM public.obra_horario;

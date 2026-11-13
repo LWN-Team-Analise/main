@@ -98,6 +98,8 @@ const ARQUIVOS = [
   /* o Ponto e os Pontos de encontro no menu (ver_ponto, ver_encontros), o fim
      da area Administrativo e o Focal Point escolhido do setor */
   'db/atualizacao-55.sql.txt',
+  /* o local do Ponto de encontro (na obra, na LWN ou em outro endereco) */
+  'db/atualizacao-56.sql.txt',
 ]
 
 /**
@@ -286,6 +288,7 @@ const CONFERENCIA = [
   ['ver_ponto no acesso total', permissaoNoAcessoTotal('ver_ponto')],
   ['ver_encontros no acesso total', permissaoNoAcessoTotal('ver_encontros')],
   ['obra_check.escolhido_id (Focal Point)', col('obra_check', 'escolhido_id')],
+  ['obra_horario.local (Ponto de encontro)', col('obra_horario', 'local')],
 ]
 
 function col(tabela, coluna) {

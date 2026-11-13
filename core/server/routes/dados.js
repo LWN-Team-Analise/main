@@ -520,9 +520,11 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
              LEFT JOIN usuario u ON u.id = p.incluido_por
             ORDER BY p.incluido_em`).catch(semTabelaVazia),
     /* os horarios dos checks com horario (atualizacao 31): cada data da
-       obra com o ponto de encontro e quem vai. Sem as tabelas, nenhum */
-    query(`SELECT obra_id, check_id, to_char(dia, 'YYYY-MM-DD') AS dia, to_char(hora, 'HH24:MI') AS hora
-             FROM obra_horario ORDER BY dia`).catch(semTabelaVazia),
+       obra com o ponto de encontro e quem vai. Sem as tabelas, nenhum. O
+       local (atualizacao 56) vem pelo to_jsonb: sem a coluna, fica a obra */
+    query(`SELECT obra_id, check_id, to_char(dia, 'YYYY-MM-DD') AS dia, to_char(hora, 'HH24:MI') AS hora,
+                  (to_jsonb(h) ->> 'local') AS local, (to_jsonb(h) ->> 'endereco') AS endereco
+             FROM obra_horario h ORDER BY dia`).catch(semTabelaVazia),
     query(`SELECT obra_id, check_id, to_char(dia, 'YYYY-MM-DD') AS dia, usuario_id
              FROM obra_horario_membro`).catch(semTabelaVazia),
     /* quantas mensagens o chat de cada obra tem (as apagadas para todos
@@ -643,6 +645,8 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     ;(daObra[String(l.check_id)] ??= []).push({
       dia: l.dia,
       hora: l.hora,
+      local: LOCAIS_DO_ENCONTRO.includes(l.local) ? l.local : 'obra',
+      endereco: l.local === 'outro' ? (l.endereco ?? '') : '',
       membros: quemVai[`${l.obra_id}|${l.check_id}|${l.dia}`] ?? [],
     })
   })
@@ -2840,6 +2844,46 @@ async function regraDoCheck(checkId) {
   }
 }
 
+/* onde o Ponto de encontro acontece (atualizacao 56) */
+const LOCAIS_DO_ENCONTRO = ['obra', 'empresa', 'outro']
+
+/** O check tem horario (o Ponto de encontro, atualizacao 31)? */
+async function checkComHorario(checkId) {
+  const { rows } = await query('SELECT horario FROM etapa_check WHERE id = $1', [checkId]).catch((erro) =>
+    erro.code === '42703' ? { rows: [] } : Promise.reject(erro),
+  )
+  return rows[0]?.horario === true
+}
+
+/**
+ * A etapa SEGUINTE que ja tem check marcado nesta obra: { ordem, nome },
+ * ou null. O Prazo da execucao e o Ponto de encontro so se desmarcam
+ * enquanto as etapas depois da deles estao sem nenhum check: o que veio
+ * depois pode ter sido feito em cima deles.
+ */
+async function etapaSeguinteMarcada(obraId, checkId) {
+  const { rows } = await query(
+    `SELECT et.ordem, et.nome
+       FROM obra_check oc
+       JOIN etapa_check ck ON ck.id = oc.check_id
+       JOIN etapa_card kd  ON kd.id = ck.card_id
+       JOIN etapa et       ON et.id = kd.etapa_id
+      WHERE oc.obra_id = $1
+        AND et.ordem > (SELECT e2.ordem
+                          FROM etapa_check c2
+                          JOIN etapa_card k2 ON k2.id = c2.card_id
+                          JOIN etapa e2      ON e2.id = k2.etapa_id
+                         WHERE c2.id = $2)
+      ORDER BY et.ordem
+      LIMIT 1`,
+    [obraId, checkId],
+  )
+  return rows[0] ?? null
+}
+
+const recadoEtapaSeguinte = (etapa) =>
+  `${etapa.nome ? `A etapa “${etapa.nome}”` : 'Uma etapa seguinte'} já tem check marcado. Para desmarcar este, desmarque antes os checks das etapas seguintes.`
+
 /* ------------------------------------------------------------
    Os ENSAIOS da obra (atualizacao 14)
 
@@ -3297,9 +3341,8 @@ router.put('/obras/:id/focal-point/:checkId', exigeSessao, obraAberta, async (re
 router.delete('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, res) => {
   try {
     if (await recusouMarcar(res, req.dono.sub, req.params.checkId, req.params.id, 'Este check é de outro setor.')) return
-    /* o do prazo acompanha o prazo: com a data definida, ele fica marcado.
-       O concluido SEM a informacao (atualizacao 36) nao acompanha nada —
-       nem o prazo, nem a reserva, nem a saida —, e desmarca como os outros */
+    /* O concluido SEM a informacao (atualizacao 36) nao acompanha nada —
+       nem a reserva, nem a saida —, e desmarca como os outros */
     const { tipo } = await regraDoCheck(req.params.checkId)
     const semInformacao = await concluidoSemInformacao(req.params.id, req.params.checkId)
     /* os da O.S. acompanham a OS no LWN Control: saem sozinhos so se a OS
@@ -3311,10 +3354,12 @@ router.delete('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req,
     ) {
       return res.status(409).json({ erro: CHECKS_DA_OS[tipo].desmarcar })
     }
-    if (tipo === 'prazo_execucao' && !semInformacao) {
-      return res.status(409).json({
-        erro: 'Este check acompanha o prazo da execução. Para mudar, altere a data no período de execução.',
-      })
+    /* o Prazo da execucao e o check com horario (o Ponto de encontro)
+       desmarcam enquanto as etapas seguintes estao sem check. O prazo
+       desmarcado guarda os dias: salvar o periodo de novo marca ele */
+    if (tipo === 'prazo_execucao' || (await checkComHorario(req.params.checkId))) {
+      const depois = await etapaSeguinteMarcada(req.params.id, req.params.checkId)
+      if (depois) return res.status(409).json({ erro: recadoEtapaSeguinte(depois) })
     }
     /* os do carro acompanham a reserva e a saida (atualizacao 23) */
     if ((tipo === 'reserva_carro' || tipo === 'retirada_carro') && !semInformacao) {
@@ -5827,8 +5872,13 @@ router.delete('/obras/:id/parciais/:usuarioId', exigeSessao, exige('ver_obras'),
    O CHECK COM HORARIO (atualizacao 31)
 
      PUT /obras/:id/horarios/:checkId
-         { dias: [{ dia: 'AAAA-MM-DD', hora: 'HH:MM', membros: [ids] }],
+         { dias: [{ dia: 'AAAA-MM-DD', hora: 'HH:MM', membros: [ids],
+                    local?: 'obra' | 'empresa' | 'outro', endereco?: '...' }],
            marcar?: true | false }
+
+   O LOCAL de cada data (atualizacao 56): no local da obra (o endereco
+   do cliente, o de sempre), na empresa (LWN) ou em outro lugar, que
+   pede o endereco escrito. Sem `local`, vale a obra.
 
    O pop-up do check (ex.: "Ponto de encontro") manda a lista inteira:
    cada data da obra com o horario e quem vai. Data que saiu da lista
@@ -5843,6 +5893,20 @@ router.delete('/obras/:id/parciais/:usuarioId', exigeSessao, exige('ver_obras'),
    ============================================================ */
 
 const DIAS_MAXIMOS = 120
+const ENDERECO_MAXIMO = 300
+
+/* o banco ja tem o local do encontro (atualizacao 56)? Lembrado depois do
+   primeiro sim: a coluna nao some */
+let temLocalDoEncontro = false
+async function bancoTemLocalDoEncontro(db = { query }) {
+  if (temLocalDoEncontro) return true
+  const { rows } = await db.query(
+    `SELECT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'obra_horario' AND column_name = 'local') AS ok`,
+  )
+  temLocalDoEncontro = rows[0]?.ok === true
+  return temLocalDoEncontro
+}
 
 router.put('/obras/:id/horarios/:checkId', exigeSessao, obraAberta, async (req, res) => {
   const { id: obraId, checkId } = req.params
@@ -5862,7 +5926,17 @@ router.put('/obras/:id/horarios/:checkId', exigeSessao, obraAberta, async (req, 
     if (dias.some((d) => d.dia === dia)) return res.status(400).json({ erro: 'Há uma data repetida.' })
     const membros = [...new Set((Array.isArray(item?.membros) ? item.membros : []).map(String))]
     if (membros.some((m) => !idValido(m))) return res.status(400).json({ erro: 'Uma das pessoas é inválida.' })
-    dias.push({ dia, hora, membros })
+    /* o local: o da data, ou o do pedido inteiro, ou a obra */
+    const local = texto(item?.local ?? req.body?.local) || 'obra'
+    if (!LOCAIS_DO_ENCONTRO.includes(local)) return res.status(400).json({ erro: 'Local do encontro inválido.' })
+    const endereco = local === 'outro' ? texto(item?.endereco ?? req.body?.endereco) : ''
+    if (local === 'outro' && !endereco) {
+      return res.status(400).json({ erro: `Escreva o endereço do encontro de ${dia.split('-').reverse().join('/')}.` })
+    }
+    if (endereco.length > ENDERECO_MAXIMO) {
+      return res.status(400).json({ erro: `O endereço tem no máximo ${ENDERECO_MAXIMO} caracteres.` })
+    }
+    dias.push({ dia, hora, membros, local, endereco: endereco || null })
   }
   const marcar = typeof req.body?.marcar === 'boolean' ? req.body.marcar : undefined
 
@@ -5882,6 +5956,12 @@ router.put('/obras/:id/horarios/:checkId', exigeSessao, obraAberta, async (req, 
       }
     }
 
+    /* desmarcar so com as etapas seguintes ainda sem check */
+    if (marcar === false) {
+      const depois = await etapaSeguinteMarcada(obraId, checkId)
+      if (depois) return res.status(409).json({ erro: recadoEtapaSeguinte(depois) })
+    }
+
     if (marcar === true) {
       if (dias.length === 0) {
         return res.status(400).json({ erro: 'Defina o horário de ao menos uma data antes de marcar o check.' })
@@ -5897,19 +5977,32 @@ router.put('/obras/:id/horarios/:checkId', exigeSessao, obraAberta, async (req, 
       }
     }
 
+    /* sem a atualizacao 56 o local nao e gravado (fica a obra) */
+    const comLocal = await bancoTemLocalDoEncontro()
     const marcouAgora = await emTransacao(async (db) => {
       await db.query(
         'DELETE FROM obra_horario WHERE obra_id = $1 AND check_id = $2 AND NOT (dia = ANY($3::date[]))',
         [obraId, checkId, dias.map((d) => d.dia)],
       )
       for (const d of dias) {
-        await db.query(
-          `INSERT INTO obra_horario (obra_id, check_id, dia, hora, atualizado_por)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (obra_id, check_id, dia) DO UPDATE
-              SET hora = EXCLUDED.hora, atualizado_por = EXCLUDED.atualizado_por, atualizado_em = now()`,
-          [obraId, checkId, d.dia, d.hora, req.dono.sub],
-        )
+        if (comLocal) {
+          await db.query(
+            `INSERT INTO obra_horario (obra_id, check_id, dia, hora, local, endereco, atualizado_por)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (obra_id, check_id, dia) DO UPDATE
+                SET hora = EXCLUDED.hora, local = EXCLUDED.local, endereco = EXCLUDED.endereco,
+                    atualizado_por = EXCLUDED.atualizado_por, atualizado_em = now()`,
+            [obraId, checkId, d.dia, d.hora, d.local, d.endereco, req.dono.sub],
+          )
+        } else {
+          await db.query(
+            `INSERT INTO obra_horario (obra_id, check_id, dia, hora, atualizado_por)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (obra_id, check_id, dia) DO UPDATE
+                SET hora = EXCLUDED.hora, atualizado_por = EXCLUDED.atualizado_por, atualizado_em = now()`,
+            [obraId, checkId, d.dia, d.hora, req.dono.sub],
+          )
+        }
         await db.query('DELETE FROM obra_horario_membro WHERE obra_id = $1 AND check_id = $2 AND dia = $3', [
           obraId,
           checkId,

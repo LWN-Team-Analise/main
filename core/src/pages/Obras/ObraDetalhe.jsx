@@ -1410,7 +1410,15 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
         aoFechar={() => setExecutando(null)}
       />
 
-      <ModalPeriodo aberto={periodo} obra={obra} aoFechar={() => setPeriodo(false)} />
+      <ModalPeriodo
+        aberto={periodo}
+        obra={obra}
+        checkDoPrazo={prazoNaPrimeira?.check ?? null}
+        podeDesmarcar={
+          !soLeitura && Boolean(prazoNaPrimeira) && podeEditarCheck(user, prazoNaPrimeira.check, prazoNaPrimeira.card, obra)
+        }
+        aoFechar={() => setPeriodo(false)}
+      />
 
       <Modal
         aberto={Boolean(avisoRoteiro)}

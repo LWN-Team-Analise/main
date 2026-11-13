@@ -62,11 +62,11 @@ export const IconeAtualizacoes = () => (
   </svg>
 )
 
-/* o calendario das reservas */
-export const IconeCalendario = () => (
+/* a localizacao dos carros: o alfinete do mapa */
+export const IconeLocalizacao = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" {...traco}>
-    <rect x="3.5" y="5" width="17" height="15.5" rx="2.4" />
-    <path d="M3.5 9.8h17M8 3.2v3.4M16 3.2v3.4M8 13.5h2M14 13.5h2M8 17h2" />
+    <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
+    <circle cx="12" cy="10" r="2.4" />
   </svg>
 )
 

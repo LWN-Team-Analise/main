@@ -12,6 +12,7 @@ import Estrelas from '@/components/Estrelas/Estrelas'
 import ModalAvisoGeral from '@/components/AvisoGeral/ModalAvisoGeral'
 import AvisoEntrada from '@/components/AvisoEntrada/AvisoEntrada'
 import { ModalEvento } from '@/pages/Home/ModalAgenda'
+import ModalSolicitarOS from '@/pages/Obras/ModalSolicitarOS'
 import { ehAplicativo } from '@/utils/dispositivo'
 import useNaoLidasChat from '@/hooks/useNaoLidasChat'
 import { useNotificacoesAutomaticas } from '@/hooks/useNotificacoesCelular'
@@ -250,14 +251,16 @@ const MENU = [
   /* Concluidas saiu do menu: virou o botao "Concluídas" de Obras, e a tela
      dela (/app/concluidas) acende Obras aqui */
   { id: 'obras', rotulo: 'Obras', rota: '/app/obras', permissao: 'ver_obras', tambem: ['/app/concluidas'] },
-  /* o atalho para o "Solicitar OS" do Almoxarife: a tela dele, ja aberta
-     no pedido (/core/app/control/solicitar, public/almoxarife/endereco.js) */
+  /* o "Solicitar OS" do Almoxarife: abre o pedido num pop-up por cima da
+     tela em que a pessoa esta (ModalSolicitarOS, sem obra), sem levar ao
+     Almoxarife. A rota continua abrindo a tela dele, para quem chega pelo
+     endereco */
   { id: 'solicitar', rotulo: 'Solicitar', rota: '/app/control/solicitar', permissao: 'almox_solicitacoes', semTv: true },
   { id: 'clientes', rotulo: 'Clientes', rota: '/app/clientes', permissao: 'ver_clientes' },
-  /* o Ponto (a folha de ponto) e os Pontos de encontro das obras, cada um
+  /* o Ponto (a folha de ponto) e o Ponto de encontro das obras, cada um
      com a permissao dele (atualizacao 55: a area Administrativo saiu) */
   { id: 'ponto', rotulo: 'Ponto', rota: '/app/ponto', permissao: 'ver_ponto', semTv: true },
-  { id: 'encontros', icone: 'encontro', rotulo: 'Pontos de encontro', rota: '/app/encontros', permissao: 'ver_encontros', semTv: true },
+  { id: 'encontros', icone: 'encontro', rotulo: 'Ponto de encontro', rota: '/app/encontros', permissao: 'ver_encontros', semTv: true },
   { id: 'despesas', rotulo: 'Reembolso', rota: '/app/despesas', permissao: 'ver_despesas' },
   { id: 'frotas', rotulo: 'Frotas', rota: '/app/frotas', permissao: 'ver_frotas' },
   /* o Almoxarife (o antigo lwncontrol) abre a tela dele, em /almoxarife */
@@ -287,6 +290,9 @@ const MENU = [
    avaliacao de quem esta logado, Configuracoes e as outras abas.
    ------------------------------------------------------------ */
 const PRINCIPAIS = ['inicio', 'obras', 'despesas']
+
+/* o item do menu que abre o pop-up do Solicitar OS, e nao uma tela */
+const ID_SOLICITAR = 'solicitar'
 
 /**
  * As abas do Almoxarife no menu completo (o hamburguer). Sao as do menu
@@ -848,7 +854,7 @@ function SubmenuArea({ area, ancora, aoFechar }) {
  * Fica MONTADO mesmo fechado (escondido por visibility): desmontando, o
  * fechar seria instantaneo, sem o painel deslizar de volta.
  */
-function MenuCompleto({ aberto, aoFechar }) {
+function MenuCompleto({ aberto, aoFechar, aoSolicitar }) {
   const { user } = useAuth()
   const { mediaDoUsuario, pode } = useDados()
   const { media, obrasAvaliadas } = mediaDoUsuario(user?.id)
@@ -917,7 +923,11 @@ function MenuCompleto({ aberto, aoFechar }) {
               <ul className="menutudo__lista">
                 {secao.itens.map((item) => (
                   <li key={item.id}>
-                    {item.href ? (
+                    {item.id === ID_SOLICITAR ? (
+                      <button type="button" className="menutudo__item" onClick={aoSolicitar} tabIndex={fora}>
+                        {item.rotulo}
+                      </button>
+                    ) : item.href ? (
                       <a href={item.href} className="menutudo__item" tabIndex={fora}>
                         {item.rotulo}
                       </a>
@@ -1291,6 +1301,8 @@ export default function AppShell({
      computador, o Menu da barra de baixo no celular */
   const [gaveta, setGaveta] = useState(false)
   const fecharGaveta = useCallback(() => setGaveta(false), [])
+  /* o pop-up do "Solicitar" do menu */
+  const [solicitando, setSolicitando] = useState(false)
 
   /* O item da tela aberta, e o item que esta ACESO. Sao dois porque a
      tela nova nasce com o aceso da anterior (ver `ultimoMostrado`) e so
@@ -1529,6 +1541,19 @@ export default function AppShell({
                 </li>
               )
             }
+            /* o Solicitar abre o pop-up do pedido, sem sair da tela */
+            if (item.id === ID_SOLICITAR) {
+              return (
+                <li key={item.id} data-id={item.id} data-principal="nao">
+                  <button type="button" className="rail__btn" title={item.rotulo} onClick={() => setSolicitando(true)}>
+                    <span className="rail__glifo">
+                      <Glifo />
+                    </span>
+                    <span className="rail__rotulo">{item.rotulo}</span>
+                  </button>
+                </li>
+              )
+            }
             return (
               /* `data-principal` e o que o CSS le para esconder, no
                  celular, quem nao e uma das tres */
@@ -1577,7 +1602,15 @@ export default function AppShell({
 
       </nav>
 
-      <MenuCompleto aberto={gaveta} aoFechar={fecharGaveta} />
+      <MenuCompleto
+        aberto={gaveta}
+        aoFechar={fecharGaveta}
+        aoSolicitar={() => {
+          fecharGaveta()
+          setSolicitando(true)
+        }}
+      />
+      <ModalSolicitarOS aberto={solicitando} aoFechar={() => setSolicitando(false)} />
 
       {submenu && <SubmenuArea area={submenu.area} ancora={submenu.ancora} aoFechar={fecharSubmenu} />}
 

@@ -16,8 +16,14 @@ import './ModalSolicitarOS.css'
    (enviarSolicitacaoFinal, em public/almoxarife/almoxarife.js), o pop-up
    diz que foi e a obra recarrega. O check continua esperando: quem marca
    e a aprovacao da OS no Almoxarife.
+
+   Sem a obra (o "Solicitar" do menu), o mesmo pop-up abre o pedido em
+   branco: a pessoa escolhe o cliente e a obra la dentro, e continua na
+   tela em que estava.
    ------------------------------------------------------------ */
 export const AVISO_OS_SOLICITADA = 'lwn-os-solicitada'
+/* o pedido em branco, sem obra (public/almoxarife/endereco.js) */
+const ENDERECO_SOLICITAR = '/core/app/control/solicitar'
 
 export default function ModalSolicitarOS({ aberto, obraId, aoEnviada, aoFechar }) {
   const [enviada, setEnviada] = useState(false)
@@ -41,17 +47,21 @@ export default function ModalSolicitarOS({ aberto, obraId, aoEnviada, aoFechar }
     return () => window.removeEventListener('message', ouvir)
   }, [aberto])
 
-  if (!obraId) return null
-  const endereco = `${enderecoSolicitarOS(obraId)}${enderecoSolicitarOS(obraId).includes('?') ? '&' : '?'}embutido=1`
+  const base = obraId ? enderecoSolicitarOS(obraId) : ENDERECO_SOLICITAR
+  const endereco = `${base}${base.includes('?') ? '&' : '?'}embutido=1`
 
   return (
     <Modal aberto={aberto} aoFechar={aoFechar} titulo="Solicitar OS" largura={1040}>
       {enviada ? (
         <div className="solicitaros__feito" role="status">
           <strong>OS solicitada.</strong>
-          <p>O check “Solicitar OS” é marcado quando o supervisor aprovar a OS no Almoxarife.</p>
+          <p>
+            {obraId
+              ? 'O check “Solicitar OS” é marcado quando o supervisor aprovar a OS no Almoxarife.'
+              : 'Ela foi para a aprovação do supervisor, no Almoxarife.'}
+          </p>
           <button type="button" className="acao acao--padrao" onClick={aoFechar}>
-            Voltar para a obra
+            {obraId ? 'Voltar para a obra' : 'Fechar'}
           </button>
         </div>
       ) : (

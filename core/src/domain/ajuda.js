@@ -126,7 +126,7 @@ export const ASSUNTOS = [
       'Na coluna "Enviar aviso" do quadro, clicar no card cobra o setor que está devendo: acende o sininho ' +
       'dele e sai um e-mail. Precisa da permissão "Enviar avisos de pendência nas obras" — sem ela o botão nem ' +
       'aparece. O quadro de avisos e a agenda da página inicial são de quem foi liberado, pessoa por pessoa, ' +
-      'em Usuários (só quem tem acesso total libera).',
+      'em Usuários (só quem tem acesso total libera), e de quem tem acesso total.',
   },
   {
     id: 'meu-painel',
@@ -206,7 +206,7 @@ export const ASSUNTOS = [
   {
     id: 'frotas',
     titulo: 'Frotas: saída e devolução de veículos',
-    gatilhos: ['frota', 'veiculo', 'carro', 'saida', 'devolucao', 'condutor', 'motorista', 'km', 'quilometragem', 'placa', 'reserva', 'calendario'],
+    gatilhos: ['frota', 'veiculo', 'carro', 'saida', 'devolucao', 'condutor', 'motorista', 'km', 'quilometragem', 'placa', 'reserva', 'calendario', 'localizacao'],
     resposta:
       'Na aba Frotas, use Saída para sair com um veículo e Devolução para devolvê-lo na garagem. Tudo é ' +
       'obrigatório: condutor, carro, KM, data, horário, observação e cinco fotos (os quatro lados e o painel ' +
@@ -215,8 +215,8 @@ export const ASSUNTOS = [
       'nunca pode ser menor que o último registrado do veículo. Saída de um carro que já está em uso vira ' +
       'troca de condutor. Em "Saídas e devoluções" ficam todos os registros, e o "não" das verificações ' +
       'aparece em vermelho. Em "Últimas atualizações" ficam os carros em uso e os que voltaram pedindo ' +
-      'atenção, e o "Calendário de reservas" mostra, mês a mês, os carros reservados para as obras, os que ' +
-      'vêm e os que já passaram. Cadastrar e editar veículos pede a permissão "Adicionar / editar veículos".',
+      'atenção, e a "Localização" mostra, dia a dia, onde está cada carro: em uso (com o condutor e o ' +
+      'destino), reservado para uma obra ou na empresa; nos dias que já passaram, quem usou cada um. Cadastrar e editar veículos pede a permissão "Adicionar / editar veículos".',
   },
   {
     id: 'concluidas',
@@ -235,7 +235,18 @@ export const ASSUNTOS = [
       'Almoxarife escolhe alguém do Almoxarife, o Time Técnico alguém do Time Técnico): escolhida a pessoa, o ' +
       'check fica marcado com o nome dela, e dá para trocar ou desmarcar. O check "Solicitar OS" abre a ' +
       'solicitação de OS do Almoxarife num pop-up, sem sair da obra; ele é marcado quando o supervisor ' +
-      'aprovar a OS.',
+      'aprovar a OS. O "Solicitar" do menu abre o mesmo pop-up, sem sair da tela em que você está.',
+  },
+  {
+    id: 'ponto-de-encontro',
+    titulo: 'Ponto de encontro',
+    gatilhos: ['encontro', 'ponto de encontro', 'horario', 'local', 'onde', 'endereco', 'desmarcar', 'prazo da execucao'],
+    resposta:
+      'O check "Ponto de encontro" da obra abre as datas da execução: em cada uma, o horário e quem vai. Em ' +
+      'cima, escolha o local: no local da obra (o endereço do cliente), na empresa (LWN) ou em outro lugar, ' +
+      'com o endereço escrito. "Salvar e marcar" grava e marca o check. Para desmarcar o Ponto de encontro ou ' +
+      'o "Prazo da execução" (pelo período de execução), as etapas seguintes não podem ter check marcado. A ' +
+      'aba Ponto de encontro do menu mostra os próximos e, depois de uma linha, os que já aconteceram.',
   },
   {
     id: 'ponto',

@@ -1,4 +1,4 @@
-/* O calendario das reservas (CalendarioReservas.jsx) */
+/* A localizacao dos carros (Localizacao.jsx): o mes em grade e o dia escolhido */
 
 .calres {
   display: flex;
@@ -107,12 +107,35 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 4px;
   min-height: 104px;
   padding: 6px;
+  border: 0;
   border-top: 1px solid var(--line);
   border-left: 1px solid var(--line);
   min-width: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.calres__dia:hover {
+  background: var(--control-bg-hover);
+}
+
+/* o dia escolhido: o que a lista de baixo mostra */
+.calres__dia.is-escolhido {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 10px;
+}
+
+.calres__dia:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .calres__semana .calres__dia:first-child {
@@ -172,15 +195,57 @@
   font-weight: 700;
 }
 
+/* reservado: o contorno tracejado (o carro ainda nao saiu) */
+.calres__chip[data-tom='reserva'] {
+  border-left-style: dashed;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--carro) 35%, transparent);
+}
+
+.calres__maischips {
+  padding-left: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+/* a legenda da grade: cheio e em uso, tracejado e reservado */
+.calres__legenda {
+  display: inline-flex;
+  gap: 12px;
+  margin-left: auto;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.calres__legenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.calres__legenda span::before {
+  content: '';
+  width: 14px;
+  height: 10px;
+  border-left: 3px solid var(--accent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.calres__legenda span[data-tom='reserva']::before {
+  border-left-style: dashed;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
 .calres__chip:hover {
   background: color-mix(in srgb, var(--carro) 24%, transparent);
 }
 
 /* o que ja passou fica mais apagado */
-.calres__chip[data-tom='retirada'],
-.calres__chip[data-tom='passada'],
 .calres__dia.is-passado .calres__chip {
-  opacity: 0.6;
+  opacity: 0.7;
 }
 
 /* no celular a grade fica so com o numero de reservas do dia; a lista diz o resto */
@@ -242,9 +307,9 @@
   border-radius: 14px;
 }
 
-.calres__reserva[data-tom='retirada'],
-.calres__reserva[data-tom='passada'] {
-  opacity: 0.72;
+/* na empresa: o cartao mais quieto */
+.calres__reserva[data-tom='empresa'] {
+  border-left-color: var(--line);
 }
 
 .calres__carro {
@@ -284,7 +349,48 @@
   color: var(--text-muted);
 }
 
-.calres__reserva[data-tom='agora'] .calres__situacao {
-  color: var(--pri-media);
-  font-weight: 600;
+/* ---- o dia escolhido ---- */
+.calres__nodia {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.calres__diacabeca {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+}
+
+.calres__diacabeca h2 {
+  margin: 0;
+  font-size: 1.02rem;
+  color: var(--text-strong);
+}
+
+.calres__estado {
+  margin-left: auto;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--control-bg);
+}
+
+.calres__estado[data-tom='uso'] {
+  color: #fff;
+  background: var(--carro);
+}
+
+.calres__estado[data-tom='reserva'] {
+  color: var(--carro);
+  background: color-mix(in srgb, var(--carro) 14%, transparent);
+}
+
+.calres__quem {
+  font-size: 0.84rem;
+  color: var(--text-base);
 }

@@ -68,8 +68,11 @@ export async function carregarDisponiveis(obraId) {
 /** As reservas ainda sem saida, da mais proxima a mais distante ({ reservas, hoje }). */
 export const carregarReservas = () => get('/frotas/reservas')
 
-/** O calendario das reservas de um mes ('AAAA-MM'): as que vem e as que passaram. */
-export const carregarCalendarioDeReservas = (mes) => get(`/frotas/reservas/calendario?mes=${encodeURIComponent(mes)}`)
+/**
+ * A localizacao dos carros num mes ('AAAA-MM'): { veiculos, reservas, usos, hoje }
+ * — as reservas das obras e os trechos em que cada carro esteve na rua.
+ */
+export const carregarLocalizacao = (mes) => get(`/frotas/localizacao?mes=${encodeURIComponent(mes)}`)
 
 /** { veiculoId } reserva o carro; { semCarro: true } marca que a obra nao usa carro. */
 export const reservar = (obraId, campos) => put(`/frotas/reservas/${encodeURIComponent(obraId)}`, campos)

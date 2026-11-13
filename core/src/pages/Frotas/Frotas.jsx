@@ -15,11 +15,11 @@ import PainelReservas from './PainelReservas'
 import {
   Falta,
   IconeAtualizacoes,
-  IconeCalendario,
   IconeCarro,
   IconeDevolucao,
   IconeEditar,
   IconeLista,
+  IconeLocalizacao,
   IconeMais,
   IconeSaida,
 } from './icones'
@@ -281,9 +281,9 @@ export default function Frotas() {
             <IconeAtualizacoes />
             Últimas atualizações
           </Link>
-          <Link to="/app/frotas/calendario" className="acao acao--fraca frotas__registros">
-            <IconeCalendario />
-            Calendário de reservas
+          <Link to="/app/frotas/localizacao" className="acao acao--fraca frotas__registros">
+            <IconeLocalizacao />
+            Localização
           </Link>
         </div>
 

@@ -77,7 +77,7 @@ export const VISUALIZACAO = [
      de encontro das obras, no menu principal (atualizacao 55: a area
      Administrativo saiu; ver_ponto foi para todos os setores) */
   { chave: 'ver_ponto', rotulo: 'Ponto', rota: '/app/ponto' },
-  { chave: 'ver_encontros', rotulo: 'Pontos de encontro', rota: '/app/encontros' },
+  { chave: 'ver_encontros', rotulo: 'Ponto de encontro', rota: '/app/encontros' },
   { chave: 'ver_concluidas', rotulo: 'Concluídas', rota: '/app/concluidas' },
   { chave: 'ver_despesas', rotulo: 'Reembolso', rota: '/app/despesas' },
   { chave: 'ver_frotas', rotulo: 'Frotas', rota: '/app/frotas' },
@@ -229,6 +229,34 @@ export const GRUPOS = [
   { visualizacao: null, rotulo: 'Outras', alteracoes: ALTERACAO.filter((a) => !a.dependeDe) },
 ].filter((g) => g.visualizacao || g.alteracoes.length > 0)
 
+/**
+ * As ABAS de dentro do Almoxarife, para a tela do setor: cada uma com a
+ * permissao que abre a aba (`chave`) e, embaixo dela, as que mexem ali
+ * dentro (`alteracoes`). A ordem e a do menu do Almoxarife.
+ *
+ * E so a arrumacao da tela: no banco e no Almoxarife todas continuam
+ * `almox_<modulo>`, dependendo so de "Almoxarife" — nenhuma trava a outra.
+ * O grupo sem `chave` ("Geral") junta o que nao e de aba nenhuma.
+ */
+export const ALMOX_SUBABAS = [
+  { chave: 'almox_dashboard', rotulo: 'Painel', alteracoes: ['almox_relatorios'] },
+  { chave: 'almox_conferencia', rotulo: 'Retirada', alteracoes: ['almox_separar_tags'] },
+  { chave: 'almox_devolutiva', rotulo: 'Devolutiva', alteracoes: ['almox_conferir_devolucao'] },
+  { chave: 'almox_concluidos', rotulo: 'OS Concluídas', alteracoes: [] },
+  { chave: 'almox_certificados', rotulo: 'Certificados', alteracoes: [] },
+  { chave: 'almox_baias', rotulo: 'Localização', alteracoes: [] },
+  { chave: 'almox_instrumentos', rotulo: 'Inventário', alteracoes: [] },
+  { chave: 'almox_manutencao', rotulo: 'Manutenção', alteracoes: ['almox_manutencao_somente_leitura'] },
+  { chave: 'almox_remanejamento', rotulo: 'Remanejamento', alteracoes: ['almox_aprovar_remanejamento'] },
+  { chave: 'almox_calibracao', rotulo: 'Calibração', alteracoes: [] },
+  {
+    chave: 'almox_solicitacoes',
+    rotulo: 'Solicitação de OS',
+    alteracoes: ['almox_gerenciar_os', 'almox_aprovar_todas_os', 'almox_prorrogar_os', 'almox_aceitar_prorrogacao'],
+  },
+  { chave: null, rotulo: 'Geral', alteracoes: ['almox_responsavel_obra'] },
+]
+
 export const TODAS = [...VISUALIZACAO, ...ALTERACAO]
 
 /** So as chaves, na ordem — e o que vai para o banco. */
@@ -342,7 +370,7 @@ export function dependentes(chaveVisualizacao) {
    setor. Nos outros ele aparece travado ate o setor principal mudar.
 
    O painel Administrativo saiu com a area (atualizacao 55): o Ponto, os
-   Pontos de encontro e os Envios gerais voltaram ao menu e ao Reembolso.
+   Ponto de encontro e os Envios gerais voltaram ao menu e ao Reembolso.
    O Almoxarife continua com as permissoes dele (almox_*) e so pode ser o
    painel de um setor que ve a aba (`exige`).
    ------------------------------------------------------------ */
@@ -361,8 +389,9 @@ export const painelPorChave = (chave) => PAINEIS.find((p) => p.chave === chave) 
    Quase tudo e do setor. Estas sao de cada pessoa, marcadas no cadastro
    dela (Usuarios > editar) e so por quem tem acesso total: o quadro de
    avisos e a agenda da pagina inicial falam com a empresa inteira, e a
-   lista de quem publica e curta e com nome. O acesso total NAO passa por
-   elas sozinho.
+   lista de quem publica e curta e com nome. O acesso total tambem passa
+   por elas: sem isso a diretoria ficava sem o "Enviar aviso" e o "Marcar
+   evento" do botao + enquanto ninguem estava marcado.
 
    Banco sem a atualizacao 53 (`permissoesPessoais` null): vale a regra de
    antes, a `enviar_avisos` do setor.
@@ -389,13 +418,14 @@ export const normalizarPessoais = (lista) =>
  * fica travada por lista. Fora isso, vale o que esta marcado no
  * setor. Sem setor nenhum, nao pode nada.
  *
- * Duas excecoes: as chaves da PESSOA (PESSOAIS), que so valem marcadas
- * nela, e `painel:<chave>` ('painel:almoxarife'), que e o painel do
- * setor (o acesso total abre todos).
+ * Duas excecoes: as chaves da PESSOA (PESSOAIS), que valem marcadas nela
+ * (ou com o acesso total), e `painel:<chave>` ('painel:almoxarife'), que e
+ * o painel do setor (o acesso total abre todos).
  */
 export function podeFazer(usuario, chave) {
   if (!usuario) return false
   if (CHAVES_PESSOAIS.includes(chave)) {
+    if (usuario.acessoTotal) return true
     if (!Array.isArray(usuario.permissoesPessoais)) return podeFazer(usuario, 'enviar_avisos')
     return usuario.permissoesPessoais.includes(chave)
   }

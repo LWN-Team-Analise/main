@@ -1,5 +1,95 @@
 /* O check com horario (ModalHorario.jsx): as datas, o horario e quem vai */
 
+/* onde e o encontro (atualizacao 56): obra, empresa ou outro endereco */
+.horario__local {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  min-width: 0;
+}
+
+.horario__local legend {
+  padding: 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.horario__locais {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.horario__locais .chip {
+  position: relative;
+}
+
+.horario__locais .chip:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* o radio fica por baixo do chip: o chip inteiro e o alvo */
+.horario__locais input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.horario__localtexto {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-base);
+}
+
+.horario__endereco {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.horario__endereco:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* o rodape: o desmarcar (ou o so salvar) de um lado, o salvar do outro */
+.horario__acoes {
+  justify-content: space-between;
+}
+
+.horario__acoes .btn {
+  width: auto;
+}
+
+.horario__acoes .proposta__desmarcar:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  text-decoration: none;
+}
+
+.horario__trava {
+  margin: -6px 0 0;
+  font-size: 0.74rem;
+  color: var(--text-faint);
+}
+
 .horario {
   display: flex;
   flex-direction: column;

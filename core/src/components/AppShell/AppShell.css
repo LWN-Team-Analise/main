@@ -1945,6 +1945,19 @@
     padding-left: 248px;
   }
 
+  /* A barra de cima (a saudacao e a Busca) NAO anda com o menu largo: so a
+     pagina embaixo dela vai para a direita. A margem negativa devolve o
+     que o padding da .shell empurrou (os 248px do largo menos os 86px de
+     sempre), no mesmo passo da animacao. A bolha do menu fica centrada na
+     altura e nao sobe ate a barra (max-height da .rail). */
+  .topbar {
+    transition: margin-left 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .shell.tem-menu-largo .topbar {
+    margin-left: -162px;
+  }
+
   .shell.tem-menu-largo .rail {
     width: 228px;
     align-items: stretch;
@@ -2161,4 +2174,24 @@
   .submenu {
     animation: none;
   }
+}
+
+/* entre 861px e 1000px a barra de sempre e mais estreita (78px de recuo):
+   a barra de cima devolve a diferenca certa */
+@media (min-width: 861px) and (max-width: 1000px) {
+  .shell.tem-menu-largo .topbar {
+    margin-left: -170px;
+  }
+}
+
+/* o Solicitar do menu completo e um botao (abre o pop-up do pedido) com a
+   cara dos links da lista */
+button.menutudo__item {
+  width: 100%;
+  border: 0;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
 }

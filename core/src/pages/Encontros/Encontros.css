@@ -206,7 +206,7 @@
   font-size: 0.84rem;
 }
 
-/* ---------------- Pontos de encontro ---------------- */
+/* ---------------- Ponto de encontro ---------------- */
 
 .encontros {
   display: flex;
@@ -455,4 +455,54 @@
     grid-template-columns: 1fr;
     gap: 8px;
   }
+}
+
+/* a linha entre os proximos e os que ja aconteceram */
+.encontros__corte {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 2px;
+  color: var(--text-muted);
+}
+
+.encontros__corte::before,
+.encontros__corte::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line, var(--glass-border));
+}
+
+.encontros__corte span {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.encontros__corte em {
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-faint);
+}
+
+/* os que ja foram ficam mais quietos */
+.encontros.is-passados .encontros__item {
+  opacity: 0.72;
+}
+
+.encontros__check b {
+  font-weight: 600;
+  color: var(--text-base);
+}
+
+.encontros__local.is-texto {
+  color: var(--text-base);
 }

@@ -61,7 +61,7 @@ const ATALHOS = [
     permissao: 'ver_clientes',
     termos: 'clientes empresas cadastro contratante setor endereco',
   },
-  /* o Ponto e os Pontos de encontro, no menu principal (atualizacao 55) */
+  /* o Ponto e o Ponto de encontro, no menu principal (atualizacao 55) */
   {
     id: 'tela-ponto',
     grupo: 'Telas',
@@ -74,7 +74,7 @@ const ATALHOS = [
   {
     id: 'tela-encontros',
     grupo: 'Telas',
-    titulo: 'Pontos de encontro',
+    titulo: 'Ponto de encontro',
     detalhe: 'O horário e o local de encontro das obras',
     rota: '/app/encontros',
     permissao: 'ver_encontros',
@@ -90,13 +90,13 @@ const ATALHOS = [
     termos: 'frotas ultimas atualizacoes carros em uso atencao tanque combustivel oleo pneus devolvido problema',
   },
   {
-    id: 'tela-frotas-calendario',
+    id: 'tela-frotas-localizacao',
     grupo: 'Telas',
-    titulo: 'Calendário de reservas',
-    detalhe: 'As reservas de carro das obras, as que vêm e as que passaram (Frotas)',
-    rota: '/app/frotas/calendario',
+    titulo: 'Localização dos carros',
+    detalhe: 'Onde está cada carro: em uso, reservado ou na empresa, e quem usou nos dias que passaram (Frotas)',
+    rota: '/app/frotas/localizacao',
     permissao: 'ver_frotas',
-    termos: 'calendario reservas reserva de carro frotas agenda carros obras futuras passadas',
+    termos: 'localizacao onde esta carro carros em uso reservado reservas empresa garagem calendario frotas quem usou',
   },
   /* saiu do menu (e o botao "Concluídas" de Obras), mas a busca ainda abre */
   {

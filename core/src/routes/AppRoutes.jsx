@@ -9,7 +9,7 @@ import Concluidas from '@/pages/Concluidas/Concluidas'
 import Ponto from '@/pages/Ponto/Ponto'
 import Encontros from '@/pages/Encontros/Encontros'
 import Atualizacoes from '@/pages/Frotas/Atualizacoes'
-import CalendarioReservas from '@/pages/Frotas/CalendarioReservas'
+import Localizacao from '@/pages/Frotas/Localizacao'
 import Avaliacoes from '@/pages/Avaliacoes/Avaliacoes'
 import Usuarios from '@/pages/Usuarios/Usuarios'
 import SetorPagina from '@/pages/Usuarios/SetorPagina'
@@ -262,7 +262,8 @@ export default function AppRoutes() {
         }
       />
       {/* os carros em uso e os que voltaram pedindo atencao (era o Frotas da
-          area Administrativo) e o calendario das reservas */}
+          area Administrativo) e a localizacao dos carros (era o calendario das
+          reservas: o endereco antigo leva para ela) */}
       <Route
         path="/app/frotas/atualizacoes"
         element={
@@ -272,13 +273,14 @@ export default function AppRoutes() {
         }
       />
       <Route
-        path="/app/frotas/calendario"
+        path="/app/frotas/localizacao"
         element={
           <Interna permissao="ver_frotas">
-            <CalendarioReservas />
+            <Localizacao />
           </Interna>
         }
       />
+      <Route path="/app/frotas/calendario" element={<Navigate to="/app/frotas/localizacao" replace />} />
       <Route
         path="/app/control/*"
         element={

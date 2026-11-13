@@ -1165,16 +1165,26 @@ router.get('/reservas', exigeSessao, exige(VER), async (_req, res) => {
 })
 
 /* ------------------------------------------------------------
-   O CALENDARIO das reservas (Frotas > Calendário)
+   A LOCALIZACAO dos carros (Frotas > Localização)
 
-     GET /reservas/calendario?mes=AAAA-MM
+     GET /localizacao?mes=AAAA-MM
+     (o endereco antigo, /reservas/calendario, responde igual)
 
-   Todas as reservas com carro cujo periodo da execucao toca o mes — as
-   que vem, as de agora e as que ja passaram (retiradas, e de obra ja
-   concluida tambem). Cada uma com os dias, o carro e a retirada.
+   Onde cada carro esteve, esta e vai estar, dia a dia no mes:
+
+     veiculos  os carros (os ativos, e os desativados que andaram no mes);
+     reservas  as reservas com carro cujo periodo da execucao toca o mes
+               — as que vem, as de agora e as que ja passaram (retiradas,
+               e de obra ja concluida tambem), com os dias e a retirada;
+     usos      cada trecho em que um carro esteve na rua: da saida (ou da
+               troca de condutor) ate a devolucao (ou a troca seguinte),
+               com o condutor, o destino e a obra. `ate` null: ainda na
+               rua. E o que diz quem usou o carro num dia que ja passou.
+
+   O dia sem uso e sem reserva e o carro na empresa.
    ------------------------------------------------------------ */
 
-router.get('/reservas/calendario', exigeSessao, exige(VER), async (req, res) => {
+async function localizacao(req, res) {
   const mes = String(req.query.mes ?? '')
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)) return res.status(400).json({ erro: 'Mês inválido. Use AAAA-MM.' })
   const de = `${mes}-01`
@@ -1213,11 +1223,84 @@ router.get('/reservas/calendario', exigeSessao, exige(VER), async (req, res) => 
           : null,
       }))
       .sort((a, b) => String(a.de).localeCompare(String(b.de)) || a.veiculoNome.localeCompare(b.veiculoNome))
-    return res.json({ mes, de, ate, hoje: hojeNoBrasil(), reservas })
+
+    const hoje = hojeNoBrasil()
+    const usos = await usosDoPeriodo(de, ate, hoje)
+    const andaram = new Set(usos.map((u) => u.veiculoId))
+    const { rows: carros } = await query('SELECT id, nome, placa, ativo FROM veiculo ORDER BY lower(nome), id')
+    const veiculos = carros
+      .filter((v) => v.ativo || andaram.has(String(v.id)))
+      .map((v) => ({ id: String(v.id), nome: v.nome, placa: v.placa ?? '', ativo: v.ativo }))
+    return res.json({ mes, de, ate, hoje, veiculos, reservas, usos })
   } catch (erro) {
-    return falhou(erro, res, 'frotas/reservas-calendario')
+    return falhou(erro, res, 'frotas/localizacao')
   }
-})
+}
+
+router.get('/localizacao', exigeSessao, exige(VER), localizacao)
+router.get('/reservas/calendario', exigeSessao, exige(VER), localizacao)
+
+/**
+ * Os trechos em que cada carro esteve na rua e que tocam [de, ate]. Le o
+ * ultimo registro de cada carro ANTES do periodo (o carro que ja estava
+ * na rua no dia 1) e os registros do periodo, na ordem de cada carro.
+ */
+async function usosDoPeriodo(de, ate, hoje) {
+  const colunas = `r.id, r.veiculo_id, r.tipo, to_char(r.data, 'YYYY-MM-DD') AS data, r.condutor_nome, r.destino,
+                   r.obra_id, concat_ws(' — ', cl.nome, nullif(btrim(o.proposta), '')) AS obra`
+  const juntas = `FROM veiculo_registro r
+                  LEFT JOIN obra o     ON o.id = r.obra_id
+                  LEFT JOIN cliente cl ON cl.id = o.cliente_id`
+  const [antes, durante] = await Promise.all([
+    query(
+      `SELECT DISTINCT ON (r.veiculo_id) ${colunas} ${juntas}
+        WHERE r.data < $1::date
+        ORDER BY r.veiculo_id, ${ORDEM_DESC}`,
+      [de],
+    ),
+    query(
+      `SELECT ${colunas} ${juntas}
+        WHERE r.data BETWEEN $1::date AND $2::date
+        ORDER BY r.veiculo_id, ${ORDEM_ASC}`,
+      [de, ate],
+    ),
+  ]).catch((e) => (e.code === '42P01' ? [{ rows: [] }, { rows: [] }] : Promise.reject(e)))
+
+  /* carro -> os registros dele, do mais antigo ao mais novo */
+  const porCarro = new Map()
+  for (const r of [...antes.rows, ...durante.rows]) {
+    const id = String(r.veiculo_id)
+    if (!porCarro.has(id)) porCarro.set(id, [])
+    porCarro.get(id).push(r)
+  }
+
+  const usos = []
+  for (const [veiculoId, registros] of porCarro) {
+    let aberto = null
+    for (const r of registros) {
+      /* a troca e a devolucao fecham o trecho de quem estava com o carro */
+      if (aberto) {
+        aberto.ate = r.data
+        usos.push(aberto)
+        aberto = null
+      }
+      if (r.tipo === 'saida' || r.tipo === 'troca') {
+        aberto = {
+          veiculoId,
+          de: r.data,
+          ate: null,
+          condutorNome: r.condutor_nome ?? '',
+          destino: r.destino ?? '',
+          obraId: r.obra_id ? String(r.obra_id) : null,
+          obra: r.obra_id ? r.obra : '',
+        }
+      }
+    }
+    if (aberto) usos.push(aberto)
+  }
+  /* so os trechos que tocam o periodo; o aberto vai ate hoje */
+  return usos.filter((u) => u.de <= ate && (u.ate ?? hoje) >= de)
+}
 
 /** 'AAAA-MM' + n meses. */
 function somarMesIso(mes, n) {
