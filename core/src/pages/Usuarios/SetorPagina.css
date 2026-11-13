@@ -316,3 +316,247 @@
     width: 100%;
   }
 }
+
+/* ============================================================
+   "Meu painel" (PainelDoSetor.jsx, atualizacao 53): a primeira linha do
+   quadro de permissoes e a escolha do painel, no pop-up
+   ============================================================ */
+
+.painelset__atual {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0;
+  min-height: 32px;
+  font-size: 0.82rem;
+  color: var(--text-base);
+}
+
+.painelset__atual strong {
+  color: var(--text-strong);
+}
+
+.painelset__atual span {
+  color: var(--text-muted);
+}
+
+.painelset__trocar {
+  padding: 4px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.painelset__trocar:hover {
+  background: var(--control-bg-hover);
+}
+
+.painelset {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.painelset__grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.painelset__grupo:disabled {
+  opacity: 0.55;
+}
+
+.painelset__grupo legend {
+  margin-bottom: 6px;
+  padding: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.painelset__opcao {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  background: var(--control-bg);
+  cursor: pointer;
+}
+
+.painelset__opcao:has(input:checked) {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.painelset__opcao input {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  cursor: inherit;
+}
+
+.painelset__opcao span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 0.86rem;
+  color: var(--text-strong);
+}
+
+.painelset__opcao em {
+  font-style: normal;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.painelset__opcao.is-travada {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.painelset__acoes {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.painelset__nota {
+  margin: -8px 0 0;
+  text-align: right;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.painelset__dica {
+  margin: 0;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+/* o "Meu painel" no quadro centralizado: o texto no meio, como as abas */
+.perm__grupo--painel .painelset__atual,
+.perm__grupo--painel .painelset__dica {
+  justify-content: center;
+  text-align: center;
+}
+
+/* ---------------- A confirmacao: so o que mudou ----------------
+   Os dados trocados em cima e, embaixo, duas colunas: o que entra e o
+   que sai. A caixa e larga (880px) para as duas caberem lado a lado. */
+.setorconf {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.setorconf__dados {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 14px;
+  margin: 0;
+}
+
+.setorconf__cores {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.setorconf__cores i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+}
+
+.setorconf__colunas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.setorconf__coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  min-width: 0;
+}
+
+.setorconf__coluna h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.setorconf__coluna h4 b {
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  color: #fff;
+  background: var(--text-faint);
+}
+
+.setorconf__coluna.is-mais h4 b {
+  background: var(--success);
+}
+
+.setorconf__coluna.is-menos h4 b {
+  background: var(--danger);
+}
+
+.setorconf__coluna.is-mais li {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+}
+
+.setorconf__coluna.is-menos li {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+.setorconf__coluna li em {
+  font-weight: 500;
+  font-style: normal;
+  color: var(--text-muted);
+}
+
+.setorconf__nada,
+.setorconf__nota {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+  .setorconf__colunas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

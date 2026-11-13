@@ -107,12 +107,29 @@
   display: none;
 }
 
-/* O Menu (hamburguer) e o menu lateral so existem no celular. Aqui em
-   cima a bolha e vertical e cabe o menu inteiro — guardar item atras de
-   um botao seria esconder o que ja estava a vista. */
-.rail__somobile,
-.menulado {
+/* O Menu da barra de baixo so existe no celular. No computador quem abre
+   o menu completo e o hamburguer do alto da barra (.rail__tudo). */
+.rail__somobile {
   display: none;
+}
+
+/* O hamburguer do computador: no alto da barra, com um fio embaixo que o
+   separa das abas. Abre o menu completo (MenuCompleto). */
+.rail__tudo {
+  flex: none;
+  height: 50px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.rail__tudo::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: -4px;
+  height: 1px;
+  background: var(--line);
 }
 
 .rail__lista {
@@ -265,8 +282,16 @@
 }
 .rail__marca-anel {
   position: absolute;
-  /* bem maior que o botao: girando, as pontas nunca deixam canto vazio */
-  inset: -60%;
+  /* Um QUADRADO centrado no botao, com o lado do tamanho da largura mais a
+     altura dele (mais que a diagonal): girando, ele cobre o botao inteiro em
+     qualquer angulo. Antes era o botao esticado 60% para cada lado — no menu
+     largo (210x44) isso dava um retangulo de 462x97 que, de pe, deixava as
+     pontas do botao descobertas, e as cores piscavam nas laterais. */
+  left: 50%;
+  top: 50%;
+  width: calc(var(--marca-l) + var(--marca-a));
+  aspect-ratio: 1;
+  translate: -50% -50%;
   background: conic-gradient(
     from 220deg,
     var(--anel-1) 0%,
@@ -666,6 +691,11 @@
   .rail__somobile {
     display: block;
     order: 4;
+  }
+
+  /* no celular quem abre o menu completo e o Menu da barra de baixo */
+  .rail__tudo {
+    display: none;
   }
 
   /* o Menu e um <button>, os outros sao links: a mesma letra e o mesmo
@@ -1636,133 +1666,220 @@
 }
 
 /* ------------------------------------------------------------
-   O MENU LATERAL (celular)
+   O MENU COMPLETO (MenuCompleto, no AppShell.jsx)
 
-   Abre pela direita a partir do Menu da barra de baixo. Fica montado
-   mesmo fechado, escondido por visibility, para o fechar tambem
-   deslizar.
+   O hamburguer abre o sistema inteiro, dividido pelas areas
+   (Atmosfera, Administrativo, Almoxarife). No computador o painel
+   desliza pela ESQUERDA, por cima da barra; no celular, pela DIREITA,
+   a partir do Menu da barra de baixo, com quem esta logado no alto.
 
-   A entrada tem tres tempos: o veu escurece (e desfoca) a tela, o
-   painel desliza na curva da folha do iPhone — sai rapido e assenta
-   devagar — e as pecas de dentro chegam logo atras, uma depois da
-   outra (`--i`, posto no JSX). Fechando, tudo sai junto e mais rapido:
-   ninguem quer esperar um menu ir embora.
-
-   A curva mora AQUI, e nao herdada da .rail: o menu fica fora da
-   barra, e com a variavel indefinida a transicao inteira caia — o
-   painel aparecia de uma vez, sem deslizar.
+   Fica montado mesmo fechado, escondido por visibility, para o fechar
+   tambem deslizar. A curva e a do painel do iPhone: sai rapido e
+   assenta devagar; fechando, tudo vai junto e mais rapido.
    ------------------------------------------------------------ */
-.menulado {
-  --menulado-curva: cubic-bezier(0.32, 0.72, 0, 1);
-  --menulado-entra: 0.5s;
-  --menulado-sai: 0.28s;
+.menutudo {
+  --menutudo-curva: cubic-bezier(0.32, 0.72, 0, 1);
+  --menutudo-entra: 0.45s;
+  --menutudo-sai: 0.26s;
+
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  visibility: hidden;
+  pointer-events: none;
+  transition: visibility 0s linear var(--menutudo-sai);
+}
+
+.menutudo.is-aberto {
+  visibility: visible;
+  pointer-events: auto;
+  transition: visibility 0s;
+}
+
+.menutudo__veu {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: var(--modal-veu);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  cursor: default;
+  transition: opacity var(--menutudo-sai) var(--ease-out);
+}
+
+.menutudo.is-aberto .menutudo__veu {
+  opacity: 1;
+  transition-duration: var(--menutudo-entra);
+}
+
+.menutudo__painel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(290px, 86vw);
+  padding: 18px 14px 14px;
+  border-right: 1px solid var(--glass-border);
+  border-radius: 0 24px 24px 0;
+  background: var(--vidro-menu);
+  box-shadow: 24px 0 48px -20px rgba(0, 0, 0, 0.45), var(--vidro-aro);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  outline: none;
+  /* 104%, e nao 100%: a sombra tambem sai da tela */
+  transform: translate3d(-104%, 0, 0);
+  transition: transform var(--menutudo-sai) var(--menutudo-curva);
+}
+
+.menutudo.is-aberto .menutudo__painel {
+  transform: none;
+  transition-duration: var(--menutudo-entra);
+}
+
+/* "Voltar": fecha o menu */
+.menutudo__voltar {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  padding: 7px 12px 7px 8px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.menutudo__voltar:hover {
+  background: var(--control-bg-hover);
+}
+
+/* quem esta logado: so no celular (no computador a foto fica no canto) */
+.menutudo__perfil {
+  display: none;
+}
+
+.menutudo__secoes {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.menutudo__secao {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.menutudo__titulo {
+  margin: 0 6px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+.menutudo__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menutudo__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--control-bg);
+  color: var(--text-base);
+  font-size: 0.86rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.menutudo__item:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.menutudo__item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* a tela em que se esta: o nome na cor do sistema */
+.menutudo__item.is-atual {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* o azul do sistema nao se le sobre o vidro escuro: o tom claro do icone
+   aceso da barra */
+:root[data-theme='dark'] .menutudo__item.is-atual {
+  color: var(--grad-b);
+}
+
+/* Configuracoes, sozinha no rodape */
+.menutudo__rodape {
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.menutudo__rodape .menutudo__item {
+  padding: 12px 6px 4px;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.menutudo__rodape svg {
+  color: var(--text-muted);
 }
 
 @media (max-width: 860px) {
-  .menulado {
-    display: block;
-    position: fixed;
-    inset: 0;
-    z-index: 70;
-    visibility: hidden;
-    pointer-events: none;
-    transition: visibility 0s linear var(--menulado-sai);
-  }
-
-  .menulado.is-aberto {
-    visibility: visible;
-    pointer-events: auto;
-    transition: visibility 0s;
-  }
-
-  .menulado__veu {
-    position: absolute;
-    inset: 0;
-    padding: 0;
-    border: 0;
-    background: var(--modal-veu);
-    -webkit-backdrop-filter: blur(3px);
-    backdrop-filter: blur(3px);
-    opacity: 0;
-    transition: opacity var(--menulado-sai) var(--ease-out);
-  }
-
-  .menulado.is-aberto .menulado__veu {
-    opacity: 1;
-    transition-duration: var(--menulado-entra);
-  }
-
-  .menulado__painel {
-    position: absolute;
-    top: 0;
+  .menutudo__painel {
+    left: auto;
     right: 0;
-    bottom: 0;
-    display: flex;
-    flex-direction: column;
-    width: min(300px, 82vw);
-    padding: calc(env(safe-area-inset-top, 0px) + 20px) 20px calc(env(safe-area-inset-bottom, 0px) + 14px);
+    width: min(300px, 84vw);
+    padding: calc(env(safe-area-inset-top, 0px) + 18px) 16px calc(env(safe-area-inset-bottom, 0px) + 14px);
+    border-right: 0;
     border-left: 1px solid var(--glass-border);
     border-radius: 24px 0 0 24px;
-    background: var(--vidro-menu);
     box-shadow: -24px 0 48px -20px rgba(0, 0, 0, 0.5), var(--vidro-aro);
-    -webkit-backdrop-filter: var(--vidro-filtro);
-    backdrop-filter: var(--vidro-filtro);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    outline: none;
-    /* 104%, e nao 100%: a sombra tambem sai da tela */
     transform: translate3d(104%, 0, 0);
-    transition: transform var(--menulado-sai) var(--menulado-curva);
   }
 
-  .menulado.is-aberto .menulado__painel {
-    transform: none;
-    transition-duration: var(--menulado-entra);
-  }
-
-  /* a cascata: cada peca chega da direita, atras do painel */
-  .menulado__perfil,
-  .menulado__lista > .menulado__item,
-  .menulado__rodape {
-    opacity: 0;
-    transform: translate3d(32px, 0, 0);
-    transition:
-      opacity 0.14s var(--ease-out),
-      transform 0.2s var(--ease-out);
-  }
-
-  .menulado.is-aberto :is(.menulado__perfil, .menulado__lista > .menulado__item, .menulado__rodape) {
-    opacity: 1;
-    transform: none;
-    transition:
-      opacity 0.32s var(--ease-out),
-      transform 0.55s var(--menulado-curva);
-    transition-delay: calc(110ms + var(--i, 0) * 45ms);
-  }
-
-  /* ---- quem esta logado ---- */
-  .menulado__perfil {
+  .menutudo__perfil {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding-bottom: 18px;
+    padding: 4px 4px 14px;
     margin-bottom: 4px;
     border-bottom: 1px solid var(--line);
   }
 
-  /* a foto nasce um pouco menor e cresce com um leve repique */
-  .menulado__perfil > .avatarfig {
+  .menutudo__perfil > .avatarfig {
     flex: none;
-    transform: scale(0.7);
-    transition: transform 0.2s var(--ease-out);
   }
 
-  .menulado.is-aberto .menulado__perfil > .avatarfig {
-    transform: none;
-    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.16s;
-  }
-
-  .menulado__quem {
+  .menutudo__quem {
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -1770,14 +1887,14 @@
     min-width: 0;
   }
 
-  .menulado__quem strong {
+  .menutudo__quem strong {
     color: var(--text-strong);
     font-size: 0.95rem;
     line-height: 1.25;
     overflow-wrap: anywhere;
   }
 
-  .menulado__nota {
+  .menutudo__nota {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1785,115 +1902,296 @@
     font-size: 0.74rem;
   }
 
-  .menulado__nota b {
+  .menutudo__nota b {
     color: var(--text-strong);
   }
 
-  .menulado__nota em {
+  .menutudo__nota em {
     font-style: normal;
   }
 
-  /* o X entra girando um quarto de volta */
-  .menulado__fechar {
-    align-self: flex-start;
-    display: grid;
-    place-items: center;
-    flex: none;
-    width: 34px;
-    height: 34px;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: var(--control-bg-hover);
-    color: var(--text-base);
-    cursor: pointer;
-    transform: rotate(-90deg) scale(0.6);
-    transition: transform 0.2s var(--ease-out);
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .menulado.is-aberto .menulado__fechar {
-    transform: none;
-    transition: transform 0.5s var(--menulado-curva) 0.2s;
-  }
-
-  .menulado__fechar:active {
-    background: var(--control-border);
-  }
-
-  /* ---- as abas ----
-     So o icone e o nome, sem fundo e sem caixa: uma linha fina entre
-     uma aba e a outra, e nada mais. */
-  .menulado__lista {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .menulado__item {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 15px 2px;
-    color: var(--text-strong);
-    font-size: 0.95rem;
-    font-weight: 500;
-    text-decoration: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .menulado__lista > .menulado__item + .menulado__item {
-    border-top: 1px solid var(--line);
-  }
-
-  .menulado__glifo {
-    display: grid;
-    place-items: center;
-    flex: none;
-    width: 22px;
-    color: var(--text-muted);
-  }
-
-  .menulado__glifo svg {
-    width: 21px;
-    height: 21px;
-  }
-
-  .menulado__item:active {
-    opacity: 0.55;
-  }
-
-  /* a tela em que se esta: o nome e o icone na cor do sistema */
-  .menulado__item.is-atual {
-    color: var(--accent);
-    font-weight: 700;
-  }
-
-  /* o azul do sistema nao se le sobre o vidro escuro: o mesmo tom claro
-     do icone aceso da barra */
-  :root[data-theme='dark'] .menulado__item.is-atual {
-    color: var(--grad-b);
-  }
-
-  .menulado__item.is-atual .menulado__glifo {
-    color: inherit;
-  }
-
-  /* ---- Configuracoes, sozinha no rodape ---- */
-  .menulado__rodape {
-    margin-top: auto;
-    padding-top: 24px;
-  }
-
-  .menulado__rodape .menulado__item {
-    border-top: 1px solid var(--line);
+  .menutudo__item {
+    padding: 11px 12px;
+    font-size: 0.92rem;
   }
 }
 
-@media (max-width: 860px) and (prefers-reduced-motion: reduce) {
-  .menulado,
-  .menulado *,
-  .menulado.is-aberto * {
+@media (prefers-reduced-motion: reduce) {
+  .menutudo,
+  .menutudo * {
     transition-duration: 0.01s !important;
     transition-delay: 0s !important;
   }
+}
+
+/* ------------------------------------------------------------
+   O MENU LARGO (o "Mais" do alto da barra, so no computador)
+
+   A barra alarga com o nome de cada aba ao lado do icone, e a PAGINA anda
+   junto (o padding da .shell): nada fica escondido atras de veu. A marca do
+   item atual e medida no botao, entao acompanha sozinha. Almoxarife e
+   Administrativo ganham a setinha e abrem o submenu ao lado (.submenu).
+   ------------------------------------------------------------ */
+@media (min-width: 861px) {
+  .shell {
+    transition: padding-left 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .rail {
+    transition: width 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .shell.tem-menu-largo {
+    padding-left: 248px;
+  }
+
+  /* A barra de cima (a saudacao e a Busca) NAO anda com o menu largo: so a
+     pagina embaixo dela vai para a direita. A margem negativa devolve o
+     que o padding da .shell empurrou (os 248px do largo menos os 86px de
+     sempre), no mesmo passo da animacao. A bolha do menu fica centrada na
+     altura e nao sobe ate a barra (max-height da .rail). */
+  .topbar {
+    transition: margin-left 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .shell.tem-menu-largo .topbar {
+    margin-left: -162px;
+  }
+
+  .shell.tem-menu-largo .rail {
+    width: 228px;
+    align-items: stretch;
+    padding: 8px;
+  }
+
+  .shell.tem-menu-largo .rail__btn {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 14px;
+    text-align: left;
+  }
+
+  .shell.tem-menu-largo .rail__rotulo {
+    font-size: 0.86rem;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    -webkit-line-clamp: 1;
+  }
+
+  .shell.tem-menu-largo .rail__marca {
+    border-radius: 14px;
+  }
+
+  .shell.tem-menu-largo .rail__marca::after {
+    border-radius: 11px;
+  }
+
+  /* o "Mais" vira "Menos": a seta da meia volta */
+  .rail__seta {
+    transition: rotate 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .shell.tem-menu-largo .rail__seta {
+    rotate: 180deg;
+  }
+
+  .shell.tem-menu-largo .rail__tudo {
+    height: 44px;
+  }
+
+  /* a area com submenu: a setinha no fim da linha, que vira ao abrir */
+  .rail__area {
+    font: inherit;
+  }
+
+  .rail__chevron {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    margin-left: auto;
+    transition: rotate var(--dur-base) var(--ease-out);
+  }
+
+  .rail__area.is-aberta {
+    color: var(--text-strong);
+    background: var(--control-bg-hover);
+  }
+
+  .rail__area.is-aberta .rail__chevron {
+    rotate: -90deg;
+  }
+}
+
+/* o cartao do submenu, ao lado da barra larga */
+.submenu {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 248px;
+  max-height: calc(100dvh - 24px);
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  background: var(--vidro-menu);
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.45), var(--vidro-aro);
+  -webkit-backdrop-filter: var(--vidro-filtro);
+  backdrop-filter: var(--vidro-filtro);
+  overflow-y: auto;
+  animation: submenu-entra 0.18s var(--ease-out);
+}
+
+@keyframes submenu-entra {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+
+.submenu > * {
+  position: relative;
+  z-index: 1;
+}
+
+.submenu__topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 4px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.submenu__icone {
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+}
+
+:root[data-theme='dark'] .submenu__icone {
+  color: var(--grad-b);
+}
+
+.submenu__titulo {
+  flex: 1;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  text-decoration: none;
+}
+
+.submenu__titulo:hover {
+  text-decoration: underline;
+}
+
+.submenu__fechar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  rotate: 180deg;
+}
+
+.submenu__fechar:hover {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+}
+
+.submenu__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.submenu__item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: var(--text-base);
+  font-size: 0.86rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.submenu__item:hover,
+.submenu__item:focus-visible {
+  background: var(--control-bg-hover);
+  color: var(--text-strong);
+  outline: none;
+}
+
+.submenu__item.is-atual {
+  color: var(--accent);
+  font-weight: 700;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+:root[data-theme='dark'] .submenu__item.is-atual {
+  color: var(--grad-b);
+}
+
+.submenu__glifo {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  color: var(--text-muted);
+}
+
+.submenu__item:hover .submenu__glifo,
+.submenu__item.is-atual .submenu__glifo {
+  color: inherit;
+}
+
+.submenu__glifo svg {
+  width: 18px;
+  height: 18px;
+}
+
+.submenu__vazio {
+  margin: 6px 4px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .submenu {
+    animation: none;
+  }
+}
+
+/* entre 861px e 1000px a barra de sempre e mais estreita (78px de recuo):
+   a barra de cima devolve a diferenca certa */
+@media (min-width: 861px) and (max-width: 1000px) {
+  .shell.tem-menu-largo .topbar {
+    margin-left: -170px;
+  }
+}
+
+/* o Solicitar do menu completo e um botao (abre o pop-up do pedido) com a
+   cara dos links da lista */
+button.menutudo__item {
+  width: 100%;
+  border: 0;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
 }

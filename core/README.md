@@ -123,6 +123,13 @@ placa x dia da semana, sem fim de semana e feriado; `GET
 que cai mostra os dias. Sem o prazo da execucao, a tela pede para definir o
 periodo; carro sem placa vai para o fim, sem conferencia.
 
+**A retirada na vespera (atualizacao 54).** O carro reservado para a obra so sai a
+partir do **primeiro dia da execucao**: a saida dele para a obra antes disso volta 409
+(e o check "Retirada do carro" ja avisa). Quem tem `conceder_carro` concede o carro
+antes, no pop-up da "Reserva de carro": **Liberar a retirada na vespera** (e "Tirar a
+liberação"), em `PUT/DELETE /api/frotas/reservas/:obraId/liberar`. Reservar de novo
+desfaz a liberacao. Reserva antiga, sem periodo, nao tem trava.
+
 **Uso da frota no Dashboard.** A pagina inicial (aba Dashboard, para quem tambem
 tem Frotas) mostra os km rodados por mes, quem mais dirigiu e a tabela de km
 por carro e por mes, sempre em doze meses (`GET /api/frotas/uso`). Cada
@@ -283,6 +290,11 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-32.sql.txt` | turno.compartilhado (+ compartilhado_em/por): o turno novo, colado ou copiado da agenda nasce sem compartilhar com a equipe |
 | `db/atualizacao-36.sql.txt` | concluir check sem a informacao: obra_check.sem_informacao e a permissao `check_sem_informacao` (no acesso total) |
 | `db/atualizacao-37.sql.txt` | quem marca check: cargo.regras_check (regra por cargo e por pessoa), as permissoes `check_todas_obras` e `criar_obras`, e o negocio pendente (negocio.proposta, compartilhado_em/por) |
+| `db/atualizacao-52.sql.txt` | a permissao `ver_administrativo` (a area Administrativo), dada uma vez a quem revisava despesa geral ou gerenciava o ponto e ao acesso total |
+| `db/atualizacao-53.sql.txt` | o **Meu painel** (`cargo.painel` e `cargo.painel_exclusivo`, com o Administrativo dado uma vez a quem tinha `ver_administrativo`), as permissoes da pessoa (`usuario.permissoes_pessoais`), o "Nao me mostrar" do aviso do cadastro (`usuario.aviso_cadastro_dispensado`) e o bonus apartamento no cliente (`cliente.bonus_apartamento`) |
+| `db/atualizacao-54.sql.txt` | o check **Tipo de ensaio** no card do Comercial da 1a etapa (`tipo_ensaio`, `obra.tipos_ensaio`; so nas obras criadas depois), a retirada do carro na vespera (`obra_reserva_veiculo.liberada_por` e `liberada_em`) e as permissoes `ordenar_turnos` (Admin e quem editava turnos) e `conceder_carro` (Admin), dadas uma vez |
+| `db/atualizacao-55.sql.txt` | o fim da area Administrativo: as permissoes `ver_ponto` (todo setor, menos a TV) e `ver_encontros` (acesso total e quem tinha o painel Administrativo), o painel Administrativo tirado dos setores, e o check **Determinar Focal Point** do sistema (`focal_point`, com a pessoa em `obra_check.escolhido_id`) |
+| `db/atualizacao-56.sql.txt` | o **local** do Ponto de encontro: `obra_horario.local` (`obra`, `empresa` ou `outro`) e `obra_horario.endereco` (o endereco escrito do `outro`); as datas que ja existiam ficam na obra |
 | `db/atualizacao-51.sql.txt` | a aba Ponto: `ponto_dia` (o Calculo Diario importado) e `ponto_assinatura` (a conferencia assinada). Tambem aposenta a 48 (a obra criada em Obras nao vira mais negocio) |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
@@ -601,7 +613,10 @@ esconde o botao e a API recusa a chamada usando exatamente as mesmas chaves.
 | Grupo        | Chaves                                                              |
 | ------------ | ------------------------------------------------------------------- |
 | Visualizacao | `ver_inicio`, `ver_obras`, `ver_clientes`, `ver_concluidas`, `ver_despesas`, `ver_frotas`, `ver_comercial`, `ver_turnos`, `ver_avaliacoes`, `ver_usuarios`, `ver_avisos` |
-| Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `ver_senha_padrao`, `gerenciar_ponto`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `criar_obras`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `check_todas_obras`, `check_sem_informacao`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails` |
+| Alteracao    | `ver_dashboard`, `ver_historico`, `editar_usuario`, `editar_cargo`, `editar_cargo_titulo`, `editar_cpf`, `ver_senha_padrao`, `gerenciar_ponto`, `editar_avaliacoes`, `editar_clientes`, `exportar_clientes`, `criar_obras`, `editar_obras`, `excluir_concluidas`, `check_todas_etapas`, `check_todas_obras`, `check_sem_informacao`, `editar_etapa`, `editar_cards`, `editar_cargos_card`, `editar_checks`, `definir_prazos`, `gerenciar_ensaios`, `enviar_avisos`, `alterar_despesas`, `revisar_despesa_geral`, `excluir_despesas`, `registrar_frota`, `editar_veiculos`, `editar_negocios`, `excluir_negocios`, `responder_emails`, `ordenar_turnos` (arrastar as pessoas nos turnos), `conceder_carro` (liberar a retirada do carro na vespera) |
+| Da pessoa    | `publicar_avisos` (quadro de avisos), `publicar_agenda` (agenda da empresa) — em `usuario.permissoes_pessoais`, marcadas so por quem tem acesso total em Usuarios > editar; o acesso total tambem passa por elas (sem isso a diretoria ficava sem o "+") |
+
+Alem das listas, cada setor pode ter um **painel** (`cargo.painel`, "Meu painel" — ver a secao "O menu, o Meu painel e o fim da area Administrativo"): `podeFazer(usuario, 'painel:almoxarife')` e a pergunta (hoje so o Almoxarife e painel).
 
 Alteracao **sempre** depende da visualizacao correspondente: sem "Obras", o
 setor nao edita nada de Obras, e essas linhas ficam travadas ate a
@@ -618,16 +633,25 @@ junta as duas listas e divide na hora de gravar (`separar()`); a API confere as
 guardadas contra a lista nova (`limparGuardadas()`). Sem a atualizacao 45 no
 banco, a tela volta a derrubar tudo junto com a aba.
 
-Na tela do setor, cada aba ocupa uma linha: a visualizacao a esquerda e as
-alteracoes dela ao lado, uma na frente da outra, quebrando a linha no fim
-(`GRUPOS` em `permissoes.js`); as tres de Usuarios, que nao dependem de
-visualizacao nenhuma, fecham a lista. No celular a aba fica em cima e as
-alteracoes embaixo.
+Na tela do setor, cada aba e um bloco: a caixa da **aba** no meio e, logo abaixo,
+centralizadas, as permissoes de dentro dela, quebrando a linha no fim (`GRUPOS` em
+`permissoes.js`). O **Almoxarife** abre embaixo dele as abas de dentro — Painel,
+Retirada, Devolutiva, OS Concluidas, Certificados, Localizacao, Inventario, Manutencao,
+Remanejamento, Calibracao, Solicitacao de OS e o Geral —, tres por linha, cada uma num
+cartao com a caixa dela em cima e as permissoes dela embaixo (`ALMOX_SUBABAS`). E so a
+arrumacao da tela: no banco todas continuam `almox_<modulo>`, dependendo so de
+"Almoxarife".
+
+O **Salvar** so vale quando algo mudou (sem mudanca, o botao fica apagado). A
+confirmacao e larga e mostra **so o que mudou**: os dados trocados (nome, sigla, cor,
+acesso total, TV, Meu painel, checks por cargo) e duas colunas, **Incluidas** e
+**Retiradas**, cada permissao com a aba dela ("Obras › Criar obra"); a retirada que fica
+guardada diz com que aba volta.
 
 As da atualizacao 27 entraram assim (uma vez so — rodar de novo nao devolve
 uma permissao que alguem tirou depois):
 
-- **`ver_historico`** — o Historico embaixo da Grade. Todo setor que ja via a
+- **`ver_historico`** — o Historico embaixo do Panorama (era embaixo da Grade). Todo setor que ja via a
   pagina inicial ganhou; a TV nao tem. A API (`GET /api/atividades`) confere;
 - **`exportar_clientes`** — o botao "Exportar clientes". Quem edita cliente
   ganhou;
@@ -1304,9 +1328,16 @@ No editor do check (no modelo ou dentro da obra), a caixa **"Horário"**
 transforma o check — ex.: "Ponto de encontro" — num check de datas: clicar nele
 dentro da obra abre o pop-up (`ModalHorario`) com as datas da obra (os dias da
 execucao, mais as que alguem acrescentar ali), cada uma com o **horario** (06:30)
-e **quem vai** naquele dia. Esse check e obrigatorio ter horario: ele fica
-marcado sozinho enquanto houver ao menos uma data com horario. Nao junta com o
-Sim/Nao.
+e **quem vai** naquele dia. Em cima, o **local do encontro** (atualizacao 56), o
+mesmo para todas as datas: **No local da obra** (o endereco do cliente), **Na empresa
+(LWN)** ou **Outro lugar**, que pede o endereco escrito. Nao junta com o Sim/Nao.
+
+- Com o check em aberto, **Salvar e marcar** grava e marca (precisa de ao menos uma
+  data com horario) e **So salvar** grava sem marcar.
+- Com o check marcado, **Salvar** grava (sem nenhuma data com horario, ele desmarca) e
+  **Desmarcar o check** tira a marca e guarda os horarios — so enquanto as etapas
+  seguintes estao sem check marcado. A API recusa igual (409, `etapaSeguinteMarcada`
+  em `server/routes/dados.js`), no `DELETE` do check e no `marcar: false`.
 
 - Quem vai numa data e ainda nao e membro da obra recebe a solicitacao de
   inclusao (o membro parcial) — e o "adicionar membros" por ali.
@@ -1477,22 +1508,89 @@ ou a API fora do ar: o estado e a cidade viram campo livre.
 - A lista de paises e fixa (`src/domain/paises.js`), com os nomes em portugues
   do proprio navegador (`Intl.DisplayNames`).
 - Na tela, "Miami/Florida (Estados Unidos)"; o Excel ganhou as colunas Estado e
-  Pais. O globo da tela inicial so marca cliente do Brasil.
+  Pais. O globo dos clientes (no fim da aba Clientes) so marca cliente do Brasil.
 - Banco sem a atualizacao 35: endereco fora do Brasil devolve o recado para
   rodar `npm run db:atualizar`.
 - Nas listas de escolha, digitar as primeiras letras pula para a opcao ("par"
   acha o Paraguai), como no `<select>` do navegador.
 
+## O menu, o Meu painel e o fim da area Administrativo
+
+A area **Administrativo** saiu (atualizacao 55), e cada tela dela voltou para o lugar
+de sempre, com a trava de permissao de cada uma:
+
+| Tela | Onde fica | Permissao |
+| ---- | --------- | --------- |
+| **Ponto** | aba do menu principal (`/app/ponto`) | `ver_ponto` (Visualizacao) |
+| **Ponto de encontro** | aba do menu principal (`/app/encontros`): os horarios dos checks com horario das obras, por dia, com a hora, a obra, o local (no local da obra, com o endereco do cliente; na empresa; ou o endereco escrito, com o atalho do mapa) e quem vai. Uma lista so: os proximos em cima e, depois de uma linha, os que ja aconteceram nos ultimos 30 dias. O horario e o local continuam sendo marcados na obra | `ver_encontros` (Visualizacao) |
+| **Envios gerais** | o botao do Reembolso (`/app/despesas/gerais`) | `revisar_despesa_geral` |
+| **Ultimas atualizacoes** | botao no alto de Frotas (`/app/frotas/atualizacoes`): os carros **em uso** (condutor, desde quando, destino, KM) e os que **pedem atencao** (a ultima devolucao com o tanque abaixo da metade ou com um "Nao" que importa: oleo, pneus, agua, farois, limpeza, abastecido) | `ver_frotas` |
+| **Localizacao** | botao no alto de Frotas (`/app/frotas/localizacao`; o antigo `/app/frotas/calendario` leva para ela): o mes em grade, com os carros na rua (cheio) e os reservados (tracejado) de cada dia, uma cor por carro. O clique num dia (hoje, ao abrir) mostra embaixo **todos os carros** e onde cada um esta: **em uso** (condutor, destino, obra e desde quando), **reservado** para a obra ou **na empresa**. Num dia que ja passou, "utilizado" diz quem usou. Vem de `GET /api/frotas/localizacao?mes=AAAA-MM` (`veiculos`, `reservas` e `usos`: cada trecho da saida, ou troca, ate a devolucao) | `ver_frotas` |
+| **Turnos** | so a aba Turnos | `ver_turnos` |
+
+A atualizacao 55 deu, uma vez so, a `ver_ponto` a todo setor (menos a TV) — o Ponto
+era de todos e continua sendo, mas agora pela permissao, que a API confere
+(`GET /api/ponto/folha` e a assinatura voltam 403 sem ela) — e a `ver_encontros` ao
+acesso total e aos setores que tinham o painel Administrativo. A `gerenciar_ponto`
+passou a depender da `ver_ponto`. Os enderecos antigos da area
+(`/app/administrativo`, `/app/administrativo/ponto`, `/reembolso`, `/encontros`,
+`/frotas`, `/turnos`) redirecionam para as telas acima, com o periodo do Ponto.
+
+**Meu painel** (atualizacao 53). Cada setor pode ter UM painel (`PAINEIS`, em
+`src/domain/permissoes.js`) — hoje so o **Almoxarife** (a 55 tirou o Administrativo de
+quem tinha) —, escolhido na tela do setor, na primeira linha do quadro de permissoes
+(`PainelDoSetor.jsx`). Marcar "Meu painel" pede o painel e se ele **pode ser incluido
+em outros setores**: com "Nao" (`cargo.painel_exclusivo`) ele e so daquele setor, e nos
+outros fica travado ate o principal mudar (desmarcar, trocar ou liberar). So quem tem
+acesso total escolhe, e a API recusa igual (`conferirPainel`, em
+`server/routes/equipe.js`: 403 sem acesso total, 409 para o exclusivo de outro setor ou
+para deixar exclusivo um painel que outro setor ja tem). O Almoxarife so e painel de
+quem ve a aba dele, e cai junto se a aba for desmarcada. Quem esta num setor com painel
+ve **Meu painel** no menu da foto, logo acima de Configuracoes, e ele abre
+`/app/control`. Setor sem painel nao ve o botao.
+
+**O menu largo (o "Mais").** No computador, o alto da barra da esquerda tem a seta
+**Mais**: ela alarga a barra, com o nome de cada aba ao lado do icone, e a pagina se
+ajusta a largura nova — nada fica atras de veu. A barra de sempre continua igual com o
+menu encolhido (o **Menos** volta), e a escolha fica guardada no aparelho
+(`customers.menu-largo`). No menu largo, o **Almoxarife** ganha a setinha: o clique abre
+ao lado o cartao com as abas dele (`SubmenuArea`, no AppShell), cada uma pela permissao
+`almox_*`; o titulo do cartao leva ao inicio do Almoxarife.
+
+O **Almoxarife tem o mesmo Mais**, no alto da barra dele (`#almox-mais` em
+`public/almoxarife/almoxarife.html`; `montarMais` em `menu-main.js`). A escolha e a
+mesma do resto do sistema: o `sessao.js` liga a classe `menu-largo` no `<html>` antes
+da tela desenhar, e o CSS esta na cola de `scripts/estilo-almoxarife.mjs` (o menu
+lateral do celular do Almoxarife, que saiu do AppShell, mora em
+`scripts/almoxarife-menulado.css`).
+
+**O menu completo (o hamburguer).** No celular, o Menu da barra de baixo abre o
+sistema inteiro dividido em **Atmosfera** (as abas de sempre) e **Almoxarife** (as abas
+dele, cada uma pela permissao `almox_*`, com o link que abre a aba direto em
+`/core/app/control/...`). So aparece o que a permissao de visualizacao da pessoa abre
+(`MenuCompleto`, no AppShell). O **Solicitar** do Atmosfera (na barra e no menu
+completo, `almox_solicitacoes`) nao leva mais ao Almoxarife: abre o "Solicitar OS" num
+pop-up por cima da tela em que a pessoa esta (`ModalSolicitarOS` sem obra, em
+`/core/app/control/solicitar?embutido=1`), e la dentro ela escolhe o cliente e a obra.
+
+**A barra de cima nao anda com o Mais.** A saudacao e a Busca ficam paradas quando o
+menu largo abre: so a pagina embaixo delas vai para a direita (a margem negativa da
+`.topbar` devolve o que o padding da `.shell` empurrou).
+
+Arquivos: `src/pages/Encontros/`, `src/pages/Frotas/Atualizacoes.jsx` (com
+`atencao.js`) e `src/pages/Frotas/Localizacao.jsx`.
+
 ## Ponto (a folha de ponto)
 
-A aba **Ponto** (`/app/ponto`, no lugar onde estava Concluidas no menu) mostra a
+O **Ponto** (`/app/ponto`, aba do menu principal — ver a secao anterior) mostra a
 folha de ponto de cada um no desenho do **Demonstrativo de Espelho de Ponto** do
 sistema de ponto: a logo, o periodo, os dados da empresa e do funcionario
 (nome, matricula, PIS, CPF, admissao, departamento, cargo), a tabela dos dias
 (Data, Tipo Dia, Jornada Esperada, Marcacoes Originais, Jornada Realizada,
 Horas Realizadas, Horas Positivas, Atrasos e Faltas, Hora Noturna, Horas
 Compensadas Debito/Credito, Eventos) e o rodape com os totais e a assinatura.
-E de todo mundo (menos a TV); cada um ve a propria folha.
+E de quem tem `ver_ponto` (a atualizacao 55 deu a todo setor, menos a TV); cada um ve
+a propria folha.
 
 - **Periodo**: **Mensal** (setas, mes e ano; abre no mes anterior) ou **Datas
   especificas** (inicio e fim, ate 370 dias). Periodo sem marcacao oferece ir
@@ -2019,12 +2117,15 @@ db/
 | `/app/obras/:id`            | Tela da obra (5 etapas)  | protegido |
 | `/app/clientes`             | Clientes                 | protegido |
 | `/app/concluidas`           | Obras concluidas (botao em Obras; fora do menu) | protegido |
-| `/app/ponto`                | Ponto (a folha de ponto) | protegido, de todos |
+| `/app/ponto`                | Ponto (a folha de ponto) | `ver_ponto` |
+| `/app/encontros`            | Ponto de encontro das obras | `ver_encontros` |
+| `/app/administrativo/...`   | enderecos antigos da area Administrativo: redirecionam (ver "O menu, o Meu painel e o fim da area Administrativo") | — |
 | `/app/comercial`            | Comercial (funis de venda) | protegido |
 | `/app/avaliacoes`           | Avaliacoes da equipe     | protegido |
 | `/app/usuarios`             | Usuarios                 | protegido |
 | `/app/despesas`             | Despesas (enviar)        | protegido |
 | `/app/despesas/envios`      | Meus envios (mes / ano)  | protegido |
+| `/app/despesas/gerais`      | Envios gerais (o botao do Reembolso) | `revisar_despesa_geral` |
 | `/app/configuracoes`        | Configuracoes (esboco)   | protegido |
 
 Sem sessao, `/app` redireciona para `/login`. Ao entrar, o usuario volta para a
@@ -2045,9 +2146,13 @@ abertas**.
 | Aba | O que mostra |
 |---|---|
 | **Panorama** | avisos, aniversariantes do mes, agenda da empresa e destaques das avaliacoes |
-| **Grade** | so o que da para fazer AGORA, em ordem de urgencia |
+| **Grade** | so na TV: o que da para fazer AGORA, em ordem de urgencia |
 | **Quadro** | as mesmas tarefas em tres colunas: Nao iniciado / Em andamento / Concluida |
 | **Dashboard** | os numeros de tempo que a lista nao mostra |
+
+O botao **Grade** saiu da pagina inicial: ela so existe na TV, que continua abrindo nela.
+Fora da TV, o **Historico** (`ver_historico`) fica embaixo do Panorama, e um endereco
+ou escolha antiga da Grade abre o Panorama.
 
 ### Panorama (atualizacao 44)
 
@@ -2057,16 +2162,23 @@ cards (consulta de conteiner), e nao a da janela:
 
 | Card | De onde vem |
 |---|---|
-| **Avisos e Comunicados** | o **aviso geral** (atualizacoes 46 e 47, `aviso_geral` em `/api/avisos`): o "Enviar aviso" do botao **+**, para todos os setores ou um so, com titulo, texto opcional, data de expiracao opcional e "importante" (pingo laranja, sempre no topo). So aparece para o setor dele, inclusive para a diretoria. Vale ate o fim do dia da expiracao; sem ela, ate alguem encerrar. Terminado, fica no **Historico de avisos** (link no pe do card); quem tem `enviar_avisos` ve la os de todos os setores. O clique abre ele inteiro, e quem tem a permissao encerra e exclui por la. So o excluido (com duplo check) some do historico. Junto, por data, os avisos de obra do sininho (`minhasNotificacoes`: so os do seu setor e os sem setor); o clique abre a obra e nao marca nada como lido |
+| **Avisos e Comunicados** | o **aviso geral** (atualizacoes 46 e 47, `aviso_geral` em `/api/avisos`): o "Enviar aviso" do botao **+**, para todos os setores ou um so, com titulo, texto opcional, data de expiracao opcional e "importante" (pingo laranja, sempre no topo). So aparece para o setor dele, inclusive para a diretoria. Vale ate o fim do dia da expiracao; sem ela, ate alguem encerrar. Terminado, fica no **Historico de avisos** (link no pe do card); quem tem `publicar_avisos` ve la os de todos os setores. O clique abre ele inteiro, e quem tem a permissao encerra e exclui por la. So o excluido (com duplo check) some do historico. Junto, por data, os avisos de obra do sininho (`minhasNotificacoes`: so os do seu setor e os sem setor); o clique abre a obra e nao marca nada como lido |
 | **Aniversariantes do Mes** | o `aniversario` de cada pessoa da equipe: so o dia e o mes (`'MM-DD'`), que a API manda para todos. A data inteira continua so para quem edita usuario. Quem faz aniversario hoje ganha o anel e os confetes |
-| **Agenda da Empresa** | a tabela nova `agenda_evento` (titulo, dia, hora e local opcionais), em `/api/agenda` (`server/routes/agenda.js`). Todos veem os eventos de hoje em diante; quem tem `enviar_avisos` cria, edita e exclui pelo "Ver calendario" |
+| **Agenda da Empresa** | a tabela nova `agenda_evento` (titulo, dia, hora e local opcionais), em `/api/agenda` (`server/routes/agenda.js`). Todos veem os eventos de hoje em diante; quem tem `publicar_agenda` cria, edita e exclui pelo "Ver calendario" |
+
+Enviar, encerrar e excluir aviso geral e de quem tem `publicar_avisos`; mexer na agenda,
+de quem tem `publicar_agenda`. As duas sao da **pessoa**, e nao do setor (atualizacao 53,
+`usuario.permissoes_pessoais`): quem tem acesso total marca em Usuarios > editar, no
+bloco "Página inicial". O acesso total tambem passa por elas. Banco sem a 53: vale
+a `enviar_avisos` do setor, como antes. A `enviar_avisos` ficou so para o aviso de
+pendencia dentro da obra (o sininho).
 | **Destaques e Conquistas** | as avaliacoes: as obras com nota 4 ou mais (ate 5, a melhor primeiro) e um slide com as tres melhores medias da equipe. Carrossel com pontinhos, que anda sozinho e para com o mouse em cima |
 
-Embaixo dos quatro cards, no meio, fica o **globo dos clientes**
-(`src/pages/Home/GloboClientes.jsx`): um pingo azul por estado com cliente e o
-total de clientes embaixo. Ele morava no vazio da Grade ("Nada pendente por
-aqui", que agora mostra so o sol). Como anima sem parar e fica abaixo da
-dobra, so e desenhado quando esta perto da tela.
+O **globo dos clientes** saiu da pagina inicial: mora no fim da aba Clientes
+(`src/pages/Clientes/GloboClientes.jsx`), com um pingo azul por estado com cliente e o
+total de clientes embaixo. A terra e so de **pontinhos reforcados**, sem as letras do
+desenho original (`globe.letters: 0` e a prop `pontos` do `Globo`). Como anima sem parar
+e fica abaixo da dobra, so e desenhado quando esta perto da tela.
 
 Sem a atualizacao 44 no banco, a agenda so sai vazia (o `GET` devolve
 `semTabela: true`); o resto da pagina nao depende dela. Sem a 46, o card de
@@ -2074,7 +2186,7 @@ avisos mostra so os de obra. A TV continua abrindo na Grade e nao tem o
 Panorama.
 
 O botao flutuante do canto (AppShell) e sempre o **+** com menu, em todas as
-abas: "Chat da equipe", "Enviar aviso" e "Marcar evento" para quem tem `enviar_avisos` e o que a
+abas: "Chat da equipe", "Enviar aviso" (`publicar_avisos`), "Marcar evento" (`publicar_agenda`) e o que a
 tela acrescentar (a observacao do quadro, em Obras). Antes, sem opcao extra,
 ele era so o balao do chat. Dentro da obra continua o + proprio dela.
 
@@ -2588,7 +2700,9 @@ transforma obra padrao em emergencia (a regra dos 3 dias saiu; a atualizacao
 e definido DENTRO da obra, na **1a etapa**: o check do sistema **"Prazo da
 execucao"** (atualizacao 19) mora no card do Time Tecnico, logo depois do
 Planejamento de ensaios. O clique nele abre o "Periodo de execucao", e
-definir o prazo MARCA o check — ele nao se marca nem se desmarca na mao.
+definir o prazo MARCA o check. Marcado, o pop-up do periodo ganha o **Desmarcar o
+check**: a marca sai e os dias ficam guardados (salvar de novo marca outra vez) — so
+enquanto as etapas seguintes estao sem check marcado; a API recusa igual.
 Quem define e quem marca os checks desse card (o Tecnico) ou quem tem
 `definir_prazos`.
 
@@ -2621,6 +2735,43 @@ como antes.
 a pessoa **arrasta** os ensaios do catalogo para a caixa da obra (e de volta
 para tirar; dentro da caixa, arrastar muda a ordem). Fica em `obra_ensaio`.
 O check so fecha com ao menos um ensaio.
+
+**Tipo de ensaio (1a etapa, Comercial — atualizacao 54).** No card do Comercial, o
+check "Tipo de ensaio" abre os tipos de item (ambiente, equipamento, sistema, ponto de
+uso) e o Comercial marca um ou mais; salvar marca o check (`PUT
+/api/dados/obras/:id/tipo-ensaio`). No Planejamento de ensaios por item, o "Tipo do
+item" fica travado nesses tipos (os outros aparecem apagados) e, antes da escolha, nao
+se cadastra item novo; o item que ja existia fica com o tipo dele. A API recusa igual
+(409). Vale para as obras criadas depois da atualizacao 54: as anteriores nao tem o
+check e seguem livres.
+
+**Nao conforme pede justificativa.** Na execucao por item, marcar "Não conforme" abre
+o campo **Justificativa**, obrigatorio (fica na observacao da linha, e aparece na
+leitura); a API recusa o nao conforme sem ela.
+
+**Determinar Focal Point (2a etapa — atualizacao 55).** O check "Determinar Focal Point"
+dos cards do Almoxarife e do Time Tecnico vira um check do sistema (`focal_point`): ele
+abre a lista das pessoas do **setor dono do check** (o do proprio check, ou os do card)
+e quem marca escolhe uma delas — com busca quando passa de 8 (`ModalFocalPoint.jsx`).
+Escolhida a pessoa, o check fica marcado com o nome dela no card (`obra_check.escolhido_id`,
+em `PUT /api/dados/obras/:id/focal-point/:checkId`); da para trocar ou desmarcar. A API
+recusa pessoa de outro setor (400) e o marcar comum do check (409). A 55 converte os
+checks com o titulo "Determinar Focal Point" que ja existiam, e o check novo com esse
+nome ja nasce assim. Diferente dos outros checks do sistema, ele pode estar em **mais de
+um card** (a 55 tira o `focal_point` dos indices `etapa_check_tipo_unico` e
+`etapa_check_tipo_da_obra`) e **pode ser excluido** do roteiro; o nome continua travado e
+ele nao vira pergunta. Mover o check para o card de outro setor muda de quem a lista sai.
+
+**Solicitar OS sem sair da obra.** O check "Solicitar OS" (2a etapa) abre a Solicitacao
+de OS do Almoxarife num pop-up por cima da obra (`ModalSolicitarOS.jsx`): a mesma tela,
+num iframe em `/core/app/control/solicitar?obra=ID&embutido=1`, ja com o cliente, a obra
+e as datas travados. No modo **embutido** (a classe `embutido` que o `sessao.js` liga) o
+Almoxarife esconde a logo, o menu, o avatar, a barra de cima e os botoes do Painel Geral.
+Enviada a OS, a tela avisa a obra por `postMessage` (`lwn-os-solicitada`), o pop-up diz
+que foi e a obra recarrega. O check continua sendo marcado pela aprovacao da OS. Na
+Vercel, so o endereco com `?embutido` pode abrir dentro de outra pagina, e so do proprio
+site (`frame-ancestors 'self'` e `X-Frame-Options: SAMEORIGIN`, em `vercel.json`); o
+resto do Almoxarife continua com `DENY`.
 
 **Execucao dos ensaios (3a etapa).** O check abre so os ensaios planejados.
 Dentro do periodo de execucao, o responsavel escolhe um **dia** e diz quanto
@@ -2937,10 +3088,14 @@ passam a ser obrigatorios. Preenchidos, os campos continuam sendo validados: o
 que a validacao deve pegar e o dedo trocado, nao a ausencia.
 
 Colaborador novo entra com a **senha padrao 123456** e com `senha_temporaria`
-ligado. A coluna continua sendo gravada, mas **nenhuma tela cobra mais a
-troca**: a faixa amarela que aparecia no alto de todas as paginas e o alerta que
-ficava dentro de Configuracoes > Senha foram removidos. Trocar a senha continua
-sendo em Configuracoes > Senha, por quem quiser.
+ligado. Enquanto ela estiver ligada, **a cada entrada no site** (sessao do navegador)
+aparece o aviso "Troque a sua senha", com **Trocar** (leva a Configuracoes > Senha) e
+**Não agora** (`src/components/AvisoEntrada/AvisoEntrada.jsx`). Nao ha como dispensar de
+vez. Depois dele, para quem esta com o **cadastro incompleto** (sem CPF), vem "Complete
+o seu cadastro", com **Completar**, **Não agora** e a caixa **"Não me mostrar essa
+mensagem novamente"**, que grava `usuario.aviso_cadastro_dispensado`
+(`POST /api/auth/aviso-cadastro`, atualizacao 53). A TV nao ve nenhum, e Configuracoes
+tambem nao.
 
 Excluir **desativa** o acesso (`ativo = false`) em vez de apagar, para o
 historico das obras nao perder quem marcou o que.
@@ -3053,14 +3208,14 @@ As duas de baixo dependem de `ver_despesas`. Quem so visualiza ve a tela com
 
 A tela abre com tres botoes — **Enviar despesa**, **Enviar refeição**,
 **Enviar bônus** —, lado a lado no computador e um embaixo do outro no celular
-(com a descricao), e **Meus envios** / **Envios gerais** embaixo. Os
+(com a descricao), e **Meus envios** embaixo. Os
 formularios abrem em pop-up, por cima dela.
 
 | Envio    | Campos                                                                 |
 | -------- | ---------------------------------------------------------------------- |
 | Despesa  | data, cliente, obra (opcional), tipo (Vale Transporte, Transporte Intermunicipal, Combustível, Outros — este com justificativa opcional), valor, **comprovante obrigatorio**, observacao |
 | Refeição | data, cliente, obra (opcional), tipo (Almoço, Janta), valor **fixo** (R$ 41,50), observacao |
-| Bônus    | data, tipo (Bônus viagem, Bônus apartamento), cliente, obra (opcional), valor, observacao |
+| Bônus    | data, cliente, obra (opcional), valor (Bônus apartamento, **fixo**), observacao. O Bônus viagem nao existe mais (`aposentado`: os envios antigos continuam com o nome e na planilha). O cliente com "O colaborador tem direito a bônus apartamento?" = **não** sai da lista e a API recusa (atualizacao 53) |
 
 **Os tipos e os valores fixos moram num arquivo so**, `src/domain/despesas.js`,
 importado pela tela e pela API — o mesmo esquema de `permissoes.js`. Mudar o
@@ -3099,12 +3254,21 @@ escreve o que recebe. O mes e o ano ficam no endereco
 Os dois tem o filtro de tipo **Todos / Despesa / Refeição / Bônus**, que se soma
 ao periodo — quem filtra e o banco.
 
-### Envios gerais
+### Envios gerais (o botao do Reembolso)
 
-Quem tem `revisar_despesa_geral` ganha o botao **Envios gerais** ao lado de Meus
-envios. A lista traz so quem ja enviou alguma coisa (foto, nome, setor, cargo,
-e-mail, total), mais um cartao "Todos os usuarios". Clicar numa pessoa abre os
+O botao **Envios gerais** do Reembolso (`/app/despesas/gerais`) abre os envios da equipe
+para quem tem `revisar_despesa_geral`. Ele morou um tempo na area Administrativo, que
+saiu na atualizacao 55 (o endereco `/app/administrativo/reembolso` redireciona). A lista
+traz so quem ja enviou alguma coisa (foto, nome, setor, cargo, e-mail, total), mais um
+cartao "Todos os usuarios". Clicar numa pessoa abre os
 envios dela com os mesmos filtros de Meus envios.
+
+Em cima da lista, o **filtro**: o periodo (todo, um dos ultimos 12 meses ou um ano —
+cada categoria no periodo dela, como em Meus envios) e o tipo **Todos / Despesa /
+Refeição / Bônus**. O tipo troca na hora o total, a quantidade e o ultimo envio de cada
+pessoa (a API manda os tres em `porCategoria`, em `GET /api/despesas/pessoas?mes=` ou
+`?ano=`); quem nao tem envio daquele tipo sai da lista. O filtro fica no endereco, e o
+clique numa pessoa abre os envios dela no mesmo recorte.
 
 A trava e **na API**, a cada chamada: sem a permissao, `/pessoas`,
 `?usuarios=todos` ou o id de outra pessoa voltam **403**, e o comprovante de

@@ -395,6 +395,31 @@ export const CHECK_GASES = 'material_gases'
 /* o "Prazo da execucao" da 1a etapa (atualizacao 19): definir o prazo
    da execucao marca ele, e a 3a etapa so mostra o prazo, travado */
 export const CHECK_PRAZO_EXECUCAO = 'prazo_execucao'
+/* o "Tipo de ensaio" do Comercial (atualizacao 54): os tipos de item que o
+   Planejamento de ensaios pode usar */
+export const CHECK_TIPO_ENSAIO = 'tipo_ensaio'
+/* o "Determinar Focal Point" da 2a etapa (atualizacao 55): o setor escolhe
+   uma pessoa dele, e escolher marca o check */
+export const CHECK_FOCAL_POINT = 'focal_point'
+
+/* onde o Ponto de encontro acontece (atualizacao 56): no local da obra (o
+   endereco do cliente), na empresa ou num endereco escrito */
+export const LOCAIS_DO_ENCONTRO = [
+  { id: 'obra', rotulo: 'No local da obra' },
+  { id: 'empresa', rotulo: 'Na empresa (LWN)' },
+  { id: 'outro', rotulo: 'Outro lugar' },
+]
+export const LOCAL_DO_ENCONTRO = Object.fromEntries(LOCAIS_DO_ENCONTRO.map((l) => [l.id, l.rotulo]))
+
+/**
+ * Os tipos de item que o Planejamento desta obra pode usar: null quando o
+ * roteiro dela nao tem o check "Tipo de ensaio" (obra antiga: livre, como
+ * antes); senao os que o Comercial escolheu ([] = ainda nao escolheu).
+ */
+export function tiposDoComercial(obra, roteiro) {
+  const tem = (roteiro ?? []).some((e) => (e.cards ?? []).some((c) => (c.checks ?? []).some((k) => k.tipo === CHECK_TIPO_ENSAIO)))
+  return tem ? (obra?.tiposEnsaio ?? []) : null
+}
 
 /**
  * Onde ESTA obra define o prazo da execucao: { etapa, card, check } do
@@ -411,6 +436,27 @@ export function checkDoPrazoDaExecucao(roteiro) {
   }
   return null
 }
+
+/**
+ * A primeira etapa DEPOIS da do check que ja tem algum check marcado nesta
+ * obra (ou null). O Prazo da execucao e o Ponto de encontro so se
+ * desmarcam enquanto as etapas seguintes estao sem check — a API recusa
+ * igual (etapaSeguinteMarcada, em server/routes/dados.js).
+ */
+export function etapaSeguinteComCheck(roteiro, obra, checkId) {
+  const marcados = obra?.checks ?? {}
+  const daqui = (roteiro ?? []).find((e) => (e.cards ?? []).some((c) => (c.checks ?? []).some((k) => String(k.id) === String(checkId))))
+  if (!daqui) return null
+  return (
+    (roteiro ?? []).find(
+      (e) => e.numero > daqui.numero && (e.cards ?? []).some((c) => (c.checks ?? []).some((k) => marcados[k.id])),
+    ) ?? null
+  )
+}
+
+/** O recado de quando o check nao desmarca por causa da etapa seguinte. */
+export const recadoEtapaSeguinte = (etapa) =>
+  `A ${etapa.numero}ª etapa já tem check marcado. Para desmarcar este, desmarque antes os checks das etapas seguintes.`
 
 /* ------------------------------------------------------------
    A "Proposta tecnica" (1a etapa)
@@ -460,6 +506,20 @@ export const nomeDaProposta = (anexo) => String(anexo?.nome ?? '').slice(PREFIXO
 
 export const CHECK_RESERVA = 'reserva_carro'
 export const CHECK_RETIRADA = 'retirada_carro'
+
+/**
+ * QUANDO o carro reservado sai (atualizacao 54): a partir do primeiro dia
+ * da execucao, ou da VESPERA quando quem tem `conceder_carro` liberou. A
+ * mesma conta de server/routes/frotas.js (janelaDaRetirada). null quando a
+ * obra nao tem periodo — ai nao ha trava.
+ */
+export function janelaDaRetirada(obra) {
+  const dias = diasDaExecucao(obra)
+  if (!dias.length) return null
+  const vespera = somarDias(dias[0], -1)
+  const liberada = Boolean(obra?.reserva?.liberada)
+  return { primeiro: dias[0], vespera, aPartirDe: liberada ? vespera : dias[0], liberada }
+}
 
 /* ------------------------------------------------------------
    O "Solicitar OS" (atualizacoes 38 e 40; o tipo continua enviar_os)
@@ -1129,6 +1189,8 @@ export function oQueOCheckPede(etapa, check, obra) {
   if (check.tipo === CHECK_RESERVA) return obra.reserva ? null : 'a reserva do carro'
   if (check.tipo === CHECK_RETIRADA) return obra.reserva?.retirada ? null : 'o registro da retirada do carro'
   if (check.tipo === CHECK_PRAZO_EXECUCAO) return obra.execucaoPrazo ? null : 'o prazo da execução'
+  if (check.tipo === CHECK_TIPO_ENSAIO) return (obra.tiposEnsaio ?? []).length > 0 ? null : 'o tipo de ensaio'
+  if (check.tipo === CHECK_FOCAL_POINT) return obra.checks?.[check.id]?.escolhidoId ? null : 'o focal point'
   if (check.tipo === CHECK_PLANEJAMENTO) {
     return (obra.ensaios ?? []).length > 0 ? null : 'os ensaios do Planejamento de ensaios'
   }
@@ -1150,7 +1212,15 @@ export function oQueOCheckPede(etapa, check, obra) {
  */
 export function checkAbrePopup(etapa, check) {
   return (
-    [CHECK_RESERVA, CHECK_RETIRADA, CHECK_PRAZO_EXECUCAO, CHECK_PLANEJAMENTO, CHECK_EXECUCAO].includes(check?.tipo) ||
+    [
+      CHECK_RESERVA,
+      CHECK_RETIRADA,
+      CHECK_PRAZO_EXECUCAO,
+      CHECK_PLANEJAMENTO,
+      CHECK_EXECUCAO,
+      CHECK_TIPO_ENSAIO,
+      CHECK_FOCAL_POINT,
+    ].includes(check?.tipo) ||
     ehPropostaTecnica(etapa, check) ||
     Boolean(check?.horario) ||
     Boolean(check?.simNao)

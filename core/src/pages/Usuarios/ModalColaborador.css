@@ -129,3 +129,41 @@
   font-size: 0.8rem;
   line-height: 1.45;
 }
+
+/* as permissoes da PESSOA (atualizacao 53): quadro de avisos e agenda */
+.formcolab__pessoais {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: 14px;
+  min-width: 0;
+}
+
+.formcolab__pessoais legend {
+  padding: 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.formcolab__pessoal {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.86rem;
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.formcolab__pessoal input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}

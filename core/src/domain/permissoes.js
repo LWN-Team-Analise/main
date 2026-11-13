@@ -73,6 +73,11 @@ export const VISUALIZACAO = [
   { chave: 'ver_inicio', rotulo: 'Página inicial', rota: '/app' },
   { chave: 'ver_obras', rotulo: 'Obras', rota: '/app/obras' },
   { chave: 'ver_clientes', rotulo: 'Clientes', rota: '/app/clientes' },
+  /* o Ponto (a folha de ponto: cada um ve e assina a propria) e os Pontos
+     de encontro das obras, no menu principal (atualizacao 55: a area
+     Administrativo saiu; ver_ponto foi para todos os setores) */
+  { chave: 'ver_ponto', rotulo: 'Ponto', rota: '/app/ponto' },
+  { chave: 'ver_encontros', rotulo: 'Ponto de encontro', rota: '/app/encontros' },
   { chave: 'ver_concluidas', rotulo: 'Concluídas', rota: '/app/concluidas' },
   { chave: 'ver_despesas', rotulo: 'Reembolso', rota: '/app/despesas' },
   { chave: 'ver_frotas', rotulo: 'Frotas', rota: '/app/frotas' },
@@ -115,12 +120,13 @@ export const ALTERACAO = [
   { chave: 'editar_cpf', rotulo: 'Incluir / editar / excluir CPF', dependeDe: 'ver_usuarios' },
   /* o "!" nos cards de Usuarios: quem ainda nao trocou a senha padrao */
   { chave: 'ver_senha_padrao', rotulo: 'Ver quem não alterou a senha padrão', dependeDe: 'ver_usuarios' },
-  /* a aba Ponto e de todo mundo: cada um ve e assina a propria folha.
-     Com esta, aparece o seletor de pessoa (ver a folha de qualquer um,
-     com CPF e PIS, como no espelho), o Importar do Calculo Diario e o
-     Excel da empresa inteira. Assinar continua sendo so a propria folha
-     (atualizacao 51; a API confere em server/routes/ponto.js) */
-  { chave: 'gerenciar_ponto', rotulo: 'Ver a folha de ponto de todos e importar', dependeDe: 'ver_usuarios' },
+  /* o Ponto (`ver_ponto`): cada um ve e assina a propria folha. Com esta,
+     aparece o seletor de pessoa (ver a folha de qualquer um, com CPF e PIS,
+     como no espelho), o Importar do Calculo Diario e o Excel da empresa
+     inteira. Assinar continua sendo so a propria folha (atualizacao 51; a
+     API confere em server/routes/ponto.js). Mora embaixo do Ponto desde a
+     atualizacao 55 */
+  { chave: 'gerenciar_ponto', rotulo: 'Ver a folha de ponto de todos e importar', dependeDe: 'ver_ponto' },
   { chave: 'editar_avaliacoes', rotulo: 'Adicionar / editar avaliações', dependeDe: 'ver_avaliacoes' },
   { chave: 'editar_clientes', rotulo: 'Adicionar / editar clientes', dependeDe: 'ver_clientes' },
   /* a planilha do Excel com o cadastro inteiro (Clientes > Exportar) */
@@ -158,10 +164,12 @@ export const ALTERACAO = [
      mao (atualizacao 30). Incluir qualquer um pode — a pessoa aceita
      ou recusa; TIRAR da obra depois e so com esta */
   { chave: 'excluir_membro_parcial', rotulo: 'Excluir membro parcial da obra', dependeDe: 'ver_obras' },
-  { chave: 'enviar_avisos', rotulo: 'Enviar avisos', dependeDe: 'ver_avisos' },
+  /* o aviso de pendencia dentro da obra (o sininho dos setores). O quadro
+     de avisos e a agenda da pagina inicial sao da PESSOA (PESSOAIS) */
+  { chave: 'enviar_avisos', rotulo: 'Enviar avisos de pendência nas obras', dependeDe: 'ver_avisos' },
   /* Despesas: ver a aba (e os proprios envios) e `ver_despesas`;
      ENVIAR despesa, refeicao ou bonus e `alterar_despesas`; abrir os
-     envios dos OUTROS (Despesas > Envios gerais) e `revisar_despesa_geral`;
+     envios dos OUTROS (Administrativo > Reembolso) e `revisar_despesa_geral`;
      EXCLUIR um lancamento e a ultima — os proprios, ou os de qualquer um
      quando o setor tambem revisa. */
   { chave: 'alterar_despesas', rotulo: 'Alterar despesas', dependeDe: 'ver_despesas' },
@@ -178,6 +186,10 @@ export const ALTERACAO = [
   { chave: 'editar_veiculos', rotulo: 'Adicionar / editar veículos', dependeDe: 'ver_frotas' },
   /* apagar uma saida, troca ou devolucao registrada (Saidas e devolucoes) */
   { chave: 'excluir_registro_frota', rotulo: 'Excluir saída e devolução', dependeDe: 'ver_frotas' },
+  /* o carro RESERVADO para a obra so sai a partir do primeiro dia da
+     execucao; quem tem esta concede o carro antes, liberando a retirada na
+     vespera (atualizacao 54, o check "Reserva de carro") */
+  { chave: 'conceder_carro', rotulo: 'Conceder o carro: liberar a retirada na véspera da obra', dependeDe: 'ver_frotas' },
   /* quem RECEBE no Teams o aviso da devolucao com o tanque abaixo da
      metade (atualizacao 39). E aviso, e nao acesso: vale so para o setor
      que tem a chave marcada — o acesso total nao entra sozinho */
@@ -198,6 +210,9 @@ export const ALTERACAO = [
   /* Turnos (atualizacao 31): ver a aba e `ver_turnos`; criar e mudar
      turnos, anotacoes do dia e cronogramas e `editar_turnos` */
   { chave: 'editar_turnos', rotulo: 'Adicionar / editar turnos e cronogramas', dependeDe: 'ver_turnos' },
+  /* arrastar as pessoas para a ordem de cada cronograma (a alca de seis
+     pontos ao lado da foto). Permissao propria (atualizacao 54) */
+  { chave: 'ordenar_turnos', rotulo: 'Arrastar e ordenar as pessoas nos turnos', dependeDe: 'ver_turnos' },
 ]
 
 /**
@@ -213,6 +228,34 @@ export const GRUPOS = [
   })),
   { visualizacao: null, rotulo: 'Outras', alteracoes: ALTERACAO.filter((a) => !a.dependeDe) },
 ].filter((g) => g.visualizacao || g.alteracoes.length > 0)
+
+/**
+ * As ABAS de dentro do Almoxarife, para a tela do setor: cada uma com a
+ * permissao que abre a aba (`chave`) e, embaixo dela, as que mexem ali
+ * dentro (`alteracoes`). A ordem e a do menu do Almoxarife.
+ *
+ * E so a arrumacao da tela: no banco e no Almoxarife todas continuam
+ * `almox_<modulo>`, dependendo so de "Almoxarife" — nenhuma trava a outra.
+ * O grupo sem `chave` ("Geral") junta o que nao e de aba nenhuma.
+ */
+export const ALMOX_SUBABAS = [
+  { chave: 'almox_dashboard', rotulo: 'Painel', alteracoes: ['almox_relatorios'] },
+  { chave: 'almox_conferencia', rotulo: 'Retirada', alteracoes: ['almox_separar_tags'] },
+  { chave: 'almox_devolutiva', rotulo: 'Devolutiva', alteracoes: ['almox_conferir_devolucao'] },
+  { chave: 'almox_concluidos', rotulo: 'OS Concluídas', alteracoes: [] },
+  { chave: 'almox_certificados', rotulo: 'Certificados', alteracoes: [] },
+  { chave: 'almox_baias', rotulo: 'Localização', alteracoes: [] },
+  { chave: 'almox_instrumentos', rotulo: 'Inventário', alteracoes: [] },
+  { chave: 'almox_manutencao', rotulo: 'Manutenção', alteracoes: ['almox_manutencao_somente_leitura'] },
+  { chave: 'almox_remanejamento', rotulo: 'Remanejamento', alteracoes: ['almox_aprovar_remanejamento'] },
+  { chave: 'almox_calibracao', rotulo: 'Calibração', alteracoes: [] },
+  {
+    chave: 'almox_solicitacoes',
+    rotulo: 'Solicitação de OS',
+    alteracoes: ['almox_gerenciar_os', 'almox_aprovar_todas_os', 'almox_prorrogar_os', 'almox_aceitar_prorrogacao'],
+  },
+  { chave: null, rotulo: 'Geral', alteracoes: ['almox_responsavel_obra'] },
+]
 
 export const TODAS = [...VISUALIZACAO, ...ALTERACAO]
 
@@ -315,6 +358,56 @@ export function dependentes(chaveVisualizacao) {
 }
 
 /* ------------------------------------------------------------
+   MEU PAINEL (atualizacao 53)
+
+   Cada setor pode ter UM painel: a area com menu proprio que e dele (hoje,
+   o Almoxarife). Quem esta no setor ve "Meu painel" no menu da foto, logo
+   acima de Configuracoes, e ele abre o inicio desse painel. Quem escolhe e
+   quem tem acesso total, na tela do setor (cargo.painel), e e opcional:
+   setor sem painel nao ve o botao.
+
+   `exclusivo` (cargo.painel_exclusivo): o painel so pode ser daquele
+   setor. Nos outros ele aparece travado ate o setor principal mudar.
+
+   O painel Administrativo saiu com a area (atualizacao 55): o Ponto, os
+   Ponto de encontro e os Envios gerais voltaram ao menu e ao Reembolso.
+   O Almoxarife continua com as permissoes dele (almox_*) e so pode ser o
+   painel de um setor que ve a aba (`exige`).
+   ------------------------------------------------------------ */
+export const PAINEIS = [
+  { chave: 'almoxarife', rotulo: 'Almoxarife', rota: '/app/control', exige: 'ver_almoxarife' },
+]
+
+export const CHAVES_PAINEL = PAINEIS.map((p) => p.chave)
+
+/** O painel pela chave ('almoxarife'), ou null. */
+export const painelPorChave = (chave) => PAINEIS.find((p) => p.chave === chave) ?? null
+
+/* ------------------------------------------------------------
+   As permissoes da PESSOA (atualizacao 53)
+
+   Quase tudo e do setor. Estas sao de cada pessoa, marcadas no cadastro
+   dela (Usuarios > editar) e so por quem tem acesso total: o quadro de
+   avisos e a agenda da pagina inicial falam com a empresa inteira, e a
+   lista de quem publica e curta e com nome. O acesso total tambem passa
+   por elas: sem isso a diretoria ficava sem o "Enviar aviso" e o "Marcar
+   evento" do botao + enquanto ninguem estava marcado.
+
+   Banco sem a atualizacao 53 (`permissoesPessoais` null): vale a regra de
+   antes, a `enviar_avisos` do setor.
+   ------------------------------------------------------------ */
+export const PESSOAIS = [
+  { chave: 'publicar_avisos', rotulo: 'Colocar informações no quadro de avisos' },
+  { chave: 'publicar_agenda', rotulo: 'Colocar informações na agenda da empresa' },
+]
+
+export const CHAVES_PESSOAIS = PESSOAIS.map((p) => p.chave)
+
+/** So as chaves pessoais que existem, na ordem. */
+export const normalizarPessoais = (lista) =>
+  CHAVES_PESSOAIS.filter((c) => (Array.isArray(lista) ? lista : []).includes(c))
+
+/* ------------------------------------------------------------
    Leitura no resto do sistema
    ------------------------------------------------------------ */
 
@@ -324,9 +417,21 @@ export function dependentes(chaveVisualizacao) {
  * Setor com acesso total passa sempre — e a diretoria, e ela nao
  * fica travada por lista. Fora isso, vale o que esta marcado no
  * setor. Sem setor nenhum, nao pode nada.
+ *
+ * Duas excecoes: as chaves da PESSOA (PESSOAIS), que valem marcadas nela
+ * (ou com o acesso total), e `painel:<chave>` ('painel:almoxarife'), que e
+ * o painel do setor (o acesso total abre todos).
  */
 export function podeFazer(usuario, chave) {
   if (!usuario) return false
+  if (CHAVES_PESSOAIS.includes(chave)) {
+    if (usuario.acessoTotal) return true
+    if (!Array.isArray(usuario.permissoesPessoais)) return podeFazer(usuario, 'enviar_avisos')
+    return usuario.permissoesPessoais.includes(chave)
+  }
+  if (String(chave).startsWith('painel:')) {
+    return Boolean(usuario.acessoTotal) || (Boolean(usuario.painel) && usuario.painel === chave.slice(7))
+  }
   if (usuario.acessoTotal) return true
   return (usuario.cargoPermissoes ?? usuario.permissoes ?? []).includes(chave)
 }

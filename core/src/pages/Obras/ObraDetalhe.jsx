@@ -20,6 +20,9 @@ import {
   CHECK_PRAZO_EXECUCAO,
   CHECK_RESERVA,
   CHECK_RETIRADA,
+  CHECK_TIPO_ENSAIO,
+  CHECK_FOCAL_POINT,
+  CHECK_ENVIAR_OS,
   checkAbrePopup,
   checkDoPrazoDaExecucao,
   corDoSetorDoCard,
@@ -30,6 +33,7 @@ import {
   ehMembroDaObra,
   ehPropostaTecnica,
   estadoDaEtapaPara,
+  janelaDaRetirada,
   nomeDoCard,
   oQueOCheckPede,
   podeEditarCheck,
@@ -38,6 +42,7 @@ import {
   PREFIXO_PROPOSTA,
   resumoDosDias,
   rotuloPrioridadeObra,
+  tiposDoComercial,
   tituloDaObra,
   tomPrioridadeObra,
 } from '@/domain/obras'
@@ -49,6 +54,9 @@ import ModalCheck from './ModalCheck'
 import ModalResposta from './ModalResposta'
 import ModalProposta from './ModalProposta'
 import ModalReserva from './ModalReserva'
+import ModalTipoEnsaio from './ModalTipoEnsaio'
+import ModalFocalPoint from './ModalFocalPoint'
+import ModalSolicitarOS from './ModalSolicitarOS'
 import ModalRegistro from '@/pages/Frotas/ModalRegistro'
 import * as frotasApi from '@/services/frotasService'
 import { lerArquivo, salvarArquivo } from './arquivos'
@@ -166,6 +174,12 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   const [prazoAlvo, setPrazoAlvo] = useState(null)
   /* os dois checks dos ensaios abrem pop-up proprio: {card, check} */
   const [planejando, setPlanejando] = useState(null)
+  /* o "Tipo de ensaio" do Comercial (atualizacao 54): { card, check } */
+  const [tipoEnsaio, setTipoEnsaio] = useState(null)
+  /* o "Determinar Focal Point" (atualizacao 55): { card, check } */
+  const [focal, setFocal] = useState(null)
+  /* o "Solicitar OS" aberto aqui (a tela do Almoxarife num pop-up) */
+  const [solicitandoOS, setSolicitandoOS] = useState(false)
   const [executando, setExecutando] = useState(null)
   /* o periodo de execucao (entrada em campo -> prazo final) */
   const [periodo, setPeriodo] = useState(false)
@@ -288,6 +302,17 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
       setSemFrota('Registrar a retirada do carro pede as permissões "Frotas" e "Registrar saída e devolução de veículo".')
       return
     }
+    /* o carro reservado so sai a partir do primeiro dia da execucao, ou da
+       vespera liberada por quem concede o carro (atualizacao 54) */
+    const janela = obra.reserva?.veiculoId ? janelaDaRetirada(obra) : null
+    if (janela && hojeISO() < janela.aPartirDe) {
+      setSemFrota(
+        janela.liberada
+          ? `A retirada deste carro foi liberada a partir de ${dataBR(janela.aPartirDe)}, a véspera da obra.`
+          : `O carro desta obra só sai a partir de ${dataBR(janela.primeiro)}, o primeiro dia da execução. Para retirar na véspera, peça a quem concede o carro para liberar, no check "Reserva de carro".`,
+      )
+      return
+    }
     try {
       const [veiculos, rodizio] = await Promise.all([
         frotasApi.carregarVeiculos(),
@@ -303,7 +328,9 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
     /* os checks da O.S. se preenchem no LWN Control */
     if (ehCheckDaOS(check)) {
       const destino = destinoDoCheckNoControl(user, check, obra)
-      if (destino) window.location.assign(destino)
+      /* o "Solicitar OS" abre o pedido aqui, sem sair da obra */
+      if (destino && check.tipo === CHECK_ENVIAR_OS) setSolicitandoOS(true)
+      else if (destino) window.location.assign(destino)
       return
     }
     if (check.tipo === CHECK_RESERVA) {
@@ -327,6 +354,14 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
     }
     if (check.tipo === CHECK_PLANEJAMENTO) {
       setPlanejando({ card, check })
+      return
+    }
+    if (check.tipo === CHECK_TIPO_ENSAIO) {
+      setTipoEnsaio({ card, check })
+      return
+    }
+    if (check.tipo === CHECK_FOCAL_POINT) {
+      setFocal({ card, check })
       return
     }
     if (check.tipo === CHECK_EXECUCAO) {
@@ -1040,6 +1075,7 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                         cargoPorChave={cargoPorChave}
                         pessoaPorId={pessoaPorId}
                         aoMarcar={(check) => clicarCheck(etapa, card, check)}
+                        aoSolicitarOS={() => setSolicitandoOS(true)}
                         execucao={execucaoDaObra(obra)}
                         aoEditarCard={() => setEditandoCard({ etapa, card })}
                         aoNovoCheck={() => setEditandoCheck({ card })}
@@ -1322,6 +1358,40 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
         marcado={Boolean(planejando && obra.checks[planejando.check.id])}
         aoDesmarcar={() => alternarCheck(obra.id, planejando.check.id)}
         aoFechar={() => setPlanejando(null)}
+        /* o "Tipo do item" travado nos tipos que o Comercial escolheu */
+        tiposDoComercial={tiposDoComercial(obra, roteiro)}
+      />
+
+      <ModalTipoEnsaio
+        aberto={Boolean(tipoEnsaio)}
+        obra={obra}
+        check={tipoEnsaio?.check}
+        nomeCard={tipoEnsaio?.card ? nomeDoCard(tipoEnsaio.card, nomeDoCargo) : ''}
+        podeEditar={
+          !soLeitura && Boolean(tipoEnsaio) && podeEditarCheck(user, tipoEnsaio.check, tipoEnsaio.card, obra)
+        }
+        marcado={Boolean(tipoEnsaio && obra.checks[tipoEnsaio.check.id])}
+        aoDesmarcar={() => alternarCheck(obra.id, tipoEnsaio.check.id)}
+        aoFechar={() => setTipoEnsaio(null)}
+      />
+
+      <ModalSolicitarOS
+        aberto={solicitandoOS}
+        obraId={obra.id}
+        aoEnviada={() => recarregar()}
+        aoFechar={() => setSolicitandoOS(false)}
+      />
+
+      <ModalFocalPoint
+        aberto={Boolean(focal)}
+        obra={obra}
+        card={focal?.card}
+        check={focal?.check}
+        nomeCard={focal?.card ? nomeDoCard(focal.card, nomeDoCargo) : ''}
+        podeEditar={!soLeitura && Boolean(focal) && podeEditarCheck(user, focal.check, focal.card, obra)}
+        marcado={Boolean(focal && obra.checks[focal.check.id])}
+        aoDesmarcar={() => alternarCheck(obra.id, focal.check.id)}
+        aoFechar={() => setFocal(null)}
       />
 
       <ModalExecucao
@@ -1340,7 +1410,15 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
         aoFechar={() => setExecutando(null)}
       />
 
-      <ModalPeriodo aberto={periodo} obra={obra} aoFechar={() => setPeriodo(false)} />
+      <ModalPeriodo
+        aberto={periodo}
+        obra={obra}
+        checkDoPrazo={prazoNaPrimeira?.check ?? null}
+        podeDesmarcar={
+          !soLeitura && Boolean(prazoNaPrimeira) && podeEditarCheck(user, prazoNaPrimeira.check, prazoNaPrimeira.card, obra)
+        }
+        aoFechar={() => setPeriodo(false)}
+      />
 
       <Modal
         aberto={Boolean(avisoRoteiro)}
@@ -1540,6 +1618,7 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
           !soLeitura &&
           podeReservarCarro(user, equipe.find((p) => p.souEu)?.cargoTitulo ?? user?.cargoTitulo)
         }
+        podeConceder={!soLeitura && pode('conceder_carro')}
         aoMudou={recarregar}
         aoFechar={() => setReservando(null)}
       />

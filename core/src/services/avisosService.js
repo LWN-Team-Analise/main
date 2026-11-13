@@ -4,7 +4,7 @@
  * Comunicados" do Panorama e depois fica no historico de avisos.
  *
  * Quem decide se pode enviar, encerrar ou excluir e a API: sem
- * `enviar_avisos`, volta erro e a tela mostra o recado.
+ * `publicar_avisos`, volta erro e a tela mostra o recado.
  */
 
 import { del, get, post } from './api'

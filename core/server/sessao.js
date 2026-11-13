@@ -9,7 +9,7 @@ import { logger } from './logger.js'
 /* a lista de permissoes e a MESMA da tela: um arquivo so, sem React
    dentro, importado pelos dois lados. Assim nao existe a chance de o
    servidor aceitar uma chave que a tela nao conhece (ou o contrario). */
-import { normalizar } from '../src/domain/permissoes.js'
+import { normalizar, normalizarPessoais } from '../src/domain/permissoes.js'
 
 export const SEGREDO = process.env.JWT_SECRET
 if (!SEGREDO) {
@@ -257,6 +257,38 @@ export function exige(chave) {
       return next()
     } catch (erro) {
       return tratar(erro, res, 'sessao/permissao')
+    }
+  }
+}
+
+/**
+ * As permissoes da PESSOA (atualizacao 53): colocar informacoes no quadro
+ * de avisos e na agenda da pagina inicial. Nao sao do setor: valem para
+ * quem tem a marca no cadastro e para o acesso total (a diretoria nao
+ * fica sem o "+"; ver PESSOAIS em src/domain/permissoes.js).
+ * Banco sem a coluna: vale a `enviar_avisos` do setor, como antes.
+ */
+export async function podePessoal(usuarioId, chave) {
+  if ((await meuCargo(usuarioId))?.acessoTotal) return true
+  try {
+    const { rows } = await query('SELECT permissoes_pessoais FROM usuario WHERE id = $1', [usuarioId])
+    return normalizarPessoais(rows[0]?.permissoes_pessoais).includes(chave)
+  } catch (erro) {
+    if (erro.code !== '42703') throw erro
+    return cargoPode(await meuCargo(usuarioId), 'enviar_avisos')
+  }
+}
+
+/** A trava de rota das permissoes da pessoa, como `exige` e para as do setor. */
+export function exigePessoal(chave) {
+  return async function checar(req, res, next) {
+    try {
+      if (!(await podePessoal(req.dono.sub, chave))) {
+        return res.status(403).json({ erro: 'Você não tem permissão para esta ação.' })
+      }
+      return next()
+    } catch (erro) {
+      return tratar(erro, res, 'sessao/permissao-pessoal')
     }
   }
 }

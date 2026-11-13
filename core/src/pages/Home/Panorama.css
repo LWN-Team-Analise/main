@@ -1010,63 +1010,6 @@ button.pdest:hover .pdest__foto {
 }
 
 /* ============================================================
-   O globo dos clientes, no pe do Panorama (GloboClientes.jsx)
-
-   Embaixo da Agenda e dos Destaques, no meio, sem cartao em volta: o
-   fundo do canvas e transparente e quem aparece atras e a pagina.
-   ============================================================ */
-
-.pglobo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 8px;
-}
-
-/* o canvas precisa de uma caixa medida para se desenhar; ela fica do
-   mesmo tamanho com ou sem o globo, e a pagina nao pula quando ele
-   entra ou sai (o globo so e desenhado perto da tela) */
-.pglobo__mapa {
-  width: min(100%, 340px);
-  height: 340px;
-}
-
-/* gira no arrasto — e so isso, e so em cima da esfera. O pingo nao abre
-   nada, entao o cursor nao promete clique: so a mao de arrastar */
-.pglobo__mapa .globo__bola {
-  cursor: grab;
-}
-
-.pglobo__mapa .globo__bola:active {
-  cursor: grabbing;
-}
-
-.pglobo__legenda {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin: 2px 0 0;
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: var(--text-faint);
-}
-
-/* do mesmo azul dos pingos do globo. Escrito a mao nos dois lugares de
-   proposito: o canvas nao le variavel de CSS */
-.pglobo__ponto {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #4d8ff0;
-}
-
-@media (max-width: 560px) {
-  .pglobo__mapa {
-    height: 300px;
-  }
-}
-
-/* ============================================================
    O pop-up da agenda e o formulario do evento
    ============================================================ */
 

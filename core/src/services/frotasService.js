@@ -68,10 +68,20 @@ export async function carregarDisponiveis(obraId) {
 /** As reservas ainda sem saida, da mais proxima a mais distante ({ reservas, hoje }). */
 export const carregarReservas = () => get('/frotas/reservas')
 
+/**
+ * A localizacao dos carros num mes ('AAAA-MM'): { veiculos, reservas, usos, hoje }
+ * — as reservas das obras e os trechos em que cada carro esteve na rua.
+ */
+export const carregarLocalizacao = (mes) => get(`/frotas/localizacao?mes=${encodeURIComponent(mes)}`)
+
 /** { veiculoId } reserva o carro; { semCarro: true } marca que a obra nao usa carro. */
 export const reservar = (obraId, campos) => put(`/frotas/reservas/${encodeURIComponent(obraId)}`, campos)
 
 export const cancelarReserva = (obraId) => del(`/frotas/reservas/${encodeURIComponent(obraId)}`)
+
+/** Conceder o carro: libera (ou trava de novo) a retirada na vespera da obra (conceder_carro). */
+export const liberarRetirada = (obraId) => put(`/frotas/reservas/${encodeURIComponent(obraId)}/liberar`, {})
+export const travarRetirada = (obraId) => del(`/frotas/reservas/${encodeURIComponent(obraId)}/liberar`)
 
 /* ---- o rodizio de Sao Paulo ---- */
 

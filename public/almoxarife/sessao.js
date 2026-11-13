@@ -27,6 +27,17 @@
        /core/app/control (core/src/routes/AppRoutes.jsx) ja pode sair */
     try { sessionStorage.removeItem('lwn-control-recarga'); } catch (e) { /* segue */ }
 
+    /* Duas classes no <html> ANTES da tela desenhar (sem piscar):
+         embutido   aberta dentro da obra, no pop-up do check "Solicitar OS"
+                    (?embutido=1, core/src/pages/Obras/ModalSolicitarOS.jsx):
+                    sem o menu, sem a barra de cima e sem o "Voltar";
+         menu-largo o "Mais" do menu ligado, a mesma escolha do resto do
+                    sistema ('customers.menu-largo', o AppShell do main). */
+    try {
+        if (new URLSearchParams(location.search).get('embutido') === '1') document.documentElement.classList.add('embutido');
+        if (localStorage.getItem('customers.menu-largo') === 'sim') document.documentElement.classList.add('menu-largo');
+    } catch (e) { /* sem storage: o menu de sempre */ }
+
     /* quem estava logado quando o site passou a usar cookie ainda tem o
        token no localStorage: troca uma vez e tira de la */
     try {

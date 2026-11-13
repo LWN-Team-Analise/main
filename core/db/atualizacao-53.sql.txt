@@ -1,0 +1,75 @@
+-- ============================================================
+--  ATUALIZACAO 53 — Meu painel, permissoes da pessoa e o bonus
+--  apartamento no cliente
+--
+--  1. MEU PAINEL. A area Administrativo deixou de ser uma aba do menu:
+--     ela e o PAINEL de um setor. Cada setor pode ter um painel (o
+--     Administrativo ou o Almoxarife), escolhido por quem tem acesso
+--     total na tela do setor; quem esta nele ve "Meu painel" no menu da
+--     foto. `painel_exclusivo` = o painel e so daquele setor, e nos
+--     outros ele fica travado.
+--     Os setores que tinham a area pela `ver_administrativo` (atualizacao
+--     52) e nao tem acesso total ganham o painel Administrativo, uma vez
+--     so. O acesso total ja abre todos os paineis. A chave antiga fica na
+--     lista, sem valer: o sistema a ignora e ela sai na proxima vez que o
+--     setor for salvo (assim o site de antes continua de pe ate o deploy).
+--
+--  2. AS PERMISSOES DA PESSOA. Colocar informacoes no quadro de avisos e
+--     na agenda da pagina inicial passa a ser de cada pessoa
+--     (usuario.permissoes_pessoais), marcado por quem tem acesso total em
+--     Usuarios > editar. Comeca vazio para todos.
+--
+--  3. O cadastro incompleto: `aviso_cadastro_dispensado` guarda o "Nao me
+--     mostrar essa mensagem novamente" do aviso que aparece ao entrar.
+--
+--  4. CLIENTE: "O colaborador tem direito a bonus apartamento?" (sim, nao
+--     ou sem resposta). Com "nao", o Reembolso recusa o bonus para ele.
+--
+--  So acrescenta. SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+-- ============================================================
+
+BEGIN;
+
+ALTER TABLE public.cargo ADD COLUMN IF NOT EXISTS painel text;
+ALTER TABLE public.cargo ADD COLUMN IF NOT EXISTS painel_exclusivo boolean NOT NULL DEFAULT false;
+
+COMMENT ON COLUMN public.cargo.painel IS
+    'O painel do setor (Meu painel, no menu da foto): administrativo, almoxarife ou null.';
+COMMENT ON COLUMN public.cargo.painel_exclusivo IS
+    'true = o painel e so deste setor; nos outros ele fica travado.';
+
+UPDATE public.cargo
+   SET painel = 'administrativo'
+ WHERE painel IS NULL
+   AND NOT acesso_total
+   AND NOT coalesce(painel_tv, false)
+   AND 'ver_administrativo' = ANY (permissoes)
+   AND NOT EXISTS (SELECT 1 FROM public.cargo x WHERE x.painel = 'administrativo' AND x.painel_exclusivo)
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_53');
+
+ALTER TABLE public.usuario ADD COLUMN IF NOT EXISTS permissoes_pessoais text[] NOT NULL DEFAULT '{}';
+ALTER TABLE public.usuario ADD COLUMN IF NOT EXISTS aviso_cadastro_dispensado boolean NOT NULL DEFAULT false;
+
+COMMENT ON COLUMN public.usuario.permissoes_pessoais IS
+    'Permissoes da pessoa, fora do setor: publicar_avisos e publicar_agenda.';
+
+ALTER TABLE public.cliente ADD COLUMN IF NOT EXISTS bonus_apartamento boolean;
+
+COMMENT ON COLUMN public.cliente.bonus_apartamento IS
+    'O colaborador tem direito a bonus apartamento neste cliente? null = sem resposta (a unidade vale a do cliente).';
+
+INSERT INTO public.configuracao (chave, valor)
+VALUES ('marco_atualizacao_53', 'painel administrativo distribuido')
+ON CONFLICT (chave) DO NOTHING;
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — os setores com painel
+-- ============================================================
+
+SELECT nome AS setor, painel, painel_exclusivo
+  FROM public.cargo
+ WHERE painel IS NOT NULL
+ ORDER BY ordem, nome;

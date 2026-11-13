@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
-import { CampoPastilhas } from '@/components/Campo/Campo'
+import { CampoArea, CampoPastilhas } from '@/components/Campo/Campo'
 import { CampoData } from '@/components/CampoData/CampoData'
 import { useDados } from '@/context/DadosContext'
 import { diasAte, diasDaExecucao, resumoDosDias } from '@/domain/obras'
-import { linhaFeita, nomeDoItem, resumoDasLinhas, rotuloDaCondicao } from '@/domain/itensEnsaio'
+import { LIMITES_ITEM, linhaFeita, nomeDoItem, resumoDasLinhas, rotuloDaCondicao } from '@/domain/itensEnsaio'
 import { dataBR, hojeISO } from '@/utils/formato'
 import './ModalEnsaios.css'
 import './ModalItens.css'
@@ -56,6 +56,7 @@ const quando = (iso) => {
  * o antes e o depois dos ajustes.
  *
  * "Nao conforme" e resultado, nao pendencia: a linha conta como feita.
+ * Ele pede a JUSTIFICATIVA (obrigatoria), que fica na observacao da linha.
  * O % da execucao e a parte das linhas feitas, e o check so fecha com
  * todas — o servidor recusa do mesmo jeito.
  *
@@ -123,6 +124,8 @@ export default function ModalExecucaoItens({
       linha,
       data: linha.data ?? dataSugerida ?? (hoje >= (inicio ?? hoje) ? hoje : ''),
       conforme: linha.conforme === true ? 'sim' : linha.conforme === false ? 'nao' : '',
+      /* a justificativa do "Nao conforme" mora na observacao da linha */
+      justificativa: linha.conforme === false ? (linha.observacao ?? '') : '',
     })
     setErros({})
     setErro('')
@@ -148,6 +151,10 @@ export default function ModalExecucaoItens({
     else if (inicio && form.data < inicio) e.data = `O período de execução começa em ${dataBR(inicio)}.`
     else if (form.data > hoje) e.data = 'A data ainda não chegou.'
     if (!form.conforme) e.conforme = 'Diga se ficou conforme.'
+    /* "Nao conforme" sempre com o porque (o servidor recusa igual) */
+    if (form.conforme === 'nao' && !form.justificativa.trim()) {
+      e.justificativa = 'Justifique por que o ensaio ficou não conforme.'
+    }
     setErros(e)
     if (Object.keys(e).length > 0) return
 
@@ -161,6 +168,7 @@ export default function ModalExecucaoItens({
           id: form.linhaId,
           data,
           conforme: form.conforme === 'sim',
+          observacao: form.conforme === 'nao' ? form.justificativa.trim() : '',
         },
       ])
       /* "Salvar e próxima": a mesma data, que costuma ser o mesmo dia de campo */
@@ -256,6 +264,17 @@ export default function ModalExecucaoItens({
                   erro={erros.conforme}
                 />
               </div>
+              {form.conforme === 'nao' && (
+                <CampoArea
+                  rotulo="Justificativa *"
+                  linhas={3}
+                  maxLength={LIMITES_ITEM.observacao}
+                  placeholder="Por que ficou não conforme? O que foi encontrado e o que foi feito."
+                  value={form.justificativa}
+                  onChange={mudar('justificativa')}
+                  erro={erros.justificativa}
+                />
+              )}
             </>
           ) : (
             <dl className="linha__lida">
@@ -271,6 +290,12 @@ export default function ModalExecucaoItens({
                     <dt>Data</dt>
                     <dd>{dataBR(form.linha.data)}</dd>
                   </div>
+                  {form.linha.conforme === false && form.linha.observacao && (
+                    <div>
+                      <dt>Justificativa</dt>
+                      <dd>{form.linha.observacao}</dd>
+                    </div>
+                  )}
                 </>
               )}
             </dl>

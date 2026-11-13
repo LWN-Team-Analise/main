@@ -7,7 +7,7 @@ import EditorImagem from '@/components/EditorImagem/EditorImagem'
 import { CampoSelecao, CampoTexto } from '@/components/Campo/Campo'
 import { useDados } from '@/context/DadosContext'
 import { podeEditarCpf } from '@/domain/obras'
-import { ALTERACAO, VISUALIZACAO } from '@/domain/permissoes'
+import { ALTERACAO, PESSOAIS, VISUALIZACAO } from '@/domain/permissoes'
 import { carregarFotoOriginal, gerarSenhaProvisoria } from '@/services/equipeService'
 import { validateCPF, validateEmail } from '@/services/authService'
 import { formatarCPF, formatarTelefone, soDigitos } from '@/utils/formato'
@@ -91,6 +91,11 @@ export default function ModalColaborador({
   const outraPessoa = editando && String(colaborador.id) !== String(usuarioLogado?.id)
   const cpfLiberado = podeEditarCpf(usuarioLogado, pode)
   const podeCargo = pode('editar_cargo_titulo')
+  /* as permissoes da PESSOA (atualizacao 53): quadro de avisos e agenda da
+     pagina inicial. So quem tem acesso total marca, e so na edicao (com o
+     banco ja com a coluna: a lista vem como array) */
+  const marcaPessoais =
+    editando && Boolean(usuarioLogado?.acessoTotal) && Array.isArray(colaborador?.permissoesPessoais)
   /* cadastro novo abre so com e-mail, setor e cargo; o resto e opcional */
   const [maisDados, setMaisDados] = useState(false)
   const curto = !editando && !maisDados
@@ -224,6 +229,8 @@ export default function ModalColaborador({
        o campo faria a API recusar a gravacao inteira. Vazio no cadastro =
        a pessoa preenche depois; vazio na edicao de quem tinha = tirar. */
     if (mexeCpf && cpf !== soDigitos(colaborador?.cpf ?? '') && (cpf || editando)) campos.cpf = cpf
+    /* as permissoes da PESSOA so viajam de quem pode marca-las */
+    if (marcaPessoais) campos.permissoesPessoais = form.permissoesPessoais ?? []
 
     setConferindo(campos)
   }
@@ -398,6 +405,31 @@ export default function ModalColaborador({
           </button>
         )}
 
+        {/* o quadro de avisos e a agenda da pagina inicial: de cada PESSOA,
+            e nao do setor — so quem esta marcado aqui coloca informacoes */}
+        {marcaPessoais && (
+          <fieldset className="formcolab__pessoais">
+            <legend>Página inicial</legend>
+            {PESSOAIS.map((p) => (
+              <label key={p.chave} className="formcolab__pessoal">
+                <input
+                  type="checkbox"
+                  checked={(form.permissoesPessoais ?? []).includes(p.chave)}
+                  onChange={(e) =>
+                    setForm((atual) => {
+                      const lista = new Set(atual.permissoesPessoais ?? [])
+                      if (e.target.checked) lista.add(p.chave)
+                      else lista.delete(p.chave)
+                      return { ...atual, permissoesPessoais: PESSOAIS.map((x) => x.chave).filter((c) => lista.has(c)) }
+                    })
+                  }
+                />
+                <span>{p.rotulo}</span>
+              </label>
+            ))}
+          </fieldset>
+        )}
+
         {erros.geral && (
           <p className="formcolab__erro" role="alert">
             {erros.geral}
@@ -523,6 +555,24 @@ function ResumoDoCargo({ campos, cargos, titulos = [] }) {
 
       <dt>Cargo</dt>
       <dd>{titulo?.nome || <em>não informado</em>}</dd>
+
+      {/* as permissoes da PESSOA, quando vao nesta gravacao */}
+      {campos.permissoesPessoais !== undefined && (
+        <>
+          <dt>Página inicial</dt>
+          <dd>
+            {campos.permissoesPessoais.length === 0 ? (
+              <em>Não coloca informações no quadro de avisos nem na agenda.</em>
+            ) : (
+              <ul>
+                {PESSOAIS.filter((p) => campos.permissoesPessoais.includes(p.chave)).map((p) => (
+                  <li key={p.chave}>{p.rotulo}</li>
+                ))}
+              </ul>
+            )}
+          </dd>
+        </>
+      )}
 
       <dt>Pode</dt>
       <dd>

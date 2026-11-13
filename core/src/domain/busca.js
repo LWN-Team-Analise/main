@@ -61,14 +61,42 @@ const ATALHOS = [
     permissao: 'ver_clientes',
     termos: 'clientes empresas cadastro contratante setor endereco',
   },
-  /* a folha de ponto: de todo mundo (cada um ve a sua) */
+  /* o Ponto e o Ponto de encontro, no menu principal (atualizacao 55) */
   {
     id: 'tela-ponto',
     grupo: 'Telas',
     titulo: 'Ponto',
-    detalhe: 'A folha de ponto: conferir e assinar',
+    detalhe: 'A sua folha de ponto: conferir e assinar',
     rota: '/app/ponto',
+    permissao: 'ver_ponto',
     termos: 'ponto folha de ponto espelho marcacoes horas extras jornada assinatura assinar conferencia batida relogio',
+  },
+  {
+    id: 'tela-encontros',
+    grupo: 'Telas',
+    titulo: 'Ponto de encontro',
+    detalhe: 'O horário e o local de encontro das obras',
+    rota: '/app/encontros',
+    permissao: 'ver_encontros',
+    termos: 'pontos de encontro ponto de encontro horario encontro saida obra local endereco quem vai',
+  },
+  {
+    id: 'tela-frotas-adm',
+    grupo: 'Telas',
+    titulo: 'Últimas atualizações da frota',
+    detalhe: 'Os carros em uso e os que voltaram com problema (Frotas)',
+    rota: '/app/frotas/atualizacoes',
+    permissao: 'ver_frotas',
+    termos: 'frotas ultimas atualizacoes carros em uso atencao tanque combustivel oleo pneus devolvido problema',
+  },
+  {
+    id: 'tela-frotas-localizacao',
+    grupo: 'Telas',
+    titulo: 'Localização dos carros',
+    detalhe: 'Onde está cada carro: em uso, reservado ou na empresa, e quem usou nos dias que passaram (Frotas)',
+    rota: '/app/frotas/localizacao',
+    permissao: 'ver_frotas',
+    termos: 'localizacao onde esta carro carros em uso reservado reservas empresa garagem calendario frotas quem usou',
   },
   /* saiu do menu (e o botao "Concluídas" de Obras), mas a busca ainda abre */
   {
@@ -96,7 +124,7 @@ const ATALHOS = [
     detalhe: 'Enviar despesa, refeição ou bônus',
     rota: '/app/despesas',
     permissao: 'ver_despesas',
-    termos: 'despesas despesa reembolso gasto recibo comprovante nota fiscal vale transporte combustivel refeicao almoco janta bonus viagem apartamento',
+    termos: 'despesas despesa reembolso gasto recibo comprovante nota fiscal vale transporte combustivel refeicao almoco janta bonus apartamento',
   },
   {
     id: 'tela-turnos',
@@ -120,7 +148,7 @@ const ATALHOS = [
     id: 'tela-envios-gerais',
     grupo: 'Telas',
     titulo: 'Envios gerais',
-    detalhe: 'As despesas, refeições e bônus de cada pessoa da equipe',
+    detalhe: 'As despesas, refeições e bônus de cada pessoa (Reembolso)',
     rota: '/app/despesas/gerais',
     permissao: 'revisar_despesa_geral',
     termos: 'envios gerais despesas da equipe revisar despesa geral reembolsos de todos',
@@ -369,11 +397,13 @@ export function procurar(termo, dados) {
 
   /* ---------------- telas, aparencia e ajustes ---------------- */
   for (const a of ATALHOS) {
-    const liberado = a.permissoes
-      ? a.permissoes.some((p) => pode(p))
-      : a.permissao
-        ? pode(a.permissao)
-        : true
+    const liberado = a.todas
+      ? a.todas.every((p) => pode(p))
+      : a.permissoes
+        ? a.permissoes.some((p) => pode(p))
+        : a.permissao
+          ? pode(a.permissao)
+          : true
     if (!liberado) continue
 
     const peso = Math.max(nota(a.titulo, alvo), nota(a.termos, alvo) ? 2 : 0)

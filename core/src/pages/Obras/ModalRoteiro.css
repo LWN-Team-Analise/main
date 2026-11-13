@@ -255,3 +255,25 @@
 .formrot__diasatalho:hover {
   background: var(--control-bg-hover);
 }
+
+/* o periodo com o check "Prazo da execucao" marcado: o desmarcar de um
+   lado e o salvar do outro (ModalPeriodo.jsx) */
+.periodo__acoes {
+  justify-content: space-between;
+}
+
+.periodo__acoes .btn {
+  width: auto;
+}
+
+.periodo__acoes .proposta__desmarcar:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  text-decoration: none;
+}
+
+.periodo__trava {
+  margin: -6px 0 0;
+  font-size: 0.74rem;
+  color: var(--text-faint);
+}

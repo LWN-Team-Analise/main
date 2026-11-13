@@ -1,0 +1,93 @@
+-- ============================================================
+--  ATUALIZACAO 55 — o Ponto e os Pontos de encontro no menu, o fim da
+--  area Administrativo e o Focal Point escolhido do setor
+--
+--  1. A area Administrativo saiu: o Ponto e os Pontos de encontro voltam
+--     ao menu principal, cada um com a permissao de visualizacao dele:
+--       ver_ponto      a folha de ponto (dada a TODOS os setores, menos a
+--                      TV: todo mundo via e assinava a propria folha);
+--       ver_encontros  os pontos de encontro das obras (dada a quem tinha
+--                      o painel Administrativo e ao acesso total).
+--     O "Meu painel" Administrativo deixa de existir: o setor que o tinha
+--     fica sem painel.
+--
+--  2. FOCAL POINT. Os checks "Determinar Focal Point" (2a etapa: o do
+--     Almoxarife e o do Time Tecnico) viram check do sistema (tipo
+--     focal_point): o setor escolhe uma pessoa DELE como focal point, e
+--     escolher marca o check (obra_check.escolhido_id). Diferente dos
+--     outros checks do sistema, ele pode estar em mais de um card, e
+--     pode ser excluido do roteiro.
+--
+--  As permissoes entram uma vez so (a marca 'marco_atualizacao_55').
+--  So acrescenta. SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+-- ============================================================
+
+BEGIN;
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['ver_ponto']
+ WHERE NOT ('ver_ponto' = ANY (permissoes))
+   AND NOT coalesce(painel_tv, false)
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_55');
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['ver_encontros']
+ WHERE NOT ('ver_encontros' = ANY (permissoes))
+   AND NOT coalesce(painel_tv, false)
+   AND (acesso_total OR painel = 'administrativo')
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_55');
+
+UPDATE public.cargo
+   SET painel = NULL, painel_exclusivo = false
+ WHERE painel = 'administrativo';
+
+ALTER TABLE public.etapa_check DROP CONSTRAINT IF EXISTS etapa_check_tipo_valido;
+ALTER TABLE public.etapa_check ADD CONSTRAINT etapa_check_tipo_valido
+    CHECK (tipo IN ('comum', 'planejamento_ensaios', 'execucao_ensaios', 'material_gases',
+                    'prazo_execucao', 'reserva_carro', 'retirada_carro', 'enviar_os',
+                    'separar_os', 'retirada_os', 'devolucao_os',
+                    'aprovacao_protocolos', 'analise_faturamento', 'tipo_ensaio', 'focal_point'));
+
+COMMENT ON COLUMN public.etapa_check.tipo IS
+    'comum, planejamento_ensaios, execucao_ensaios, material_gases, prazo_execucao, reserva_carro, retirada_carro, enviar_os, separar_os, retirada_os, devolucao_os, aprovacao_protocolos, analise_faturamento, tipo_ensaio ou focal_point';
+
+-- O Focal Point mora em MAIS DE UM card (o do Almoxarife e o do Time
+-- Tecnico): ele sai da regra de "um check de cada tipo do sistema" no
+-- roteiro (atualizacao 18) e nas copias de cada obra
+DROP INDEX IF EXISTS public.etapa_check_tipo_unico;
+CREATE UNIQUE INDEX etapa_check_tipo_unico
+    ON public.etapa_check (tipo)
+    WHERE tipo NOT IN ('comum', 'focal_point') AND vigente_ate IS NULL AND obra_id IS NULL;
+
+DROP INDEX IF EXISTS public.etapa_check_tipo_da_obra;
+CREATE UNIQUE INDEX etapa_check_tipo_da_obra
+    ON public.etapa_check (obra_id, tipo)
+    WHERE tipo NOT IN ('comum', 'focal_point') AND vigente_ate IS NULL AND obra_id IS NOT NULL;
+
+-- todas as versoes do check e as copias das obras
+UPDATE public.etapa_check
+   SET tipo = 'focal_point'
+ WHERE tipo = 'comum'
+   AND lower(btrim(titulo)) LIKE 'determinar focal point%';
+
+ALTER TABLE public.obra_check ADD COLUMN IF NOT EXISTS escolhido_id bigint REFERENCES public.usuario (id) ON DELETE SET NULL;
+
+COMMENT ON COLUMN public.obra_check.escolhido_id IS
+    'A pessoa escolhida no check (o focal point do setor, no check focal_point).';
+
+INSERT INTO public.configuracao (chave, valor)
+VALUES ('marco_atualizacao_55', 'ver_ponto e ver_encontros distribuidas')
+ON CONFLICT (chave) DO NOTHING;
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA
+-- ============================================================
+
+SELECT 'checks Determinar Focal Point no sistema: ' || count(*) AS item
+  FROM public.etapa_check WHERE tipo = 'focal_point' AND vigente_ate IS NULL AND obra_id IS NULL
+UNION ALL
+SELECT 'setores com ver_encontros: ' || coalesce(string_agg(nome, ', '), 'nenhum')
+  FROM public.cargo WHERE 'ver_encontros' = ANY (permissoes);

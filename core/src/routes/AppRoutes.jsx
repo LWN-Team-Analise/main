@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import Login from '@/pages/Login/Login'
 import Home from '@/pages/Home/Home'
 import Privacy from '@/pages/Privacy/Privacy'
@@ -7,6 +7,9 @@ import ObraDetalhe from '@/pages/Obras/ObraDetalhe'
 import Clientes from '@/pages/Clientes/Clientes'
 import Concluidas from '@/pages/Concluidas/Concluidas'
 import Ponto from '@/pages/Ponto/Ponto'
+import Encontros from '@/pages/Encontros/Encontros'
+import Atualizacoes from '@/pages/Frotas/Atualizacoes'
+import Localizacao from '@/pages/Frotas/Localizacao'
 import Avaliacoes from '@/pages/Avaliacoes/Avaliacoes'
 import Usuarios from '@/pages/Usuarios/Usuarios'
 import SetorPagina from '@/pages/Usuarios/SetorPagina'
@@ -45,6 +48,17 @@ function LwnControl() {
   if (tentou) return <p style={{ padding: 24 }}>Não foi possível abrir o LWN Control. Recarregue a página.</p>
   window.location.replace(destino)
   return null
+}
+
+/**
+ * O endereco que mudou de lugar: leva para o novo com o que vinha depois
+ * do "?" (o periodo do link do aviso do Ponto, no Teams) e o :usuarioId.
+ */
+function Mudou({ para }) {
+  const { search } = useLocation()
+  const { usuarioId } = useParams()
+  const destino = usuarioId ? `${para}/${encodeURIComponent(usuarioId)}` : para
+  return <Navigate to={{ pathname: destino, search }} replace />
 }
 
 /**
@@ -118,16 +132,35 @@ export default function AppRoutes() {
           </Interna>
         }
       />
-      {/* a folha de ponto (atualizacao 51): de todo mundo, cada um ve a sua.
-          Ver a dos outros e importar e `gerenciar_ponto`, que a API confere */}
+      {/* a folha de ponto (atualizacao 51), com `ver_ponto` (atualizacao 55):
+          cada um ve e assina a sua (e o link do aviso do Teams). Ver a dos
+          outros e importar e `gerenciar_ponto`, que a API confere */}
       <Route
         path="/app/ponto"
         element={
-          <Interna>
+          <Interna permissao="ver_ponto">
             <Ponto />
           </Interna>
         }
       />
+      {/* os horarios dos checks com horario das obras (o ponto de encontro) */}
+      <Route
+        path="/app/encontros"
+        element={
+          <Interna permissao="ver_encontros">
+            <Encontros />
+          </Interna>
+        }
+      />
+      {/* A area Administrativo saiu (atualizacao 55): os enderecos dela levam
+          para as telas de sempre, com o que vinha depois do "?" */}
+      <Route path="/app/administrativo" element={<Navigate to="/app" replace />} />
+      <Route path="/app/administrativo/ponto" element={<Mudou para="/app/ponto" />} />
+      <Route path="/app/administrativo/reembolso" element={<Mudou para="/app/despesas/gerais" />} />
+      <Route path="/app/administrativo/reembolso/:usuarioId" element={<Mudou para="/app/despesas/gerais" />} />
+      <Route path="/app/administrativo/encontros" element={<Mudou para="/app/encontros" />} />
+      <Route path="/app/administrativo/frotas" element={<Mudou para="/app/frotas/atualizacoes" />} />
+      <Route path="/app/administrativo/turnos" element={<Mudou para="/app/turnos" />} />
       {/* os funis de venda (os negocios do Pipedrive); a API confere a
           mesma chave em cada chamada de /api/comercial */}
       <Route
@@ -191,9 +224,9 @@ export default function AppRoutes() {
           </Interna>
         }
       />
-      {/* Envios gerais: so quem revisa. revisar_despesa_geral depende de
-          ver_despesas (sem ela, a lista do setor ja chega sem esta), e a
-          API confere as duas em cada chamada. */}
+      {/* Envios gerais: os envios da equipe, com o filtro por tipo e por
+          periodo. revisar_despesa_geral depende de ver_despesas, e a API
+          confere as duas em cada chamada. */}
       <Route
         path="/app/despesas/gerais"
         element={
@@ -228,6 +261,26 @@ export default function AppRoutes() {
           </Interna>
         }
       />
+      {/* os carros em uso e os que voltaram pedindo atencao (era o Frotas da
+          area Administrativo) e a localizacao dos carros (era o calendario das
+          reservas: o endereco antigo leva para ela) */}
+      <Route
+        path="/app/frotas/atualizacoes"
+        element={
+          <Interna permissao="ver_frotas">
+            <Atualizacoes />
+          </Interna>
+        }
+      />
+      <Route
+        path="/app/frotas/localizacao"
+        element={
+          <Interna permissao="ver_frotas">
+            <Localizacao />
+          </Interna>
+        }
+      />
+      <Route path="/app/frotas/calendario" element={<Navigate to="/app/frotas/localizacao" replace />} />
       <Route
         path="/app/control/*"
         element={

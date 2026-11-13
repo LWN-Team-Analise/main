@@ -67,8 +67,8 @@ export const ASSUNTOS = [
     gatilhos: ['marcar', 'consigo', 'travado', 'cadeado', 'bloqueado', 'cinza', 'desabilitado', 'permissao'],
     resposta:
       'Três motivos possíveis: o check é de outro setor; a etapa dele ainda não abriu (a anterior não ' +
-      'fechou); ou o seu cargo não tem a permissão. Na grade da página inicial, a linha com cadeado é ' +
-      'justamente a de outro setor — ela aparece para você saber quem está segurando a fila. Quem tem ' +
+      'fechou); ou o seu cargo não tem a permissão. Na tela da obra, o check com cadeado é justamente o ' +
+      'de outro setor — ele aparece para você saber quem está segurando a fila. Quem tem ' +
       'a permissão "Check em todas as etapas" não espera a etapa anterior fechar.',
   },
   {
@@ -124,7 +124,20 @@ export const ASSUNTOS = [
     gatilhos: ['aviso', 'avisar', 'sino', 'sininho', 'notificacao', 'cobrar', 'email'],
     resposta:
       'Na coluna "Enviar aviso" do quadro, clicar no card cobra o setor que está devendo: acende o sininho ' +
-      'dele e sai um e-mail. Precisa da permissão "enviar avisos" — sem ela o botão nem aparece.',
+      'dele e sai um e-mail. Precisa da permissão "Enviar avisos de pendência nas obras" — sem ela o botão nem ' +
+      'aparece. O quadro de avisos e a agenda da página inicial são de quem foi liberado, pessoa por pessoa, ' +
+      'em Usuários (só quem tem acesso total libera), e de quem tem acesso total.',
+  },
+  {
+    id: 'meu-painel',
+    titulo: 'Meu painel e o menu completo',
+    gatilhos: ['meu painel', 'painel', 'hamburguer', 'menu completo', 'menu', 'mais', 'solicitar'],
+    resposta:
+      'Se o seu setor tem o painel do Almoxarife, ele aparece como "Meu painel" no menu da sua foto, logo ' +
+      'acima de Configurações. O painel de cada setor é escolhido por quem tem acesso total, na tela do setor. ' +
+      'No computador, o "Mais" no alto do menu mostra o nome de cada aba (no Almoxarife também), e o ' +
+      'Almoxarife abre ao lado as abas dele; no celular, o Menu da barra de baixo abre o sistema inteiro. ' +
+      'O Solicitar abre direto a solicitação de OS do Almoxarife.',
   },
   {
     id: 'emergencia',
@@ -184,15 +197,16 @@ export const ASSUNTOS = [
     resposta:
       'Na aba Reembolso, escolha Enviar despesa, Enviar refeição ou Enviar bônus. O cliente é obrigatório. ' +
       'Combustível e outros precisam do comprovante (imagem, PDF, ZIP ou documento); a refeição e o bônus ' +
-      'apartamento têm valor pré-definido. O que você enviou fica em ' +
+      'apartamento têm valor pré-definido. A refeição vai para o cliente que não oferece alimentação, e o ' +
+      'bônus, para o cliente em que o colaborador tem direito ao bônus apartamento. O que você enviou fica em ' +
       '"Meus envios", por mês (dia a dia) ou por ano (mês a mês), com os totais e o filtro por tipo. Quem ' +
-      'tem a permissão "Revisar despesa geral" ganha também "Envios gerais", com os envios de cada pessoa ' +
-      'da equipe.',
+      'tem a permissão "Revisar despesa geral" vê, no botão Envios gerais do Reembolso, quanto cada pessoa ' +
+      'enviou, com o filtro por tipo e por período.',
   },
   {
     id: 'frotas',
     titulo: 'Frotas: saída e devolução de veículos',
-    gatilhos: ['frota', 'veiculo', 'carro', 'saida', 'devolucao', 'condutor', 'motorista', 'km', 'quilometragem', 'placa'],
+    gatilhos: ['frota', 'veiculo', 'carro', 'saida', 'devolucao', 'condutor', 'motorista', 'km', 'quilometragem', 'placa', 'reserva', 'calendario', 'localizacao'],
     resposta:
       'Na aba Frotas, use Saída para sair com um veículo e Devolução para devolvê-lo na garagem. Tudo é ' +
       'obrigatório: condutor, carro, KM, data, horário, observação e cinco fotos (os quatro lados e o painel ' +
@@ -200,7 +214,9 @@ export const ASSUNTOS = [
       'as verificações (pneus, óleo, água do para-brisa, combustível, Sem Parar, limpeza e faróis). O KM ' +
       'nunca pode ser menor que o último registrado do veículo. Saída de um carro que já está em uso vira ' +
       'troca de condutor. Em "Saídas e devoluções" ficam todos os registros, e o "não" das verificações ' +
-      'aparece em vermelho. Cadastrar e editar veículos pede a permissão "Adicionar / editar veículos".',
+      'aparece em vermelho. Em "Últimas atualizações" ficam os carros em uso e os que voltaram pedindo ' +
+      'atenção, e a "Localização" mostra, dia a dia, onde está cada carro: em uso (com o condutor e o ' +
+      'destino), reservado para uma obra ou na empresa; nos dias que já passaram, quem usou cada um. Cadastrar e editar veículos pede a permissão "Adicionar / editar veículos".',
   },
   {
     id: 'concluidas',
@@ -211,11 +227,33 @@ export const ASSUNTOS = [
       'continuam abrindo — só que travadas. Obra encerrada é registro: dá para ver tudo, não dá para mexer em nada.',
   },
   {
+    id: 'focal-point',
+    titulo: 'Focal point e Solicitar OS',
+    gatilhos: ['focal', 'focal point', 'responsavel', 'solicitar os', 'ordem de servico', 'os'],
+    resposta:
+      'O check "Determinar Focal Point" da 2a etapa abre a lista das pessoas do setor dono do check (o ' +
+      'Almoxarife escolhe alguém do Almoxarife, o Time Técnico alguém do Time Técnico): escolhida a pessoa, o ' +
+      'check fica marcado com o nome dela, e dá para trocar ou desmarcar. O check "Solicitar OS" abre a ' +
+      'solicitação de OS do Almoxarife num pop-up, sem sair da obra; ele é marcado quando o supervisor ' +
+      'aprovar a OS. O "Solicitar" do menu abre o mesmo pop-up, sem sair da tela em que você está.',
+  },
+  {
+    id: 'ponto-de-encontro',
+    titulo: 'Ponto de encontro',
+    gatilhos: ['encontro', 'ponto de encontro', 'horario', 'local', 'onde', 'endereco', 'desmarcar', 'prazo da execucao'],
+    resposta:
+      'O check "Ponto de encontro" da obra abre as datas da execução: em cada uma, o horário e quem vai. Em ' +
+      'cima, escolha o local: no local da obra (o endereço do cliente), na empresa (LWN) ou em outro lugar, ' +
+      'com o endereço escrito. "Salvar e marcar" grava e marca o check. Para desmarcar o Ponto de encontro ou ' +
+      'o "Prazo da execução" (pelo período de execução), as etapas seguintes não podem ter check marcado. A ' +
+      'aba Ponto de encontro do menu mostra os próximos e, depois de uma linha, os que já aconteceram.',
+  },
+  {
     id: 'ponto',
     titulo: 'Folha de ponto',
     gatilhos: ['ponto', 'folha de ponto', 'espelho', 'marcacao', 'marcacoes', 'hora extra', 'assinar folha', 'assinatura'],
     resposta:
-      'Na aba Ponto cada um vê a própria folha de ponto, do mês ou de datas escolhidas, no desenho do espelho do ' +
+      'Na aba Ponto, cada um vê a própria folha de ponto, do mês ou de datas escolhidas, no desenho do espelho do ' +
       'sistema de ponto. Para assinar a conferência, clique na área acima de "Assinatura Funcionário", marque as ' +
       'duas confirmações e assine: o seu nome completo fica impresso ali. O Exportar baixa a folha em PDF e em ' +
       'Excel. Quem tem a permissão "Ver a folha de ponto de todos e importar" (em Usuários) escolhe a pessoa e ' +

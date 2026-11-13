@@ -278,6 +278,9 @@ export function CampoPastilhas({ rotulo, dica, erro, valor, aoMudar, opcoes = []
             aria-checked={valor === o.valor}
             className={`pastilha ${valor === o.valor ? 'is-atual' : ''}`.trim()}
             data-tom={o.tom ?? o.valor}
+            /* a opcao travada continua a vista, so nao se escolhe (`travada`) */
+            disabled={Boolean(o.travada)}
+            title={o.travada && typeof o.travada === 'string' ? o.travada : undefined}
             onClick={() => aoMudar(o.valor)}
           >
             {o.rotulo}

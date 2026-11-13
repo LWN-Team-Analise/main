@@ -87,6 +87,19 @@ const ARQUIVOS = [
   'db/atualizacao-50.sql.txt',
   /* a aba Ponto: as marcacoes importadas e as assinaturas da folha */
   'db/atualizacao-51.sql.txt',
+  /* a permissao da area Administrativo, para quem ja usava o que foi para la */
+  'db/atualizacao-52.sql.txt',
+  /* Meu painel (o painel de cada setor), as permissoes da pessoa (quadro de
+     avisos e agenda), o aviso do cadastro incompleto e o bonus apartamento */
+  'db/atualizacao-53.sql.txt',
+  /* o check Tipo de ensaio do Comercial, a retirada do carro na vespera e as
+     permissoes ordenar_turnos e conceder_carro */
+  'db/atualizacao-54.sql.txt',
+  /* o Ponto e os Pontos de encontro no menu (ver_ponto, ver_encontros), o fim
+     da area Administrativo e o Focal Point escolhido do setor */
+  'db/atualizacao-55.sql.txt',
+  /* o local do Ponto de encontro (na obra, na LWN ou em outro endereco) */
+  'db/atualizacao-56.sql.txt',
 ]
 
 /**
@@ -261,6 +274,21 @@ const CONFERENCIA = [
   ['aviso_geral.encerrado_em', col('aviso_geral', 'encerrado_em')],
   ['ponto_dia (a aba Ponto)', "SELECT to_regclass('public.ponto_dia') IS NOT NULL AS ok"],
   ['ponto_assinatura (a aba Ponto)', "SELECT to_regclass('public.ponto_assinatura') IS NOT NULL AS ok"],
+  ['ver_administrativo no acesso total', permissaoNoAcessoTotal('ver_administrativo')],
+  ['cargo.painel (Meu painel)', col('cargo', 'painel')],
+  ['cargo.painel_exclusivo', col('cargo', 'painel_exclusivo')],
+  ['usuario.permissoes_pessoais', col('usuario', 'permissoes_pessoais')],
+  ['usuario.aviso_cadastro_dispensado', col('usuario', 'aviso_cadastro_dispensado')],
+  ['cliente.bonus_apartamento', col('cliente', 'bonus_apartamento')],
+  ['obra.tipos_ensaio', col('obra', 'tipos_ensaio')],
+  ['obra_reserva_veiculo.liberada_em', col('obra_reserva_veiculo', 'liberada_em')],
+  ['check Tipo de ensaio (Comercial, 1a etapa)', "SELECT EXISTS (SELECT 1 FROM etapa_check WHERE tipo = 'tipo_ensaio' AND vigente_ate IS NULL AND obra_id IS NULL) AS ok"],
+  ['ordenar_turnos no acesso total', permissaoNoAcessoTotal('ordenar_turnos')],
+  ['conceder_carro no acesso total', permissaoNoAcessoTotal('conceder_carro')],
+  ['ver_ponto no acesso total', permissaoNoAcessoTotal('ver_ponto')],
+  ['ver_encontros no acesso total', permissaoNoAcessoTotal('ver_encontros')],
+  ['obra_check.escolhido_id (Focal Point)', col('obra_check', 'escolhido_id')],
+  ['obra_horario.local (Ponto de encontro)', col('obra_horario', 'local')],
 ]
 
 function col(tabela, coluna) {

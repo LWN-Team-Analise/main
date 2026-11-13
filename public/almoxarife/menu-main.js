@@ -436,7 +436,44 @@
         if (saudado) saudado.textContent = nome.split(/\s+/)[0];
     });
 
+    // ---------------- o "Mais" (o menu largo) ----------------
+    //
+    // O mesmo do AppShell do main: a seta no alto da barra alarga o menu,
+    // com o nome de cada aba ao lado do icone, e a pagina se ajusta a
+    // largura nova (a classe menu-largo no <html>, que o sessao.js ja liga
+    // antes da tela desenhar). A escolha e a mesma do resto do sistema
+    // ('customers.menu-largo'). A marca segue o botao sozinha: a barra muda
+    // de tamanho e o ResizeObserver de montarBarra mede de novo.
+    function montarMais() {
+        const botao = document.getElementById('almox-mais');
+        if (!botao) return;
+        const raiz = document.documentElement;
+        const rotulo = botao.querySelector('.rail__rotulo');
+        const pintar = () => {
+            const largo = raiz.classList.contains('menu-largo');
+            botao.setAttribute('aria-expanded', String(largo));
+            botao.title = largo ? 'Encolher o menu' : 'Mostrar o menu com os nomes das abas';
+            if (rotulo) rotulo.textContent = largo ? 'Menos' : 'Mais';
+        };
+        botao.addEventListener('click', () => {
+            const largo = !raiz.classList.contains('menu-largo');
+            raiz.classList.toggle('menu-largo', largo);
+            try { localStorage.setItem('customers.menu-largo', largo ? 'sim' : 'nao'); } catch (e) { /* vale ate recarregar */ }
+            pintar();
+            // quem mede a largura do conteudo (a aba Configuracoes) mede de novo
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 360);
+        });
+        // trocado em outra aba do site, vale aqui tambem
+        window.addEventListener('storage', (e) => {
+            if (e.key !== 'customers.menu-largo') return;
+            raiz.classList.toggle('menu-largo', e.newValue === 'sim');
+            pintar();
+        });
+        pintar();
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+        montarMais();
         montarBarra();
         montarAvatar();
         montarMenuLado();

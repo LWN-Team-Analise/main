@@ -8,7 +8,8 @@
                  comprovante (anexo), os transportes o aceitam.
      refeicao  — almoco ou janta em obra. O valor e PRE-DEFINIDO: a
                  pessoa ve, mas nao digita.
-     bonus     — bonus de viagem ou de apartamento (este, pre-definido).
+     bonus     — bonus apartamento (pre-definido). O bonus viagem nao
+                 existe mais: fica so para os envios antigos (`aposentado`).
 
    Este arquivo nao tem React dentro, de proposito: a API importa
    o MESMO arquivo (server/routes/despesas.js), igual faz com as
@@ -46,7 +47,9 @@ export const CATEGORIAS = {
     plural: 'Bônus',
     enviar: 'Enviar bônus',
     tipos: [
-      { chave: 'bonus_viagem', rotulo: 'Bônus viagem' },
+      /* nao existe mais: sai do formulario e o servidor recusa o envio
+         novo, mas os antigos continuam com o nome certo e na planilha */
+      { chave: 'bonus_viagem', rotulo: 'Bônus viagem', aposentado: true },
       { chave: 'bonus_apartamento', rotulo: 'Bônus apartamento' },
     ],
   },
@@ -244,8 +247,9 @@ export function anexoAceito(nome) {
    Leitura no resto do sistema
    ------------------------------------------------------------ */
 
+/** Os tipos que ainda se enviam (o aposentado fica so no historico). */
 export function tiposDa(categoria) {
-  return CATEGORIAS[categoria]?.tipos ?? []
+  return (CATEGORIAS[categoria]?.tipos ?? []).filter((t) => !t.aposentado)
 }
 
 export function tipoValido(categoria, tipo) {

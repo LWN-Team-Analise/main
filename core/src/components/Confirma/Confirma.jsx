@@ -21,6 +21,9 @@ import './Confirma.css'
  * sem ele, confirmar de dentro de um formulario abriria a caixa ATRAS
  * dele.
  *
+ * `largura` alarga a caixa quando a conferencia e grande (o que mudou
+ * nas permissoes de um setor); sem ela, a caixa estreita de sempre.
+ *
  * `ciencia` acrescenta um SEGUNDO passo: uma caixinha que precisa ser
  * marcada antes de o botao liberar. E para o que nao tem desfazer — um
  * clique so, num botao que ja estava debaixo do cursor, nao e decisao
@@ -35,6 +38,7 @@ export default function Confirma({
   detalhes,
   tom = 'perigo',
   nivel = 0,
+  largura = 430,
   ciencia,
   rotuloConfirmar = 'Apagar',
   aoConfirmar,
@@ -52,7 +56,7 @@ export default function Confirma({
   const travado = Boolean(ciencia) && !ciente
 
   return (
-    <Modal aberto={aberto} aoFechar={aoFechar} titulo={titulo} largura={430} nivel={nivel}>
+    <Modal aberto={aberto} aoFechar={aoFechar} titulo={titulo} largura={largura} nivel={nivel}>
       <div className="confirma">
         {/* sem mensagem, nem o parágrafo: um <p> vazio deixaria um vão
             entre o título e os botões */}

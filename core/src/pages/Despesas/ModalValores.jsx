@@ -3,7 +3,7 @@ import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
 import Seletor from '@/components/Seletor/Seletor'
 import { CampoDinheiro } from '@/components/Campo/Campo'
-import { CATEGORIAS, CHAVES_CATEGORIA, DIA_INICIO_MAXIMO, inicioDoPeriodo } from '@/domain/despesas'
+import { CATEGORIAS, CHAVES_CATEGORIA, DIA_INICIO_MAXIMO, inicioDoPeriodo, tiposDa } from '@/domain/despesas'
 import * as despesasApi from '@/services/despesasService'
 
 /**
@@ -109,7 +109,7 @@ export default function ModalValores({ aberto, valores, periodos, aoFechar, aoSa
                 {(dias[categoria] ?? 1) > 1 ? `ao dia ${dias[categoria] - 1} do mês seguinte` : 'ao último dia do mês'}
               </span>
             </div>
-            {CATEGORIAS[categoria].tipos.map(({ chave, rotulo }) => {
+            {tiposDa(categoria).map(({ chave, rotulo }) => {
               const ligado = linhas[chave] !== null && linhas[chave] !== undefined
               return (
                 <div key={chave} className={`valores__linha ${ligado ? 'is-ligado' : ''}`.trim()}>

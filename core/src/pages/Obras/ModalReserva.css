@@ -206,3 +206,33 @@
   font-size: 0.74rem;
   color: var(--text-muted);
 }
+
+/* quando o carro reservado sai, e a liberacao da vespera (atualizacao 54) */
+.reservacar__liberacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: 14px;
+  background: var(--control-bg);
+}
+
+.reservacar__liberacao p {
+  flex: 1 1 260px;
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--text-base);
+}
+
+.reservacar__liberacao strong {
+  color: var(--text-strong);
+}
+
+.reservacar__liberacao[data-liberada] {
+  border-color: color-mix(in srgb, var(--pri-baixa) 45%, transparent);
+  background: color-mix(in srgb, var(--pri-baixa) 9%, transparent);
+}

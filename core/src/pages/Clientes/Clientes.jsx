@@ -28,6 +28,7 @@ import {
 } from '@/domain/clientes'
 import { ehBrasil, nomeDoPais } from '@/domain/paises'
 import Estrelas from '@/components/Estrelas/Estrelas'
+import GloboClientes from './GloboClientes'
 import { dataBR, dataHora, hojeISO } from '@/utils/formato'
 import useCorDaLogo from '@/hooks/useCorDaLogo'
 import Confirma from '@/components/Confirma/Confirma'
@@ -465,6 +466,9 @@ export default function Clientes() {
             ))}
           </ul>
         )}
+
+        {/* no fim da aba, embaixo da lista: onde estao os clientes */}
+        <GloboClientes />
       </section>
 
       <ModalSetores aberto={modalSetores} aoFechar={() => setModalSetores(false)} />

@@ -216,42 +216,59 @@ const recusa = (res, campo, erro, status = 400) => res.status(status).json({ err
 
    "Enviar refeição" so vale para o cliente que NAO oferece alimentacao
    (cliente.oferece_alimentacao; a unidade sem resposta propria vale a
-   do cliente dela) e so para quem esta numa obra desse cliente — quem
-   marcou check nela ou foi incluido em Membros e aceitou. O cliente que
-   oferece a refeicao (sim no cadastro) nao recebe envio de refeicao.
+   do cliente dela). O cliente que oferece a refeicao (sim no cadastro)
+   nao recebe envio de refeicao. Antes ela tambem era so de quem estava
+   numa obra do cliente — a lista saia vazia para quase todo mundo, e a
+   regra caiu: vale qualquer cliente que nao oferece.
 
    A conta e uma so, em SQL, para a recusa do envio e para a lista que a
-   tela usa (GET /refeicao/clientes): `$1` e quem envia.
+   tela usa (GET /refeicao/clientes).
    ------------------------------------------------------------ */
 const CLIENTES_DA_REFEICAO = `
   SELECT c.id,
-         coalesce(c.oferece_alimentacao, m.oferece_alimentacao) IS TRUE AS oferece,
-         EXISTS (
-           SELECT 1 FROM obra o
-            WHERE (o.cliente_id = c.id OR o.cliente_id = c.matriz_id
-                   OR o.cliente_id IN (SELECT u.id FROM cliente u WHERE u.matriz_id = c.id))
-              AND (EXISTS (SELECT 1 FROM obra_membro om WHERE om.obra_id = o.id AND om.usuario_id = $1)
-                   OR EXISTS (SELECT 1 FROM obra_membro_parcial op
-                               WHERE op.obra_id = o.id AND op.usuario_id = $1 AND op.status = 'aceito'))
-         ) AS na_obra
+         coalesce(c.oferece_alimentacao, m.oferece_alimentacao) IS TRUE AS oferece
     FROM cliente c
     LEFT JOIN cliente m ON m.id = c.matriz_id`
 
 /** O porque da recusa da refeicao para este cliente, ou null quando pode. */
-async function refeicaoRecusada(clienteId, usuarioId) {
+async function refeicaoRecusada(clienteId) {
   let linha
   try {
-    const { rows } = await query(`${CLIENTES_DA_REFEICAO} WHERE c.id = $2`, [usuarioId, clienteId])
+    const { rows } = await query(`${CLIENTES_DA_REFEICAO} WHERE c.id = $1`, [clienteId])
     linha = rows[0]
   } catch (erro) {
     /* banco sem a atualizacao 39: a regra de antes (qualquer cliente) */
     if (erro.code === '42703') return null
     throw erro
   }
-  if (!linha) return null
-  if (linha.oferece) return 'Este cliente oferece alimentação: não há envio de refeição para ele.'
-  if (!linha.na_obra) return 'A refeição só pode ser enviada por quem está em uma obra deste cliente (Membros da obra).'
+  if (linha?.oferece) return 'Este cliente oferece alimentação: não há envio de refeição para ele.'
   return null
+}
+
+/* ------------------------------------------------------------
+   O BONUS E O CLIENTE (atualizacao 53)
+
+   "O colaborador tem direito a bônus apartamento?" no cadastro do
+   cliente (a unidade sem resposta propria vale a do cliente dela). Com
+   "não", o bonus nao vai para ele; com "sim" ou sem resposta, vai.
+   ------------------------------------------------------------ */
+const CLIENTES_DO_BONUS = `
+  SELECT c.id,
+         coalesce(c.bonus_apartamento, m.bonus_apartamento) IS FALSE AS sem_direito
+    FROM cliente c
+    LEFT JOIN cliente m ON m.id = c.matriz_id`
+
+/** O porque da recusa do bonus para este cliente, ou null quando pode. */
+async function bonusRecusado(clienteId) {
+  try {
+    const { rows } = await query(`${CLIENTES_DO_BONUS} WHERE c.id = $1`, [clienteId])
+    if (rows[0]?.sem_direito) return 'Neste cliente o colaborador não tem direito a bônus apartamento.'
+    return null
+  } catch (erro) {
+    /* banco sem a atualizacao 53: qualquer cliente, como antes */
+    if (erro.code === '42703') return null
+    throw erro
+  }
 }
 
 /* ------------------------------------------------------------
@@ -554,22 +571,37 @@ export async function atualizarPlanilhaNoSharePoint() {
    ============================================================ */
 
 /**
- * GET /refeicao/clientes — para quem esta logado: os clientes em que ele
- * pode lancar refeicao (`permitidos`) e os que oferecem a alimentacao
+ * GET /refeicao/clientes — os clientes em que se lanca refeicao
+ * (`permitidos`: os que nao oferecem a alimentacao) e os que oferecem
  * (`oferecem`). E o que o "Enviar refeição" mostra no campo Cliente.
  * Banco sem a atualizacao 39: `regra: false` (vale qualquer cliente).
  */
-router.get('/refeicao/clientes', exigeSessao, exige(PERMISSAO_VER), async (req, res) => {
+router.get('/refeicao/clientes', exigeSessao, exige(PERMISSAO_VER), async (_req, res) => {
   try {
-    const { rows } = await query(CLIENTES_DA_REFEICAO, [req.dono.sub])
+    const { rows } = await query(CLIENTES_DA_REFEICAO)
     return res.json({
       regra: true,
-      permitidos: rows.filter((l) => !l.oferece && l.na_obra).map((l) => String(l.id)),
+      permitidos: rows.filter((l) => !l.oferece).map((l) => String(l.id)),
       oferecem: rows.filter((l) => l.oferece).map((l) => String(l.id)),
     })
   } catch (erro) {
     if (erro.code === '42703') return res.json({ regra: false, permitidos: [], oferecem: [] })
     return tratar(erro, res, 'despesas/refeicao-clientes')
+  }
+})
+
+/**
+ * GET /bonus/clientes — os clientes em que o colaborador NAO tem direito
+ * a bonus apartamento (`semDireito`). O "Enviar bônus" tira estes do
+ * campo Cliente. Banco sem a atualizacao 53: `regra: false`.
+ */
+router.get('/bonus/clientes', exigeSessao, exige(PERMISSAO_VER), async (_req, res) => {
+  try {
+    const { rows } = await query(CLIENTES_DO_BONUS)
+    return res.json({ regra: true, semDireito: rows.filter((l) => l.sem_direito).map((l) => String(l.id)) })
+  } catch (erro) {
+    if (erro.code === '42703') return res.json({ regra: false, semDireito: [] })
+    return tratar(erro, res, 'despesas/bonus-clientes')
   }
 })
 
@@ -648,10 +680,15 @@ router.post('/envios', exigeSessao, exige(PERMISSAO_ENVIAR), async (req, res) =>
       return recusa(res, 'clienteId', 'O cliente escolhido não existe mais. Escolha outro.')
     }
 
-    /* a refeicao: so cliente que nao oferece, e so de quem esta na obra dele */
+    /* a refeicao: so cliente que nao oferece; o bonus: so cliente em que o
+       colaborador nao ficou sem direito ao bonus apartamento */
     if (categoria === 'refeicao') {
-      const recusada = await refeicaoRecusada(clienteId, req.dono.sub)
+      const recusada = await refeicaoRecusada(clienteId)
       if (recusada) return recusa(res, 'clienteId', recusada)
+    }
+    if (categoria === 'bonus') {
+      const recusado = await bonusRecusado(clienteId)
+      if (recusado) return recusa(res, 'clienteId', recusado)
     }
 
     /* a obra, quando vem, tem de ser DESSE cliente — senao o envio
@@ -1069,23 +1106,42 @@ router.get('/painel', exigeSessao, exige(PERMISSAO_DASHBOARD), async (req, res) 
    `exige` — o mesmo 403 de qualquer outra rota protegida.
    ============================================================ */
 
-router.get('/pessoas', exigeSessao, exige(PERMISSAO_REVISAR), async (_req, res) => {
+/* O filtro da lista (Administrativo > Reembolso): o total de CADA tipo
+   vem junto (`porCategoria`), e a tela troca entre Todos, Despesa,
+   Refeicao e Bonus na hora, sem perguntar de novo. O periodo (?mes= ou
+   ?ano=, como em /exportar) recorta cada categoria no periodo DELA. */
+const SOMA_DA_CATEGORIA = CHAVES_CATEGORIA.map(
+  (c) =>
+    `count(e.id) FILTER (WHERE e.categoria = '${c}')::int AS quantidade_${c},
+              coalesce(sum(e.valor) FILTER (WHERE e.categoria = '${c}'), 0) AS total_${c},
+              max(e.data) FILTER (WHERE e.categoria = '${c}') AS ultimo_${c}`,
+).join(',\n              ')
+
+router.get('/pessoas', exigeSessao, exige(PERMISSAO_REVISAR), async (req, res) => {
+  const periodo = periodoDaConsulta(req, res)
+  if (!periodo) return undefined
   try {
+    const periodos = periodo.meses ? await tabelaDePeriodos() : null
+    const { onde, params } = recorte({ ids: null, categoria: undefined, periodos, meses: periodo.meses })
     const { rows } = await query(
       `SELECT u.id, u.name, u.email, u.ativo,
               c.nome AS setor_nome, c.cor AS setor_cor,
               coalesce(t.nome, u.cargo_titulo) AS cargo_titulo,
               count(e.id)::int AS quantidade,
               sum(e.valor)     AS total,
-              max(e.data)      AS ultimo_envio
+              max(e.data)      AS ultimo_envio,
+              ${SOMA_DA_CATEGORIA}
          FROM despesa_envio e
          JOIN usuario u           ON u.id = e.usuario_id
          LEFT JOIN cargo c        ON c.id = u.cargo_id
          LEFT JOIN cargo_titulo t ON t.id = u.cargo_titulo_id
+        ${onde}
         GROUP BY u.id, u.name, u.email, u.ativo, c.nome, c.cor, t.nome, u.cargo_titulo
         ORDER BY lower(u.name)`,
+      params,
     )
     return res.json({
+      periodo: { tipo: periodo.tipo, valor: periodo.valor },
       pessoas: rows.map((l) => ({
         usuarioId: String(l.id),
         nome: l.name,
@@ -1096,6 +1152,15 @@ router.get('/pessoas', exigeSessao, exige(PERMISSAO_REVISAR), async (_req, res) 
         cargo: l.cargo_titulo ?? '',
         ultimoEnvio: l.ultimo_envio ? String(l.ultimo_envio).slice(0, 10) : null,
         ...soma(l),
+        porCategoria: Object.fromEntries(
+          CHAVES_CATEGORIA.map((c) => [
+            c,
+            {
+              ...soma({ total: l[`total_${c}`], quantidade: l[`quantidade_${c}`] }),
+              ultimoEnvio: l[`ultimo_${c}`] ? String(l[`ultimo_${c}`]).slice(0, 10) : null,
+            },
+          ]),
+        ),
       })),
     })
   } catch (erro) {

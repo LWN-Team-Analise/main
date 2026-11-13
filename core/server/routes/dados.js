@@ -40,6 +40,7 @@ import {
   TIPOS_DE_ITEM,
   rotuloDaCondicao,
   rotuloDoServico,
+  tipoDoItem,
 } from '../../src/domain/itensEnsaio.js'
 import { MOTIVO_DA_TRAVA, regraDoUsuario, regraLibera } from '../../src/domain/regrasCheck.js'
 
@@ -233,6 +234,10 @@ const paraCliente = (l) => ({
      refeicao, e o Reembolso nao aceita "Enviar refeição" para ele. A
      unidade sem resposta propria vale a do cliente */
   ofereceAlimentacao: typeof l.oferece_alimentacao === 'boolean' ? l.oferece_alimentacao : null,
+  /* "O colaborador tem direito a bônus apartamento?" (atualizacao 53):
+     false = o Reembolso nao aceita bonus para ele. A unidade sem resposta
+     propria vale a do cliente */
+  bonusApartamento: typeof l.bonus_apartamento === 'boolean' ? l.bonus_apartamento : null,
   criadoEm: l.criado_em,
 })
 
@@ -282,6 +287,12 @@ const COLUNAS_CLIENTE = COLUNAS_CLIENTE_38.replace(
   ' c.servico, coalesce(c.oferece_alimentacao, i.oferece_alimentacao) AS oferece_alimentacao,',
 )
 
+/* com o bonus apartamento (atualizacao 53) */
+const COLUNAS_CLIENTE_53 = COLUNAS_CLIENTE.replace(
+  ' c.servico,',
+  ' c.servico, coalesce(c.bonus_apartamento, i.bonus_apartamento) AS bonus_apartamento,',
+)
+
 /* banco com o servico das unidades e sem o pais (sem a atualizacao 35) */
 const COLUNAS_CLIENTE_34 = COLUNAS_CLIENTE_38.replace(' c.pais,', '')
 
@@ -302,11 +313,21 @@ async function lerClientes(imagens) {
     query(
       /* os prioritarios (as unidades da LWN, atualizacao 23) primeiro, na
          ordem deles; cada unidade logo depois do cliente dela */
-      `SELECT ${COLUNAS_CLIENTE}${imagens ? ', i.logo, i.capa' : ''}
+      `SELECT ${COLUNAS_CLIENTE_53}${imagens ? ', i.logo, i.capa' : ''}
          FROM cliente c
          JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
         ${ORDEM_CLIENTES}`,
     )
+      .catch((erro) => {
+        /* banco sem o bonus apartamento (atualizacao 53) */
+        if (erro.code !== '42703') throw erro
+        return query(
+          `SELECT ${COLUNAS_CLIENTE}${imagens ? ', i.logo, i.capa' : ''}
+             FROM cliente c
+             JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
+            ${ORDEM_CLIENTES}`,
+        )
+      })
       .catch((erro) => {
         /* banco sem o "Oferece alimentação?" (atualizacao 39) */
         if (erro.code !== '42703') throw erro
@@ -410,6 +431,7 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     horarioMembros,
     chats,
     ordens,
+    escolhidos,
   ] = await Promise.all([
     lerClientes(imagens),
     /* os setores vem junto: sao poucos e a tela de Clientes precisa
@@ -470,13 +492,17 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
              FROM obra_ensaio_progresso p ORDER BY p.dia`).catch(semTabelaVazia),
     /* a reserva de carro de cada obra (atualizacao 23) e a saida que
        retirou o carro. Sem a tabela, nenhuma obra tem reserva */
+    /* a liberacao da vespera (atualizacao 54) vem pelo to_jsonb: sem a
+       coluna no banco ela so nao aparece, e as reservas continuam */
     query(`SELECT r.obra_id, r.veiculo_id, r.reservado_em, r.registro_id,
                   v.nome AS veiculo_nome, v.placa, u.name AS reservado_por_nome,
                   vr.data AS retirada_data, to_char(vr.hora, 'HH24:MI') AS retirada_hora,
-                  vr.condutor_nome AS retirada_condutor, vr.km AS retirada_km
+                  vr.condutor_nome AS retirada_condutor, vr.km AS retirada_km,
+                  (to_jsonb(r) ->> 'liberada_em') AS liberada_em, ul.name AS liberada_por_nome
              FROM obra_reserva_veiculo r
              LEFT JOIN veiculo v           ON v.id = r.veiculo_id
              LEFT JOIN usuario u           ON u.id = r.reservado_por
+             LEFT JOIN usuario ul          ON ul.id = (to_jsonb(r) ->> 'liberada_por')::bigint
              LEFT JOIN veiculo_registro vr ON vr.id = r.registro_id`).catch(semTabelaVazia),
     /* os ensaios POR ITEM (atualizacao 25): os itens de cada obra e as
        linhas (item + ensaio + condicao), com o resultado da execucao.
@@ -494,9 +520,11 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
              LEFT JOIN usuario u ON u.id = p.incluido_por
             ORDER BY p.incluido_em`).catch(semTabelaVazia),
     /* os horarios dos checks com horario (atualizacao 31): cada data da
-       obra com o ponto de encontro e quem vai. Sem as tabelas, nenhum */
-    query(`SELECT obra_id, check_id, to_char(dia, 'YYYY-MM-DD') AS dia, to_char(hora, 'HH24:MI') AS hora
-             FROM obra_horario ORDER BY dia`).catch(semTabelaVazia),
+       obra com o ponto de encontro e quem vai. Sem as tabelas, nenhum. O
+       local (atualizacao 56) vem pelo to_jsonb: sem a coluna, fica a obra */
+    query(`SELECT obra_id, check_id, to_char(dia, 'YYYY-MM-DD') AS dia, to_char(hora, 'HH24:MI') AS hora,
+                  (to_jsonb(h) ->> 'local') AS local, (to_jsonb(h) ->> 'endereco') AS endereco
+             FROM obra_horario h ORDER BY dia`).catch(semTabelaVazia),
     query(`SELECT obra_id, check_id, to_char(dia, 'YYYY-MM-DD') AS dia, usuario_id
              FROM obra_horario_membro`).catch(semTabelaVazia),
     /* quantas mensagens o chat de cada obra tem (as apagadas para todos
@@ -515,6 +543,13 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
              FROM almox.solicitacoes
             WHERE obra_id IS NOT NULL
             ORDER BY id`).catch(semTabelaVazia),
+    /* quem foi escolhido nos checks de escolher pessoa (o Focal Point,
+       atualizacao 55). Sem a coluna, ninguem */
+    query(`SELECT oc.obra_id, oc.check_id, oc.escolhido_id, u.name AS escolhido_nome
+             FROM obra_check oc LEFT JOIN usuario u ON u.id = oc.escolhido_id
+            WHERE oc.escolhido_id IS NOT NULL`).catch((erro) =>
+      erro.code === '42703' || erro.code === '42P01' ? { rows: [] } : Promise.reject(erro),
+    ),
   ])
 
   const junta = (linhas, chave, monta) => {
@@ -552,6 +587,13 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
       ...(l.sem_informacao === true ? { semInformacao: true } : {}),
     }
     checksDaObra[l.obra_id] = mapa
+  })
+  /* o Focal Point escolhido (atualizacao 55) entra no check marcado */
+  escolhidos.rows.forEach((l) => {
+    const marca = checksDaObra[l.obra_id]?.[String(l.check_id)]
+    if (!marca) return
+    marca.escolhidoId = String(l.escolhido_id)
+    marca.escolhidoNome = l.escolhido_nome ?? null
   })
 
   /* prazo de cada etapa e de cada check, por obra, como 'AAAA-MM-DD' */
@@ -603,6 +645,8 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     ;(daObra[String(l.check_id)] ??= []).push({
       dia: l.dia,
       hora: l.hora,
+      local: LOCAIS_DO_ENCONTRO.includes(l.local) ? l.local : 'obra',
+      endereco: l.local === 'outro' ? (l.endereco ?? '') : '',
       membros: quemVai[`${l.obra_id}|${l.check_id}|${l.dia}`] ?? [],
     })
   })
@@ -685,6 +729,8 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
         placa: l.placa ?? '',
         reservadoPorNome: l.reservado_por_nome ?? null,
         reservadoEm: l.reservado_em,
+        /* o carro concedido antes: a retirada liberada na vespera (atualizacao 54) */
+        liberada: l.liberada_em ? { em: l.liberada_em, porNome: l.liberada_por_nome ?? null } : null,
         retirada: l.registro_id
           ? {
               registroId: String(l.registro_id),
@@ -778,6 +824,9 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
       /* o tipo de servico (atualizacao 25) e os itens com as linhas.
          itens vazio = a obra nao planeja por item */
       servico: o.servico ?? null,
+      /* o "Tipo de ensaio" do Comercial (atualizacao 54): os tipos de item
+         que o planejamento pode usar. null = ainda nao escolhido */
+      tiposEnsaio: Array.isArray(o.tipos_ensaio) ? o.tipos_ensaio : null,
       itens: itensDaObra[o.id] ?? [],
       membros: membrosDaObra[o.id] ?? [],
       /* os incluidos a mao: pendente, aceito ou recusado (com o motivo) */
@@ -1445,12 +1494,26 @@ function lerExtrasDoCliente(corpo) {
           ? corpo.ofereceAlimentacao
           : null
         : undefined,
+    /* "O colaborador tem direito a bônus apartamento?", do mesmo jeito */
+    bonusApartamento:
+      corpo && 'bonusApartamento' in corpo
+        ? typeof corpo.bonusApartamento === 'boolean'
+          ? corpo.bonusApartamento
+          : null
+        : undefined,
   }
 }
 
 /* banco sem a atualizacao 39: o resto do cadastro grava, sem a resposta */
 async function gravarAlimentacao(clienteId, valor) {
   await query('UPDATE cliente SET oferece_alimentacao = $2 WHERE id = $1', [clienteId, valor]).catch((erro) => {
+    if (erro.code !== '42703') throw erro
+  })
+}
+
+/* banco sem a atualizacao 53: o resto do cadastro grava, sem a resposta */
+async function gravarBonusApartamento(clienteId, valor) {
+  await query('UPDATE cliente SET bonus_apartamento = $2 WHERE id = $1', [clienteId, valor]).catch((erro) => {
     if (erro.code !== '42703') throw erro
   })
 }
@@ -1484,6 +1547,7 @@ async function gravarExtrasDoCliente(clienteId, extras, { novo, usuarioId }) {
       }
     })
     if (extras.ofereceAlimentacao !== undefined) await gravarAlimentacao(clienteId, extras.ofereceAlimentacao)
+    if (extras.bonusApartamento !== undefined) await gravarBonusApartamento(clienteId, extras.bonusApartamento)
   } catch (erro) {
     /* banco ainda sem a atualizacao 27: o cadastro em si ja foi gravado */
     if (erro.code === '42P01' || erro.code === '42703') return
@@ -2780,6 +2844,46 @@ async function regraDoCheck(checkId) {
   }
 }
 
+/* onde o Ponto de encontro acontece (atualizacao 56) */
+const LOCAIS_DO_ENCONTRO = ['obra', 'empresa', 'outro']
+
+/** O check tem horario (o Ponto de encontro, atualizacao 31)? */
+async function checkComHorario(checkId) {
+  const { rows } = await query('SELECT horario FROM etapa_check WHERE id = $1', [checkId]).catch((erro) =>
+    erro.code === '42703' ? { rows: [] } : Promise.reject(erro),
+  )
+  return rows[0]?.horario === true
+}
+
+/**
+ * A etapa SEGUINTE que ja tem check marcado nesta obra: { ordem, nome },
+ * ou null. O Prazo da execucao e o Ponto de encontro so se desmarcam
+ * enquanto as etapas depois da deles estao sem nenhum check: o que veio
+ * depois pode ter sido feito em cima deles.
+ */
+async function etapaSeguinteMarcada(obraId, checkId) {
+  const { rows } = await query(
+    `SELECT et.ordem, et.nome
+       FROM obra_check oc
+       JOIN etapa_check ck ON ck.id = oc.check_id
+       JOIN etapa_card kd  ON kd.id = ck.card_id
+       JOIN etapa et       ON et.id = kd.etapa_id
+      WHERE oc.obra_id = $1
+        AND et.ordem > (SELECT e2.ordem
+                          FROM etapa_check c2
+                          JOIN etapa_card k2 ON k2.id = c2.card_id
+                          JOIN etapa e2      ON e2.id = k2.etapa_id
+                         WHERE c2.id = $2)
+      ORDER BY et.ordem
+      LIMIT 1`,
+    [obraId, checkId],
+  )
+  return rows[0] ?? null
+}
+
+const recadoEtapaSeguinte = (etapa) =>
+  `${etapa.nome ? `A etapa “${etapa.nome}”` : 'Uma etapa seguinte'} já tem check marcado. Para desmarcar este, desmarque antes os checks das etapas seguintes.`
+
 /* ------------------------------------------------------------
    Os ENSAIOS da obra (atualizacao 14)
 
@@ -2969,6 +3073,23 @@ async function faltaNoCheck(obraId, checkId, regra, resposta) {
     }
   }
 
+  /* O "Focal Point" (atualizacao 55) marca quando o setor escolhe a pessoa
+     no proprio check (PUT /obras/:id/focal-point/:checkId), e nunca no clique */
+  if (regra.tipo === 'focal_point') {
+    return { status: 409, erro: 'Escolha o focal point no próprio check.', falta: 'o focal point' }
+  }
+
+  /* O "Tipo de ensaio" do Comercial (atualizacao 54) marca quando os
+     tipos sao escolhidos no proprio check */
+  if (regra.tipo === 'tipo_ensaio') {
+    const { rows } = await query('SELECT tipos_ensaio FROM obra WHERE id = $1', [obraId]).catch((erro) =>
+      erro.code === '42703' ? { rows: [] } : Promise.reject(erro),
+    )
+    if (!(rows[0]?.tipos_ensaio?.length > 0)) {
+      return { status: 409, erro: 'Escolha o tipo de ensaio no próprio check.', falta: 'o tipo de ensaio' }
+    }
+  }
+
   /* A reserva e a retirada do carro (atualizacao 23) nao se marcam no
      clique: a reserva marca quando o supervisor escolhe o carro, e a
      retirada quando a saida do carro e registrada (ver
@@ -3151,12 +3272,77 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
   }
 })
 
+/* ------------------------------------------------------------
+   FOCAL POINT (2a etapa — atualizacao 55)
+
+   Corpo: { usuarioId }. O check "Determinar Focal Point" (tipo
+   focal_point) e do setor do card (o Almoxarife, o Time Tecnico): quem
+   marca escolhe uma pessoa DESSE setor como focal point da obra. Escolher
+   ja marca o check; trocar a pessoa e escolher de novo.
+   ------------------------------------------------------------ */
+
+/** Os setores (ids de cargo) de um check: os dele, ou os do card. */
+async function setoresDoCheck(checkId) {
+  const proprio = await query('SELECT cargo_id FROM etapa_check_cargo WHERE check_id = $1', [checkId])
+  if (proprio.rows.length > 0) return proprio.rows.map((l) => String(l.cargo_id))
+  const { rows } = await query(
+    `SELECT cc.cargo_id FROM etapa_check ck JOIN etapa_card_cargo cc ON cc.card_id = ck.card_id WHERE ck.id = $1`,
+    [checkId],
+  )
+  return rows.map((l) => String(l.cargo_id))
+}
+
+router.put('/obras/:id/focal-point/:checkId', exigeSessao, obraAberta, async (req, res) => {
+  const obraId = req.params.id
+  const checkId = req.params.checkId
+  const usuarioId = texto(req.body?.usuarioId)
+  if (!/^\d{1,15}$/.test(checkId)) return res.status(404).json({ erro: 'Check não encontrado.' })
+  if (!/^\d{1,15}$/.test(usuarioId)) return res.status(400).json({ erro: 'Escolha quem vai ser o focal point.' })
+  try {
+    const regra = await regraDoCheck(checkId)
+    if (regra.tipo !== 'focal_point') return res.status(409).json({ erro: 'Este check não é de focal point.' })
+    if (await recusouMarcar(res, req.dono.sub, checkId, obraId, 'Este Focal Point é de outro setor.')) return
+
+    const setores = await setoresDoCheck(checkId)
+    const { rows: pessoa } = await query('SELECT name, cargo_id FROM usuario WHERE id = $1 AND ativo', [usuarioId])
+    if (!pessoa[0]) return res.status(400).json({ erro: 'Esta pessoa não está mais na equipe.' })
+    if (!setores.includes(String(pessoa[0].cargo_id))) {
+      return res.status(400).json({ erro: 'O focal point tem de ser uma pessoa do setor deste check.' })
+    }
+
+    const { rows } = await query(
+      `INSERT INTO obra_check (obra_id, check_id, feito_por, escolhido_id)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (obra_id, check_id) DO UPDATE
+          SET escolhido_id = EXCLUDED.escolhido_id, feito_por = EXCLUDED.feito_por, feito_em = now()
+       RETURNING (xmax = 0) AS inserido`,
+      [obraId, checkId, req.dono.sub, usuarioId],
+    )
+    await informacaoChegou(obraId, checkId)
+    const novo = rows[0]?.inserido === true
+    await registrarAtividade(req, {
+      acao: novo ? 'check.marcado' : 'check.focal_point',
+      categoria: 'check',
+      entidade: ['obra', obraId],
+      descricao: novo ? 'Check concluído' : 'Focal point trocado',
+      detalhes: { ...(await descreverObra(obraId)), ...(await descreverCheck(checkId)), focal_point: pessoa[0].name },
+    })
+    if (novo) await depoisDeMarcar(req.dono.sub, obraId)
+    return res.json({ ok: true })
+  } catch (e) {
+    if (e.code === '42703') {
+      return res.status(501).json({ erro: 'O banco ainda não tem o Focal Point. Rode npm run db:atualizar (atualização 55).' })
+    }
+    if (e.code === '23503') return res.status(404).json({ erro: 'Obra ou check não encontrado.' })
+    return tratar(e, res, 'dados/focal-point')
+  }
+})
+
 router.delete('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, res) => {
   try {
     if (await recusouMarcar(res, req.dono.sub, req.params.checkId, req.params.id, 'Este check é de outro setor.')) return
-    /* o do prazo acompanha o prazo: com a data definida, ele fica marcado.
-       O concluido SEM a informacao (atualizacao 36) nao acompanha nada —
-       nem o prazo, nem a reserva, nem a saida —, e desmarca como os outros */
+    /* O concluido SEM a informacao (atualizacao 36) nao acompanha nada —
+       nem a reserva, nem a saida —, e desmarca como os outros */
     const { tipo } = await regraDoCheck(req.params.checkId)
     const semInformacao = await concluidoSemInformacao(req.params.id, req.params.checkId)
     /* os da O.S. acompanham a OS no LWN Control: saem sozinhos so se a OS
@@ -3168,10 +3354,12 @@ router.delete('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req,
     ) {
       return res.status(409).json({ erro: CHECKS_DA_OS[tipo].desmarcar })
     }
-    if (tipo === 'prazo_execucao' && !semInformacao) {
-      return res.status(409).json({
-        erro: 'Este check acompanha o prazo da execução. Para mudar, altere a data no período de execução.',
-      })
+    /* o Prazo da execucao e o check com horario (o Ponto de encontro)
+       desmarcam enquanto as etapas seguintes estao sem check. O prazo
+       desmarcado guarda os dias: salvar o periodo de novo marca ele */
+    if (tipo === 'prazo_execucao' || (await checkComHorario(req.params.checkId))) {
+      const depois = await etapaSeguinteMarcada(req.params.id, req.params.checkId)
+      if (depois) return res.status(409).json({ erro: recadoEtapaSeguinte(depois) })
     }
     /* os do carro acompanham a reserva e a saida (atualizacao 23) */
     if ((tipo === 'reserva_carro' || tipo === 'retirada_carro') && !semInformacao) {
@@ -3861,6 +4049,15 @@ router.put('/obras/:id/planejamento-itens', exigeSessao, obraAberta, async (req,
     }
     if (await recusouMarcar(res, req.dono.sub, checkId, obraId, 'O Planejamento de ensaios é de outro setor.')) return
 
+    /* O TIPO DO ITEM e do Comercial (atualizacao 54): na obra com o check
+       "Tipo de ensaio", o item novo (ou que mudou de tipo) so entra com um
+       dos tipos que o Comercial escolheu. O item que ja existia fica com o
+       tipo dele. Obra sem o check segue livre, como antes. */
+    if (await checkDoSistema(obraId, 'tipo_ensaio').catch(() => null)) {
+      const recusado = await tipoForaDoComercial(obraId, itens)
+      if (recusado) return res.status(409).json({ erro: recusado })
+    }
+
     /* a lista solta com execucao registrada nao passa para itens */
     const jaPorItem = await usaItens(obraId)
     if (!jaPorItem && itens.length > 0) {
@@ -4036,6 +4233,75 @@ router.put('/obras/:id/planejamento-itens', exigeSessao, obraAberta, async (req,
   }
 })
 
+/**
+ * O recado de recusa quando algum item usa um tipo que o Comercial nao
+ * escolheu no "Tipo de ensaio" (ou null quando todos passam).
+ */
+async function tipoForaDoComercial(obraId, itens) {
+  const [{ rows: obra }, { rows: atuais }] = await Promise.all([
+    query('SELECT tipos_ensaio FROM obra WHERE id = $1', [obraId]).catch((e) =>
+      e.code === '42703' ? { rows: [{ tipos_ensaio: null }] } : Promise.reject(e),
+    ),
+    query('SELECT id, tipo FROM obra_item WHERE obra_id = $1', [obraId]),
+  ])
+  const permitidos = obra[0]?.tipos_ensaio ?? []
+  const tipoAntes = new Map(atuais.map((l) => [String(l.id), l.tipo]))
+  const fora = itens.find((i) => !(i.id && tipoAntes.get(i.id) === i.tipo) && !permitidos.includes(i.tipo))
+  if (!fora) return null
+  if (permitidos.length === 0) {
+    return 'O tipo do item é definido pelo Comercial, no check "Tipo de ensaio" do card dele, e ainda não foi escolhido.'
+  }
+  const nomes = permitidos.map((t) => tipoDoItem(t)?.rotulo ?? t).join(', ')
+  return `O tipo do item é definido pelo Comercial (check "Tipo de ensaio"): esta obra usa ${nomes}.`
+}
+
+/* ------------------------------------------------------------
+   TIPO DE ENSAIO (1a etapa, card do Comercial — atualizacao 54)
+
+   Corpo: { tipos: ['ambiente', 'equipamento', ...] }, os tipos de item
+   desta obra (TIPOS_DE_ITEM). Quem pode e quem marca o check (o Comercial,
+   pela regra de sempre). Gravar ja marca o check; o Planejamento de
+   ensaios passa a so aceitar item destes tipos.
+   ------------------------------------------------------------ */
+
+router.put('/obras/:id/tipo-ensaio', exigeSessao, obraAberta, async (req, res) => {
+  const obraId = req.params.id
+  const brutos = Array.isArray(req.body?.tipos) ? req.body.tipos.map(texto) : null
+  if (!brutos) return res.status(400).json({ erro: 'Escolha o tipo de ensaio.' })
+  const tipos = TIPOS_DE_ITEM.map((t) => t.id).filter((id) => brutos.includes(id))
+  if (tipos.length === 0) return res.status(400).json({ erro: 'Escolha ao menos um tipo de ensaio.' })
+  try {
+    const checkId = await checkDoSistema(obraId, 'tipo_ensaio')
+    if (!checkId) return res.status(409).json({ erro: 'Esta obra não tem o check "Tipo de ensaio".' })
+    if (await recusouMarcar(res, req.dono.sub, checkId, obraId, 'O Tipo de ensaio é do Comercial.')) return
+
+    await query('UPDATE obra SET tipos_ensaio = $2, atualizado_por = $3 WHERE id = $1', [obraId, tipos, req.dono.sub])
+    const marcou = await query(
+      `INSERT INTO obra_check (obra_id, check_id, feito_por) VALUES ($1, $2, $3)
+       ON CONFLICT (obra_id, check_id) DO NOTHING`,
+      [obraId, checkId, req.dono.sub],
+    )
+    await informacaoChegou(obraId, checkId)
+    await registrarAtividade(req, {
+      acao: 'check.tipo_ensaio',
+      categoria: 'check',
+      entidade: ['obra', obraId],
+      descricao: 'Tipo de ensaio escolhido',
+      detalhes: {
+        ...(await descreverObra(obraId)),
+        tipos: tipos.map((t) => tipoDoItem(t)?.rotulo ?? t).join(', '),
+      },
+    })
+    if (marcou.rowCount > 0) await depoisDeMarcar(req.dono.sub, obraId)
+    return res.json({ ok: true, tipos })
+  } catch (e) {
+    if (e.code === '42703') {
+      return res.status(501).json({ erro: 'O banco ainda não tem o Tipo de ensaio. Rode npm run db:atualizar (atualização 54).' })
+    }
+    return tratar(e, res, 'dados/tipo-ensaio')
+  }
+})
+
 /* ------------------------------------------------------------
    Execucao POR LINHA (3a etapa)
 
@@ -4080,6 +4346,10 @@ router.put('/obras/:id/execucao-itens', exigeSessao, obraAberta, async (req, res
     const observacao = opcional(l.observacao)
     if (observacao && observacao.length > LIMITES_ITEM.observacao) {
       return res.status(400).json({ erro: `A observação passa de ${LIMITES_ITEM.observacao} caracteres.` })
+    }
+    /* "Nao conforme" sempre com o porque: a justificativa e a observacao */
+    if (l.conforme === false && !observacao) {
+      return res.status(400).json({ erro: 'Justifique por que o ensaio ficou não conforme.' })
     }
     linhas.push({ id, data, resultado, conforme: l.conforme, observacao })
   }
@@ -5602,8 +5872,13 @@ router.delete('/obras/:id/parciais/:usuarioId', exigeSessao, exige('ver_obras'),
    O CHECK COM HORARIO (atualizacao 31)
 
      PUT /obras/:id/horarios/:checkId
-         { dias: [{ dia: 'AAAA-MM-DD', hora: 'HH:MM', membros: [ids] }],
+         { dias: [{ dia: 'AAAA-MM-DD', hora: 'HH:MM', membros: [ids],
+                    local?: 'obra' | 'empresa' | 'outro', endereco?: '...' }],
            marcar?: true | false }
+
+   O LOCAL de cada data (atualizacao 56): no local da obra (o endereco
+   do cliente, o de sempre), na empresa (LWN) ou em outro lugar, que
+   pede o endereco escrito. Sem `local`, vale a obra.
 
    O pop-up do check (ex.: "Ponto de encontro") manda a lista inteira:
    cada data da obra com o horario e quem vai. Data que saiu da lista
@@ -5618,6 +5893,20 @@ router.delete('/obras/:id/parciais/:usuarioId', exigeSessao, exige('ver_obras'),
    ============================================================ */
 
 const DIAS_MAXIMOS = 120
+const ENDERECO_MAXIMO = 300
+
+/* o banco ja tem o local do encontro (atualizacao 56)? Lembrado depois do
+   primeiro sim: a coluna nao some */
+let temLocalDoEncontro = false
+async function bancoTemLocalDoEncontro(db = { query }) {
+  if (temLocalDoEncontro) return true
+  const { rows } = await db.query(
+    `SELECT EXISTS (SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'obra_horario' AND column_name = 'local') AS ok`,
+  )
+  temLocalDoEncontro = rows[0]?.ok === true
+  return temLocalDoEncontro
+}
 
 router.put('/obras/:id/horarios/:checkId', exigeSessao, obraAberta, async (req, res) => {
   const { id: obraId, checkId } = req.params
@@ -5637,7 +5926,17 @@ router.put('/obras/:id/horarios/:checkId', exigeSessao, obraAberta, async (req, 
     if (dias.some((d) => d.dia === dia)) return res.status(400).json({ erro: 'Há uma data repetida.' })
     const membros = [...new Set((Array.isArray(item?.membros) ? item.membros : []).map(String))]
     if (membros.some((m) => !idValido(m))) return res.status(400).json({ erro: 'Uma das pessoas é inválida.' })
-    dias.push({ dia, hora, membros })
+    /* o local: o da data, ou o do pedido inteiro, ou a obra */
+    const local = texto(item?.local ?? req.body?.local) || 'obra'
+    if (!LOCAIS_DO_ENCONTRO.includes(local)) return res.status(400).json({ erro: 'Local do encontro inválido.' })
+    const endereco = local === 'outro' ? texto(item?.endereco ?? req.body?.endereco) : ''
+    if (local === 'outro' && !endereco) {
+      return res.status(400).json({ erro: `Escreva o endereço do encontro de ${dia.split('-').reverse().join('/')}.` })
+    }
+    if (endereco.length > ENDERECO_MAXIMO) {
+      return res.status(400).json({ erro: `O endereço tem no máximo ${ENDERECO_MAXIMO} caracteres.` })
+    }
+    dias.push({ dia, hora, membros, local, endereco: endereco || null })
   }
   const marcar = typeof req.body?.marcar === 'boolean' ? req.body.marcar : undefined
 
@@ -5657,6 +5956,12 @@ router.put('/obras/:id/horarios/:checkId', exigeSessao, obraAberta, async (req, 
       }
     }
 
+    /* desmarcar so com as etapas seguintes ainda sem check */
+    if (marcar === false) {
+      const depois = await etapaSeguinteMarcada(obraId, checkId)
+      if (depois) return res.status(409).json({ erro: recadoEtapaSeguinte(depois) })
+    }
+
     if (marcar === true) {
       if (dias.length === 0) {
         return res.status(400).json({ erro: 'Defina o horário de ao menos uma data antes de marcar o check.' })
@@ -5672,19 +5977,32 @@ router.put('/obras/:id/horarios/:checkId', exigeSessao, obraAberta, async (req, 
       }
     }
 
+    /* sem a atualizacao 56 o local nao e gravado (fica a obra) */
+    const comLocal = await bancoTemLocalDoEncontro()
     const marcouAgora = await emTransacao(async (db) => {
       await db.query(
         'DELETE FROM obra_horario WHERE obra_id = $1 AND check_id = $2 AND NOT (dia = ANY($3::date[]))',
         [obraId, checkId, dias.map((d) => d.dia)],
       )
       for (const d of dias) {
-        await db.query(
-          `INSERT INTO obra_horario (obra_id, check_id, dia, hora, atualizado_por)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (obra_id, check_id, dia) DO UPDATE
-              SET hora = EXCLUDED.hora, atualizado_por = EXCLUDED.atualizado_por, atualizado_em = now()`,
-          [obraId, checkId, d.dia, d.hora, req.dono.sub],
-        )
+        if (comLocal) {
+          await db.query(
+            `INSERT INTO obra_horario (obra_id, check_id, dia, hora, local, endereco, atualizado_por)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (obra_id, check_id, dia) DO UPDATE
+                SET hora = EXCLUDED.hora, local = EXCLUDED.local, endereco = EXCLUDED.endereco,
+                    atualizado_por = EXCLUDED.atualizado_por, atualizado_em = now()`,
+            [obraId, checkId, d.dia, d.hora, d.local, d.endereco, req.dono.sub],
+          )
+        } else {
+          await db.query(
+            `INSERT INTO obra_horario (obra_id, check_id, dia, hora, atualizado_por)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (obra_id, check_id, dia) DO UPDATE
+                SET hora = EXCLUDED.hora, atualizado_por = EXCLUDED.atualizado_por, atualizado_em = now()`,
+            [obraId, checkId, d.dia, d.hora, req.dono.sub],
+          )
+        }
         await db.query('DELETE FROM obra_horario_membro WHERE obra_id = $1 AND check_id = $2 AND dia = $3', [
           obraId,
           checkId,

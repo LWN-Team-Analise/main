@@ -54,6 +54,22 @@ export const IconeLista = () => (
   </svg>
 )
 
+/* as ultimas atualizacoes da frota: o relogio com a seta da volta */
+export const IconeAtualizacoes = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" {...traco}>
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+    <path d="M3 3v5h5M12 7v5l3 2" />
+  </svg>
+)
+
+/* a localizacao dos carros: o alfinete do mapa */
+export const IconeLocalizacao = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" {...traco}>
+    <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
+    <circle cx="12" cy="10" r="2.4" />
+  </svg>
+)
+
 export const IconeMais = () => (
   <svg viewBox="0 0 24 24" width="16" height="16" {...traco} strokeWidth="2">
     <path d="M12 5v14M5 12h14" />

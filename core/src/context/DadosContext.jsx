@@ -379,6 +379,14 @@ export function DadosProvider({ children }) {
     [gravar],
   )
 
+  /* desmarcar de dentro de um pop-up (o Ponto de encontro, o Prazo da
+     execucao): sem a ida otimista do alternarCheck, e o erro volta para
+     quem chamou mostrar ali mesmo */
+  const desmarcarCheck = useCallback(
+    (obraId, checkId) => gravar(() => dados.desmarcarCheck(obraId, checkId)),
+    [gravar],
+  )
+
   const atualizarObra = useCallback(
     (id, campos) => gravar(() => dados.editarObra(id, campos)),
     [gravar],
@@ -605,6 +613,18 @@ export function DadosProvider({ children }) {
   /** O planejamento por item inteiro ({ servico, itens }); `concluir` ja marca o check. */
   const planejarItens = useCallback(
     (obraId, campos, concluir) => gravar(() => dados.planejarItens(obraId, campos, concluir)),
+    [gravar],
+  )
+
+  /** O Focal Point do setor (atualizacao 55): a pessoa escolhida no check. */
+  const definirFocalPoint = useCallback(
+    (obraId, checkId, usuarioId) => gravar(() => dados.definirFocalPoint(obraId, checkId, usuarioId)),
+    [gravar],
+  )
+
+  /** O "Tipo de ensaio" do Comercial (atualizacao 54): os tipos de item da obra. */
+  const definirTipoEnsaio = useCallback(
+    (obraId, tipos) => gravar(() => dados.definirTipoEnsaio(obraId, tipos)),
     [gravar],
   )
 
@@ -1311,6 +1331,8 @@ export function DadosProvider({ children }) {
       registrarExecucaoDia,
       planejarItens,
       registrarLinhas,
+      definirTipoEnsaio,
+      definirFocalPoint,
       adicionarEnsaio,
       atualizarEnsaio,
       removerEnsaio,
@@ -1334,6 +1356,7 @@ export function DadosProvider({ children }) {
       responderInclusao,
       tirarMembroParcial,
       definirHorarios,
+      desmarcarCheck,
 
       adicionarAvaliacao,
       atualizarAvaliacao,
@@ -1438,6 +1461,8 @@ export function DadosProvider({ children }) {
       registrarExecucaoDia,
       planejarItens,
       registrarLinhas,
+      definirTipoEnsaio,
+      definirFocalPoint,
       adicionarEnsaio,
       atualizarEnsaio,
       removerEnsaio,
@@ -1459,6 +1484,7 @@ export function DadosProvider({ children }) {
       responderInclusao,
       tirarMembroParcial,
       definirHorarios,
+      desmarcarCheck,
       adicionarAvaliacao,
       atualizarAvaliacao,
       removerAvaliacao,

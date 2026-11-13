@@ -2,7 +2,14 @@ import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import { query } from '../db.js'
 import { cargoPode, exige, exigeSessao, meuCargo, tratar } from '../sessao.js'
-import { limparGuardadas, normalizar } from '../../src/domain/permissoes.js'
+import {
+  CHAVES_PAINEL,
+  VISUALIZACAO,
+  limparGuardadas,
+  normalizar,
+  normalizarPessoais,
+  painelPorChave,
+} from '../../src/domain/permissoes.js'
 import { lerRegrasCheck } from '../../src/domain/regrasCheck.js'
 import { IMAGEM_INVALIDA, imagemValida } from '../utils/imagem.js'
 import { gerarSenhaProvisoria } from '../utils/senha.js'
@@ -52,6 +59,7 @@ const ROTULO_CAMPO_USUARIO = {
   cargo_id: 'setor',
   cargo: 'setor',
   cpf: 'CPF',
+  permissoes_pessoais: 'quadro de avisos e agenda',
 }
 
 /** A senha com que todo colaborador novo entrava, e que esta escrita no
@@ -105,6 +113,12 @@ const paraCargo = (linha) => ({
      pessoa, a partir de que etapa e os checks de fora. null = o banco
      ainda nao tem a coluna, e a tela de Setores esconde a parte */
   regrasCheck: linha.regras_check === undefined ? null : lerRegrasCheck(linha.regras_check),
+  /* o PAINEL do setor (atualizacao 53): o "Meu painel" de quem esta nele.
+     `painelDisponivel` false = o banco ainda nao tem a coluna, e a tela de
+     Setores esconde a escolha */
+  painelDisponivel: linha.painel !== undefined,
+  painel: CHAVES_PAINEL.includes(linha.painel) ? linha.painel : null,
+  painelExclusivo: CHAVES_PAINEL.includes(linha.painel) && linha.painel_exclusivo === true,
 })
 
 /* ------------------------------------------------------------
@@ -196,7 +210,9 @@ router.patch('/cargos/:id', exigeSessao, exige('editar_cargo'), async (req, res)
     req.body?.painelTv === undefined &&
     req.body?.permissoes === undefined &&
     req.body?.permissoesGuardadas === undefined &&
-    req.body?.regrasCheck === undefined
+    req.body?.regrasCheck === undefined &&
+    req.body?.painel === undefined &&
+    req.body?.painelExclusivo === undefined
   ) {
     return res.status(400).json({ erro: 'Nada para alterar.' })
   }
@@ -284,6 +300,22 @@ router.patch('/cargos/:id', exigeSessao, exige('editar_cargo'), async (req, res)
       }
     }
 
+    /* O PAINEL do setor (atualizacao 53), o "Meu painel" de quem esta nele.
+       So quem tem acesso total escolhe — e a mesma trava do acesso total e
+       da TV. Exclusivo: o painel e so deste setor, e nenhum outro pode te-lo;
+       o que ja e exclusivo de outro fica travado ate o setor de la mudar.
+       O Almoxarife so e painel de quem ve a aba dele (`exige`). */
+    if (req.body?.painel !== undefined || req.body?.painelExclusivo !== undefined || alvo.rows[0].painel) {
+      const recusa = await conferirPainel(req, alvo.rows[0])
+      if (recusa?.erro) return res.status(recusa.status).json({ erro: recusa.erro })
+      if (recusa?.painel !== undefined) {
+        valores.push(recusa.painel)
+        campos.push(`painel = $${valores.length}`)
+        valores.push(recusa.exclusivo)
+        campos.push(`painel_exclusivo = $${valores.length}`)
+      }
+    }
+
     if (campos.length === 0) {
       const igual = await query('SELECT * FROM cargo WHERE id = $1', [req.params.id])
       return res.json({ cargo: paraCargo(igual.rows[0]) })
@@ -300,7 +332,7 @@ router.patch('/cargos/:id', exigeSessao, exige('editar_cargo'), async (req, res)
       acao: 'setor.editado',
       categoria: 'equipe',
       entidade: ['cargo', rows[0].id],
-      descricao: campos.some((c) => /^(permissoes|acesso_total|painel_tv|regras_check)/.test(c))
+      descricao: campos.some((c) => /^(permissoes|acesso_total|painel|regras_check)/.test(c))
         ? 'Permissões do setor alteradas'
         : 'Setor editado',
       detalhes: { setor: rows[0].nome },
@@ -310,6 +342,70 @@ router.patch('/cargos/:id', exigeSessao, exige('editar_cargo'), async (req, res)
     return tratar(erro, res, 'equipe/cargos-editar')
   }
 })
+
+/**
+ * O painel que o setor fica tendo depois deste PATCH, conferido.
+ *
+ * Volta { erro, status } para recusar, { painel, exclusivo } quando muda e
+ * nada quando fica como estava. A conta usa o estado FINAL do setor (a lista
+ * nova de permissoes e o acesso total novo, se vieram no mesmo pedido): o
+ * painel do Almoxarife cai junto se a aba dele for desmarcada.
+ */
+async function conferirPainel(req, linha) {
+  if (linha.painel === undefined) {
+    if (req.body?.painel === undefined && req.body?.painelExclusivo === undefined) return null
+    return { status: 503, erro: 'O banco ainda não tem o Meu painel. Rode npm run db:atualizar (atualização 53).' }
+  }
+  const antes = CHAVES_PAINEL.includes(linha.painel) ? linha.painel : null
+  const exclusivoAntes = Boolean(antes) && linha.painel_exclusivo === true
+  const pedido = req.body?.painel !== undefined ? texto(req.body.painel) || null : antes
+  if (pedido !== null && !CHAVES_PAINEL.includes(pedido)) return { status: 400, erro: 'Painel inválido.' }
+
+  /* o painel que pede uma aba some quando o setor deixa de ver a aba */
+  const def = pedido ? painelPorChave(pedido) : null
+  const lista = req.body?.permissoes !== undefined ? normalizar(req.body.permissoes) : normalizar(linha.permissoes ?? [])
+  const total = req.body?.acessoTotal !== undefined ? Boolean(req.body.acessoTotal) : linha.acesso_total === true
+  const semAba = def?.exige && !total && !lista.includes(def.exige)
+  if (semAba && req.body?.painel !== undefined) {
+    const aba = VISUALIZACAO.find((v) => v.chave === def.exige)?.rotulo ?? def.exige
+    return { status: 400, erro: `Para o painel ${def.rotulo}, marque "${aba}" em Visualização.` }
+  }
+  const painel = semAba ? null : pedido
+  const exclusivo = painel
+    ? req.body?.painelExclusivo !== undefined
+      ? req.body.painelExclusivo === true
+      : exclusivoAntes
+    : false
+  if (painel === antes && exclusivo === exclusivoAntes) return null
+
+  /* o painel que cai so porque a aba dele foi desmarcada nao e escolha:
+     quem pode desmarcar a aba pode deixar o setor sem o painel dela */
+  const soCaiu = semAba && req.body?.painel === undefined && req.body?.painelExclusivo === undefined
+  if (!soCaiu && !req.cargo?.acessoTotal) {
+    return { status: 403, erro: 'Só quem tem acesso total escolhe o painel do setor.' }
+  }
+
+  if (painel) {
+    const { rows: outros } = await query(
+      'SELECT nome, painel_exclusivo FROM cargo WHERE painel = $1 AND id <> $2 ORDER BY ordem, nome',
+      [painel, req.params.id],
+    )
+    const dono = outros.find((o) => o.painel_exclusivo)
+    if (dono) {
+      return {
+        status: 409,
+        erro: `O painel ${def.rotulo} é exclusivo do setor ${dono.nome}. Para usá-lo aqui, libere primeiro no setor ${dono.nome}.`,
+      }
+    }
+    if (exclusivo && outros.length > 0) {
+      return {
+        status: 409,
+        erro: `O painel ${def.rotulo} também é de ${outros.map((o) => o.nome).join(', ')}. Tire de lá antes de deixá-lo só deste setor.`,
+      }
+    }
+  }
+  return { painel, exclusivo }
+}
 
 router.delete('/cargos/:id', exigeSessao, exige('editar_cargo'), async (req, res) => {
   try {
@@ -524,6 +620,24 @@ const consultaUsuarios = (comFoto) => `
 
 const CONSULTA_USUARIOS = consultaUsuarios(true)
 
+/* As permissoes da PESSOA (atualizacao 53: quadro de avisos e agenda),
+   lidas a parte: a consulta de cima continua a mesma em banco sem a
+   coluna. null = sem a coluna (a tela volta a regra do setor). */
+async function pessoaisDaEquipe() {
+  try {
+    const { rows } = await query("SELECT id, permissoes_pessoais FROM usuario WHERE permissoes_pessoais <> '{}'")
+    return new Map(rows.map((l) => [String(l.id), normalizarPessoais(l.permissoes_pessoais)]))
+  } catch (erro) {
+    if (erro.code === '42703') return null
+    throw erro
+  }
+}
+
+const comPessoais = (pessoais) => (u) => ({
+  ...u,
+  permissoesPessoais: pessoais ? pessoais.get(String(u.id)) ?? [] : null,
+})
+
 const paraUsuario = (l) => ({
   id: String(l.id),
   nome: l.name,
@@ -607,7 +721,7 @@ function recortarPessoal(usuario, meu, meuId) {
  * carga (server/carga.js). `imagens: false` deixa as fotos de fora.
  */
 export async function lerEquipe(usuarioId, { imagens = true } = {}) {
-  const [cargos, titulos, usuarios, meu] = await Promise.all([
+  const [cargos, titulos, usuarios, meu, pessoais] = await Promise.all([
     query('SELECT * FROM cargo ORDER BY ordem, nome'),
     query('SELECT * FROM cargo_titulo ORDER BY ordem, nome').catch((erro) => {
       if (erro.code === '42P01') return { rows: [] }
@@ -615,22 +729,24 @@ export async function lerEquipe(usuarioId, { imagens = true } = {}) {
     }),
     query(`${consultaUsuarios(imagens)} ORDER BY c.ordem NULLS LAST, u.name`),
     meuCargo(usuarioId),
+    pessoaisDaEquipe(),
   ])
   return {
     cargos: cargos.rows.map(paraCargo),
     titulos: titulos.rows.map(paraTitulo),
-    usuarios: usuarios.rows.map(paraUsuario).map((u) => recortarPessoal(u, meu, usuarioId)),
+    usuarios: usuarios.rows.map(paraUsuario).map(comPessoais(pessoais)).map((u) => recortarPessoal(u, meu, usuarioId)),
   }
 }
 
 router.get('/usuarios', exigeSessao, async (req, res) => {
   try {
-    const [{ rows }, meu] = await Promise.all([
+    const [{ rows }, meu, pessoais] = await Promise.all([
       query(`${CONSULTA_USUARIOS} ORDER BY c.ordem NULLS LAST, u.name`),
       meuCargo(req.dono.sub),
+      pessoaisDaEquipe(),
     ])
     return res.json({
-      usuarios: rows.map(paraUsuario).map((u) => recortarPessoal(u, meu, req.dono.sub)),
+      usuarios: rows.map(paraUsuario).map(comPessoais(pessoais)).map((u) => recortarPessoal(u, meu, req.dono.sub)),
     })
   } catch (erro) {
     return tratar(erro, res, 'equipe/usuarios')
@@ -950,6 +1066,26 @@ router.patch('/usuarios/:id', exigeSessao, async (req, res) => {
       }
     }
 
+    /* as permissoes da PESSOA (atualizacao 53): colocar informacoes no
+       quadro de avisos e na agenda da pagina inicial. So quem tem acesso
+       total marca — e nao sao do setor, entao trocar de setor nao as leva */
+    if (req.body?.permissoesPessoais !== undefined) {
+      const lista = normalizarPessoais(req.body.permissoesPessoais)
+      const { rows: antes } = await query('SELECT permissoes_pessoais FROM usuario WHERE id = $1', [alvo]).catch((erro) => {
+        if (erro.code === '42703') return { rows: null }
+        throw erro
+      })
+      if (!antes) {
+        return res.status(503).json({ erro: 'O banco ainda não tem as permissões da pessoa. Rode npm run db:atualizar (atualização 53).' })
+      }
+      if (lista.join('|') !== normalizarPessoais(antes[0]?.permissoes_pessoais).join('|')) {
+        if (!meu.acessoTotal) {
+          return res.status(403).json({ erro: 'Só quem tem acesso total marca quem coloca informações no quadro de avisos e na agenda.' })
+        }
+        por('permissoes_pessoais', lista)
+      }
+    }
+
     if (campos.length === 0) return res.status(400).json({ erro: 'Nada para alterar.' })
 
     valores.push(alvo)
@@ -974,7 +1110,7 @@ router.patch('/usuarios/:id', exigeSessao, async (req, res) => {
           .join(', '),
       },
     })
-    return res.json({ usuario: paraUsuario(salvo.rows[0]) })
+    return res.json({ usuario: comPessoais(await pessoaisDaEquipe())(paraUsuario(salvo.rows[0])) })
   } catch (erro) {
     if (erro.code === '23505') {
       const qual = String(erro.detail ?? '').includes('cpf') ? 'CPF' : 'e-mail'
