@@ -229,6 +229,12 @@
          item aceso, com o icone subindo para dentro dele (menu-main.js mede
          e poe --ind-x e --ergue na barra, como o AppShell.jsx) -->
     <span class="rail__indicador" aria-hidden="true"></span>
+    <!-- o "Mais": alarga o menu com o nome de cada aba, como no resto do
+         sistema (menu-main.js, montarMais; so no computador) -->
+    <button type="button" class="rail__btn rail__tudo" id="almox-mais" aria-expanded="false" title="Mostrar o menu com os nomes das abas">
+        <span class="rail__glifo rail__seta"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        <span class="rail__rotulo">Mais</span>
+    </button>
     <ul class="sidebar-menu rail__lista">
         <span class="rail__marca" aria-hidden="true"><span class="rail__marca-anel"></span></span>
         <!-- Dashboard - Permissão: dashboard -->

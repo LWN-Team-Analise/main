@@ -95,6 +95,9 @@ const ARQUIVOS = [
   /* o check Tipo de ensaio do Comercial, a retirada do carro na vespera e as
      permissoes ordenar_turnos e conceder_carro */
   'db/atualizacao-54.sql.txt',
+  /* o Ponto e os Pontos de encontro no menu (ver_ponto, ver_encontros), o fim
+     da area Administrativo e o Focal Point escolhido do setor */
+  'db/atualizacao-55.sql.txt',
 ]
 
 /**
@@ -280,6 +283,9 @@ const CONFERENCIA = [
   ['check Tipo de ensaio (Comercial, 1a etapa)', "SELECT EXISTS (SELECT 1 FROM etapa_check WHERE tipo = 'tipo_ensaio' AND vigente_ate IS NULL AND obra_id IS NULL) AS ok"],
   ['ordenar_turnos no acesso total', permissaoNoAcessoTotal('ordenar_turnos')],
   ['conceder_carro no acesso total', permissaoNoAcessoTotal('conceder_carro')],
+  ['ver_ponto no acesso total', permissaoNoAcessoTotal('ver_ponto')],
+  ['ver_encontros no acesso total', permissaoNoAcessoTotal('ver_encontros')],
+  ['obra_check.escolhido_id (Focal Point)', col('obra_check', 'escolhido_id')],
 ]
 
 function col(tabela, coluna) {

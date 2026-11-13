@@ -79,10 +79,13 @@ const celular = appshell.slice(
   appshell.indexOf('@media (max-width: 860px) {'),
   appshell.indexOf('/* ---------------- Recado de falha'),
 )
-const marcaMenu = '/* ------------------------------------------------------------\n   O MENU LATERAL'
-const ham = appshell.slice(appshell.indexOf('/* ------------------------------------------------------------\n   O hambúrguer'), appshell.indexOf(marcaMenu))
-const menulado = appshell.slice(appshell.indexOf(marcaMenu))
-if (!celular.startsWith('@media') || !ham.includes('.ham {') || !menulado.includes('.menulado__painel')) {
+/* o menu lateral do celular (.menulado) saiu do AppShell.css quando o main
+   trocou ele pelo menu completo: o do Almoxarife mora em
+   scripts/almoxarife-menulado.css */
+const marcaCompleto = '/* ------------------------------------------------------------\n   O MENU COMPLETO'
+const ham = appshell.slice(appshell.indexOf('/* ------------------------------------------------------------\n   O hambúrguer'), appshell.indexOf(marcaCompleto))
+const menulado = fs.readFileSync(path.join(RAIZ, 'scripts/almoxarife-menulado.css'), 'utf8').split(String.fromCharCode(13, 10)).join('\n')
+if (!celular.startsWith('@media') || !ham.includes('.ham {') || appshell.indexOf(marcaCompleto) < 0 || !menulado.includes('.menulado__painel')) {
   throw new Error('o celular, o hamburguer ou o menu lateral mudaram de lugar no AppShell.css')
 }
 
@@ -787,6 +790,129 @@ select.sel-nativo:not([multiple]):not([size]) {
 
 .menulado__nota .estrelas svg {
   display: block;
+}
+
+/* O menu lateral do celular (scripts/almoxarife-menulado.css) saiu do main:
+   o comum.css nao o conta mais entre as superficies de vidro, e o
+   AppShell.css nao o esconde mais no computador. As duas coisas ficam
+   aqui. */
+.menulado__painel {
+  --am-text-muted: var(--am-vidro-texto-suave);
+  --am-text-faint: var(--am-vidro-texto-fraco);
+  --am-danger: var(--am-vidro-perigo);
+}
+
+@media (min-width: 861px) {
+  .menulado {
+    display: none;
+  }
+}
+
+/* ---- o "Mais": o menu largo, como no main (o O MENU LARGO do
+   AppShell.css) ----
+   A seta no alto da barra (menu-main.js, montarMais) liga a classe
+   menu-largo no <html>: a barra alarga com o nome de cada aba ao lado do
+   icone e o conteudo anda junto (--sidebar-width). So no computador. */
+@media (min-width: 861px) {
+  #main-content {
+    transition: margin-left 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .rail {
+    transition: width 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  html.menu-largo {
+    --sidebar-width: 248px;
+  }
+
+  html.menu-largo .rail {
+    width: 228px;
+    align-items: stretch;
+    padding: 8px;
+  }
+
+  html.menu-largo .rail .rail__btn,
+  html.menu-largo .rail .menu-item.rail__btn {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    width: 100%;
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 14px;
+    text-align: left;
+  }
+
+  /* o nome inteiro, numa linha so (os quatro nomes compridos encolhidos
+     acima voltam ao tamanho dos outros) */
+  html.menu-largo .rail .rail__rotulo {
+    font-size: 0.86rem !important;
+    font-weight: 600;
+    letter-spacing: normal !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -webkit-line-clamp: 1;
+  }
+
+  /* o contador do item vai para o fim da linha */
+  html.menu-largo .rail .menu-item.rail__btn .badge {
+    top: 50%;
+    right: 10px;
+    translate: 0 -50%;
+  }
+
+  html.menu-largo .rail__marca {
+    border-radius: 14px;
+  }
+
+  html.menu-largo .rail__marca::after {
+    border-radius: 11px;
+  }
+
+  /* o "Mais" vira "Menos": a seta da meia volta */
+  .rail__seta {
+    transition: rotate 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  html.menu-largo .rail__seta {
+    rotate: 180deg;
+  }
+
+  html.menu-largo .rail__tudo {
+    height: 44px;
+  }
+}
+
+/* ---- o modo EMBUTIDO (?embutido=1, o sessao.js liga a classe) ----
+   A Solicitação de OS aberta dentro da obra, no pop-up do check
+   "Solicitar OS" (core/src/pages/Obras/ModalSolicitarOS.jsx): so o
+   formulario, sem a logo, o menu, o avatar, a barra de cima, o "Voltar" e
+   os botoes do Painel Geral. */
+html.embutido {
+  --sidebar-width: 0px;
+}
+
+html.embutido .marca,
+html.embutido #almox-rail,
+html.embutido .euzinho,
+html.embutido #almox-topo,
+html.embutido #painel-voltar-linha,
+html.embutido #painel-acoes,
+html.embutido .menulado,
+html.embutido #bottom-nav {
+  display: none !important;
+}
+
+html.embutido #main-content {
+  margin-left: 0;
+  padding-bottom: 12px;
+}
+
+html.embutido #almox-topo + .content-container,
+html.embutido .content-container {
+  margin-top: 0;
 }
 `
 

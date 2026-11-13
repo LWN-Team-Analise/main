@@ -43,6 +43,8 @@ import {
 const router = Router()
 
 const GERENCIAR = 'gerenciar_ponto'
+/* ver a propria folha e assinar: a aba Ponto do menu (atualizacao 55) */
+const VER = 'ver_ponto'
 
 /* o arquivo chega como texto no JSON: um ano de uma empresa de 60 pessoas
    da uns 6 MB. O limite do corpo (8 MB, app.js) e da Vercel (4,5 MB) vem
@@ -163,7 +165,7 @@ async function usuarioPorId(id) {
    A folha
    ------------------------------------------------------------ */
 
-router.get('/folha', exigeSessao, async (req, res) => {
+router.get('/folha', exigeSessao, exige(VER), async (req, res) => {
   const periodo = lerPeriodo(req.query)
   if (periodo.erro) return res.status(400).json({ erro: periodo.erro })
   const { inicio, fim } = periodo
@@ -501,7 +503,7 @@ router.post('/importar', exigeSessao, exige(GERENCIAR), async (req, res) => {
    Assinar a conferencia
    ------------------------------------------------------------ */
 
-router.post('/assinar', exigeSessao, async (req, res) => {
+router.post('/assinar', exigeSessao, exige(VER), async (req, res) => {
   /* quem assina e sempre quem esta no token. Pedir por outra pessoa e
      recusado com o motivo, e nada e gravado */
   const pedido = req.body?.usuarioId

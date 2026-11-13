@@ -431,6 +431,7 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
     horarioMembros,
     chats,
     ordens,
+    escolhidos,
   ] = await Promise.all([
     lerClientes(imagens),
     /* os setores vem junto: sao poucos e a tela de Clientes precisa
@@ -540,6 +541,13 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
              FROM almox.solicitacoes
             WHERE obra_id IS NOT NULL
             ORDER BY id`).catch(semTabelaVazia),
+    /* quem foi escolhido nos checks de escolher pessoa (o Focal Point,
+       atualizacao 55). Sem a coluna, ninguem */
+    query(`SELECT oc.obra_id, oc.check_id, oc.escolhido_id, u.name AS escolhido_nome
+             FROM obra_check oc LEFT JOIN usuario u ON u.id = oc.escolhido_id
+            WHERE oc.escolhido_id IS NOT NULL`).catch((erro) =>
+      erro.code === '42703' || erro.code === '42P01' ? { rows: [] } : Promise.reject(erro),
+    ),
   ])
 
   const junta = (linhas, chave, monta) => {
@@ -577,6 +585,13 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
       ...(l.sem_informacao === true ? { semInformacao: true } : {}),
     }
     checksDaObra[l.obra_id] = mapa
+  })
+  /* o Focal Point escolhido (atualizacao 55) entra no check marcado */
+  escolhidos.rows.forEach((l) => {
+    const marca = checksDaObra[l.obra_id]?.[String(l.check_id)]
+    if (!marca) return
+    marca.escolhidoId = String(l.escolhido_id)
+    marca.escolhidoNome = l.escolhido_nome ?? null
   })
 
   /* prazo de cada etapa e de cada check, por obra, como 'AAAA-MM-DD' */
@@ -3014,6 +3029,12 @@ async function faltaNoCheck(obraId, checkId, regra, resposta) {
     }
   }
 
+  /* O "Focal Point" (atualizacao 55) marca quando o setor escolhe a pessoa
+     no proprio check (PUT /obras/:id/focal-point/:checkId), e nunca no clique */
+  if (regra.tipo === 'focal_point') {
+    return { status: 409, erro: 'Escolha o focal point no próprio check.', falta: 'o focal point' }
+  }
+
   /* O "Tipo de ensaio" do Comercial (atualizacao 54) marca quando os
      tipos sao escolhidos no proprio check */
   if (regra.tipo === 'tipo_ensaio') {
@@ -3204,6 +3225,72 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
   } catch (e) {
     if (e.code === '23503') return res.status(404).json({ erro: 'Obra ou check não encontrado.' })
     return tratar(e, res, 'dados/check-marcar')
+  }
+})
+
+/* ------------------------------------------------------------
+   FOCAL POINT (2a etapa — atualizacao 55)
+
+   Corpo: { usuarioId }. O check "Determinar Focal Point" (tipo
+   focal_point) e do setor do card (o Almoxarife, o Time Tecnico): quem
+   marca escolhe uma pessoa DESSE setor como focal point da obra. Escolher
+   ja marca o check; trocar a pessoa e escolher de novo.
+   ------------------------------------------------------------ */
+
+/** Os setores (ids de cargo) de um check: os dele, ou os do card. */
+async function setoresDoCheck(checkId) {
+  const proprio = await query('SELECT cargo_id FROM etapa_check_cargo WHERE check_id = $1', [checkId])
+  if (proprio.rows.length > 0) return proprio.rows.map((l) => String(l.cargo_id))
+  const { rows } = await query(
+    `SELECT cc.cargo_id FROM etapa_check ck JOIN etapa_card_cargo cc ON cc.card_id = ck.card_id WHERE ck.id = $1`,
+    [checkId],
+  )
+  return rows.map((l) => String(l.cargo_id))
+}
+
+router.put('/obras/:id/focal-point/:checkId', exigeSessao, obraAberta, async (req, res) => {
+  const obraId = req.params.id
+  const checkId = req.params.checkId
+  const usuarioId = texto(req.body?.usuarioId)
+  if (!/^\d{1,15}$/.test(checkId)) return res.status(404).json({ erro: 'Check não encontrado.' })
+  if (!/^\d{1,15}$/.test(usuarioId)) return res.status(400).json({ erro: 'Escolha quem vai ser o focal point.' })
+  try {
+    const regra = await regraDoCheck(checkId)
+    if (regra.tipo !== 'focal_point') return res.status(409).json({ erro: 'Este check não é de focal point.' })
+    if (await recusouMarcar(res, req.dono.sub, checkId, obraId, 'Este Focal Point é de outro setor.')) return
+
+    const setores = await setoresDoCheck(checkId)
+    const { rows: pessoa } = await query('SELECT name, cargo_id FROM usuario WHERE id = $1 AND ativo', [usuarioId])
+    if (!pessoa[0]) return res.status(400).json({ erro: 'Esta pessoa não está mais na equipe.' })
+    if (!setores.includes(String(pessoa[0].cargo_id))) {
+      return res.status(400).json({ erro: 'O focal point tem de ser uma pessoa do setor deste check.' })
+    }
+
+    const { rows } = await query(
+      `INSERT INTO obra_check (obra_id, check_id, feito_por, escolhido_id)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (obra_id, check_id) DO UPDATE
+          SET escolhido_id = EXCLUDED.escolhido_id, feito_por = EXCLUDED.feito_por, feito_em = now()
+       RETURNING (xmax = 0) AS inserido`,
+      [obraId, checkId, req.dono.sub, usuarioId],
+    )
+    await informacaoChegou(obraId, checkId)
+    const novo = rows[0]?.inserido === true
+    await registrarAtividade(req, {
+      acao: novo ? 'check.marcado' : 'check.focal_point',
+      categoria: 'check',
+      entidade: ['obra', obraId],
+      descricao: novo ? 'Check concluído' : 'Focal point trocado',
+      detalhes: { ...(await descreverObra(obraId)), ...(await descreverCheck(checkId)), focal_point: pessoa[0].name },
+    })
+    if (novo) await depoisDeMarcar(req.dono.sub, obraId)
+    return res.json({ ok: true })
+  } catch (e) {
+    if (e.code === '42703') {
+      return res.status(501).json({ erro: 'O banco ainda não tem o Focal Point. Rode npm run db:atualizar (atualização 55).' })
+    }
+    if (e.code === '23503') return res.status(404).json({ erro: 'Obra ou check não encontrado.' })
+    return tratar(e, res, 'dados/focal-point')
   }
 })
 

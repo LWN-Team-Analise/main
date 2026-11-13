@@ -1,0 +1,67 @@
+/* "Determinar Focal Point" (ModalFocalPoint.jsx, atualizacao 55) */
+
+.focal__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: min(52dvh, 420px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.focal__pessoa {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  background: var(--control-bg);
+  color: var(--text-base);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.focal__pessoa:hover {
+  background: var(--control-bg-hover);
+}
+
+.focal__pessoa[aria-checked='true'] {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+}
+
+.focal__quem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.focal__quem strong {
+  font-size: 0.88rem;
+  color: var(--text-strong);
+}
+
+.focal__quem span {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.focal__marca {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--control-border);
+  border-radius: 50%;
+}
+
+.focal__pessoa[aria-checked='true'] .focal__marca {
+  border-color: var(--accent);
+  background: radial-gradient(circle, var(--accent) 45%, transparent 50%);
+}

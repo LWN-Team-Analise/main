@@ -7990,6 +7990,14 @@ async function enviarSolicitacaoFinal() {
         const finalModalEl = document.getElementById('solicitacao-final-modal');
         if (finalModalEl) finalModalEl.remove();
 
+        // Aberta DENTRO da obra (o pop-up do check "Solicitar OS", modo
+        // embutido): avisa a obra, que fecha o pop-up e recarrega
+        if (document.documentElement.classList.contains('embutido') && window.parent !== window) {
+            try {
+                window.parent.postMessage({ tipo: 'lwn-os-solicitada', numero: numeroOS }, location.origin);
+            } catch (e) { /* sem a obra por perto, segue no Almoxarife */ }
+        }
+
         // Limpar seleção (de forma segura: alguns campos podem não existir na tela atual)
         solicitacaoTiposSelecionados = {};
         ['os-client', 'os-supervisor', 'os-obra', 'os-start-date', 'os-end-date', 'os-notes', 'os-baia']

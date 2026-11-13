@@ -12,7 +12,17 @@ import ModalVeiculo from './ModalVeiculo'
 import PainelRodizio from './PainelRodizio'
 import PainelCondicoes from './PainelCondicoes'
 import PainelReservas from './PainelReservas'
-import { Falta, IconeCarro, IconeDevolucao, IconeEditar, IconeLista, IconeMais, IconeSaida } from './icones'
+import {
+  Falta,
+  IconeAtualizacoes,
+  IconeCalendario,
+  IconeCarro,
+  IconeDevolucao,
+  IconeEditar,
+  IconeLista,
+  IconeMais,
+  IconeSaida,
+} from './icones'
 import './Frotas.css'
 
 const DESCRICAO = {
@@ -260,10 +270,20 @@ export default function Frotas() {
           </div>
         )}
 
+        {/* as saidas e devolucoes, as ultimas atualizacoes (carros em uso e os
+            que voltaram pedindo atencao) e o calendario das reservas */}
         <div className="frotas__links">
           <Link to="/app/frotas/registros" className="acao acao--fraca frotas__registros">
             <IconeLista />
             Saídas e devoluções
+          </Link>
+          <Link to="/app/frotas/atualizacoes" className="acao acao--fraca frotas__registros">
+            <IconeAtualizacoes />
+            Últimas atualizações
+          </Link>
+          <Link to="/app/frotas/calendario" className="acao acao--fraca frotas__registros">
+            <IconeCalendario />
+            Calendário de reservas
           </Link>
         </div>
 

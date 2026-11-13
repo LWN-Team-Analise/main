@@ -1164,6 +1164,68 @@ router.get('/reservas', exigeSessao, exige(VER), async (_req, res) => {
   }
 })
 
+/* ------------------------------------------------------------
+   O CALENDARIO das reservas (Frotas > Calendário)
+
+     GET /reservas/calendario?mes=AAAA-MM
+
+   Todas as reservas com carro cujo periodo da execucao toca o mes — as
+   que vem, as de agora e as que ja passaram (retiradas, e de obra ja
+   concluida tambem). Cada uma com os dias, o carro e a retirada.
+   ------------------------------------------------------------ */
+
+router.get('/reservas/calendario', exigeSessao, exige(VER), async (req, res) => {
+  const mes = String(req.query.mes ?? '')
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)) return res.status(400).json({ erro: 'Mês inválido. Use AAAA-MM.' })
+  const de = `${mes}-01`
+  const ate = somarDiasIso(`${somarMesIso(mes, 1)}-01`, -1)
+  try {
+    const { rows } = await query(
+      `SELECT rv.obra_id, rv.veiculo_id, rv.reservado_em, rv.registro_id,
+              u.name AS reservado_por_nome, v.nome AS veiculo_nome, v.placa,
+              cl.nome AS cliente, o.proposta, o.concluida_em,
+              o.data_inicio, o.execucao_inicio, o.execucao_prazo, o.execucao_dias,
+              vr.data AS retirada_data, vr.condutor_nome AS retirada_condutor
+         FROM obra_reserva_veiculo rv
+         JOIN obra o         ON o.id = rv.obra_id
+         JOIN cliente cl     ON cl.id = o.cliente_id
+         JOIN veiculo v      ON v.id = rv.veiculo_id
+         LEFT JOIN usuario u ON u.id = rv.reservado_por
+         LEFT JOIN veiculo_registro vr ON vr.id = rv.registro_id
+        WHERE rv.veiculo_id IS NOT NULL`,
+    ).catch((e) => (e.code === '42P01' ? { rows: [] } : Promise.reject(e)))
+    const reservas = rows
+      .map((r) => ({ ...r, dias: diasDaLinha(r) ?? [] }))
+      .filter((r) => r.dias.some((d) => d >= de && d <= ate))
+      .map((r) => ({
+        obraId: String(r.obra_id),
+        obra: nomeDaReserva(r),
+        concluida: Boolean(r.concluida_em),
+        veiculoId: String(r.veiculo_id),
+        veiculoNome: r.veiculo_nome,
+        placa: r.placa ?? '',
+        dias: r.dias,
+        de: r.dias[0] ?? null,
+        ate: r.dias.at(-1) ?? null,
+        reservadoPorNome: r.reservado_por_nome ?? null,
+        retirada: r.registro_id
+          ? { data: diaIso(r.retirada_data), condutorNome: r.retirada_condutor ?? null }
+          : null,
+      }))
+      .sort((a, b) => String(a.de).localeCompare(String(b.de)) || a.veiculoNome.localeCompare(b.veiculoNome))
+    return res.json({ mes, de, ate, hoje: hojeNoBrasil(), reservas })
+  } catch (erro) {
+    return falhou(erro, res, 'frotas/reservas-calendario')
+  }
+})
+
+/** 'AAAA-MM' + n meses. */
+function somarMesIso(mes, n) {
+  const [a, m] = mes.split('-').map(Number)
+  const d = new Date(Date.UTC(a, m - 1 + n, 1))
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
 router.put('/reservas/:obraId', exigeSessao, exigeReservador, async (req, res) => {
   const { obraId } = req.params
   if (!idValido(obraId)) return res.status(404).json({ erro: 'Obra não encontrada.' })

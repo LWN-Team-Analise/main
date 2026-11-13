@@ -1,0 +1,30 @@
+/* "Solicitar OS" sem sair da obra (ModalSolicitarOS.jsx) */
+
+.solicitaros__quadro {
+  display: block;
+  width: 100%;
+  height: min(76dvh, 860px);
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+}
+
+.solicitaros__feito {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 36px 16px;
+  text-align: center;
+}
+
+.solicitaros__feito strong {
+  font-size: 1.05rem;
+  color: var(--text-strong);
+}
+
+.solicitaros__feito p {
+  margin: 0 0 6px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}

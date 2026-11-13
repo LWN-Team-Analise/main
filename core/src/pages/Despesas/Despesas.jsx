@@ -16,7 +16,7 @@ import * as despesasApi from '@/services/despesasService'
 import { dataBR, reais } from '@/utils/formato'
 import ModalEnvio from './ModalEnvio'
 import ModalValores from './ModalValores'
-import { IconeCategoria, IconeLista, IconeValores } from './icones'
+import { IconeCategoria, IconeEquipe, IconeLista, IconeValores } from './icones'
 import './Despesas.css'
 
 /* A linha de baixo de cada botao: o que entra ali, em poucas palavras.
@@ -144,13 +144,19 @@ export default function Despesas() {
             </div>
           )}
 
-          {/* os envios da equipe ("Envios gerais") mudaram para a area
-              administrativa, no card Reembolso (/app/administrativo/reembolso) */}
+          {/* "Envios gerais" so para quem revisa — e a API recusa quem nao
+              revisa do mesmo jeito, com ou sem o botao na tela */}
           <div className="despesas__links">
             <Link to="/app/despesas/envios" className="acao acao--fraca despesas__envios">
               <IconeLista />
               Meus envios
             </Link>
+            {pode('revisar_despesa_geral') && (
+              <Link to="/app/despesas/gerais" className="acao acao--fraca despesas__envios">
+                <IconeEquipe />
+                Envios gerais
+              </Link>
+            )}
           </div>
         </section>
       </div>

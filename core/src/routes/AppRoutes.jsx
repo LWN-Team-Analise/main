@@ -7,9 +7,9 @@ import ObraDetalhe from '@/pages/Obras/ObraDetalhe'
 import Clientes from '@/pages/Clientes/Clientes'
 import Concluidas from '@/pages/Concluidas/Concluidas'
 import Ponto from '@/pages/Ponto/Ponto'
-import Administrativo from '@/pages/Administrativo/Administrativo'
-import Encontros from '@/pages/Administrativo/Encontros'
-import FrotasAdm from '@/pages/Administrativo/FrotasAdm'
+import Encontros from '@/pages/Encontros/Encontros'
+import Atualizacoes from '@/pages/Frotas/Atualizacoes'
+import CalendarioReservas from '@/pages/Frotas/CalendarioReservas'
 import Avaliacoes from '@/pages/Avaliacoes/Avaliacoes'
 import Usuarios from '@/pages/Usuarios/Usuarios'
 import SetorPagina from '@/pages/Usuarios/SetorPagina'
@@ -24,8 +24,6 @@ import Registros from '@/pages/Frotas/Registros'
 import RetornoOutlook from '@/pages/Login/RetornoOutlook'
 import ChatEquipe from '@/pages/Chat/ChatEquipe'
 import ProtectedRoute from './ProtectedRoute'
-import { useAuth } from '@/context/AuthContext'
-import { podeFazer } from '@/domain/permissoes'
 
 /* O LWN Control (o Almoxarife) e a tela do lwncontrol (public/almoxarife),
    fora do React: o servidor entrega a pagina dele em /core/app/control
@@ -61,35 +59,6 @@ function Mudou({ para }) {
   const { usuarioId } = useParams()
   const destino = usuarioId ? `${para}/${encodeURIComponent(usuarioId)}` : para
   return <Navigate to={{ pathname: destino, search }} replace />
-}
-
-/**
- * A tela da area Administrativo: pede o painel dela (o setor que tem o
- * Administrativo como painel, ou o acesso total — atualizacao 53) e, se
- * vier, a permissao da tela.
- */
-function NaArea({ permissao, children }) {
-  return (
-    <ProtectedRoute permissao="painel:administrativo">
-      {permissao ? <ProtectedRoute permissao={permissao}>{children}</ProtectedRoute> : children}
-    </ProtectedRoute>
-  )
-}
-
-/**
- * O Ponto mora em dois enderecos, pelo painel do setor: quem tem a area
- * Administrativo abre em /app/administrativo/ponto (com o menu da
- * area); quem nao tem, em /app/ponto (com o menu de sempre). Cada endereco
- * leva ao certo, com o periodo do link do aviso do Teams.
- */
-function PontoDaArea() {
-  const { user } = useAuth()
-  return podeFazer(user, 'painel:administrativo') ? <Ponto /> : <Mudou para="/app/ponto" />
-}
-
-function PontoForaDaArea() {
-  const { user } = useAuth()
-  return podeFazer(user, 'painel:administrativo') ? <Mudou para="/app/administrativo/ponto" /> : <Ponto />
 }
 
 /**
@@ -163,85 +132,35 @@ export default function AppRoutes() {
           </Interna>
         }
       />
-      {/* A AREA ADMINISTRATIVA: o painel do setor ("Meu painel", atualizacao
-          53). Entrar nela troca o menu pelo dela (MENU_ADM, no AppShell). O
-          inicio e os cards; cada tela pede o painel E a permissao dela */}
-      <Route
-        path="/app/administrativo"
-        element={
-          <NaArea>
-            <Administrativo />
-          </NaArea>
-        }
-      />
-      {/* o Ponto da area. Quem nao tem a area vai para /app/ponto (a mesma
-          tela, com o menu de sempre), com o periodo do endereco */}
-      <Route
-        path="/app/administrativo/ponto"
-        element={
-          <Interna>
-            <PontoDaArea />
-          </Interna>
-        }
-      />
-      {/* o antigo "Envios gerais" do Reembolso: os envios da equipe */}
-      <Route
-        path="/app/administrativo/reembolso"
-        element={
-          <NaArea permissao="revisar_despesa_geral">
-            <EnviosGerais />
-          </NaArea>
-        }
-      />
-      <Route
-        path="/app/administrativo/reembolso/:usuarioId"
-        element={
-          <NaArea permissao="revisar_despesa_geral">
-            <EnviosDaPessoa />
-          </NaArea>
-        }
-      />
-      {/* os horarios dos checks com horario das obras (o ponto de encontro) */}
-      <Route
-        path="/app/administrativo/encontros"
-        element={
-          <NaArea permissao="ver_obras">
-            <Encontros />
-          </NaArea>
-        }
-      />
-      {/* os carros em uso e os que voltaram pedindo atencao */}
-      <Route
-        path="/app/administrativo/frotas"
-        element={
-          <NaArea permissao="ver_frotas">
-            <FrotasAdm />
-          </NaArea>
-        }
-      />
-      {/* a mesma tela da aba Turnos, com o menu da area (quem edita, edita daqui) */}
-      <Route
-        path="/app/administrativo/turnos"
-        element={
-          <NaArea permissao="ver_turnos">
-            <Turnos />
-          </NaArea>
-        }
-      />
-      {/* a folha de ponto (atualizacao 51) de quem nao tem a area: de todo
-          mundo, cada um ve a sua (e o link do aviso do Teams). Ver a dos
+      {/* a folha de ponto (atualizacao 51), com `ver_ponto` (atualizacao 55):
+          cada um ve e assina a sua (e o link do aviso do Teams). Ver a dos
           outros e importar e `gerenciar_ponto`, que a API confere */}
       <Route
         path="/app/ponto"
         element={
-          <Interna>
-            <PontoForaDaArea />
+          <Interna permissao="ver_ponto">
+            <Ponto />
           </Interna>
         }
       />
-      {/* o endereco antigo do Envios gerais */}
-      <Route path="/app/despesas/gerais" element={<Mudou para="/app/administrativo/reembolso" />} />
-      <Route path="/app/despesas/gerais/:usuarioId" element={<Mudou para="/app/administrativo/reembolso" />} />
+      {/* os horarios dos checks com horario das obras (o ponto de encontro) */}
+      <Route
+        path="/app/encontros"
+        element={
+          <Interna permissao="ver_encontros">
+            <Encontros />
+          </Interna>
+        }
+      />
+      {/* A area Administrativo saiu (atualizacao 55): os enderecos dela levam
+          para as telas de sempre, com o que vinha depois do "?" */}
+      <Route path="/app/administrativo" element={<Navigate to="/app" replace />} />
+      <Route path="/app/administrativo/ponto" element={<Mudou para="/app/ponto" />} />
+      <Route path="/app/administrativo/reembolso" element={<Mudou para="/app/despesas/gerais" />} />
+      <Route path="/app/administrativo/reembolso/:usuarioId" element={<Mudou para="/app/despesas/gerais" />} />
+      <Route path="/app/administrativo/encontros" element={<Mudou para="/app/encontros" />} />
+      <Route path="/app/administrativo/frotas" element={<Mudou para="/app/frotas/atualizacoes" />} />
+      <Route path="/app/administrativo/turnos" element={<Mudou para="/app/turnos" />} />
       {/* os funis de venda (os negocios do Pipedrive); a API confere a
           mesma chave em cada chamada de /api/comercial */}
       <Route
@@ -305,9 +224,25 @@ export default function AppRoutes() {
           </Interna>
         }
       />
-      {/* Envios gerais mudou para a area administrativa (card Reembolso):
-          /app/administrativo/reembolso. revisar_despesa_geral depende de
-          ver_despesas, e a API confere as duas em cada chamada. */}
+      {/* Envios gerais: os envios da equipe, com o filtro por tipo e por
+          periodo. revisar_despesa_geral depende de ver_despesas, e a API
+          confere as duas em cada chamada. */}
+      <Route
+        path="/app/despesas/gerais"
+        element={
+          <Interna permissao="revisar_despesa_geral">
+            <EnviosGerais />
+          </Interna>
+        }
+      />
+      <Route
+        path="/app/despesas/gerais/:usuarioId"
+        element={
+          <Interna permissao="revisar_despesa_geral">
+            <EnviosDaPessoa />
+          </Interna>
+        }
+      />
       {/* Frotas abre com ver_frotas, e a lista de registros tambem: a API
           confere a mesma chave em cada chamada de /api/frotas. */}
       <Route
@@ -323,6 +258,24 @@ export default function AppRoutes() {
         element={
           <Interna permissao="ver_frotas">
             <Registros />
+          </Interna>
+        }
+      />
+      {/* os carros em uso e os que voltaram pedindo atencao (era o Frotas da
+          area Administrativo) e o calendario das reservas */}
+      <Route
+        path="/app/frotas/atualizacoes"
+        element={
+          <Interna permissao="ver_frotas">
+            <Atualizacoes />
+          </Interna>
+        }
+      />
+      <Route
+        path="/app/frotas/calendario"
+        element={
+          <Interna permissao="ver_frotas">
+            <CalendarioReservas />
           </Interna>
         }
       />

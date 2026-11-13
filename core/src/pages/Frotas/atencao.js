@@ -1,7 +1,7 @@
 /* O que pede atencao num carro: a ultima devolucao com o tanque abaixo da
    metade ou com um "Nao" que importa no checklist (os mesmos de
-   alertasDe, em src/domain/frotas.js). Usado no card e na tela Frotas da
-   area administrativa. */
+   alertasDe, em src/domain/frotas.js). Usado na tela Ultimas atualizacoes
+   da aba Frotas. */
 import { COMBUSTIVEL_MINIMO, alertasDe, rotuloDoCombustivel } from '@/domain/frotas'
 
 /* o "Nao" de cada pergunta, dito como problema */

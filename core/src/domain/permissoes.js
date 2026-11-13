@@ -73,9 +73,11 @@ export const VISUALIZACAO = [
   { chave: 'ver_inicio', rotulo: 'Página inicial', rota: '/app' },
   { chave: 'ver_obras', rotulo: 'Obras', rota: '/app/obras' },
   { chave: 'ver_clientes', rotulo: 'Clientes', rota: '/app/clientes' },
-  /* a area Administrativo nao tem mais chave aqui: ela e o PAINEL de um
-     setor (PAINEIS, mais abaixo). A `ver_administrativo` (atualizacao 52)
-     saiu; a atualizacao 53 deu o painel a quem a tinha */
+  /* o Ponto (a folha de ponto: cada um ve e assina a propria) e os Pontos
+     de encontro das obras, no menu principal (atualizacao 55: a area
+     Administrativo saiu; ver_ponto foi para todos os setores) */
+  { chave: 'ver_ponto', rotulo: 'Ponto', rota: '/app/ponto' },
+  { chave: 'ver_encontros', rotulo: 'Pontos de encontro', rota: '/app/encontros' },
   { chave: 'ver_concluidas', rotulo: 'Concluídas', rota: '/app/concluidas' },
   { chave: 'ver_despesas', rotulo: 'Reembolso', rota: '/app/despesas' },
   { chave: 'ver_frotas', rotulo: 'Frotas', rota: '/app/frotas' },
@@ -118,12 +120,13 @@ export const ALTERACAO = [
   { chave: 'editar_cpf', rotulo: 'Incluir / editar / excluir CPF', dependeDe: 'ver_usuarios' },
   /* o "!" nos cards de Usuarios: quem ainda nao trocou a senha padrao */
   { chave: 'ver_senha_padrao', rotulo: 'Ver quem não alterou a senha padrão', dependeDe: 'ver_usuarios' },
-  /* o Ponto (na area Administrativo) e de todo mundo: cada um ve e assina a propria folha.
-     Com esta, aparece o seletor de pessoa (ver a folha de qualquer um,
-     com CPF e PIS, como no espelho), o Importar do Calculo Diario e o
-     Excel da empresa inteira. Assinar continua sendo so a propria folha
-     (atualizacao 51; a API confere em server/routes/ponto.js) */
-  { chave: 'gerenciar_ponto', rotulo: 'Ver a folha de ponto de todos e importar', dependeDe: 'ver_usuarios' },
+  /* o Ponto (`ver_ponto`): cada um ve e assina a propria folha. Com esta,
+     aparece o seletor de pessoa (ver a folha de qualquer um, com CPF e PIS,
+     como no espelho), o Importar do Calculo Diario e o Excel da empresa
+     inteira. Assinar continua sendo so a propria folha (atualizacao 51; a
+     API confere em server/routes/ponto.js). Mora embaixo do Ponto desde a
+     atualizacao 55 */
+  { chave: 'gerenciar_ponto', rotulo: 'Ver a folha de ponto de todos e importar', dependeDe: 'ver_ponto' },
   { chave: 'editar_avaliacoes', rotulo: 'Adicionar / editar avaliações', dependeDe: 'ver_avaliacoes' },
   { chave: 'editar_clientes', rotulo: 'Adicionar / editar clientes', dependeDe: 'ver_clientes' },
   /* a planilha do Excel com o cadastro inteiro (Clientes > Exportar) */
@@ -329,28 +332,27 @@ export function dependentes(chaveVisualizacao) {
 /* ------------------------------------------------------------
    MEU PAINEL (atualizacao 53)
 
-   Cada setor pode ter UM painel: a area com menu proprio que e dele (o
-   Administrativo, o Almoxarife). Quem esta no setor ve "Meu painel" no
-   menu da foto, logo acima de Configuracoes, e ele abre o inicio desse
-   painel. Quem escolhe e quem tem acesso total, na tela do setor
-   (cargo.painel), e e opcional: setor sem painel nao ve o botao.
+   Cada setor pode ter UM painel: a area com menu proprio que e dele (hoje,
+   o Almoxarife). Quem esta no setor ve "Meu painel" no menu da foto, logo
+   acima de Configuracoes, e ele abre o inicio desse painel. Quem escolhe e
+   quem tem acesso total, na tela do setor (cargo.painel), e e opcional:
+   setor sem painel nao ve o botao.
 
    `exclusivo` (cargo.painel_exclusivo): o painel so pode ser daquele
    setor. Nos outros ele aparece travado ate o setor principal mudar.
 
-   O Administrativo nao tem outra chave: entra nele so quem e de um setor
-   que o tem como painel (e o acesso total, que passa por tudo). O
-   Almoxarife continua com as permissoes dele (almox_*) e so pode ser o
+   O painel Administrativo saiu com a area (atualizacao 55): o Ponto, os
+   Pontos de encontro e os Envios gerais voltaram ao menu e ao Reembolso.
+   O Almoxarife continua com as permissoes dele (almox_*) e so pode ser o
    painel de um setor que ve a aba (`exige`).
    ------------------------------------------------------------ */
 export const PAINEIS = [
-  { chave: 'administrativo', rotulo: 'Administrativo', rota: '/app/administrativo' },
   { chave: 'almoxarife', rotulo: 'Almoxarife', rota: '/app/control', exige: 'ver_almoxarife' },
 ]
 
 export const CHAVES_PAINEL = PAINEIS.map((p) => p.chave)
 
-/** O painel pela chave ('administrativo'), ou null. */
+/** O painel pela chave ('almoxarife'), ou null. */
 export const painelPorChave = (chave) => PAINEIS.find((p) => p.chave === chave) ?? null
 
 /* ------------------------------------------------------------
@@ -388,7 +390,7 @@ export const normalizarPessoais = (lista) =>
  * setor. Sem setor nenhum, nao pode nada.
  *
  * Duas excecoes: as chaves da PESSOA (PESSOAIS), que so valem marcadas
- * nela, e `painel:<chave>` ('painel:administrativo'), que e o painel do
+ * nela, e `painel:<chave>` ('painel:almoxarife'), que e o painel do
  * setor (o acesso total abre todos).
  */
 export function podeFazer(usuario, chave) {

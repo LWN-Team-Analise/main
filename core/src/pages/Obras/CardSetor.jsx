@@ -9,6 +9,7 @@ import {
   CHECK_RESERVA,
   CHECK_RETIRADA,
   CHECK_TIPO_ENSAIO,
+  CHECK_FOCAL_POINT,
   CHECK_ENVIAR_OS,
   CHECK_SEPARAR_OS,
   CHECK_RETIRADA_OS,
@@ -83,6 +84,8 @@ export default function CardSetor({
   cargoPorChave,
   pessoaPorId,
   aoMarcar,
+  /* o "Solicitar OS" aberto na propria obra (sem ela, vai ao Almoxarife) */
+  aoSolicitarOS,
   aoEditarCard,
   aoNovoCheck,
   aoEditarCheck,
@@ -254,7 +257,9 @@ export default function CardSetor({
           const execucaoDosEnsaios = check.tipo === CHECK_EXECUCAO
           /* o "Tipo de ensaio" do Comercial (atualizacao 54) abre o pop-up dele */
           const tipoDeEnsaio = check.tipo === CHECK_TIPO_ENSAIO
-          const doSistema = planejamento || execucaoDosEnsaios || tipoDeEnsaio
+          /* o "Determinar Focal Point" (atualizacao 55): o pop-up de escolher a pessoa */
+          const focalPoint = check.tipo === CHECK_FOCAL_POINT
+          const doSistema = planejamento || execucaoDosEnsaios || tipoDeEnsaio || focalPoint
           /* a proposta tecnica (1a etapa) abre o pop-up do documento */
           const proposta = !modelo && ehPropostaTecnica(etapa, check)
           const documento = proposta ? anexoDaProposta(obra) : null
@@ -364,8 +369,11 @@ export default function CardSetor({
                 } ${modelo ? 'is-modelo' : ''}`.trim()}
                 onClick={() => {
                   if (travadoAqui) return
-                  if (vaiSolicitar) {
-                    window.location.assign(enderecoSolicitarOS(obra.id))
+                  /* o "Solicitar OS" abre o pedido aqui mesmo, num pop-up por
+                     cima da obra, e nao leva mais ao Almoxarife */
+                  if (vaiSolicitar || (vaiAoControl && enviarOS && aoSolicitarOS)) {
+                    if (aoSolicitarOS) aoSolicitarOS()
+                    else window.location.assign(enderecoSolicitarOS(obra.id))
                     return
                   }
                   if (vaiAoControl) {
@@ -443,6 +451,13 @@ export default function CardSetor({
                           : `${horarios.length} datas`}
                   </span>
                 )}
+                {/* o focal point escolhido, do lado do check */}
+                {focalPoint && !modelo && feito && marca?.escolhidoNome && (
+                  <span className="tarefa__ensaios" title={`Focal point: ${marca.escolhidoNome}`}>
+                    {marca.escolhidoNome.split(' ')[0]}
+                  </span>
+                )}
+                {focalPoint && !modelo && !feito && <span className="tarefa__ensaios">escolher</span>}
                 {/* os do sistema dizem em que pe estao */}
                 {planejamento && !modelo && !semInformacao && (
                   <span className="tarefa__ensaios">

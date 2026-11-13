@@ -196,6 +196,10 @@ export const registrarExecucaoDia = (obraId, dia, valores) =>
 export const planejarItens = (obraId, campos, concluir = false) =>
   put(`/dados/obras/${obraId}/planejamento-itens`, { ...campos, concluir })
 
+/** O Focal Point do setor (atualizacao 55): a pessoa escolhida no check; gravar marca o check. */
+export const definirFocalPoint = (obraId, checkId, usuarioId) =>
+  put(`/dados/obras/${obraId}/focal-point/${checkId}`, { usuarioId })
+
 /** O "Tipo de ensaio" do Comercial (atualizacao 54): os tipos de item da obra; gravar marca o check. */
 export const definirTipoEnsaio = (obraId, tipos) => put(`/dados/obras/${obraId}/tipo-ensaio`, { tipos })
 

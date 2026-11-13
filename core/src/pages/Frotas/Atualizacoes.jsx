@@ -4,8 +4,8 @@ import AppShell from '@/components/AppShell/AppShell'
 import { carregarVeiculos } from '@/services/frotasService'
 import { kmLegivel } from '@/domain/frotas'
 import { dataBR } from '@/utils/formato'
-import { atencaoDoVeiculo, resumoDaFrota } from './frota'
-import './Administrativo.css'
+import { atencaoDoVeiculo, resumoDaFrota } from './atencao'
+import '../Encontros/Encontros.css'
 
 const placaLegivel = (placa) => (placa && placa.length === 7 ? `${placa.slice(0, 3)}-${placa.slice(3)}` : placa || '')
 const quando = (data, hora) => [data ? dataBR(String(data).slice(0, 10)) : '', hora ? `às ${String(hora).slice(0, 5)}` : ''].filter(Boolean).join(' ')
@@ -20,7 +20,7 @@ function NomeDoCarro({ v }) {
 }
 
 /**
- * FROTAS da area administrativa — o que o administrativo precisa olhar:
+ * ULTIMAS ATUALIZACOES da frota (botao da aba Frotas) — o que precisa olhar:
  *
  *   em uso            quem esta com cada carro, desde quando, para onde
  *                     e com que KM saiu;
@@ -50,20 +50,20 @@ export default function FrotasAdm() {
     <AppShell>
       <section className="adm adm--tela">
         <header className="adm__topo">
-          <Link to="/app/administrativo" className="adm__voltar">
+          <Link to="/app/frotas" className="adm__voltar">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="m15 6-6 6 6 6" />
             </svg>
-            Administrativo
+            Frotas
           </Link>
           <div className="adm__titulo">
-            <h1 className="tela__titulo">Frotas</h1>
+            <h1 className="tela__titulo">Últimas atualizações</h1>
             <div className="adm__atalhos">
               <Link to="/app/frotas/registros" className="acao acao--fraca">
                 Saídas e devoluções
               </Link>
-              <Link to="/app/frotas" className="acao acao--fraca">
-                Abrir Frotas
+              <Link to="/app/frotas/calendario" className="acao acao--fraca">
+                Calendário de reservas
               </Link>
             </div>
           </div>

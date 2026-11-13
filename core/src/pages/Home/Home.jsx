@@ -300,11 +300,15 @@ export default function Home() {
     recarregar()
   }, [recarregar])
 
-  /* quem perde a permissao com a aba aberta volta para a Grade, em vez
-     de ficar olhando um painel que nao e mais dele (a TV nem tem o painel) */
-  const aba =
-    (abaEscolhida === 'painel' && (!veDashboard || tv)) || (abaEscolhida === 'panorama' && tv)
-      ? 'grade'
+  /* A Grade saiu das abas (so a TV ainda a usa, revezando com o Quadro):
+     quem estava nela, ou perdeu a permissao do painel com a aba aberta,
+     volta para o Panorama — e a TV, que nao tem o Panorama, para a Grade */
+  const aba = tv
+    ? abaEscolhida === 'quadro'
+      ? 'quadro'
+      : 'grade'
+    : abaEscolhida === 'grade' || (abaEscolhida === 'painel' && !veDashboard)
+      ? 'panorama'
       : abaEscolhida
   /* o Panorama nao e lista de tarefas: o mes e o escopo nao mexem nele */
   const naLista = aba === 'grade' || aba === 'quadro'
@@ -458,8 +462,10 @@ export default function Home() {
         <div className="inicio__barra">
           <nav className="abas" role="tablist" aria-label="Modo de visualização">
             {[
-              ...(tv ? [] : [{ id: 'panorama', rotulo: 'Panorama', Glifo: Icone.panorama }]),
-              { id: 'grade', rotulo: 'Grade', Glifo: Icone.grade },
+              /* a Grade so na TV, que reveza Grade e Quadro sozinha */
+              ...(tv
+                ? [{ id: 'grade', rotulo: 'Grade', Glifo: Icone.grade }]
+                : [{ id: 'panorama', rotulo: 'Panorama', Glifo: Icone.panorama }]),
               { id: 'quadro', rotulo: 'Quadro', Glifo: Icone.quadro },
               ...(veDashboard ? [{ id: 'painel', rotulo: 'Dashboard', Glifo: Icone.painel }] : []),
             ].map(({ id, rotulo, Glifo }) => (
@@ -600,10 +606,10 @@ export default function Home() {
 
             {telaGrade}
 
-            {/* O Historico mora embaixo da Grade — do globo, quando nao ha
-                nada pendente; da tabela de tarefas, quando ha. A Grade e o
-                "meu dia" daqui para a frente; o Historico, o que ja foi. */}
-            {aba === 'grade' && veHistorico && <Historico />}
+            {/* O Historico morava embaixo da Grade; com ela fora das abas,
+                fica no pe do Panorama: o que ja foi feito, embaixo do retrato
+                da empresa */}
+            {aba === 'panorama' && veHistorico && <Historico />}
 
             {telaQuadro}
           </>

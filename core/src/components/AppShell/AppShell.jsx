@@ -60,13 +60,6 @@ const Icone = {
       <path d="M14 3v5h5M12 17.5v-6M9 14.5h6" />
     </svg>
   ),
-  /* Administrativo (a area, no menu largo): a pasta de trabalho */
-  administrativo: () => (
-    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
-      <rect x="3" y="7" width="18" height="13" rx="2" />
-      <path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M3 12.5h18M10.5 12.5v1.5h3v-1.5" />
-    </svg>
-  ),
   /* o "Mais" do alto da barra: a seta que alarga o menu (e encolhe, virada) */
   seta: () => (
     <svg viewBox="0 0 24 24" width="21" height="21" {...traco} strokeWidth="1.9">
@@ -261,10 +254,10 @@ const MENU = [
      no pedido (/core/app/control/solicitar, public/almoxarife/endereco.js) */
   { id: 'solicitar', rotulo: 'Solicitar', rota: '/app/control/solicitar', permissao: 'almox_solicitacoes', semTv: true },
   { id: 'clientes', rotulo: 'Clientes', rota: '/app/clientes', permissao: 'ver_clientes' },
-  /* A area Administrativo nao e mais uma aba: ela e o PAINEL de um setor
-     ("Meu painel", no menu da foto) e mora no menu completo do hamburguer.
-     Quem nao tem a area ve o Ponto (a propria folha) aqui */
-  { id: 'ponto', rotulo: 'Ponto', rota: '/app/ponto', semTv: true, quandoNao: 'painel:administrativo' },
+  /* o Ponto (a folha de ponto) e os Pontos de encontro das obras, cada um
+     com a permissao dele (atualizacao 55: a area Administrativo saiu) */
+  { id: 'ponto', rotulo: 'Ponto', rota: '/app/ponto', permissao: 'ver_ponto', semTv: true },
+  { id: 'encontros', icone: 'encontro', rotulo: 'Pontos de encontro', rota: '/app/encontros', permissao: 'ver_encontros', semTv: true },
   { id: 'despesas', rotulo: 'Reembolso', rota: '/app/despesas', permissao: 'ver_despesas' },
   { id: 'frotas', rotulo: 'Frotas', rota: '/app/frotas', permissao: 'ver_frotas' },
   /* o Almoxarife (o antigo lwncontrol) abre a tela dele, em /almoxarife */
@@ -280,27 +273,6 @@ const MENU = [
   },
 ]
 
-/**
- * O menu da AREA ADMINISTRATIVA. Como no LWN Control (o Almoxarife), entrar
- * nela troca o menu inteiro pelos itens dela, e o ultimo volta para o
- * Atmosfera. `icone` e a chave do glifo (varios repetem o da aba do menu
- * principal). Cada item segue a mesma regra de permissao do MENU, e a rota
- * tem a mesma trava (src/routes/AppRoutes.jsx).
- */
-const MENU_ADM = [
-  /* o inicio da area (os cards) saiu do menu: e por "Meu painel", no menu
-     da foto, que se chega nele */
-  { id: 'adm-reembolso', icone: 'despesas', rotulo: 'Reembolso', rota: '/app/administrativo/reembolso', permissao: 'revisar_despesa_geral' },
-  { id: 'adm-ponto', icone: 'ponto', rotulo: 'Ponto', rota: '/app/administrativo/ponto' },
-  { id: 'adm-encontros', icone: 'encontro', rotulo: 'Pontos de encontro', rota: '/app/administrativo/encontros', permissao: 'ver_obras' },
-  { id: 'adm-frotas', icone: 'frotas', rotulo: 'Frotas', rota: '/app/administrativo/frotas', permissao: 'ver_frotas' },
-  { id: 'adm-turnos', icone: 'turnos', rotulo: 'Turnos', rota: '/app/administrativo/turnos', permissao: 'ver_turnos' },
-  { id: 'adm-voltar', icone: 'atmosfera', rotulo: 'Atmosfera', rota: '/app', exato: true },
-]
-
-/** true quando o endereco e da area administrativa. */
-const naAreaAdministrativa = (caminho) => caminho === '/app/administrativo' || caminho.startsWith('/app/administrativo/')
-
 /* ------------------------------------------------------------
    As que ficam na barra do celular
 
@@ -315,8 +287,6 @@ const naAreaAdministrativa = (caminho) => caminho === '/app/administrativo' || c
    avaliacao de quem esta logado, Configuracoes e as outras abas.
    ------------------------------------------------------------ */
 const PRINCIPAIS = ['inicio', 'obras', 'despesas']
-/* na area administrativa: o Reembolso, o Ponto e a volta para o Atmosfera */
-const PRINCIPAIS_ADM = ['adm-reembolso', 'adm-ponto', 'adm-voltar']
 
 /**
  * As abas do Almoxarife no menu completo (o hamburguer). Sao as do menu
@@ -426,9 +396,8 @@ let menuLargo = (() => {
   }
 })()
 
-/* as areas com submenu no menu largo, e o item que o Administrativo ganha ali */
-const AREAS_COM_SUBMENU = ['almoxarife', 'administrativo']
-const ITEM_ADMINISTRATIVO = { id: 'administrativo', rotulo: 'Administrativo', rota: '/app/administrativo', permissao: 'painel:administrativo', semTv: true }
+/* as areas com submenu no menu largo */
+const AREAS_COM_SUBMENU = ['almoxarife']
 
 /** O item entra no menu de quem esta logado? A mesma regra para todo menu. */
 function itemVisivel(item, pode, painelTv) {
@@ -814,10 +783,8 @@ function SubmenuArea({ area, ancora, aoFechar }) {
   }, [aoFechar])
 
   const ve = (item) => itemVisivel(item, pode, user?.painelTv)
-  const almox = area === 'almoxarife'
-  const itens = almox
-    ? ALMOX_ABAS.filter(ve).map((aba) => ({ ...aba, href: `/core/app/control${aba.caminho}`, Glifo: ICONE_ALMOX[aba.id] }))
-    : MENU_ADM.filter((i) => i.id !== 'adm-voltar' && ve(i)).map((i) => ({ ...i, Glifo: Icone[i.icone ?? i.id] }))
+  /* hoje a unica area com submenu e o Almoxarife */
+  const itens = ALMOX_ABAS.filter(ve).map((aba) => ({ ...aba, href: `/core/app/control${aba.caminho}`, Glifo: ICONE_ALMOX[aba.id] }))
   const Titulo = Icone[area]
 
   /* na altura do item; perto do pe da tela, sobe ate caber */
@@ -831,15 +798,9 @@ function SubmenuArea({ area, ancora, aoFechar }) {
         <span className="submenu__icone" aria-hidden="true">
           <Titulo />
         </span>
-        {almox ? (
-          <a href="/core/app/control" className="submenu__titulo">
-            Almoxarife
-          </a>
-        ) : (
-          <Link to="/app/administrativo" className="submenu__titulo" onClick={aoFechar}>
-            Administrativo
-          </Link>
-        )}
+        <a href="/core/app/control" className="submenu__titulo">
+          Almoxarife
+        </a>
         <button type="button" className="submenu__fechar" onClick={aoFechar} aria-label="Fechar o submenu">
           <Icone.chevron />
         </button>
@@ -905,13 +866,11 @@ function MenuCompleto({ aberto, aoFechar }) {
     const ve = (item) => itemVisivel(item, pode, user?.painelTv)
     /* o Almoxarife do Atmosfera vira a area dele, logo abaixo */
     const atmosfera = MENU.filter((item) => item.id !== 'almoxarife' && ve(item))
-    const administrativo = pode('painel:administrativo') ? MENU_ADM.filter((item) => item.id !== 'adm-voltar' && ve(item)) : []
     const almoxarife = pode('ver_almoxarife')
       ? ALMOX_ABAS.filter(ve).map((aba) => ({ ...aba, href: `/core/app/control${aba.caminho}` }))
       : []
     return [
       { id: 'atmosfera', titulo: 'Atmosfera', itens: atmosfera },
-      { id: 'administrativo', titulo: 'Administrativo', itens: administrativo },
       { id: 'almoxarife', titulo: 'Almoxarife', itens: almoxarife },
     ].filter((s) => s.itens.length > 0)
   }, [pode, user?.painelTv])
@@ -1279,16 +1238,12 @@ export default function AppShell({
      sistema e abre a lista de resultados por conta propria */
   const controlada = typeof busca === 'string'
 
-  /* dentro da area administrativa o menu e o dela (MENU_ADM), como no LWN
-     Control; o ultimo item volta para o Atmosfera */
-  const { pathname } = useLocation()
-  const administrativa = naAreaAdministrativa(pathname)
-  const principais = administrativa ? PRINCIPAIS_ADM : PRINCIPAIS
+  const principais = PRINCIPAIS
 
   /* cada cargo enxerga so as abas que a permissao dele abre */
   const abas = useMemo(
-    () => (administrativa ? MENU_ADM : MENU).filter((item) => itemVisivel(item, pode, user?.painelTv)),
-    [pode, user?.painelTv, administrativa],
+    () => MENU.filter((item) => itemVisivel(item, pode, user?.painelTv)),
+    [pode, user?.painelTv],
   )
 
   /* O MENU LARGO (o "Mais"): a barra com o nome das abas e a pagina
@@ -1305,19 +1260,12 @@ export default function AppShell({
       }
       return novo
     })
-  /* no menu largo o Administrativo entra como area, antes do Almoxarife,
-     para quem entra nele */
-  const abasNaBarra = useMemo(() => {
-    if (!largo || administrativa || !itemVisivel(ITEM_ADMINISTRATIVO, pode, user?.painelTv)) return abas
-    const lista = [...abas]
-    const onde = lista.findIndex((i) => i.id === 'almoxarife')
-    lista.splice(onde === -1 ? lista.length : onde, 0, ITEM_ADMINISTRATIVO)
-    return lista
-  }, [abas, largo, administrativa, pode, user?.painelTv])
+  /* as abas da barra: as mesmas no menu largo e no de sempre */
+  const abasNaBarra = abas
   /* o submenu aberto de uma area: { area, ancora } */
   const [submenu, setSubmenu] = useState(null)
   const fecharSubmenu = useCallback(() => setSubmenu(null), [])
-  const comSubmenu = (item) => largo && !administrativa && AREAS_COM_SUBMENU.includes(item.id)
+  const comSubmenu = (item) => largo && AREAS_COM_SUBMENU.includes(item.id)
 
   /* A ilha do aviso de senha. So no modo APLICATIVO — ver o comentario
      la embaixo, onde ela e desenhada. O shell precisa saber disso aqui

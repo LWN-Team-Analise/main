@@ -54,6 +54,22 @@ export const IconeLista = () => (
   </svg>
 )
 
+/* as ultimas atualizacoes da frota: o relogio com a seta da volta */
+export const IconeAtualizacoes = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" {...traco}>
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+    <path d="M3 3v5h5M12 7v5l3 2" />
+  </svg>
+)
+
+/* o calendario das reservas */
+export const IconeCalendario = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" {...traco}>
+    <rect x="3.5" y="5" width="17" height="15.5" rx="2.4" />
+    <path d="M3.5 9.8h17M8 3.2v3.4M16 3.2v3.4M8 13.5h2M14 13.5h2M8 17h2" />
+  </svg>
+)
+
 export const IconeMais = () => (
   <svg viewBox="0 0 24 24" width="16" height="16" {...traco} strokeWidth="2">
     <path d="M12 5v14M5 12h14" />

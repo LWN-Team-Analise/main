@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import AppShell from '@/components/AppShell/AppShell'
 import Seletor from '@/components/Seletor/Seletor'
 import { CampoData } from '@/components/CampoData/CampoData'
@@ -25,7 +25,6 @@ import ModalAssinar from './ModalAssinar'
 import ModalAssinaturas from './ModalAssinaturas'
 import { montarPdfDaFolha } from './pdfPonto'
 import './Ponto.css'
-import '../Administrativo/Administrativo.css'
 
 /* ---- icones ---- */
 const traco = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }
@@ -154,7 +153,6 @@ export default function Ponto() {
   const { user } = useAuth()
   const { pode } = useDados()
   const gestor = pode('gerenciar_ponto')
-  const naArea = useLocation().pathname.startsWith('/app/administrativo')
   const meuId = String(user?.id ?? '')
 
   /* o periodo do endereco vale so na abertura (o link do aviso do Teams) */
@@ -346,14 +344,6 @@ export default function Ponto() {
       <section className="ponto">
         <header className="ponto__topo">
           <div>
-            {/* aberto de dentro da area administrativa, a volta e para o inicio
-                dela; em /app/ponto (quem nao tem a area) nao ha para onde voltar */}
-            {naArea && (
-              <Link to="/app/administrativo" className="adm__voltar">
-                <Seta lado="esq" />
-                Administrativo
-              </Link>
-            )}
             <h1 className="tela__titulo">Ponto</h1>
             {!gestor && (
               <p className="tela__lead">A sua folha de ponto. Confira as marcações do período e assine no rodapé.</p>

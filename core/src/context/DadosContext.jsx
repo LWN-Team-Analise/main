@@ -608,6 +608,12 @@ export function DadosProvider({ children }) {
     [gravar],
   )
 
+  /** O Focal Point do setor (atualizacao 55): a pessoa escolhida no check. */
+  const definirFocalPoint = useCallback(
+    (obraId, checkId, usuarioId) => gravar(() => dados.definirFocalPoint(obraId, checkId, usuarioId)),
+    [gravar],
+  )
+
   /** O "Tipo de ensaio" do Comercial (atualizacao 54): os tipos de item da obra. */
   const definirTipoEnsaio = useCallback(
     (obraId, tipos) => gravar(() => dados.definirTipoEnsaio(obraId, tipos)),
@@ -1318,6 +1324,7 @@ export function DadosProvider({ children }) {
       planejarItens,
       registrarLinhas,
       definirTipoEnsaio,
+      definirFocalPoint,
       adicionarEnsaio,
       atualizarEnsaio,
       removerEnsaio,
@@ -1446,6 +1453,7 @@ export function DadosProvider({ children }) {
       planejarItens,
       registrarLinhas,
       definirTipoEnsaio,
+      definirFocalPoint,
       adicionarEnsaio,
       atualizarEnsaio,
       removerEnsaio,

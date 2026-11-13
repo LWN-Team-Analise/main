@@ -6,7 +6,7 @@ import { useDados } from '@/context/DadosContext'
 import { tituloDaObra } from '@/domain/obras'
 import { enderecoCompleto } from '@/domain/clientes'
 import { hojeISO } from '@/utils/formato'
-import './Administrativo.css'
+import './Encontros.css'
 
 const SEMANA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado']
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
@@ -98,12 +98,6 @@ export default function Encontros() {
     <AppShell>
       <section className="adm adm--tela">
         <header className="adm__topo">
-          <Link to="/app/administrativo" className="adm__voltar">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="m15 6-6 6 6 6" />
-            </svg>
-            Administrativo
-          </Link>
           <h1 className="tela__titulo">Pontos de encontro</h1>
         </header>
 

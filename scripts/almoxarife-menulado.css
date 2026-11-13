@@ -1,0 +1,269 @@
+/* O menu lateral do celular do Almoxarife (o .menulado).
+
+   Era o "Mais" do celular no AppShell do main ate ele virar o menu
+   completo (MenuCompleto). O Almoxarife segue com o dele: este e o CSS
+   de entao, guardado aqui para scripts/estilo-almoxarife.mjs copiar.
+   Mexer aqui e rodar o script de novo. */
+
+/* ------------------------------------------------------------
+   O MENU LATERAL (celular)
+
+   Abre pela direita a partir do Menu da barra de baixo. Fica montado
+   mesmo fechado, escondido por visibility, para o fechar tambem
+   deslizar.
+
+   A entrada tem tres tempos: o veu escurece (e desfoca) a tela, o
+   painel desliza na curva da folha do iPhone — sai rapido e assenta
+   devagar — e as pecas de dentro chegam logo atras, uma depois da
+   outra (`--i`, posto no JSX). Fechando, tudo sai junto e mais rapido:
+   ninguem quer esperar um menu ir embora.
+
+   A curva mora AQUI, e nao herdada da .rail: o menu fica fora da
+   barra, e com a variavel indefinida a transicao inteira caia — o
+   painel aparecia de uma vez, sem deslizar.
+   ------------------------------------------------------------ */
+.menulado {
+  --menulado-curva: cubic-bezier(0.32, 0.72, 0, 1);
+  --menulado-entra: 0.5s;
+  --menulado-sai: 0.28s;
+}
+
+@media (max-width: 860px) {
+  .menulado {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    visibility: hidden;
+    pointer-events: none;
+    transition: visibility 0s linear var(--menulado-sai);
+  }
+
+  .menulado.is-aberto {
+    visibility: visible;
+    pointer-events: auto;
+    transition: visibility 0s;
+  }
+
+  .menulado__veu {
+    position: absolute;
+    inset: 0;
+    padding: 0;
+    border: 0;
+    background: var(--modal-veu);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    opacity: 0;
+    transition: opacity var(--menulado-sai) var(--ease-out);
+  }
+
+  .menulado.is-aberto .menulado__veu {
+    opacity: 1;
+    transition-duration: var(--menulado-entra);
+  }
+
+  .menulado__painel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    width: min(300px, 82vw);
+    padding: calc(env(safe-area-inset-top, 0px) + 20px) 20px calc(env(safe-area-inset-bottom, 0px) + 14px);
+    border-left: 1px solid var(--glass-border);
+    border-radius: 24px 0 0 24px;
+    background: var(--vidro-menu);
+    box-shadow: -24px 0 48px -20px rgba(0, 0, 0, 0.5), var(--vidro-aro);
+    -webkit-backdrop-filter: var(--vidro-filtro);
+    backdrop-filter: var(--vidro-filtro);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    outline: none;
+    /* 104%, e nao 100%: a sombra tambem sai da tela */
+    transform: translate3d(104%, 0, 0);
+    transition: transform var(--menulado-sai) var(--menulado-curva);
+  }
+
+  .menulado.is-aberto .menulado__painel {
+    transform: none;
+    transition-duration: var(--menulado-entra);
+  }
+
+  /* a cascata: cada peca chega da direita, atras do painel */
+  .menulado__perfil,
+  .menulado__lista > .menulado__item,
+  .menulado__rodape {
+    opacity: 0;
+    transform: translate3d(32px, 0, 0);
+    transition:
+      opacity 0.14s var(--ease-out),
+      transform 0.2s var(--ease-out);
+  }
+
+  .menulado.is-aberto :is(.menulado__perfil, .menulado__lista > .menulado__item, .menulado__rodape) {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.32s var(--ease-out),
+      transform 0.55s var(--menulado-curva);
+    transition-delay: calc(110ms + var(--i, 0) * 45ms);
+  }
+
+  /* ---- quem esta logado ---- */
+  .menulado__perfil {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 18px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* a foto nasce um pouco menor e cresce com um leve repique */
+  .menulado__perfil > .avatarfig {
+    flex: none;
+    transform: scale(0.7);
+    transition: transform 0.2s var(--ease-out);
+  }
+
+  .menulado.is-aberto .menulado__perfil > .avatarfig {
+    transform: none;
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.16s;
+  }
+
+  .menulado__quem {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .menulado__quem strong {
+    color: var(--text-strong);
+    font-size: 0.95rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .menulado__nota {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 0.74rem;
+  }
+
+  .menulado__nota b {
+    color: var(--text-strong);
+  }
+
+  .menulado__nota em {
+    font-style: normal;
+  }
+
+  /* o X entra girando um quarto de volta */
+  .menulado__fechar {
+    align-self: flex-start;
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--control-bg-hover);
+    color: var(--text-base);
+    cursor: pointer;
+    transform: rotate(-90deg) scale(0.6);
+    transition: transform 0.2s var(--ease-out);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .menulado.is-aberto .menulado__fechar {
+    transform: none;
+    transition: transform 0.5s var(--menulado-curva) 0.2s;
+  }
+
+  .menulado__fechar:active {
+    background: var(--control-border);
+  }
+
+  /* ---- as abas ----
+     So o icone e o nome, sem fundo e sem caixa: uma linha fina entre
+     uma aba e a outra, e nada mais. */
+  .menulado__lista {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .menulado__item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 15px 2px;
+    color: var(--text-strong);
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .menulado__lista > .menulado__item + .menulado__item {
+    border-top: 1px solid var(--line);
+  }
+
+  .menulado__glifo {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 22px;
+    color: var(--text-muted);
+  }
+
+  .menulado__glifo svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .menulado__item:active {
+    opacity: 0.55;
+  }
+
+  /* a tela em que se esta: o nome e o icone na cor do sistema */
+  .menulado__item.is-atual {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* o azul do sistema nao se le sobre o vidro escuro: o mesmo tom claro
+     do icone aceso da barra */
+  :root[data-theme='dark'] .menulado__item.is-atual {
+    color: var(--grad-b);
+  }
+
+  .menulado__item.is-atual .menulado__glifo {
+    color: inherit;
+  }
+
+  /* ---- Configuracoes, sozinha no rodape ---- */
+  .menulado__rodape {
+    margin-top: auto;
+    padding-top: 24px;
+  }
+
+  .menulado__rodape .menulado__item {
+    border-top: 1px solid var(--line);
+  }
+}
+
+@media (max-width: 860px) and (prefers-reduced-motion: reduce) {
+  .menulado,
+  .menulado *,
+  .menulado.is-aberto * {
+    transition-duration: 0.01s !important;
+    transition-delay: 0s !important;
+  }
+}

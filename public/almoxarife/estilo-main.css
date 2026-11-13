@@ -190,7 +190,8 @@ body.dark-mode {
    no tema escuro). So as variaveis: a ordem das folhas nao interfere. */
 .rail,
 .topbar,
-.menulado__painel,
+.menutudo__painel,
+.submenu,
 .am-modal__caixa,
 .euzinho__menu,
 .sininho__painel,
@@ -303,12 +304,29 @@ body.dark-mode {
   display: none;
 }
 
-/* O Menu (hamburguer) e o menu lateral so existem no celular. Aqui em
-   cima a bolha e vertical e cabe o menu inteiro — guardar item atras de
-   um botao seria esconder o que ja estava a vista. */
-.rail__somobile,
-.menulado {
+/* O Menu da barra de baixo so existe no celular. No computador quem abre
+   o menu completo e o hamburguer do alto da barra (.rail__tudo). */
+.rail__somobile {
   display: none;
+}
+
+/* O hamburguer do computador: no alto da barra, com um fio embaixo que o
+   separa das abas. Abre o menu completo (MenuCompleto). */
+.rail__tudo {
+  flex: none;
+  height: 50px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.rail__tudo::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: -4px;
+  height: 1px;
+  background: var(--am-line);
 }
 
 .rail__lista {
@@ -461,8 +479,16 @@ body.dark-mode {
 }
 .rail__marca-anel {
   position: absolute;
-  /* bem maior que o botao: girando, as pontas nunca deixam canto vazio */
-  inset: -60%;
+  /* Um QUADRADO centrado no botao, com o lado do tamanho da largura mais a
+     altura dele (mais que a diagonal): girando, ele cobre o botao inteiro em
+     qualquer angulo. Antes era o botao esticado 60% para cada lado — no menu
+     largo (210x44) isso dava um retangulo de 462x97 que, de pe, deixava as
+     pontas do botao descobertas, e as cores piscavam nas laterais. */
+  left: 50%;
+  top: 50%;
+  width: calc(var(--marca-l) + var(--marca-a));
+  aspect-ratio: 1;
+  translate: -50% -50%;
   background: conic-gradient(
     from 220deg,
     var(--am-anel-1) 0%,
@@ -1633,6 +1659,11 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
     order: 4;
   }
 
+  /* no celular quem abre o menu completo e o Menu da barra de baixo */
+  .rail__tudo {
+    display: none;
+  }
+
   /* o Menu e um <button>, os outros sao links: a mesma letra e o mesmo
      cursor para os quatro */
   .rail__menu {
@@ -2084,6 +2115,13 @@ body.dark-mode .busca__marca[data-fechada='nao'] {
 }
 
 
+
+/* O menu lateral do celular do Almoxarife (o .menulado).
+
+   Era o "Mais" do celular no AppShell do main ate ele virar o menu
+   completo (MenuCompleto). O Almoxarife segue com o dele: este e o CSS
+   de entao, guardado aqui para scripts/estilo-almoxarife.mjs copiar.
+   Mexer aqui e rodar o script de novo. */
 
 /* ------------------------------------------------------------
    O MENU LATERAL (celular)
@@ -3211,4 +3249,127 @@ select.sel-nativo:not([multiple]):not([size]) {
 
 .menulado__nota .estrelas svg {
   display: block;
+}
+
+/* O menu lateral do celular (scripts/almoxarife-menulado.css) saiu do main:
+   o comum.css nao o conta mais entre as superficies de vidro, e o
+   AppShell.css nao o esconde mais no computador. As duas coisas ficam
+   aqui. */
+.menulado__painel {
+  --am-text-muted: var(--am-vidro-texto-suave);
+  --am-text-faint: var(--am-vidro-texto-fraco);
+  --am-danger: var(--am-vidro-perigo);
+}
+
+@media (min-width: 861px) {
+  .menulado {
+    display: none;
+  }
+}
+
+/* ---- o "Mais": o menu largo, como no main (o O MENU LARGO do
+   AppShell.css) ----
+   A seta no alto da barra (menu-main.js, montarMais) liga a classe
+   menu-largo no <html>: a barra alarga com o nome de cada aba ao lado do
+   icone e o conteudo anda junto (--sidebar-width). So no computador. */
+@media (min-width: 861px) {
+  #main-content {
+    transition: margin-left 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .rail {
+    transition: width 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  html.menu-largo {
+    --sidebar-width: 248px;
+  }
+
+  html.menu-largo .rail {
+    width: 228px;
+    align-items: stretch;
+    padding: 8px;
+  }
+
+  html.menu-largo .rail .rail__btn,
+  html.menu-largo .rail .menu-item.rail__btn {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    width: 100%;
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 14px;
+    text-align: left;
+  }
+
+  /* o nome inteiro, numa linha so (os quatro nomes compridos encolhidos
+     acima voltam ao tamanho dos outros) */
+  html.menu-largo .rail .rail__rotulo {
+    font-size: 0.86rem !important;
+    font-weight: 600;
+    letter-spacing: normal !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -webkit-line-clamp: 1;
+  }
+
+  /* o contador do item vai para o fim da linha */
+  html.menu-largo .rail .menu-item.rail__btn .badge {
+    top: 50%;
+    right: 10px;
+    translate: 0 -50%;
+  }
+
+  html.menu-largo .rail__marca {
+    border-radius: 14px;
+  }
+
+  html.menu-largo .rail__marca::after {
+    border-radius: 11px;
+  }
+
+  /* o "Mais" vira "Menos": a seta da meia volta */
+  .rail__seta {
+    transition: rotate 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  html.menu-largo .rail__seta {
+    rotate: 180deg;
+  }
+
+  html.menu-largo .rail__tudo {
+    height: 44px;
+  }
+}
+
+/* ---- o modo EMBUTIDO (?embutido=1, o sessao.js liga a classe) ----
+   A Solicitação de OS aberta dentro da obra, no pop-up do check
+   "Solicitar OS" (core/src/pages/Obras/ModalSolicitarOS.jsx): so o
+   formulario, sem a logo, o menu, o avatar, a barra de cima, o "Voltar" e
+   os botoes do Painel Geral. */
+html.embutido {
+  --sidebar-width: 0px;
+}
+
+html.embutido .marca,
+html.embutido #almox-rail,
+html.embutido .euzinho,
+html.embutido #almox-topo,
+html.embutido #painel-voltar-linha,
+html.embutido #painel-acoes,
+html.embutido .menulado,
+html.embutido #bottom-nav {
+  display: none !important;
+}
+
+html.embutido #main-content {
+  margin-left: 0;
+  padding-bottom: 12px;
+}
+
+html.embutido #almox-topo + .content-container,
+html.embutido .content-container {
+  margin-top: 0;
 }

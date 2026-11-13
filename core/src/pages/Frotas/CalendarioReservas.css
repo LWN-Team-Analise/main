@@ -1,0 +1,290 @@
+/* O calendario das reservas (CalendarioReservas.jsx) */
+
+.calres {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1180px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.calres__topo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calres__voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.calres__voltar:hover {
+  color: var(--text-strong);
+}
+
+.calres__barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.calres__passo {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--control-border);
+  border-radius: 50%;
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.calres__passo:hover {
+  background: var(--control-bg-hover);
+}
+
+.calres__mes {
+  min-width: 170px;
+  text-align: center;
+  font-size: 1.02rem;
+  color: var(--text-strong);
+}
+
+.calres__hoje {
+  padding: 7px 14px;
+}
+
+.calres__conta {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--text-faint);
+}
+
+.calres__erro {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger);
+  font-size: 0.86rem;
+}
+
+/* ---- a grade do mes ---- */
+.calres__grade {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  border-radius: 18px;
+}
+
+.calres__semana {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.calres__semana--cabeca span {
+  padding: 6px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.calres__dia {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 104px;
+  padding: 6px;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  min-width: 0;
+}
+
+.calres__semana .calres__dia:first-child {
+  border-left: 0;
+}
+
+.calres__dia.is-fora {
+  background: transparent;
+}
+
+.calres__numero {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-base);
+}
+
+.calres__dia.is-passado .calres__numero {
+  color: var(--text-faint);
+}
+
+.calres__dia.is-hoje .calres__numero {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+}
+
+.calres__chips {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.calres__chip {
+  display: block;
+  overflow: hidden;
+  padding: 3px 6px;
+  border-left: 3px solid var(--carro);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--carro) 14%, transparent);
+  color: var(--text-strong);
+  font-size: 0.7rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-decoration: none;
+}
+
+.calres__chip b {
+  font-weight: 700;
+}
+
+.calres__chip:hover {
+  background: color-mix(in srgb, var(--carro) 24%, transparent);
+}
+
+/* o que ja passou fica mais apagado */
+.calres__chip[data-tom='retirada'],
+.calres__chip[data-tom='passada'],
+.calres__dia.is-passado .calres__chip {
+  opacity: 0.6;
+}
+
+/* no celular a grade fica so com o numero de reservas do dia; a lista diz o resto */
+.calres__pontos {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .calres__dia {
+    min-height: 54px;
+    padding: 4px;
+  }
+
+  .calres__chips {
+    display: none;
+  }
+
+  .calres__pontos {
+    display: grid;
+    place-items: center;
+    align-self: flex-start;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.66rem;
+    font-weight: 700;
+  }
+}
+
+/* ---- a lista do mes ---- */
+.calres__vazio {
+  margin: 0;
+  padding: 28px 16px;
+  border: 1px dashed var(--control-border);
+  border-radius: 14px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.calres__lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.calres__reserva {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-left: 4px solid var(--carro);
+  border-radius: 14px;
+}
+
+.calres__reserva[data-tom='retirada'],
+.calres__reserva[data-tom='passada'] {
+  opacity: 0.72;
+}
+
+.calres__carro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text-strong);
+}
+
+.calres__carro i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--carro);
+}
+
+.calres__carro span {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.calres__obra {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.calres__obra:hover {
+  text-decoration: underline;
+}
+
+.calres__periodo,
+.calres__situacao {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.calres__reserva[data-tom='agora'] .calres__situacao {
+  color: var(--pri-media);
+  font-weight: 600;
+}

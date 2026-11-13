@@ -398,6 +398,9 @@ export const CHECK_PRAZO_EXECUCAO = 'prazo_execucao'
 /* o "Tipo de ensaio" do Comercial (atualizacao 54): os tipos de item que o
    Planejamento de ensaios pode usar */
 export const CHECK_TIPO_ENSAIO = 'tipo_ensaio'
+/* o "Determinar Focal Point" da 2a etapa (atualizacao 55): o setor escolhe
+   uma pessoa dele, e escolher marca o check */
+export const CHECK_FOCAL_POINT = 'focal_point'
 
 /**
  * Os tipos de item que o Planejamento desta obra pode usar: null quando o
@@ -1157,6 +1160,7 @@ export function oQueOCheckPede(etapa, check, obra) {
   if (check.tipo === CHECK_RETIRADA) return obra.reserva?.retirada ? null : 'o registro da retirada do carro'
   if (check.tipo === CHECK_PRAZO_EXECUCAO) return obra.execucaoPrazo ? null : 'o prazo da execução'
   if (check.tipo === CHECK_TIPO_ENSAIO) return (obra.tiposEnsaio ?? []).length > 0 ? null : 'o tipo de ensaio'
+  if (check.tipo === CHECK_FOCAL_POINT) return obra.checks?.[check.id]?.escolhidoId ? null : 'o focal point'
   if (check.tipo === CHECK_PLANEJAMENTO) {
     return (obra.ensaios ?? []).length > 0 ? null : 'os ensaios do Planejamento de ensaios'
   }
@@ -1178,7 +1182,15 @@ export function oQueOCheckPede(etapa, check, obra) {
  */
 export function checkAbrePopup(etapa, check) {
   return (
-    [CHECK_RESERVA, CHECK_RETIRADA, CHECK_PRAZO_EXECUCAO, CHECK_PLANEJAMENTO, CHECK_EXECUCAO, CHECK_TIPO_ENSAIO].includes(check?.tipo) ||
+    [
+      CHECK_RESERVA,
+      CHECK_RETIRADA,
+      CHECK_PRAZO_EXECUCAO,
+      CHECK_PLANEJAMENTO,
+      CHECK_EXECUCAO,
+      CHECK_TIPO_ENSAIO,
+      CHECK_FOCAL_POINT,
+    ].includes(check?.tipo) ||
     ehPropostaTecnica(etapa, check) ||
     Boolean(check?.horario) ||
     Boolean(check?.simNao)
