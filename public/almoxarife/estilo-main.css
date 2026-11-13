@@ -3285,6 +3285,18 @@ select.sel-nativo:not([multiple]):not([size]) {
     --sidebar-width: 248px;
   }
 
+  /* a barra de cima (a saudacao e a Busca) NAO anda com o menu largo, como
+     no main: so o conteudo embaixo dela vai para a direita. A margem
+     negativa devolve o que o --sidebar-width a mais empurrou (248px menos
+     os 86px de sempre; os 18px sao a folga de sempre), no mesmo passo */
+  #almox-topo {
+    transition: margin-left 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  html.menu-largo #almox-topo {
+    margin-left: calc(18px - 162px);
+  }
+
   html.menu-largo .rail {
     width: 228px;
     align-items: stretch;
@@ -3341,6 +3353,14 @@ select.sel-nativo:not([multiple]):not([size]) {
 
   html.menu-largo .rail__tudo {
     height: 44px;
+  }
+}
+
+/* entre 861px e 1000px a barra de sempre tem 78px de recuo: a barra de cima
+   devolve a diferenca certa */
+@media (min-width: 861px) and (max-width: 1000px) {
+  html.menu-largo #almox-topo {
+    margin-left: calc(18px - 170px);
   }
 }
 
