@@ -1,0 +1,28 @@
+/* ============================================================
+   A AREA ALMOXARIFE: a tela do Almoxarife num quadro, dentro do
+   Atmosfera, com a altura que sobra embaixo da barra de cima
+   ============================================================ */
+
+.almoxarea {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.almoxarea__quadro {
+  display: block;
+  width: 100%;
+  height: calc(100dvh - 128px);
+  min-height: 420px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+/* no celular a barra de baixo tambem come altura */
+@media (max-width: 860px) {
+  .almoxarea__quadro {
+    height: calc(100dvh - 200px);
+    border-radius: var(--radius-sm, 12px);
+  }
+}

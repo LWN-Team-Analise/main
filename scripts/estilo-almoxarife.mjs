@@ -934,6 +934,36 @@ html.embutido #almox-topo + .content-container,
 html.embutido .content-container {
   margin-top: 0;
 }
+
+/* ---- o modo AREA (?embutido=area, o sessao.js liga a classe) ----
+   O Almoxarife inteiro dentro do Atmosfera, na Area almoxarife do menu por
+   area (core/src/pages/Almoxarife/AlmoxarifeNaArea.jsx): quem troca de aba
+   e o menu do Atmosfera, entao saem so a navegacao e a barra de cima daqui
+   (a logo, a barra, o avatar, o menu do celular). Os botoes e o "Voltar"
+   do Painel Geral ficam: sao o trabalho, e nao a navegacao. Vem por
+   ultimo para valer tambem com o menu largo ligado. */
+html.embutido-area {
+  --sidebar-width: 0px;
+}
+
+html.embutido-area .marca,
+html.embutido-area #almox-rail,
+html.embutido-area .euzinho,
+html.embutido-area #almox-topo,
+html.embutido-area .menulado,
+html.embutido-area #bottom-nav {
+  display: none !important;
+}
+
+html.embutido-area #main-content {
+  margin-left: 0;
+  padding-bottom: 16px;
+}
+
+html.embutido-area #almox-topo + .content-container,
+html.embutido-area .content-container {
+  margin-top: 0;
+}
 `
 
 fs.writeFileSync(SAIDA, cabecalho + copiado + cola)

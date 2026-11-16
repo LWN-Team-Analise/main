@@ -363,11 +363,14 @@ function ModalAvaliar({ obraId, aoFechar }) {
 
     setSalvando(true)
     try {
-      for (const linha of validas) {
+      for (const [i, linha] of validas.entries()) {
         const campos = {
           rotulo: String(linha.rotulo).trim(),
           nota: Number(linha.nota),
           descricao: linha.descricao,
+          /* o Teams avisa UMA vez por obra, com a media: so a ultima etapa
+             gravada pede o aviso (antes saia uma mensagem por etapa) */
+          avisar: i === validas.length - 1,
         }
         if (linha.id) await atualizarAvaliacao(linha.id, campos)
         else await adicionarAvaliacao(obra.id, campos)

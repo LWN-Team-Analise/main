@@ -25,6 +25,7 @@ import RetornoOutlook from '@/pages/Login/RetornoOutlook'
 import ChatEquipe from '@/pages/Chat/ChatEquipe'
 import Dashboard from '@/pages/Diretoria/Dashboard'
 import Insumos from '@/pages/Insumos/Insumos'
+import AlmoxarifeNaArea from '@/pages/Almoxarife/AlmoxarifeNaArea'
 import ProtectedRoute from './ProtectedRoute'
 
 /* O LWN Control (o Almoxarife) e a tela do lwncontrol (public/almoxarife),
@@ -330,8 +331,18 @@ export default function AppRoutes() {
           </Interna>
         }
       />
-      {/* o endereco antigo */}
-      <Route path="/app/almoxarife" element={<Navigate to="/app/control" replace />} />
+      {/* A Area almoxarife do menu por area: a tela do Almoxarife num quadro,
+          DENTRO do Atmosfera, com o menu daqui (AlmoxarifeNaArea). O
+          /app/control continua abrindo a tela dele inteira, para os links de
+          fora (os avisos do Teams, os e-mails) */}
+      <Route
+        path="/app/almoxarife/*"
+        element={
+          <Interna permissao="ver_almoxarife">
+            <AlmoxarifeNaArea />
+          </Interna>
+        }
+      />
       {/* Configuracoes nao tem trava: e onde todo mundo cuida da propria conta */}
       <Route
         path="/app/configuracoes"

@@ -617,13 +617,18 @@ export function estadoDasFerramentasDaOS(obra) {
   }
 }
 
-/** O endereco da aba do LWN Control com a OS da obra em destaque (e, com `acao`, ja aberta nela). */
+/**
+ * O endereco da aba do LWN Control com a OS da obra em destaque (e, com
+ * `acao`, ja aberta nela). Abre a aba DENTRO do Atmosfera, na Area
+ * almoxarife (pages/Almoxarife/AlmoxarifeNaArea.jsx), que leva o "?" junto
+ * para o quadro.
+ */
 export const enderecoDaAbaDaOS = (aba, os, acao) => {
   const busca = new URLSearchParams()
   if (os) busca.set('os', os.id)
   if (os && acao) busca.set('acao', acao)
   const texto = busca.toString()
-  return `/core/app/control/${aba}${texto ? `?${texto}` : ''}`
+  return `/core/app/almoxarife/${aba}${texto ? `?${texto}` : ''}`
 }
 
 /**

@@ -477,8 +477,17 @@ const AREAS = [
     curto: 'Almoxarife',
     permissao: 'ver_almoxarife',
     /* o titulo do painel leva ao inicio do Almoxarife */
-    inicio: '/core/app/control',
-    itens: ALMOX_ABAS.map((aba) => ({ ...aba, href: `/core/app/control${aba.caminho}`, Glifo: ICONE_ALMOX[aba.id] })),
+    inicio: '/app/almoxarife',
+    /* cada aba abre a tela do Almoxarife DENTRO do Atmosfera, num quadro,
+       com este menu (pages/Almoxarife/AlmoxarifeNaArea.jsx). Os atalhos do
+       Painel Geral (aprovar, minhas obras, solicitar) acendem o Painel */
+    itens: ALMOX_ABAS.map((aba) => ({
+      ...aba,
+      rota: `/app/almoxarife${aba.caminho}`,
+      exato: !aba.caminho,
+      ...(aba.caminho ? {} : { tambem: ['/app/almoxarife/aprovar', '/app/almoxarife/minhas-obras', '/app/almoxarife/solicitar'] }),
+      Glifo: ICONE_ALMOX[aba.id],
+    })),
   },
   {
     id: 'comercial',
@@ -978,9 +987,9 @@ function SubmenuArea({ area, ancora, aoFechar, aoSolicitar }) {
           <Titulo />
         </span>
         {area.inicio ? (
-          <a href={area.inicio} className="submenu__titulo">
+          <Link to={area.inicio} className="submenu__titulo" onClick={aoFechar}>
             {area.rotulo}
-          </a>
+          </Link>
         ) : (
           <span className="submenu__titulo">{area.rotulo}</span>
         )}

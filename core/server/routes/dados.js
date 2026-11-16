@@ -5093,8 +5093,11 @@ router.post('/obras/:id/avaliacoes', exigeSessao, exige('editar_avaliacoes'), as
         nota: String(valor),
       },
     })
-    /* os membros recebem no Teams a nota geral da obra e a nova nota deles */
-    await avisarAvaliacao(req.params.id)
+    /* os membros recebem no Teams a nota geral da obra (a media) e a nova
+       nota deles. A tela grava uma nota por etapa, uma chamada cada: so a
+       ultima vem sem `avisar: false`, e sai UMA mensagem por obra, ja com a
+       media final (antes saia uma por etapa) */
+    if (req.body?.avisar !== false) await avisarAvaliacao(req.params.id)
     return res.status(201).json({ id: String(rows[0].id), avaliadaEm: rows[0].avaliado_em })
   } catch (e) {
     if (e.code === '23503') return res.status(404).json({ erro: 'Obra não encontrada.' })
@@ -5138,8 +5141,9 @@ router.patch('/avaliacoes/:id', exigeSessao, exige('editar_avaliacoes'), async (
         nota: String(Number(rows[0].nota)),
       },
     })
-    /* a nota mudou: as notas novas vao para os membros */
-    if (req.body?.nota !== undefined) await avisarAvaliacao(rows[0].obra_id)
+    /* a nota mudou: as notas novas vao para os membros — uma vez so, na
+       ultima etapa gravada (as outras vem com `avisar: false`) */
+    if (req.body?.nota !== undefined && req.body?.avisar !== false) await avisarAvaliacao(rows[0].obra_id)
     return res.json({ ok: true })
   } catch (e) {
     return tratar(e, res, 'dados/avaliacao-editar')

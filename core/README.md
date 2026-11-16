@@ -1524,7 +1524,7 @@ O menu e por **area** (`AREAS`, no `AppShell.jsx`). No alto ficam as telas solta
 | ---- | ------------------------------------- |
 | **Seu espaco** | Meu ponto (`/app/ponto`, `ver_ponto`), Meus reembolsos (`/app/despesas`, `ver_despesas`), Pedir insumos (`/app/insumos`, `ver_insumos`) |
 | **Area admin** | Ponto da equipe (`/app/ponto/equipe`, `gerenciar_ponto`), Ponto de encontro (`ver_encontros`, `soComOutros`), Dashboard de reembolso (os Envios gerais, `revisar_despesa_geral`), Insumos (`/app/insumos/pedidos`, `gerenciar_insumos`) |
-| **Area almoxarife** | as abas do Almoxarife (`almox_*`), links de pagina inteira para `/core/app/control/...` |
+| **Area almoxarife** | as abas do Almoxarife (`almox_*`), abertas DENTRO do Atmosfera em `/app/almoxarife/<aba>` (`AlmoxarifeNaArea.jsx`): a tela do Almoxarife num quadro, no modo area (`?embutido=area`, sem o menu e a barra de cima de la). Trocar de aba pelo menu chama o `switchTab` do quadro; trocar la dentro avisa o Atmosfera (`postMessage` `almox-aba`, em `endereco.js`) e o menu acompanha. O `/app/control` continua abrindo a tela inteira, para os links de fora |
 | **Area comercial** | Comercial (`ver_comercial`), Clientes (`ver_clientes`) |
 | **Area tecnica** | Ponto de encontro (`ver_encontros`), Frota (`ver_frotas`), Solicitar instrumento (o pop-up do Solicitar OS, `almox_solicitacoes`) |
 | **Area da excelencia** | Avaliacoes (`ver_avaliacoes`), Usuarios (`ver_usuarios`) |

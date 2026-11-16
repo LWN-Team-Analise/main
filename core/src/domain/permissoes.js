@@ -87,7 +87,7 @@ export const VISUALIZACAO = [
   { chave: 'ver_frotas', rotulo: 'Frotas', rota: '/app/frotas' },
   /* o Almoxarife (o antigo lwncontrol, atualizacao 38): a aba abre a tela
      dele, em /almoxarife. As abas de dentro dele sao as almox_* de baixo */
-  { chave: 'ver_almoxarife', rotulo: 'Almoxarife', rota: '/app/control' },
+  { chave: 'ver_almoxarife', rotulo: 'Almoxarife', rota: '/app/almoxarife' },
   { chave: 'ver_comercial', rotulo: 'Comercial', rota: '/app/comercial' },
   { chave: 'ver_turnos', rotulo: 'Turnos', rota: '/app/turnos' },
   { chave: 'ver_avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes' },
@@ -382,7 +382,7 @@ export function dependentes(chaveVisualizacao) {
    painel de um setor que ve a aba (`exige`).
    ------------------------------------------------------------ */
 export const PAINEIS = [
-  { chave: 'almoxarife', rotulo: 'Almoxarife', rota: '/app/control', exige: 'ver_almoxarife' },
+  { chave: 'almoxarife', rotulo: 'Almoxarife', rota: '/app/almoxarife', exige: 'ver_almoxarife' },
 ]
 
 export const CHAVES_PAINEL = PAINEIS.map((p) => p.chave)

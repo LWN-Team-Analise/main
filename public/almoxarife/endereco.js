@@ -31,6 +31,24 @@
     var original = window.switchTab;
     if (typeof original !== 'function') return;
 
+    /* Aberta EMBUTIDA (?embutido=1, o pop-up do Solicitar OS; ?embutido=area,
+       o quadro da Area almoxarife do Atmosfera), o endereco novo leva o
+       ?embutido junto: sem ele, recarregar o quadro na Vercel seria recusado
+       (vercel.json so deixa abrir dentro do site com o ?embutido). */
+    var SUFIXO = (function () {
+        try {
+            var modo = new URLSearchParams(location.search).get('embutido');
+            return modo ? '?embutido=' + encodeURIComponent(modo) : '';
+        } catch (e) { return ''; }
+    })();
+    /* no quadro da Area almoxarife, cada troca de aba avisa o Atmosfera, que
+       acende a aba certa no menu dele (AlmoxarifeNaArea.jsx) */
+    var NO_QUADRO = document.documentElement.classList.contains('embutido-area') && window.parent !== window;
+    function avisarOQuadro(caminho) {
+        if (!NO_QUADRO) return;
+        try { window.parent.postMessage({ tipo: 'almox-aba', caminho: caminho }, location.origin); } catch (e) { /* segue */ }
+    }
+
     function existe(aba) {
         return aba === 'dashboard' || ATALHOS.indexOf(aba) >= 0 || !!document.getElementById(aba + '-tab');
     }
@@ -61,7 +79,10 @@
                switchTab('dashboard') por dentro, e o endereco fica /aprovar */
             if (pronto && profundidade === 0 && existe(aba)) {
                 var novo = enderecoDa(aba);
-                if (novo !== location.pathname) history.pushState({ aba: aba }, '', novo);
+                if (novo !== location.pathname) {
+                    history.pushState({ aba: aba }, '', novo + SUFIXO);
+                    avisarOQuadro(novo);
+                }
             }
         }
     };
@@ -71,11 +92,13 @@
         pronto = false;
         try { window.switchTab(abaDoEndereco()); } catch (e) { /* segue onde esta */ }
         pronto = true;
+        avisarOQuadro(location.pathname);
     });
 
     window.addEventListener('load', function () {
         var aba = abaDoEndereco();
-        history.replaceState({ aba: aba }, '', enderecoDa(aba));
+        history.replaceState({ aba: aba }, '', enderecoDa(aba) + SUFIXO);
+        avisarOQuadro(enderecoDa(aba));
         if (aba !== 'dashboard') {
             try { window.switchTab(aba); } catch (e) { /* segue no Painel Geral */ }
         }

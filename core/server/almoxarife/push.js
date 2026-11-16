@@ -129,7 +129,8 @@ export async function notificar(pool, tipo, opcoes) {
             titulo: modelo.titulo,
             corpo: `${o.corpo || modelo.corpo} ${o.detalhe || linhaOS(o.os, o.remetente)}`,
             tag: `lwn-${tipo}-${(o.os && o.os.id) || Date.now()}`,
-            url: `/core/app/control/${modelo.aba}`
+            /* abre a aba DENTRO do Atmosfera, na Area almoxarife do menu por area */
+            url: `/core/app/almoxarife/${modelo.aba}`
         });
         return { enviadas: r.enviados, destinatarios: ids };
     } catch (e) {

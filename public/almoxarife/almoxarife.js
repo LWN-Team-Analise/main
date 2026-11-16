@@ -6457,7 +6457,8 @@ function sairApp() {
     // Sair e sair do Atmosfera LWN: a sessao e a do main, e quem encerra e o
     // servidor (o cookie nao e visivel daqui). Sem rede, a tela sai do mesmo jeito.
     try { localStorage.removeItem('customers.session'); } catch (e) { /* segue */ }
-    const irAoLogin = () => { window.location.href = '/core/login'; };
+    /* dentro do Atmosfera (o quadro da Area almoxarife), o login abre na janela de cima */
+    const irAoLogin = () => { (window.top || window).location.href = '/core/login'; };
     fetch('/api/auth/sair', { method: 'POST', keepalive: true }).then(irAoLogin, irAoLogin);
 }
 

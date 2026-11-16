@@ -214,19 +214,18 @@ const recusa = (res, campo, erro, status = 400) => res.status(status).json({ err
 /* ------------------------------------------------------------
    A REFEICAO E O CLIENTE (atualizacao 39)
 
-   "Enviar refeição" so vale para o cliente que NAO oferece alimentacao
-   (cliente.oferece_alimentacao; a unidade sem resposta propria vale a
-   do cliente dela). O cliente que oferece a refeicao (sim no cadastro)
-   nao recebe envio de refeicao. Antes ela tambem era so de quem estava
-   numa obra do cliente — a lista saia vazia para quase todo mundo, e a
-   regra caiu: vale qualquer cliente que nao oferece.
+   "Enviar refeição" so vale para o cliente marcado com "Oferece
+   alimentação?: não" (cliente.oferece_alimentacao = false; a unidade sem
+   resposta propria vale a do cliente dela). O cliente que oferece (sim) e
+   o que ainda nao tem resposta no cadastro nao recebem envio de refeicao:
+   antes o "sem resposta" passava, e a lista mostrava quase todo mundo.
 
    A conta e uma so, em SQL, para a recusa do envio e para a lista que a
-   tela usa (GET /refeicao/clientes).
+   tela usa (GET /refeicao/clientes): `oferece` e true, false ou null.
    ------------------------------------------------------------ */
 const CLIENTES_DA_REFEICAO = `
   SELECT c.id,
-         coalesce(c.oferece_alimentacao, m.oferece_alimentacao) IS TRUE AS oferece
+         coalesce(c.oferece_alimentacao, m.oferece_alimentacao) AS oferece
     FROM cliente c
     LEFT JOIN cliente m ON m.id = c.matriz_id`
 
@@ -241,7 +240,10 @@ async function refeicaoRecusada(clienteId) {
     if (erro.code === '42703') return null
     throw erro
   }
-  if (linha?.oferece) return 'Este cliente oferece alimentação: não há envio de refeição para ele.'
+  if (linha?.oferece === true) return 'Este cliente oferece alimentação: não há envio de refeição para ele.'
+  if (linha?.oferece !== false) {
+    return 'A refeição só vai para o cliente marcado com "Oferece alimentação?: não", e este cliente ainda não tem a resposta no cadastro.'
+  }
   return null
 }
 
@@ -572,8 +574,9 @@ export async function atualizarPlanilhaNoSharePoint() {
 
 /**
  * GET /refeicao/clientes — os clientes em que se lanca refeicao
- * (`permitidos`: os que nao oferecem a alimentacao) e os que oferecem
- * (`oferecem`). E o que o "Enviar refeição" mostra no campo Cliente.
+ * (`permitidos`: so os marcados com "Oferece alimentação?: não") e os que
+ * oferecem (`oferecem`). O cliente sem resposta no cadastro nao entra em
+ * nenhum dos dois. E o que o "Enviar refeição" mostra no campo Cliente.
  * Banco sem a atualizacao 39: `regra: false` (vale qualquer cliente).
  */
 router.get('/refeicao/clientes', exigeSessao, exige(PERMISSAO_VER), async (_req, res) => {
@@ -581,8 +584,8 @@ router.get('/refeicao/clientes', exigeSessao, exige(PERMISSAO_VER), async (_req,
     const { rows } = await query(CLIENTES_DA_REFEICAO)
     return res.json({
       regra: true,
-      permitidos: rows.filter((l) => !l.oferece).map((l) => String(l.id)),
-      oferecem: rows.filter((l) => l.oferece).map((l) => String(l.id)),
+      permitidos: rows.filter((l) => l.oferece === false).map((l) => String(l.id)),
+      oferecem: rows.filter((l) => l.oferece === true).map((l) => String(l.id)),
     })
   } catch (erro) {
     if (erro.code === '42703') return res.json({ regra: false, permitidos: [], oferecem: [] })

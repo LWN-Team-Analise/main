@@ -155,8 +155,9 @@ export default function ModalEnvio({ categoria, valores = VALORES_FIXOS, aoFecha
     setPreparando(false)
   }, [aberto, categoria, tipoUnico])
 
-  /* "Enviar refeição" so para o cliente que NAO oferece alimentacao (o
-     servidor confere igual) */
+  /* "Enviar refeição" so para o cliente marcado com "Oferece alimentação?:
+     não" — o que oferece e o que nao tem resposta ficam de fora (o servidor
+     confere igual) */
   useEffect(() => {
     if (!aberto || categoria !== 'refeicao') return undefined
     let vivo = true
@@ -330,7 +331,7 @@ export default function ModalEnvio({ categoria, valores = VALORES_FIXOS, aoFecha
         <span className="campo__rotulo">Cliente</span>
         <p className="formdesp__aviso">
           {categoria === 'refeicao' && daRefeicao?.regra
-            ? 'A refeição só pode ser enviada para o cliente que não oferece alimentação, e todos os clientes cadastrados oferecem.'
+            ? 'A refeição só pode ser enviada para o cliente marcado com "Oferece alimentação?: não", e nenhum cliente cadastrado está assim.'
             : categoria === 'bonus' && doBonus?.regra
               ? 'Nenhum cliente dá direito a bônus apartamento.'
               : 'Nenhum cliente cadastrado ainda. Os envios são lançados para um cliente.'}
