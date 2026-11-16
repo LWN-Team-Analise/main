@@ -325,12 +325,33 @@
 
 /* ---------------- o quadro ---------------- */
 
+/* O quadro rola DENTRO dele, nos dois sentidos, com a altura da tela: e o
+   que deixa a linha das datas presa no alto (.turnos__linha--dias) enquanto
+   as pessoas descem — ate a ultima pessoa ainda ve o dia de cada coluna.
+   Rolando so de lado, o "sticky" das datas nao tinha onde grudar (a pagina
+   e que descia) */
 .turnos__quadro {
-  overflow-x: auto;
+  overflow: auto;
+  max-height: calc(100dvh - 210px);
+  min-height: 320px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--surface);
-  overscroll-behavior-x: contain;
+  overscroll-behavior: contain;
+}
+
+/* a linha das datas: presa no alto do quadro (e o canto dela, a esquerda,
+   por cima de tudo) */
+.turnos__linha--dias {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--surface);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+.turnos__linha--dias .turnos__canto {
+  z-index: 6;
 }
 
 .turnos__grade {
@@ -976,6 +997,12 @@ button.turnos__celula:hover {
     --col-dia: 84px;
   }
 
+  /* no celular os botoes de cima ocupam meia tela: a pagina desce ate o
+     quadro, e ai ele enche o espaco entre a barra de cima e a de baixo */
+  .turnos__quadro {
+    max-height: calc(100dvh - 200px);
+  }
+
   .turnos__periodo {
     order: 5;
     width: 100%;
@@ -1110,9 +1137,16 @@ button.turnos__celula:hover {
     padding: 0;
   }
 
+  /* no papel o quadro sai inteiro, sem a altura da tela nem as datas presas */
   .turnos__quadro {
     overflow: visible;
+    max-height: none;
     border-radius: 0;
+  }
+
+  .turnos__linha--dias {
+    position: static;
+    box-shadow: none;
   }
 
   .turnos__grade {
