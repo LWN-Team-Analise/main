@@ -1,0 +1,209 @@
+/* ============================================================
+   INSUMOS — os pedidos de material (Pedir insumos, no Seu espaco,
+   e Insumos, na Area admin)
+   ============================================================ */
+
+.insumos {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  min-width: 0;
+}
+
+.insumos__topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 20px;
+}
+
+.insumos__topo .tela__lead {
+  margin-bottom: 0;
+}
+
+.insumos__filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.insumos__conta {
+  margin-left: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+.insumos__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.insumos__vazio {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 28px 20px;
+  border: 1px dashed var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.insumos__vazio strong {
+  color: var(--text-strong);
+  font-size: 0.95rem;
+}
+
+.insumos__erro {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.84rem;
+}
+
+/* ---------------- um pedido ---------------- */
+
+.pedido {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+/* o pendente e o que pede acao: a borda da esquerda acende */
+.pedido[data-situacao='pendente'] {
+  border-left: 3px solid var(--accent);
+}
+
+.pedido__miolo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pedido__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+}
+
+.pedido__item strong {
+  color: var(--text-strong);
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.pedido__qtd {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.pedido__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.pedido__quem {
+  color: var(--text-base);
+  font-weight: 600;
+}
+
+.pedido__obs,
+.pedido__resposta {
+  margin: 2px 0 0;
+  color: var(--text-base);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.pedido__resposta {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.pedido__lado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.pedido__acoes {
+  display: flex;
+  gap: 6px;
+}
+
+.pedido__situacao {
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+:root[data-theme='dark'] .pedido__situacao[data-situacao='pendente'] {
+  color: var(--grad-b);
+}
+
+.pedido__situacao[data-situacao='atendido'] {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
+}
+
+.pedido__situacao[data-situacao='recusado'] {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+/* ---------------- os formularios ---------------- */
+
+.insumos__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.insumos__rodape {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+@media (max-width: 640px) {
+  .pedido {
+    flex-direction: column;
+  }
+
+  .pedido__lado {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    width: 100%;
+  }
+}

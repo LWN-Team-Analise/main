@@ -80,6 +80,10 @@ export const VISUALIZACAO = [
   { chave: 'ver_encontros', rotulo: 'Ponto de encontro', rota: '/app/encontros' },
   { chave: 'ver_concluidas', rotulo: 'Concluídas', rota: '/app/concluidas' },
   { chave: 'ver_despesas', rotulo: 'Reembolso', rota: '/app/despesas' },
+  /* os pedidos de insumos (atualizacao 57): cada um pede o material que
+     precisa e acompanha os seus (Seu espaco > Pedir insumos). Atender os de
+     todos e `gerenciar_insumos`, embaixo */
+  { chave: 'ver_insumos', rotulo: 'Insumos', rota: '/app/insumos' },
   { chave: 'ver_frotas', rotulo: 'Frotas', rota: '/app/frotas' },
   /* o Almoxarife (o antigo lwncontrol, atualizacao 38): a aba abre a tela
      dele, em /almoxarife. As abas de dentro dele sao as almox_* de baixo */
@@ -178,6 +182,9 @@ export const ALTERACAO = [
   /* os valores pre-definidos do reembolso (almoco, janta, bonus
      apartamento...) e quais tipos sao pre-definidos */
   { chave: 'definir_valores_reembolso', rotulo: 'Editar valores pré-definidos', dependeDe: 'ver_despesas' },
+  /* a lista de TODOS os pedidos de insumos (Area admin > Insumos): marcar
+     como atendido, recusar com o motivo ou reabrir (atualizacao 57) */
+  { chave: 'gerenciar_insumos', rotulo: 'Atender os pedidos de insumos de todos', dependeDe: 'ver_insumos' },
   /* Frotas: ver a aba e os registros de todos os veiculos e
      `ver_frotas`; dar SAIDA e DEVOLUCAO e `registrar_frota`;
      cadastrar e editar os veiculos (e corrigir o KM atual de um

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import AppShell from '@/components/AppShell/AppShell'
 import Avatar from '@/components/Avatar/Avatar'
 import IconeClima from '@/components/Clima/IconeClima'
-import Seletor from '@/components/Seletor/Seletor'
 import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
 import { rotuloPrioridadeObra, temAcessoTotal, tomPrioridadeObra } from '@/domain/obras'
@@ -11,9 +10,7 @@ import useClima, { familiaDoTempo, nomeDoTempo } from '@/hooks/useClima'
 import { dataBR, dataHora, hojeISO } from '@/utils/formato'
 import useTarefas from './useTarefas'
 import useModoTv from './useModoTv'
-import Painel from './Painel'
 import Historico from './Historico'
-import ModalPowerBI from './ModalPowerBI'
 import Panorama from './Panorama'
 import './Home.css'
 
@@ -112,8 +109,9 @@ function Clima() {
   )
 }
 
-/* onde o filtro "Gráficos" do Painel fica guardado */
-const CHAVE_GRAFICOS = 'atmosfera.painel.graficos'
+/* onde o filtro "Gráficos" do Painel fica guardado (o Dashboard da Area da
+   diretoria, pages/Diretoria/Dashboard.jsx) */
+export const CHAVE_GRAFICOS = 'atmosfera.painel.graficos'
 
 const DIAS = ['DOM.', 'SEG.', 'TER.', 'QUA.', 'QUI.', 'SEX.', 'SÁB.']
 const MESES = ['JAN.', 'FEV.', 'MAR.', 'ABR.', 'MAI.', 'JUN.', 'JUL.', 'AGO.', 'SET.', 'OUT.', 'NOV.', 'DEZ.']
@@ -131,7 +129,7 @@ const MESES = ['JAN.', 'FEV.', 'MAR.', 'ABR.', 'MAI.', 'JUN.', 'JUL.', 'AGO.', '
  * hoje, e filtrar pendencia por mes esconderia trabalho atrasado
  * justamente de quem foi procurar o mes passado.
  */
-function mesDe(ano, mes) {
+export function mesDe(ano, mes) {
   const d = new Date(ano, mes, 1)
   const agora = new Date()
   return {
@@ -158,7 +156,7 @@ function mesDoCarimbo(valor) {
 
 /** As setas de mes: < SET 2026 > */
 /**
- * No celular ele aparece SO no Dashboard.
+ * No celular ele aparece SO no Dashboard (a tela da Area da diretoria).
  *
  * O mes filtra duas coisas: a coluna de concluidas do Quadro e os
  * graficos do Dashboard. Na Grade ele nao filtra nada — a grade e o que
@@ -166,7 +164,7 @@ function mesDoCarimbo(valor) {
  * disputa a largura com os outros, um seletor que nao muda nada e o
  * primeiro que tem de sair. No computador ele fica onde sempre esteve.
  */
-function SeletorMes({ mes, aoMudar, foraDoPainel }) {
+export function SeletorMes({ mes, aoMudar, foraDoPainel }) {
   return (
     <div
       className="mes"
@@ -222,17 +220,16 @@ const COLUNAS = [
  * lista de tarefa nenhuma, e por isso o mes e o "Para você/Todas" nao
  * aparecem nele.
  *
- * Depois dele, tres modos de olhar a MESMA lista de tarefas, e a
+ * Depois dele, dois modos de olhar a MESMA lista de tarefas, e a
  * tarefa aqui e o CHECK de uma obra (ver `useTarefas`):
  *
- *   Grade      — a tabela do que precisa ser feito, em ordem de urgencia;
- *   Quadro     — as mesmas tarefas em tres colunas, por estado;
- *   Dashboard  — os numeros que a lista sozinha nao mostra: quanto tempo
- *                uma obra leva, quanto tempo cada setor leva, o quanto
- *                as entregas chegam antes ou depois do prazo, e quanto
- *                se gastou em despesas. So para quem tem `ver_dashboard`:
- *                sem ela a aba nem aparece. E dele que sai a exportacao
- *                para o Power BI.
+ *   Grade      — a tabela do que precisa ser feito, em ordem de urgencia
+ *                (so na TV, revezando com o Quadro);
+ *   Quadro     — as mesmas tarefas em tres colunas, por estado.
+ *
+ * O Dashboard (os numeros que a lista sozinha nao mostra e a exportacao
+ * para o Power BI) morava aqui como terceira aba; no menu por area ele e a
+ * tela da Area da diretoria (pages/Diretoria/Dashboard.jsx).
  *
  * Nao ha "adicionar tarefa" em lugar nenhum, e isso e proposital: tarefa
  * solta nao teria obra onde ser marcada nem quem a cobrasse. Quem cria
@@ -243,7 +240,6 @@ export default function Home() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const tarefas = useTarefas()
-  const veDashboard = pode('ver_dashboard')
   /* a televisao da empresa (setor "Painel TV"): troca de Grade para Quadro
      sozinha e descendo a lista (useModoTv), fala com a EQUIPE e mostra as
      tarefas de todos os setores */
@@ -253,28 +249,6 @@ export default function Home() {
   /* a TV continua abrindo na Grade: ela reveza Grade e Quadro sozinha
      (useModoTv), e o Panorama nem aparece nela */
   const [abaEscolhida, setAba] = useState(() => (user?.painelTv ? 'grade' : 'panorama'))
-  const [powerBI, setPowerBI] = useState(false)
-  const [recado, setRecado] = useState('')
-  /* o passo do Dashboard mora aqui porque o seletor dele vive na barra
-     de abas, ao lado de Grade/Quadro/Dashboard */
-  const [passo, setPasso] = useState('mes')
-  /* o filtro "Gráficos" do Painel: todos, ou um grupo so. Fica
-     lembrado neste navegador. */
-  const [graficos, setGraficosEstado] = useState(() => {
-    try {
-      return localStorage.getItem(CHAVE_GRAFICOS) || 'todos'
-    } catch {
-      return 'todos'
-    }
-  })
-  const setGraficos = (valor) => {
-    setGraficosEstado(valor)
-    try {
-      localStorage.setItem(CHAVE_GRAFICOS, valor)
-    } catch {
-      /* sem storage, vale so ate recarregar */
-    }
-  }
   const [mes, setMes] = useState(() => {
     const agora = new Date()
     return mesDe(agora.getFullYear(), agora.getMonth())
@@ -301,15 +275,10 @@ export default function Home() {
   }, [recarregar])
 
   /* A Grade saiu das abas (so a TV ainda a usa, revezando com o Quadro):
-     quem estava nela, ou perdeu a permissao do painel com a aba aberta,
-     volta para o Panorama — e a TV, que nao tem o Panorama, para a Grade */
-  const aba = tv
-    ? abaEscolhida === 'quadro'
-      ? 'quadro'
-      : 'grade'
-    : abaEscolhida === 'grade' || (abaEscolhida === 'painel' && !veDashboard)
-      ? 'panorama'
-      : abaEscolhida
+     quem estava nela volta para o Panorama — e a TV, que nao tem o
+     Panorama, para a Grade. O Dashboard saiu daqui: e a tela da Area da
+     diretoria (pages/Diretoria/Dashboard.jsx) */
+  const aba = tv ? (abaEscolhida === 'quadro' ? 'quadro' : 'grade') : abaEscolhida === 'grade' ? 'panorama' : abaEscolhida
   /* o Panorama nao e lista de tarefas: o mes e o escopo nao mexem nele */
   const naLista = aba === 'grade' || aba === 'quadro'
   const { saindo: tvSaindo } = useModoTv({ ligado: tv, aba, aoTrocar: proximaTela })
@@ -467,7 +436,6 @@ export default function Home() {
                 ? [{ id: 'grade', rotulo: 'Grade', Glifo: Icone.grade }]
                 : [{ id: 'panorama', rotulo: 'Panorama', Glifo: Icone.panorama }]),
               { id: 'quadro', rotulo: 'Quadro', Glifo: Icone.quadro },
-              ...(veDashboard ? [{ id: 'painel', rotulo: 'Dashboard', Glifo: Icone.painel }] : []),
             ].map(({ id, rotulo, Glifo }) => (
               <button
                 key={id}
@@ -484,71 +452,9 @@ export default function Home() {
           </nav>
 
           {/* O mês fica no meio, entre as abas e o Minhas/Todas. Ele
-              filtra só o que TEM data: a coluna de concluídas do Quadro
-              e os gráficos do Dashboard. */}
-          {aba !== 'panorama' && (
-            <SeletorMes mes={mes} aoMudar={setMes} foraDoPainel={aba !== 'painel'} />
-          )}
+              filtra só o que TEM data: a coluna de concluídas do Quadro. */}
+          {aba !== 'panorama' && <SeletorMes mes={mes} aoMudar={setMes} foraDoPainel />}
 
-          {/* o passo do Dashboard entra na MESMA linha das abas: ele é
-              um modo de olhar, como elas, e não um controle de dentro
-              de um cartão */}
-          {aba === 'painel' && (
-            <div className="escopo" role="group" aria-label="Passo do tempo">
-              <button
-                type="button"
-                className={passo === 'mes' ? 'is-atual' : ''}
-                onClick={() => setPasso('mes')}
-                title="O mês escolhido, dia a dia"
-              >
-                Diário
-              </button>
-              <button
-                type="button"
-                className={passo === 'ano' ? 'is-atual' : ''}
-                onClick={() => setPasso('ano')}
-                title="De janeiro até o mês escolhido, mês a mês"
-              >
-                Mensal
-              </button>
-            </div>
-          )}
-
-          {/* quais graficos o Painel mostra: todos, ou so os de um grupo */}
-          {aba === 'painel' && (
-            <div className="inicio__graficos">
-              <Seletor
-                valor={pode('ver_comercial') || graficos !== 'comercial' ? graficos : 'todos'}
-                aoMudar={setGraficos}
-                aria-label="Quais gráficos mostrar"
-                opcoes={[
-                  { valor: 'todos', rotulo: 'Todos os gráficos' },
-                  { valor: 'obras', rotulo: 'Obras' },
-                  { valor: 'despesas', rotulo: 'Despesas' },
-                  { valor: 'frotas', rotulo: 'Frotas' },
-                  ...(pode('ver_almoxarife') && pode('almox_relatorios') ? [{ valor: 'almoxarife', rotulo: 'Almoxarife' }] : []),
-                  ...(pode('ver_comercial') ? [{ valor: 'comercial', rotulo: 'Comercial' }] : []),
-                ]}
-              />
-            </div>
-          )}
-
-          {/* os dados do Dashboard, para o Power BI: tudo, só obras ou
-              só despesas (ModalPowerBI) */}
-          {aba === 'painel' && (
-            <button
-              type="button"
-              className="acao acao--fraca inicio__exportar"
-              onClick={() => setPowerBI(true)}
-              title="Baixar os dados do Dashboard numa planilha que o Power BI abre"
-            >
-              <Icone.exportar />
-              Exportar para o Power BI
-            </button>
-          )}
-
-          {/* o Dashboard olha a empresa inteira: filtrar por setor ali
-              daria uma média de uma pessoa só, que não é média nenhuma */}
           {tv && (
             <div className="escopo" role="group" aria-label="De quem são as tarefas">
               <button type="button" disabled>
@@ -615,27 +521,7 @@ export default function Home() {
           </>
         )}
 
-        {aba === 'painel' && recado && (
-          <p className="recado" role="status">
-            {recado}
-            <button type="button" onClick={() => setRecado('')} aria-label="Fechar aviso">
-              ×
-            </button>
-          </p>
-        )}
-
-        {aba === 'painel' && (
-          <Painel
-            mes={mes}
-            passo={passo}
-            secao={pode('ver_comercial') || graficos !== 'comercial' ? graficos : 'todos'}
-          />
-        )}
       </section>
-
-      {veDashboard && (
-        <ModalPowerBI aberto={powerBI} aoFechar={() => setPowerBI(false)} aoExportado={setRecado} />
-      )}
     </AppShell>
   )
 }

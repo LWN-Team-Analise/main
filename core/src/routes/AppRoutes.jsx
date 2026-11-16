@@ -23,6 +23,8 @@ import Turnos from '@/pages/Turnos/Turnos'
 import Registros from '@/pages/Frotas/Registros'
 import RetornoOutlook from '@/pages/Login/RetornoOutlook'
 import ChatEquipe from '@/pages/Chat/ChatEquipe'
+import Dashboard from '@/pages/Diretoria/Dashboard'
+import Insumos from '@/pages/Insumos/Insumos'
 import ProtectedRoute from './ProtectedRoute'
 
 /* O LWN Control (o Almoxarife) e a tela do lwncontrol (public/almoxarife),
@@ -143,6 +145,16 @@ export default function AppRoutes() {
           </Interna>
         }
       />
+      {/* a mesma tela com o seletor de pessoa, as Assinaturas e o Importar:
+          o "Ponto da equipe" da Area admin */}
+      <Route
+        path="/app/ponto/equipe"
+        element={
+          <Interna permissao="gerenciar_ponto">
+            <Ponto equipe />
+          </Interna>
+        }
+      />
       {/* os horarios dos checks com horario das obras (o ponto de encontro) */}
       <Route
         path="/app/encontros"
@@ -161,6 +173,35 @@ export default function AppRoutes() {
       <Route path="/app/administrativo/encontros" element={<Mudou para="/app/encontros" />} />
       <Route path="/app/administrativo/frotas" element={<Mudou para="/app/frotas/atualizacoes" />} />
       <Route path="/app/administrativo/turnos" element={<Mudou para="/app/turnos" />} />
+      {/* o Dashboard da Area da diretoria (era a aba Dashboard da pagina
+          inicial): os numeros da empresa e a exportacao para o Power BI */}
+      <Route
+        path="/app/diretoria"
+        element={
+          <Interna permissao="ver_dashboard">
+            <Dashboard />
+          </Interna>
+        }
+      />
+      {/* os pedidos de insumos (atualizacao 57): cada um pede e acompanha os
+          seus; os de todos, para atender, sao de `gerenciar_insumos` (a API
+          confere as duas em cada chamada de /api/insumos) */}
+      <Route
+        path="/app/insumos"
+        element={
+          <Interna permissao="ver_insumos">
+            <Insumos />
+          </Interna>
+        }
+      />
+      <Route
+        path="/app/insumos/pedidos"
+        element={
+          <Interna permissao="gerenciar_insumos">
+            <Insumos equipe />
+          </Interna>
+        }
+      />
       {/* os funis de venda (os negocios do Pipedrive); a API confere a
           mesma chave em cada chamada de /api/comercial */}
       <Route

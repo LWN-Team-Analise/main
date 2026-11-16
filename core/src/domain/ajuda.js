@@ -130,14 +130,28 @@ export const ASSUNTOS = [
   },
   {
     id: 'meu-painel',
-    titulo: 'Meu painel e o menu completo',
-    gatilhos: ['meu painel', 'painel', 'hamburguer', 'menu completo', 'menu', 'mais', 'solicitar'],
+    titulo: 'O menu por área e o Meu painel',
+    gatilhos: ['meu painel', 'painel', 'hamburguer', 'menu completo', 'menu', 'mais', 'solicitar', 'area', 'seu espaco'],
     resposta:
-      'Se o seu setor tem o painel do Almoxarife, ele aparece como "Meu painel" no menu da sua foto, logo ' +
-      'acima de Configurações. O painel de cada setor é escolhido por quem tem acesso total, na tela do setor. ' +
-      'No computador, o "Mais" no alto do menu mostra o nome de cada aba (no Almoxarife também), e o ' +
-      'Almoxarife abre ao lado as abas dele; no celular, o Menu da barra de baixo abre o sistema inteiro. ' +
-      'O Solicitar abre direto a solicitação de OS do Almoxarife.',
+      'O menu é por área. No alto ficam Página inicial, Obras e Turnos; depois vem "Seu espaço" (Meu ponto, ' +
+      'Meus reembolsos e Pedir insumos) e as áreas: admin, almoxarife, comercial, técnica, da excelência e da ' +
+      'diretoria. Cada área só aparece se você tem ao menos uma tela dela: a área organiza, quem decide o que ' +
+      'você vê continua sendo a permissão do seu setor. No computador, clicar na área abre as telas dela ao ' +
+      'lado; com o "Mais" no alto do menu, elas aparecem embaixo do nome da área, que abre e fecha. No ' +
+      'celular, o Menu da barra de baixo mostra uma seção por área. O "Solicitar instrumento" da Área técnica ' +
+      'abre direto a solicitação de OS do Almoxarife. Se o seu setor tem o painel do Almoxarife, ele aparece ' +
+      'como "Meu painel" no menu da sua foto, logo acima de Configurações.',
+  },
+  {
+    id: 'insumos',
+    titulo: 'Pedir insumos',
+    gatilhos: ['insumo', 'insumos', 'material', 'pedido', 'pedir', 'escritorio', 'limpeza'],
+    resposta:
+      'Em Seu espaço > Pedir insumos, use "Novo pedido": diga o que você precisa, a quantidade e, se quiser, ' +
+      'uma observação. O pedido fica na lista com a situação (pendente, atendido ou recusado) e a resposta de ' +
+      'quem atendeu; enquanto estiver pendente, dá para cancelar. Quem tem a permissão "Atender os pedidos de ' +
+      'insumos de todos" vê, em Área admin > Insumos, os pedidos da equipe e marca cada um como atendido ou ' +
+      'recusa com o motivo.',
   },
   {
     id: 'emergencia',
@@ -195,13 +209,13 @@ export const ASSUNTOS = [
     titulo: 'Despesas, refeições e bônus',
     gatilhos: ['despesa', 'reembolso', 'gasto', 'recibo', 'comprovante', 'refeicao', 'almoco', 'janta', 'bonus', 'vale'],
     resposta:
-      'Na aba Reembolso, escolha Enviar despesa, Enviar refeição ou Enviar bônus. O cliente é obrigatório. ' +
+      'Em Seu espaço > Meus reembolsos, escolha Enviar despesa, Enviar refeição ou Enviar bônus. O cliente é obrigatório. ' +
       'Combustível e outros precisam do comprovante (imagem, PDF, ZIP ou documento); a refeição e o bônus ' +
       'apartamento têm valor pré-definido. A refeição vai para o cliente que não oferece alimentação, e o ' +
       'bônus, para o cliente em que o colaborador tem direito ao bônus apartamento. O que você enviou fica em ' +
       '"Meus envios", por mês (dia a dia) ou por ano (mês a mês), com os totais e o filtro por tipo. Quem ' +
-      'tem a permissão "Revisar despesa geral" vê, no botão Envios gerais do Reembolso, quanto cada pessoa ' +
-      'enviou, com o filtro por tipo e por período.',
+      'tem a permissão "Revisar despesa geral" vê, no Dashboard de reembolso da Área admin (ou no botão ' +
+      'Envios gerais do Reembolso), quanto cada pessoa enviou, com o filtro por tipo e por período.',
   },
   {
     id: 'frotas',
@@ -235,7 +249,7 @@ export const ASSUNTOS = [
       'Almoxarife escolhe alguém do Almoxarife, o Time Técnico alguém do Time Técnico): escolhida a pessoa, o ' +
       'check fica marcado com o nome dela, e dá para trocar ou desmarcar. O check "Solicitar OS" abre a ' +
       'solicitação de OS do Almoxarife num pop-up, sem sair da obra; ele é marcado quando o supervisor ' +
-      'aprovar a OS. O "Solicitar" do menu abre o mesmo pop-up, sem sair da tela em que você está.',
+      'aprovar a OS. O "Solicitar instrumento" da Área técnica abre o mesmo pop-up, sem sair da tela em que você está.',
   },
   {
     id: 'ponto-de-encontro',
@@ -246,18 +260,19 @@ export const ASSUNTOS = [
       'cima, escolha o local: no local da obra (o endereço do cliente), na empresa (LWN) ou em outro lugar, ' +
       'com o endereço escrito. "Salvar e marcar" grava e marca o check. Para desmarcar o Ponto de encontro ou ' +
       'o "Prazo da execução" (pelo período de execução), as etapas seguintes não podem ter check marcado. A ' +
-      'aba Ponto de encontro do menu mostra os próximos e, depois de uma linha, os que já aconteceram.',
+      'tela Ponto de encontro (nas áreas técnica e admin) mostra os próximos e, depois de uma linha, os que já aconteceram.',
   },
   {
     id: 'ponto',
     titulo: 'Folha de ponto',
     gatilhos: ['ponto', 'folha de ponto', 'espelho', 'marcacao', 'marcacoes', 'hora extra', 'assinar folha', 'assinatura'],
     resposta:
-      'Na aba Ponto, cada um vê a própria folha de ponto, do mês ou de datas escolhidas, no desenho do espelho do ' +
-      'sistema de ponto. Para assinar a conferência, clique na área acima de "Assinatura Funcionário", marque as ' +
-      'duas confirmações e assine: o seu nome completo fica impresso ali. O Exportar baixa a folha em PDF e em ' +
-      'Excel. Quem tem a permissão "Ver a folha de ponto de todos e importar" (em Usuários) escolhe a pessoa e ' +
-      'importa o Cálculo Diário (.csv), mas não assina a folha de outra pessoa. Em Assinaturas vê quem assinou ' +
-      'e quem falta, e o "Enviar aviso" manda no Teams o pedido para a pessoa assinar.',
+      'Em Seu espaço > Meu ponto, cada um vê a própria folha de ponto, do mês ou de datas escolhidas, no desenho ' +
+      'do espelho do sistema de ponto. Para assinar a conferência, clique na área acima de "Assinatura ' +
+      'Funcionário", marque as duas confirmações e assine: o seu nome completo fica impresso ali. O Exportar ' +
+      'baixa a folha em PDF e em Excel. Quem tem a permissão "Ver a folha de ponto de todos e importar" abre o ' +
+      'Ponto da equipe, na Área admin: escolhe a pessoa e importa o Cálculo Diário (.csv), mas não assina a ' +
+      'folha de outra pessoa. Em Assinaturas vê quem assinou e quem falta, e o "Enviar aviso" manda no Teams o ' +
+      'pedido para a pessoa assinar.',
   },
 ]

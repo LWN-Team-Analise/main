@@ -156,6 +156,48 @@ const Icone = {
       <path d="M16.2 5.2a3.3 3.3 0 0 1 0 6.1M17.6 14.4a6.4 6.4 0 0 1 3.6 5.1" />
     </svg>
   ),
+  /* as AREAS do menu (AREAS, mais abaixo) */
+  /* Seu espaco: a pessoa */
+  espaco: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <circle cx="12" cy="8" r="3.6" />
+      <path d="M5 20c.8-3.6 3.6-5.6 7-5.6s6.2 2 7 5.6" />
+    </svg>
+  ),
+  /* Area admin: a prancheta com o visto */
+  admin: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <rect x="5" y="4.5" width="14" height="16" rx="2" />
+      <path d="M9 4.5V3.5h6v1M8.8 12.4l2.2 2.2 4.4-4.4" />
+    </svg>
+  ),
+  /* Area tecnica: o capacete */
+  tecnica: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <path d="M4.5 16.5v-1a7.5 7.5 0 0 1 15 0v1" />
+      <path d="M10 8.3V5.5h4v2.8M3 16.5h18v2.5H3z" />
+    </svg>
+  ),
+  /* Area da excelencia: a medalha */
+  excelencia: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <circle cx="12" cy="14.5" r="5" />
+      <path d="M8.6 10.6 6 3.5h4l2 4 2-4h4l-2.6 7.1M12 12.6v3.8" />
+    </svg>
+  ),
+  /* Area da diretoria (e o Dashboard): as barras do grafico */
+  diretoria: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <path d="M4.5 20V11M10 20V5M15.5 20v-6M21 20H3" />
+    </svg>
+  ),
+  /* Insumos: a caixa */
+  insumos: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z" />
+      <path d="M3.5 7.5 12 12l8.5-4.5M12 12v9" />
+    </svg>
+  ),
   config: () => (
     <svg viewBox="0 0 24 24" width="17" height="17" {...traco}>
       <circle cx="12" cy="12" r="3" />
@@ -238,10 +280,10 @@ const Icone = {
 /**
  * Barra lateral: icone + descricao embaixo.
  *
- * `permissao` e a chave que o cargo precisa ter para o item aparecer.
- * Usuarios nao tem permissao de VISUALIZACAO propria: quem entra la e
- * quem pode mexer em usuario ou em cargo.
+ * O menu e por AREA (AREAS, mais abaixo): no alto ficam so as telas
+ * soltas, que nao sao de area nenhuma — Pagina inicial, Obras e Turnos.
  *
+ * `permissao` e a chave que o cargo precisa ter para o item aparecer.
  * Item SEM `permissao` nem `permissoes` e de todo mundo (`semTv`: menos
  * da TV da empresa; `quandoNao`: so para quem NAO tem aquela permissao).
  * `tambem` sao as outras rotas que acendem o item.
@@ -251,29 +293,7 @@ const MENU = [
   /* Concluidas saiu do menu: virou o botao "Concluídas" de Obras, e a tela
      dela (/app/concluidas) acende Obras aqui */
   { id: 'obras', rotulo: 'Obras', rota: '/app/obras', permissao: 'ver_obras', tambem: ['/app/concluidas'] },
-  /* o "Solicitar OS" do Almoxarife: abre o pedido num pop-up por cima da
-     tela em que a pessoa esta (ModalSolicitarOS, sem obra), sem levar ao
-     Almoxarife. A rota continua abrindo a tela dele, para quem chega pelo
-     endereco */
-  { id: 'solicitar', rotulo: 'Solicitar', rota: '/app/control/solicitar', permissao: 'almox_solicitacoes', semTv: true },
-  { id: 'clientes', rotulo: 'Clientes', rota: '/app/clientes', permissao: 'ver_clientes' },
-  /* o Ponto (a folha de ponto) e o Ponto de encontro das obras, cada um
-     com a permissao dele (atualizacao 55: a area Administrativo saiu) */
-  { id: 'ponto', rotulo: 'Ponto', rota: '/app/ponto', permissao: 'ver_ponto', semTv: true },
-  { id: 'encontros', icone: 'encontro', rotulo: 'Ponto de encontro', rota: '/app/encontros', permissao: 'ver_encontros', semTv: true },
-  { id: 'despesas', rotulo: 'Reembolso', rota: '/app/despesas', permissao: 'ver_despesas' },
-  { id: 'frotas', rotulo: 'Frotas', rota: '/app/frotas', permissao: 'ver_frotas' },
-  /* o Almoxarife (o antigo lwncontrol) abre a tela dele, em /almoxarife */
-  { id: 'almoxarife', rotulo: 'Almoxarife', rota: '/app/control', permissao: 'ver_almoxarife' },
-  { id: 'comercial', rotulo: 'Comercial', rota: '/app/comercial', permissao: 'ver_comercial' },
   { id: 'turnos', rotulo: 'Turnos', rota: '/app/turnos', permissao: 'ver_turnos' },
-  { id: 'avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes', permissao: 'ver_avaliacoes' },
-  {
-    id: 'usuarios',
-    rotulo: 'Usuários',
-    rota: '/app/usuarios',
-    permissao: 'ver_usuarios',
-  },
 ]
 
 /* ------------------------------------------------------------
@@ -284,15 +304,17 @@ const MENU = [
    de lado — uma barra que rola e uma barra onde ninguem acha o
    quarto item, porque nada indica que ha um quarto item.
 
-   Entao ficam as tres do dia a dia — Pagina inicial, Obras e
-   Despesas — e, na ponta direita, o Menu (o hamburguer), que abre
-   o MENU LATERAL pela direita com o resto: a foto, o nome e a
-   avaliacao de quem esta logado, Configuracoes e as outras abas.
+   Entao ficam as tres do dia a dia — Pagina inicial, Obras e o
+   Reembolso (Meus reembolsos, um ATALHO: no computador ele mora no
+   Seu espaco) — e, na ponta direita, o Menu (o hamburguer), que abre
+   o MENU LATERAL pela direita com o resto, area por area.
    ------------------------------------------------------------ */
-const PRINCIPAIS = ['inicio', 'obras', 'despesas']
+const PRINCIPAIS = ['inicio', 'obras']
+/* o atalho do celular: o item do Seu espaco que vira botao da barra */
+const ATALHO_CELULAR = { area: 'espaco', item: 'meus-reembolsos', id: 'atalho-reembolso', rotulo: 'Reembolso' }
 
 /* o item do menu que abre o pop-up do Solicitar OS, e nao uma tela */
-const ID_SOLICITAR = 'solicitar'
+const ACAO_SOLICITAR = 'solicitar'
 
 /**
  * As abas do Almoxarife no menu completo (o hamburguer). Sao as do menu
@@ -385,13 +407,128 @@ const ICONE_ALMOX = {
 }
 
 /* ------------------------------------------------------------
+   AS AREAS DO MENU
+
+   Cada area e UM item da barra. No menu de sempre o clique abre, ao
+   lado, um painel com as telas dela (SubmenuArea); no menu largo (o
+   "Mais") as telas aparecem embaixo do nome da area, que abre e fecha.
+   No celular, cada area e uma secao do Menu da barra de baixo.
+
+   A area e uma prateleira, e nao um acesso: cada tela continua com a
+   permissao dela, e a area so aparece para quem tem ao menos uma tela
+   liberada la dentro. O Ponto de encontro mora em duas (a admin e a
+   tecnica); na admin ele e `soComOutros` — sozinho ele nao abre a area,
+   senao quem so ve os encontros ganharia uma "Área admin" com eles.
+
+   `curto` e o nome no menu de sempre, onde o rotulo tem duas linhas
+   curtas embaixo do icone. Item com `href` e pagina inteira (as abas do
+   Almoxarife moram fora do React); com `acao`, um botao (o Solicitar
+   abre o pop-up do pedido, sem sair da tela).
+   ------------------------------------------------------------ */
+const AREAS = [
+  {
+    id: 'espaco',
+    rotulo: 'Seu espaço',
+    curto: 'Seu espaço',
+    itens: [
+      /* a propria folha: cada um ve e assina a sua (a da equipe esta na admin) */
+      { id: 'meu-ponto', icone: 'ponto', rotulo: 'Meu ponto', rota: '/app/ponto', exato: true, permissao: 'ver_ponto', semTv: true },
+      {
+        id: 'meus-reembolsos',
+        icone: 'despesas',
+        rotulo: 'Meus reembolsos',
+        rota: '/app/despesas',
+        exato: true,
+        permissao: 'ver_despesas',
+        tambem: ['/app/despesas/envios'],
+      },
+      { id: 'pedir-insumos', icone: 'insumos', rotulo: 'Pedir insumos', rota: '/app/insumos', exato: true, permissao: 'ver_insumos', semTv: true },
+    ],
+  },
+  {
+    id: 'admin',
+    rotulo: 'Área admin',
+    curto: 'Admin',
+    itens: [
+      { id: 'ponto-equipe', icone: 'ponto', rotulo: 'Ponto da equipe', rota: '/app/ponto/equipe', permissao: 'gerenciar_ponto', semTv: true },
+      {
+        id: 'encontros',
+        icone: 'encontro',
+        rotulo: 'Ponto de encontro',
+        rota: '/app/encontros',
+        permissao: 'ver_encontros',
+        semTv: true,
+        soComOutros: true,
+      },
+      /* os Envios gerais do Reembolso: quanto cada pessoa enviou */
+      {
+        id: 'envios-gerais',
+        icone: 'diretoria',
+        rotulo: 'Dashboard de reembolso',
+        rota: '/app/despesas/gerais',
+        permissao: 'revisar_despesa_geral',
+      },
+      { id: 'insumos', icone: 'insumos', rotulo: 'Insumos', rota: '/app/insumos/pedidos', permissao: 'gerenciar_insumos' },
+    ],
+  },
+  {
+    id: 'almoxarife',
+    rotulo: 'Área almoxarife',
+    curto: 'Almoxarife',
+    permissao: 'ver_almoxarife',
+    /* o titulo do painel leva ao inicio do Almoxarife */
+    inicio: '/core/app/control',
+    itens: ALMOX_ABAS.map((aba) => ({ ...aba, href: `/core/app/control${aba.caminho}`, Glifo: ICONE_ALMOX[aba.id] })),
+  },
+  {
+    id: 'comercial',
+    rotulo: 'Área comercial',
+    curto: 'Comercial',
+    itens: [
+      { id: 'comercial', rotulo: 'Comercial', rota: '/app/comercial', permissao: 'ver_comercial' },
+      { id: 'clientes', rotulo: 'Clientes', rota: '/app/clientes', permissao: 'ver_clientes' },
+    ],
+  },
+  {
+    id: 'tecnica',
+    rotulo: 'Área técnica',
+    curto: 'Técnica',
+    itens: [
+      { id: 'encontros', icone: 'encontro', rotulo: 'Ponto de encontro', rota: '/app/encontros', permissao: 'ver_encontros', semTv: true },
+      { id: 'frotas', rotulo: 'Frota', rota: '/app/frotas', permissao: 'ver_frotas' },
+      /* o "Solicitar OS" do Almoxarife: abre o pedido num pop-up por cima da
+         tela em que a pessoa esta (ModalSolicitarOS, sem obra) */
+      { id: 'solicitar', rotulo: 'Solicitar instrumento', acao: ACAO_SOLICITAR, permissao: 'almox_solicitacoes', semTv: true },
+    ],
+  },
+  {
+    id: 'excelencia',
+    rotulo: 'Área da excelência',
+    curto: 'Excelência',
+    itens: [
+      { id: 'avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes', permissao: 'ver_avaliacoes' },
+      { id: 'usuarios', rotulo: 'Usuários', rota: '/app/usuarios', permissao: 'ver_usuarios' },
+    ],
+  },
+  {
+    id: 'diretoria',
+    rotulo: 'Área da diretoria',
+    curto: 'Diretoria',
+    itens: [
+      /* o Dashboard que morava na pagina inicial */
+      { id: 'dashboard', icone: 'diretoria', rotulo: 'Dashboard', rota: '/app/diretoria', permissao: 'ver_dashboard' },
+    ],
+  },
+]
+
+/* ------------------------------------------------------------
    O MENU LARGO (o "Mais" do alto da barra, no computador)
 
    A barra continua a mesma; o "Mais" a alarga, com o nome de cada aba ao
    lado do icone, e a PAGINA se ajusta a largura dela — nada fica atras de
-   veu. Almoxarife e Administrativo viram areas com submenu: o clique abre,
-   ao lado, as abas delas (SubmenuArea). A escolha fica guardada no aparelho
-   e vale para todas as telas.
+   veu. Cada area vira um titulo que abre e fecha, com as telas dela
+   embaixo. A escolha fica guardada no aparelho e vale para todas as telas,
+   e as areas abertas tambem.
    ------------------------------------------------------------ */
 const CHAVE_MENU_LARGO = 'customers.menu-largo'
 let menuLargo = (() => {
@@ -402,8 +539,18 @@ let menuLargo = (() => {
   }
 })()
 
-/* as areas com submenu no menu largo */
-const AREAS_COM_SUBMENU = ['almoxarife']
+/* as areas abertas no menu largo. Variavel de MODULO, como `ultimaMarca`:
+   cada tela monta o proprio AppShell, e a lista sobrevive a troca. null =
+   ninguem mexeu ainda (abre so a area da tela atual) */
+const CHAVE_AREAS_ABERTAS = 'customers.menu-areas'
+let areasAbertas = (() => {
+  try {
+    const salvo = JSON.parse(localStorage.getItem(CHAVE_AREAS_ABERTAS) ?? 'null')
+    return Array.isArray(salvo) ? salvo.filter((id) => typeof id === 'string') : null
+  } catch {
+    return null
+  }
+})()
 
 /** O item entra no menu de quem esta logado? A mesma regra para todo menu. */
 function itemVisivel(item, pode, painelTv) {
@@ -412,6 +559,46 @@ function itemVisivel(item, pode, painelTv) {
   if (item.permissoes) return item.permissoes.some((p) => pode(p))
   return item.permissao ? pode(item.permissao) : true
 }
+
+/**
+ * As areas de quem esta logado, cada uma so com as telas que a permissao
+ * abre. Area sem tela que seja dela de verdade (so com `soComOutros`) nao
+ * aparece.
+ */
+function areasVisiveis(pode, painelTv) {
+  return AREAS.map((area) => {
+    if (area.permissao && !pode(area.permissao)) return null
+    const itens = area.itens.filter((item) => itemVisivel(item, pode, painelTv))
+    if (!itens.some((item) => !item.soComOutros)) return null
+    return { ...area, itens }
+  }).filter(Boolean)
+}
+
+/** A tela tem este endereco? A mesma regra do NavLink. */
+function casaComRota(item, caminho) {
+  if (!item.rota) return false
+  return Boolean(
+    matchPath({ path: item.rota, end: Boolean(item.exato) }, caminho) ||
+      (item.tambem ?? []).some((rota) => matchPath({ path: rota, end: false }, caminho)),
+  )
+}
+
+/**
+ * Onde o endereco esta no menu: `{ area, item }` (area null para as telas
+ * soltas do alto; os dois null fora do menu, como em Configuracoes).
+ */
+function ondeEstou(soltos, areas, caminho) {
+  const solto = soltos.find((item) => casaComRota(item, caminho))
+  if (solto) return { area: null, item: solto.id }
+  for (const area of areas) {
+    const item = area.itens.find((i) => casaComRota(i, caminho))
+    if (item) return { area: area.id, item: item.id }
+  }
+  return { area: null, item: null }
+}
+
+/** O desenho do item: o glifo dele (abas do Almoxarife) ou o do Icone. */
+const glifoDo = (item) => item.Glifo ?? Icone[item.icone ?? item.id] ?? Icone.painel
 
 /* ------------------------------------------------------------
    Onde o indicador estava na tela anterior
@@ -441,16 +628,6 @@ let ultimoMostrado = null
 /* a rolagem da lista do computador, pelo mesmo motivo: a barra nova
    nasceria rolada para o topo e o item clicado pularia de lugar */
 let ultimaRolagem = 0
-
-/** Qual item do menu corresponde ao endereco — a mesma regra do NavLink. */
-function itemDaRota(abas, caminho) {
-  const item = abas.find(
-    (i) =>
-      matchPath({ path: i.rota, end: Boolean(i.exato) }, caminho) ||
-      (i.tambem ?? []).some((rota) => matchPath({ path: rota, end: false }, caminho)),
-  )
-  return item?.id ?? null
-}
 
 /* Posicao de `el` medida a partir da caixa de `ate`, somando os offsets.
    Offset e medida de LAYOUT: ignora transform, entao nem o icone erguido
@@ -760,15 +937,13 @@ function Notificacoes() {
 }
 
 /**
- * O SUBMENU de uma area no menu largo: o cartao que abre ao lado da barra,
- * na altura do item clicado, com as abas da area (Almoxarife ou
- * Administrativo) — so as que a permissao da pessoa abre. O titulo leva ao
- * inicio da area. Fecha no clique fora, no Esc, na setinha e ao trocar de
- * tela. As abas do Almoxarife sao links de pagina inteira.
+ * O PAINEL de uma area no menu de sempre: o cartao que abre ao lado da
+ * barra, na altura do item clicado, com as telas da area — so as que a
+ * permissao da pessoa abre (`area` ja chega filtrada, de areasVisiveis).
+ * Fecha no clique fora, no Esc, na setinha e ao trocar de tela. As abas do
+ * Almoxarife sao links de pagina inteira; o Solicitar abre o pop-up.
  */
-function SubmenuArea({ area, ancora, aoFechar }) {
-  const { user } = useAuth()
-  const { pode } = useDados()
+function SubmenuArea({ area, ancora, aoFechar, aoSolicitar }) {
   const caixa = useRef(null)
 
   useEffect(() => {
@@ -788,10 +963,8 @@ function SubmenuArea({ area, ancora, aoFechar }) {
     }
   }, [aoFechar])
 
-  const ve = (item) => itemVisivel(item, pode, user?.painelTv)
-  /* hoje a unica area com submenu e o Almoxarife */
-  const itens = ALMOX_ABAS.filter(ve).map((aba) => ({ ...aba, href: `/core/app/control${aba.caminho}`, Glifo: ICONE_ALMOX[aba.id] }))
-  const Titulo = Icone[area]
+  const itens = area.itens
+  const Titulo = Icone[area.id] ?? Icone.painel
 
   /* na altura do item; perto do pe da tela, sobe ate caber */
   const alto = 64 + itens.length * 38
@@ -804,32 +977,57 @@ function SubmenuArea({ area, ancora, aoFechar }) {
         <span className="submenu__icone" aria-hidden="true">
           <Titulo />
         </span>
-        <a href="/core/app/control" className="submenu__titulo">
-          Almoxarife
-        </a>
-        <button type="button" className="submenu__fechar" onClick={aoFechar} aria-label="Fechar o submenu">
+        {area.inicio ? (
+          <a href={area.inicio} className="submenu__titulo">
+            {area.rotulo}
+          </a>
+        ) : (
+          <span className="submenu__titulo">{area.rotulo}</span>
+        )}
+        <button type="button" className="submenu__fechar" onClick={aoFechar} aria-label="Fechar o painel da área">
           <Icone.chevron />
         </button>
       </header>
       {itens.length === 0 ? (
-        <p className="submenu__vazio">Nenhuma aba liberada para você aqui.</p>
+        <p className="submenu__vazio">Nenhuma tela liberada para você aqui.</p>
       ) : (
         <ul className="submenu__lista">
-          {itens.map(({ id, rotulo, href, rota, exato, Glifo }) => (
-            <li key={id}>
-              {href ? (
-                <a href={href} className="submenu__item" role="menuitem">
-                  <span className="submenu__glifo">{Glifo && <Glifo />}</span>
-                  {rotulo}
-                </a>
-              ) : (
-                <NavLink to={rota} end={exato} className={classe} role="menuitem" onClick={aoFechar}>
-                  <span className="submenu__glifo">{Glifo && <Glifo />}</span>
-                  {rotulo}
-                </NavLink>
-              )}
-            </li>
-          ))}
+          {itens.map((item) => {
+            const Glifo = glifoDo(item)
+            const miolo = (
+              <>
+                <span className="submenu__glifo">
+                  <Glifo />
+                </span>
+                {item.rotulo}
+              </>
+            )
+            return (
+              <li key={item.id}>
+                {item.acao === ACAO_SOLICITAR ? (
+                  <button
+                    type="button"
+                    className="submenu__item"
+                    role="menuitem"
+                    onClick={() => {
+                      aoFechar()
+                      aoSolicitar()
+                    }}
+                  >
+                    {miolo}
+                  </button>
+                ) : item.href ? (
+                  <a href={item.href} className="submenu__item" role="menuitem">
+                    {miolo}
+                  </a>
+                ) : (
+                  <NavLink to={item.rota} end={item.exato} className={classe} role="menuitem" onClick={aoFechar}>
+                    {miolo}
+                  </NavLink>
+                )}
+              </li>
+            )
+          })}
         </ul>
       )}
     </div>
@@ -838,9 +1036,9 @@ function SubmenuArea({ area, ancora, aoFechar }) {
 
 /**
  * O MENU COMPLETO, o do hamburguer: o sistema inteiro, dividido pelas
- * areas — Atmosfera (as abas de sempre), Administrativo e Almoxarife —,
- * cada uma so com o que a permissao de visualizacao da pessoa abre. Area
- * sem nenhum item nao aparece.
+ * areas — Atmosfera (as telas soltas do alto) e as AREAS da barra —, cada
+ * uma so com o que a permissao da pessoa abre. Area sem nenhum item nao
+ * aparece.
  *
  * No computador o hamburguer fica no alto da barra e o menu abre pela
  * esquerda, por cima dela; no celular ele e o Menu da barra de baixo e
@@ -868,16 +1066,13 @@ function MenuCompleto({ aberto, aoFechar, aoSolicitar }) {
     return () => document.removeEventListener('keydown', tecla)
   }, [aberto, aoFechar])
 
+  /* as telas soltas do alto e, depois, uma secao por area (as mesmas da
+     barra, so com o que a permissao abre) */
   const secoes = useMemo(() => {
-    const ve = (item) => itemVisivel(item, pode, user?.painelTv)
-    /* o Almoxarife do Atmosfera vira a area dele, logo abaixo */
-    const atmosfera = MENU.filter((item) => item.id !== 'almoxarife' && ve(item))
-    const almoxarife = pode('ver_almoxarife')
-      ? ALMOX_ABAS.filter(ve).map((aba) => ({ ...aba, href: `/core/app/control${aba.caminho}` }))
-      : []
+    const soltos = MENU.filter((item) => itemVisivel(item, pode, user?.painelTv))
     return [
-      { id: 'atmosfera', titulo: 'Atmosfera', itens: atmosfera },
-      { id: 'almoxarife', titulo: 'Almoxarife', itens: almoxarife },
+      { id: 'atmosfera', titulo: 'Atmosfera', itens: soltos },
+      ...areasVisiveis(pode, user?.painelTv).map((area) => ({ id: area.id, titulo: area.rotulo, itens: area.itens })),
     ].filter((s) => s.itens.length > 0)
   }, [pode, user?.painelTv])
 
@@ -923,7 +1118,7 @@ function MenuCompleto({ aberto, aoFechar, aoSolicitar }) {
               <ul className="menutudo__lista">
                 {secao.itens.map((item) => (
                   <li key={item.id}>
-                    {item.id === ID_SOLICITAR ? (
+                    {item.acao === ACAO_SOLICITAR ? (
                       <button type="button" className="menutudo__item" onClick={aoSolicitar} tabIndex={fora}>
                         {item.rotulo}
                       </button>
@@ -1249,12 +1444,23 @@ export default function AppShell({
   const controlada = typeof busca === 'string'
 
   const principais = PRINCIPAIS
+  const local = useLocation()
 
-  /* cada cargo enxerga so as abas que a permissao dele abre */
+  /* cada cargo enxerga so as telas que a permissao dele abre: as soltas do
+     alto e as areas com ao menos uma tela liberada */
   const abas = useMemo(
     () => MENU.filter((item) => itemVisivel(item, pode, user?.painelTv)),
     [pode, user?.painelTv],
   )
+  const areas = useMemo(() => areasVisiveis(pode, user?.painelTv), [pode, user?.painelTv])
+  const onde = ondeEstou(abas, areas, local.pathname)
+
+  /* o atalho do celular (o Reembolso), para quem tem a tela */
+  const atalho = useMemo(() => {
+    const item = areas.find((a) => a.id === ATALHO_CELULAR.area)?.itens.find((i) => i.id === ATALHO_CELULAR.item)
+    return item ? { ...item, id: ATALHO_CELULAR.id, rotulo: ATALHO_CELULAR.rotulo } : null
+  }, [areas])
+  const noAtalho = Boolean(atalho) && onde.area === ATALHO_CELULAR.area && onde.item === ATALHO_CELULAR.item
 
   /* O MENU LARGO (o "Mais"): a barra com o nome das abas e a pagina
      ajustada a ela. A escolha fica guardada no aparelho. */
@@ -1270,12 +1476,40 @@ export default function AppShell({
       }
       return novo
     })
-  /* as abas da barra: as mesmas no menu largo e no de sempre */
-  const abasNaBarra = abas
-  /* o submenu aberto de uma area: { area, ancora } */
+
+  /* as areas abertas no menu largo (ver `areasAbertas`) */
+  const [abertas, setAbertas] = useState(() => areasAbertas ?? (onde.area ? [onde.area] : []))
+  const alternarArea = (id) =>
+    setAbertas((atual) => {
+      const nova = atual.includes(id) ? atual.filter((a) => a !== id) : [...atual, id]
+      areasAbertas = nova
+      try {
+        localStorage.setItem(CHAVE_AREAS_ABERTAS, JSON.stringify(nova))
+      } catch {
+        /* sem storage, vale ate recarregar */
+      }
+      return nova
+    })
+
+  /* As linhas da barra, na ordem: as telas soltas, cada area e — no menu
+     largo, com a area aberta — as telas dela embaixo; no fim, o atalho do
+     celular. `id` e o que a marca procura (data-id). */
+  const linhas = useMemo(() => {
+    const lista = abas.map((item) => ({ tipo: 'tela', id: item.id, item }))
+    areas.forEach((area) => {
+      lista.push({ tipo: 'area', id: area.id, area })
+      if (largo && abertas.includes(area.id)) {
+        area.itens.forEach((item) => lista.push({ tipo: 'sub', id: `${area.id}:${item.id}`, area, item }))
+      }
+    })
+    if (atalho) lista.push({ tipo: 'atalho', id: atalho.id, item: atalho })
+    return lista
+  }, [abas, areas, largo, abertas, atalho])
+
+  /* o painel aberto de uma area, no menu de sempre: { area, ancora } */
   const [submenu, setSubmenu] = useState(null)
   const fecharSubmenu = useCallback(() => setSubmenu(null), [])
-  const comSubmenu = (item) => largo && AREAS_COM_SUBMENU.includes(item.id)
+  const areaDoPainel = submenu && !largo ? areas.find((a) => a.id === submenu.area) : null
 
   /* A ilha do aviso de senha. So no modo APLICATIVO — ver o comentario
      la embaixo, onde ela e desenhada. O shell precisa saber disso aqui
@@ -1295,7 +1529,6 @@ export default function AppShell({
      ------------------------------------------------------------ */
   const barra = useRef(null)
   const lista = useRef(null)
-  const local = useLocation()
   const [marca, setMarca] = useState(ultimaMarca)
   /* o menu completo do hamburguer (MenuCompleto): o alto da barra no
      computador, o Menu da barra de baixo no celular */
@@ -1308,9 +1541,15 @@ export default function AppShell({
      tela nova nasce com o aceso da anterior (ver `ultimoMostrado`) e so
      depois de desenhada passa ao dela — e essa troca, com a barra ja na
      tela, que as transicoes do CSS conseguem animar. */
-  const ativo = itemDaRota(abas, local.pathname)
+  /* O aceso e a tela solta, ou a AREA da tela — no menu largo, com a area
+     aberta, a propria tela embaixo dela. */
+  const ativo = onde.area
+    ? largo && abertas.includes(onde.area)
+      ? `${onde.area}:${onde.item}`
+      : onde.area
+    : onde.item
   const [mostrado, setMostrado] = useState(() =>
-    ultimoMostrado && abas.some((i) => i.id === ultimoMostrado) ? ultimoMostrado : ativo,
+    ultimoMostrado && linhas.some((l) => l.id === ultimoMostrado) ? ultimoMostrado : ativo,
   )
 
   useEffect(() => {
@@ -1348,9 +1587,10 @@ export default function AppShell({
     setSubmenu(null)
   }, [local.pathname])
 
-  /* o menu encolheu: o submenu fica sem a area de onde saiu */
+  /* o menu alargou: as telas da area passam a aparecer embaixo dela, e o
+     painel ao lado fica sem lugar */
   useEffect(() => {
-    if (!largo) setSubmenu(null)
+    if (largo) setSubmenu(null)
   }, [largo])
 
   /* a lista do computador volta rolada onde a anterior estava */
@@ -1380,9 +1620,14 @@ export default function AppShell({
     }
 
     const medir = () => {
-      const btn = mostrado
+      let btn = mostrado
         ? caixa.querySelector(`li[data-id="${mostrado}"] > .rail__btn`)
         : null
+      /* no celular as areas ficam no Menu: a tela do atalho (o Reembolso)
+         acende o botao do atalho, que esta na barra */
+      if ((!btn || btn.offsetParent === null) && noAtalho) {
+        btn = caixa.querySelector(`li[data-id="${ATALHO_CELULAR.id}"] > .rail__btn`)
+      }
       const glifo = btn?.querySelector('.rail__glifo')
 
       /* O quanto o centro do circulo fica ABAIXO da borda de cima da
@@ -1437,7 +1682,7 @@ export default function AppShell({
     observador.observe(nav)
     observador.observe(caixa)
     return () => observador.disconnect()
-  }, [mostrado, abasNaBarra])
+  }, [mostrado, linhas, noAtalho])
 
   return (
     <div
@@ -1512,54 +1757,104 @@ export default function AppShell({
             <span className="rail__marca-anel" />
           </span>
 
-          {abasNaBarra.map((item) => {
-            const Glifo = Icone[item.icone ?? item.id]
-            /* no menu largo, Almoxarife e Administrativo abrem o submenu */
-            if (comSubmenu(item)) {
-              const aberto = submenu?.area === item.id
+          {linhas.map((linha) => {
+            /* ---- a AREA: no menu de sempre abre o painel ao lado; no
+               largo, abre e fecha as telas dela embaixo ---- */
+            if (linha.tipo === 'area') {
+              const { area } = linha
+              const Glifo = Icone[area.id] ?? Icone.painel
+              const aberta = largo ? abertas.includes(area.id) : submenu?.area === area.id
               return (
-                <li key={item.id} data-id={item.id} data-principal="nao">
+                <li key={linha.id} data-id={linha.id} data-principal="nao">
                   <button
                     type="button"
-                    className={`rail__btn rail__area ${aberto ? 'is-aberta' : ''}`.trim()}
+                    className={`rail__btn rail__area ${aberta ? 'is-aberta' : ''} ${linha.id === mostrado ? 'is-atual' : ''}`
+                      .replace(/\s+/g, ' ')
+                      .trim()}
                     data-submenu
-                    aria-haspopup="menu"
-                    aria-expanded={aberto}
+                    aria-haspopup={largo ? undefined : 'menu'}
+                    aria-expanded={aberta}
+                    title={area.rotulo}
                     onClick={(e) => {
+                      if (largo) {
+                        alternarArea(area.id)
+                        return
+                      }
                       const ancora = e.currentTarget.getBoundingClientRect()
-                      setSubmenu((atual) => (atual?.area === item.id ? null : { area: item.id, ancora }))
+                      setSubmenu((atual) => (atual?.area === area.id ? null : { area: area.id, ancora }))
                     }}
                   >
                     <span className="rail__glifo">
                       <Glifo />
                     </span>
-                    <span className="rail__rotulo">{item.rotulo}</span>
-                    <span className="rail__chevron" aria-hidden="true">
-                      <Icone.chevron />
-                    </span>
+                    <span className="rail__rotulo">{largo ? area.rotulo : area.curto}</span>
+                    {largo && (
+                      <span className="rail__chevron" aria-hidden="true">
+                        <Icone.chevron />
+                      </span>
+                    )}
                   </button>
                 </li>
               )
             }
-            /* o Solicitar abre o pop-up do pedido, sem sair da tela */
-            if (item.id === ID_SOLICITAR) {
+
+            const { item } = linha
+            const Glifo = glifoDo(item)
+            const miolo = (
+              <>
+                <span className="rail__glifo">
+                  <Glifo />
+                </span>
+                <span className="rail__rotulo">{item.rotulo}</span>
+              </>
+            )
+
+            /* ---- a tela de uma area aberta, no menu largo ---- */
+            if (linha.tipo === 'sub') {
+              const classe = `rail__btn rail__sub ${linha.id === mostrado ? 'is-atual' : ''}`.trim()
               return (
-                <li key={item.id} data-id={item.id} data-principal="nao">
-                  <button type="button" className="rail__btn" title={item.rotulo} onClick={() => setSolicitando(true)}>
-                    <span className="rail__glifo">
-                      <Glifo />
-                    </span>
-                    <span className="rail__rotulo">{item.rotulo}</span>
-                  </button>
+                <li key={linha.id} data-id={linha.id} data-principal="nao">
+                  {item.acao === ACAO_SOLICITAR ? (
+                    /* o Solicitar abre o pop-up do pedido, sem sair da tela */
+                    <button type="button" className={classe} title={item.rotulo} onClick={() => setSolicitando(true)}>
+                      {miolo}
+                    </button>
+                  ) : item.href ? (
+                    <a href={item.href} className={classe} title={item.rotulo}>
+                      {miolo}
+                    </a>
+                  ) : (
+                    <NavLink to={item.rota} end={item.exato} className={classe} title={item.rotulo}>
+                      {miolo}
+                    </NavLink>
+                  )}
                 </li>
               )
             }
+
+            /* ---- o atalho do celular (o Reembolso): no computador ele
+               mora no Seu espaco e este botao some ---- */
+            if (linha.tipo === 'atalho') {
+              return (
+                <li key={linha.id} data-id={linha.id} data-principal="sim" className="rail__somobile">
+                  <NavLink
+                    to={item.rota}
+                    end={item.exato}
+                    className={`rail__btn ${noAtalho && mostrado === ativo ? 'is-atual' : ''}`.trim()}
+                    title={item.rotulo}
+                  >
+                    {miolo}
+                  </NavLink>
+                </li>
+              )
+            }
+
             return (
               /* `data-principal` e o que o CSS le para esconder, no
                  celular, quem nao e uma das tres */
               <li
-                key={item.id}
-                data-id={item.id}
+                key={linha.id}
+                data-id={linha.id}
                 data-principal={principais.includes(item.id) ? 'sim' : 'nao'}
               >
                 <NavLink
@@ -1571,10 +1866,7 @@ export default function AppShell({
                   className={`rail__btn ${item.id === mostrado ? 'is-atual' : ''}`.trim()}
                   title={item.rotulo}
                 >
-                  <span className="rail__glifo">
-                    <Glifo />
-                  </span>
-                  <span className="rail__rotulo">{item.rotulo}</span>
+                  {miolo}
                 </NavLink>
               </li>
             )
@@ -1612,7 +1904,14 @@ export default function AppShell({
       />
       <ModalSolicitarOS aberto={solicitando} aoFechar={() => setSolicitando(false)} />
 
-      {submenu && <SubmenuArea area={submenu.area} ancora={submenu.ancora} aoFechar={fecharSubmenu} />}
+      {areaDoPainel && (
+        <SubmenuArea
+          area={areaDoPainel}
+          ancora={submenu.ancora}
+          aoFechar={fecharSubmenu}
+          aoSolicitar={() => setSolicitando(true)}
+        />
+      )}
 
       <MenuUsuario />
 

@@ -148,11 +148,16 @@ function Menu({ rotulo, conteudo, titulo, desabilitado }) {
  * As marcacoes chegam pelo Importar (o Calculo Diario do sistema de
  * ponto) e o Exportar devolve a folha em PDF (o espelho) e em Excel (no
  * formato do Calculo Diario).
+ *
+ * Sao duas telas no menu por area: "Meu ponto" (/app/ponto, no Seu
+ * espaco), so a propria folha, e "Ponto da equipe" (/app/ponto/equipe,
+ * `equipe`, na Area admin), com o seletor de pessoa, as Assinaturas e o
+ * Importar de quem tem `gerenciar_ponto`.
  */
-export default function Ponto() {
+export default function Ponto({ equipe = false }) {
   const { user } = useAuth()
   const { pode } = useDados()
-  const gestor = pode('gerenciar_ponto')
+  const gestor = equipe && pode('gerenciar_ponto')
   const meuId = String(user?.id ?? '')
 
   /* o periodo do endereco vale so na abertura (o link do aviso do Teams) */
@@ -344,10 +349,12 @@ export default function Ponto() {
       <section className="ponto">
         <header className="ponto__topo">
           <div>
-            <h1 className="tela__titulo">Ponto</h1>
-            {!gestor && (
-              <p className="tela__lead">A sua folha de ponto. Confira as marcações do período e assine no rodapé.</p>
-            )}
+            <h1 className="tela__titulo">{gestor ? 'Ponto da equipe' : 'Meu ponto'}</h1>
+            <p className="tela__lead">
+              {gestor
+                ? 'A folha de cada pessoa: escolha quem ver, confira as assinaturas e importe o Cálculo Diário.'
+                : 'A sua folha de ponto. Confira as marcações do período e assine no rodapé.'}
+            </p>
           </div>
         </header>
 

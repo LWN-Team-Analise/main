@@ -295,6 +295,7 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-54.sql.txt` | o check **Tipo de ensaio** no card do Comercial da 1a etapa (`tipo_ensaio`, `obra.tipos_ensaio`; so nas obras criadas depois), a retirada do carro na vespera (`obra_reserva_veiculo.liberada_por` e `liberada_em`) e as permissoes `ordenar_turnos` (Admin e quem editava turnos) e `conceder_carro` (Admin), dadas uma vez |
 | `db/atualizacao-55.sql.txt` | o fim da area Administrativo: as permissoes `ver_ponto` (todo setor, menos a TV) e `ver_encontros` (acesso total e quem tinha o painel Administrativo), o painel Administrativo tirado dos setores, e o check **Determinar Focal Point** do sistema (`focal_point`, com a pessoa em `obra_check.escolhido_id`) |
 | `db/atualizacao-56.sql.txt` | o **local** do Ponto de encontro: `obra_horario.local` (`obra`, `empresa` ou `outro`) e `obra_horario.endereco` (o endereco escrito do `outro`); as datas que ja existiam ficam na obra |
+| `db/atualizacao-57.sql.txt` | os **pedidos de insumos** do menu por area: a tabela `insumo_pedido` (item, quantidade, observacao, situacao `pendente`/`atendido`/`recusado`, resposta e quem respondeu) e as permissoes `ver_insumos` (todo setor menos a TV) e `gerenciar_insumos` (acesso total e quem tem `revisar_despesa_geral`), dadas uma vez |
 | `db/atualizacao-51.sql.txt` | a aba Ponto: `ponto_dia` (o Calculo Diario importado) e `ponto_assinatura` (a conferencia assinada). Tambem aposenta a 48 (a obra criada em Obras nao vira mais negocio) |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
@@ -1514,10 +1515,49 @@ ou a API fora do ar: o estado e a cidade viram campo livre.
 - Nas listas de escolha, digitar as primeiras letras pula para a opcao ("par"
   acha o Paraguai), como no `<select>` do navegador.
 
+## O menu por area
+
+O menu e por **area** (`AREAS`, no `AppShell.jsx`). No alto ficam as telas soltas —
+**Pagina inicial**, **Obras** e **Turnos** — e, depois, uma linha por area:
+
+| Area | Telas (cada uma com a permissao dela) |
+| ---- | ------------------------------------- |
+| **Seu espaco** | Meu ponto (`/app/ponto`, `ver_ponto`), Meus reembolsos (`/app/despesas`, `ver_despesas`), Pedir insumos (`/app/insumos`, `ver_insumos`) |
+| **Area admin** | Ponto da equipe (`/app/ponto/equipe`, `gerenciar_ponto`), Ponto de encontro (`ver_encontros`, `soComOutros`), Dashboard de reembolso (os Envios gerais, `revisar_despesa_geral`), Insumos (`/app/insumos/pedidos`, `gerenciar_insumos`) |
+| **Area almoxarife** | as abas do Almoxarife (`almox_*`), links de pagina inteira para `/core/app/control/...` |
+| **Area comercial** | Comercial (`ver_comercial`), Clientes (`ver_clientes`) |
+| **Area tecnica** | Ponto de encontro (`ver_encontros`), Frota (`ver_frotas`), Solicitar instrumento (o pop-up do Solicitar OS, `almox_solicitacoes`) |
+| **Area da excelencia** | Avaliacoes (`ver_avaliacoes`), Usuarios (`ver_usuarios`) |
+| **Area da diretoria** | Dashboard (`/app/diretoria`, `ver_dashboard`: era a aba Dashboard da pagina inicial) |
+
+A area e a **prateleira**, e nao o acesso: cada tela continua com a permissao dela, e
+a area so aparece para quem tem ao menos uma tela liberada la dentro
+(`areasVisiveis`). O Ponto de encontro da Area admin e `soComOutros`: sozinho ele nao
+abre a area (quem so ve os encontros os ve na Area tecnica). O Ponto se divide em duas
+telas: **Meu ponto** e so a propria folha; o seletor de pessoa, as Assinaturas e o
+Importar ficam no **Ponto da equipe** (`<Ponto equipe />`).
+
+No **menu de sempre**, o clique na area abre ao lado o painel com as telas dela
+(`SubmenuArea`); no **menu largo** (o "Mais"), a area vira um titulo que abre e fecha,
+com as telas embaixo (`.rail__sub`), e as areas abertas ficam guardadas no aparelho
+(`customers.menu-areas`). O item aceso e a area da tela aberta — no menu largo, com a
+area aberta, a propria tela. No **celular**, a barra de baixo fica com Pagina inicial,
+Obras, o atalho do **Reembolso** (Meus reembolsos) e o Menu, que mostra uma secao por
+area (`MenuCompleto`).
+
+**Insumos** (atualizacao 57). Cada pessoa pede o material de que precisa (o item, a
+quantidade e uma observacao) e acompanha a resposta; o pedido pendente pode ser
+cancelado. Quem tem `gerenciar_insumos` ve os pedidos de todos e marca cada um como
+atendido (com um recado opcional), recusado (com o motivo) ou o reabre. Tabela
+`insumo_pedido`; API em `server/routes/insumos.js` (`GET /api/insumos?todos=1`,
+`POST`, `PATCH /:id`, `DELETE /:id`). A 57 deu a `ver_insumos` a todo setor (menos a
+TV) e a `gerenciar_insumos` ao acesso total e a quem tem `revisar_despesa_geral`.
+
 ## O menu, o Meu painel e o fim da area Administrativo
 
 A area **Administrativo** saiu (atualizacao 55), e cada tela dela voltou para o lugar
-de sempre, com a trava de permissao de cada uma:
+de sempre, com a trava de permissao de cada uma (no menu por area, mais acima, elas
+ficaram no Seu espaco e nas areas admin e tecnica):
 
 | Tela | Onde fica | Permissao |
 | ---- | --------- | --------- |
@@ -1553,9 +1593,8 @@ ve **Meu painel** no menu da foto, logo acima de Configuracoes, e ele abre
 **Mais**: ela alarga a barra, com o nome de cada aba ao lado do icone, e a pagina se
 ajusta a largura nova — nada fica atras de veu. A barra de sempre continua igual com o
 menu encolhido (o **Menos** volta), e a escolha fica guardada no aparelho
-(`customers.menu-largo`). No menu largo, o **Almoxarife** ganha a setinha: o clique abre
-ao lado o cartao com as abas dele (`SubmenuArea`, no AppShell), cada uma pela permissao
-`almox_*`; o titulo do cartao leva ao inicio do Almoxarife.
+(`customers.menu-largo`). No menu largo, cada **area** ganha a setinha e abre, embaixo
+dela, as telas que tem (ver "O menu por area").
 
 O **Almoxarife tem o mesmo Mais**, no alto da barra dele (`#almox-mais` em
 `public/almoxarife/almoxarife.html`; `montarMais` em `menu-main.js`). A escolha e a
@@ -1565,11 +1604,11 @@ lateral do celular do Almoxarife, que saiu do AppShell, mora em
 `scripts/almoxarife-menulado.css`).
 
 **O menu completo (o hamburguer).** No celular, o Menu da barra de baixo abre o
-sistema inteiro dividido em **Atmosfera** (as abas de sempre) e **Almoxarife** (as abas
-dele, cada uma pela permissao `almox_*`, com o link que abre a aba direto em
-`/core/app/control/...`). So aparece o que a permissao de visualizacao da pessoa abre
-(`MenuCompleto`, no AppShell). O **Solicitar** do Atmosfera (na barra e no menu
-completo, `almox_solicitacoes`) nao leva mais ao Almoxarife: abre o "Solicitar OS" num
+sistema inteiro dividido em **Atmosfera** (as telas soltas do alto) e uma secao por
+**area** (as abas do Almoxarife com o link que abre a aba direto em
+`/core/app/control/...`). So aparece o que a permissao da pessoa abre
+(`MenuCompleto`, no AppShell). O **Solicitar instrumento** da Area tecnica
+(`almox_solicitacoes`) nao leva ao Almoxarife: abre o "Solicitar OS" num
 pop-up por cima da tela em que a pessoa esta (`ModalSolicitarOS` sem obra, em
 `/core/app/control/solicitar?embutido=1`), e la dentro ela escolhe o cliente e a obra.
 

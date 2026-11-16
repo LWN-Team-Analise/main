@@ -18,6 +18,7 @@ import agendaRouter from './routes/agenda.js'
 import avisosRouter from './routes/avisos.js'
 import sharepointRouter from './routes/sharepoint.js'
 import pontoRouter from './routes/ponto.js'
+import insumosRouter from './routes/insumos.js'
 import almoxarifeRouter, { notificacoesDiarias } from './almoxarife/index.js'
 import cargaRouter, { cargaJunto } from './carga.js'
 import { logger } from './logger.js'
@@ -154,6 +155,8 @@ app.use('/api/avisos', avisosRouter)
 app.use('/api/sharepoint', sharepointRouter)
 /* a folha de ponto, a aba Ponto (atualizacao 51) */
 app.use('/api/ponto', pontoRouter)
+/* os pedidos de insumos (atualizacao 57) */
+app.use('/api/insumos', insumosRouter)
 
 /* O ALMOXARIFE (o antigo lwncontrol, server/almoxarife). Os avisos do dia
    (ultimo dia da obra, certificado vencendo) nao tem clique que os

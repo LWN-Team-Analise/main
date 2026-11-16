@@ -100,6 +100,8 @@ const ARQUIVOS = [
   'db/atualizacao-55.sql.txt',
   /* o local do Ponto de encontro (na obra, na LWN ou em outro endereco) */
   'db/atualizacao-56.sql.txt',
+  /* os pedidos de insumos do menu por area (ver_insumos, gerenciar_insumos) */
+  'db/atualizacao-57.sql.txt',
 ]
 
 /**
@@ -289,6 +291,9 @@ const CONFERENCIA = [
   ['ver_encontros no acesso total', permissaoNoAcessoTotal('ver_encontros')],
   ['obra_check.escolhido_id (Focal Point)', col('obra_check', 'escolhido_id')],
   ['obra_horario.local (Ponto de encontro)', col('obra_horario', 'local')],
+  ['insumo_pedido (Insumos)', "SELECT to_regclass('public.insumo_pedido') IS NOT NULL AS ok"],
+  ['ver_insumos no acesso total', permissaoNoAcessoTotal('ver_insumos')],
+  ['gerenciar_insumos no acesso total', permissaoNoAcessoTotal('gerenciar_insumos')],
 ]
 
 function col(tabela, coluna) {

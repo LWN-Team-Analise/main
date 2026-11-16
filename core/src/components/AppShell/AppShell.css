@@ -671,7 +671,7 @@
   }
 
   /* ---- a ordem na barra ----
-     inicio · obras · despesas · menu
+     inicio · obras · reembolso (o atalho do Seu espaco) · menu
 
      O Menu fica na PONTA DIREITA, com cara de item igual aos outros:
      e o lugar onde todo aplicativo poe o "mais", e e onde o polegar
@@ -684,7 +684,7 @@
     order: 2;
   }
 
-  .rail__lista > li[data-id='despesas'] {
+  .rail__lista > li[data-id='atalho-reembolso'] {
     order: 3;
   }
 
@@ -1929,8 +1929,8 @@
 
    A barra alarga com o nome de cada aba ao lado do icone, e a PAGINA anda
    junto (o padding da .shell): nada fica escondido atras de veu. A marca do
-   item atual e medida no botao, entao acompanha sozinha. Almoxarife e
-   Administrativo ganham a setinha e abrem o submenu ao lado (.submenu).
+   item atual e medida no botao, entao acompanha sozinha. Cada area ganha a
+   setinha e abre, embaixo dela, as telas que tem (.rail__sub).
    ------------------------------------------------------------ */
 @media (min-width: 861px) {
   .shell {
@@ -2003,7 +2003,9 @@
     height: 44px;
   }
 
-  /* a area com submenu: a setinha no fim da linha, que vira ao abrir */
+  /* a AREA: no menu de sempre abre o painel ao lado (.submenu); no largo,
+     a setinha no fim da linha aponta para o lado fechada e para baixo
+     aberta, com as telas dela embaixo (.rail__sub) */
   .rail__area {
     font: inherit;
   }
@@ -2014,6 +2016,7 @@
     display: grid;
     place-items: center;
     margin-left: auto;
+    rotate: -90deg;
     transition: rotate var(--dur-base) var(--ease-out);
   }
 
@@ -2023,11 +2026,40 @@
   }
 
   .rail__area.is-aberta .rail__chevron {
-    rotate: -90deg;
+    rotate: 0deg;
+  }
+
+  /* as telas da area aberta: a mesma altura dos outros botoes (a marca so
+     desliza, sem mudar de tamanho), com o recuo que diz de quem elas sao */
+  .shell.tem-menu-largo .rail__sub {
+    padding-left: 26px;
+    font: inherit;
+  }
+
+  .shell.tem-menu-largo .rail__sub .rail__rotulo {
+    font-weight: 500;
+  }
+
+  .rail__sub .rail__glifo svg {
+    width: 18px;
+    height: 18px;
   }
 }
 
-/* o cartao do submenu, ao lado da barra larga */
+/* o Solicitar do painel da area e um botao (abre o pop-up do pedido) com a
+   cara dos links da lista */
+button.submenu__item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* o painel da area, ao lado da barra (no menu de sempre) */
 .submenu {
   position: fixed;
   z-index: 60;
