@@ -102,6 +102,9 @@ const ARQUIVOS = [
   'db/atualizacao-56.sql.txt',
   /* os pedidos de insumos do menu por area (ver_insumos, gerenciar_insumos) */
   'db/atualizacao-57.sql.txt',
+  /* o Faturar espera o Administrativo, os tipos dos Turnos (ferias,
+     atestado, folga, dia nao operacional) e a Area da qualidade */
+  'db/atualizacao-58.sql.txt',
 ]
 
 /**
@@ -294,6 +297,11 @@ const CONFERENCIA = [
   ['insumo_pedido (Insumos)', "SELECT to_regclass('public.insumo_pedido') IS NOT NULL AS ok"],
   ['ver_insumos no acesso total', permissaoNoAcessoTotal('ver_insumos')],
   ['gerenciar_insumos no acesso total', permissaoNoAcessoTotal('gerenciar_insumos')],
+  ['turno.tipo (ferias, atestado, folga...)', col('turno', 'tipo')],
+  ['qualidade_documento (Qualidade)', "SELECT to_regclass('public.qualidade_documento') IS NOT NULL AS ok"],
+  ['correio_solicitacao (Qualidade)', "SELECT to_regclass('public.correio_solicitacao') IS NOT NULL AS ok"],
+  ['ver_documentos no acesso total', permissaoNoAcessoTotal('ver_documentos')],
+  ['gerenciar_correio no acesso total', permissaoNoAcessoTotal('gerenciar_correio')],
 ]
 
 function col(tabela, coluna) {

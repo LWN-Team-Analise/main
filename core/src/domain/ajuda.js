@@ -134,7 +134,7 @@ export const ASSUNTOS = [
     gatilhos: ['meu painel', 'painel', 'hamburguer', 'menu completo', 'menu', 'mais', 'solicitar', 'area', 'seu espaco'],
     resposta:
       'O menu é por área. No alto ficam Página inicial, Obras e Turnos; depois vem "Seu espaço" (Meu ponto, ' +
-      'Meus reembolsos e Pedir insumos) e as áreas: admin, almoxarife, comercial, técnica, da excelência e da ' +
+      'Meus reembolsos e Pedir insumos) e as áreas: admin, almoxarife, comercial, da qualidade, técnica, da excelência e da ' +
       'diretoria. Cada área só aparece se você tem ao menos uma tela dela: a área organiza, quem decide o que ' +
       'você vê continua sendo a permissão do seu setor. No computador, clicar na área abre as telas dela ao ' +
       'lado; com o "Mais" no alto do menu, elas aparecem embaixo do nome da área, que abre e fecha. No ' +
@@ -152,6 +152,48 @@ export const ASSUNTOS = [
       'quem atendeu; enquanto estiver pendente, dá para cancelar. Quem tem a permissão "Atender os pedidos de ' +
       'insumos de todos" vê, em Área admin > Insumos, os pedidos da equipe e marca cada um como atendido ou ' +
       'recusa com o motivo.',
+  },
+  {
+    id: 'qualidade-documentos',
+    titulo: 'Acompanhamento dos documentos',
+    gatilhos: ['documento', 'documentos', 'protocolo', 'relatorio', 'certificado', 'laudo', 'revisao', 'qualidade'],
+    resposta:
+      'Em Área da qualidade > Acompanhamento dos documentos, cada documento é um cartão que anda pelas etapas, ' +
+      'como no Comercial. São três funis: Protocolos, Relatórios e Documentos gerais. Arraste o cartão para ' +
+      'mudar a etapa, ou abra o documento: lá ficam os dados (tipo, código, revisão, obra, responsável, prazo e ' +
+      'prioridade), o histórico e os comentários, e os botões Concluir, Nova revisão e Cancelar. O prazo fica ' +
+      'vermelho quando passa. Criar e mover pede a permissão "Adicionar / editar / mover documentos"; quem só ' +
+      'vê também comenta.',
+  },
+  {
+    id: 'qualidade-correio',
+    titulo: 'Solicitação de correio',
+    gatilhos: ['correio', 'correios', 'envio', 'enviar', 'sedex', 'pac', 'rastreio', 'etiqueta', 'pasta fisica'],
+    resposta:
+      'Em Área da qualidade > Solicitação de correio, use "Solicitar envio": o que vai, para quem e o endereço ' +
+      '(o CEP preenche o resto; escolher a obra traz o endereço do cliente), o serviço e até quando precisa sair. ' +
+      'Quem tem "Atender os envios" leva o pedido pelas colunas — Etiqueta gerada, Postada (com o código de ' +
+      'rastreio) e Entregue. Enquanto ninguém pegou, quem pediu ainda edita ou cancela.',
+  },
+  {
+    id: 'faturar',
+    titulo: 'O Faturar e o Liberado para faturamento',
+    gatilhos: ['faturar', 'faturamento', 'liberado', 'fatura', 'nota fiscal'],
+    resposta:
+      'Na 5ª etapa, o "Faturar" do Comercial fica com o cadeado ("após a liberação") até o Administrativo ' +
+      'marcar "Liberado para faturamento". Depois que o Faturar foi marcado, a liberação só se desmarca com o ' +
+      'Faturar desmarcado antes.',
+  },
+  {
+    id: 'turnos-ausencias',
+    titulo: 'Férias, atestado, folga e dia não operacional nos Turnos',
+    gatilhos: ['ferias', 'atestado', 'folga', 'nao operacional', 'ausencia', 'cor do turno', 'hex', 'rgb'],
+    resposta:
+      'No turno novo, escolha o Tipo: Turno, Férias (de uma data a outra), Atestado médico, Folga solicitada ou ' +
+      'Dia não operacional. Os quatro últimos valem o dia inteiro, sem obra, e já vêm com título e cor (dá para ' +
+      'mudar). O dia não operacional sem pessoa vale para o cronograma inteiro: a coluna fica hachurada. A cor ' +
+      'tem 20 amostras e, em "Outra cor", o quadro de cor, o HEX e o RGB. A tarefa da obra só aparece para quem ' +
+      'é do Time Técnico.',
   },
   {
     id: 'emergencia',

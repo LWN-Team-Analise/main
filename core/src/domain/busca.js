@@ -109,6 +109,25 @@ const ATALHOS = [
     permissao: 'gerenciar_insumos',
     termos: 'insumos pedidos da equipe atender recusar material',
   },
+  /* a Area da qualidade (atualizacao 58) */
+  {
+    id: 'tela-documentos',
+    grupo: 'Telas',
+    titulo: 'Acompanhamento dos documentos',
+    detalhe: 'Protocolos, relatórios e documentos gerais pelas etapas (Área da qualidade)',
+    rota: '/app/qualidade/documentos',
+    permissao: 'ver_documentos',
+    termos: 'qualidade documentos documento protocolo relatorio certificado laudo procedimento pop revisao funil etapas',
+  },
+  {
+    id: 'tela-correio',
+    grupo: 'Telas',
+    titulo: 'Solicitação de correio',
+    detalhe: 'Pedir o envio de documentos pelo correio e acompanhar o rastreio (Área da qualidade)',
+    rota: '/app/qualidade/correio',
+    permissao: 'ver_correio',
+    termos: 'correio correios envio enviar sedex pac carta registrada pasta fisica etiqueta rastreio postagem',
+  },
   {
     id: 'tela-encontros',
     grupo: 'Telas',

@@ -23,6 +23,9 @@ import {
   CHECK_TIPO_ENSAIO,
   CHECK_FOCAL_POINT,
   CHECK_ENVIAR_OS,
+  CHECK_LIBERADO_FATURAMENTO,
+  RECADO_LIBERACAO_FATURADA,
+  estadoDoFaturamento,
   checkAbrePopup,
   checkDoPrazoDaExecucao,
   corDoSetorDoCard,
@@ -191,6 +194,8 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   const [reservando, setReservando] = useState(null)
   const [retirada, setRetirada] = useState(null)
   const [semFrota, setSemFrota] = useState('')
+  /* a liberacao do faturamento nao sai com o "Faturar" marcado (atualizacao 58) */
+  const [liberacaoFaturada, setLiberacaoFaturada] = useState(false)
 
   /* pop-ups da obra */
   const [chat, setChat] = useState(false)
@@ -257,6 +262,8 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   /* o roteiro que ESTA obra enxerga: o que foi criado depois dela nao
      entra, e o que saiu depois dela continua aqui */
   const roteiro = roteiroDaObra(obra)
+  /* o "Faturar" do Comercial espera o "Liberado para faturamento" do Administrativo */
+  const faturamento = estadoDoFaturamento(roteiro, obra)
 
   /**
    * Marcar um check, e — quando for o caso — anunciar o fechamento.
@@ -325,6 +332,10 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   }
 
   const abrirCheck = (etapa, card, check) => {
+    if (check.tipo === CHECK_LIBERADO_FATURAMENTO && obra.checks?.[check.id] && faturamento.faturado) {
+      setLiberacaoFaturada(true)
+      return
+    }
     /* os checks da O.S. se preenchem no LWN Control */
     if (ehCheckDaOS(check)) {
       const destino = destinoDoCheckNoControl(user, check, obra)
@@ -1076,6 +1087,7 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                         pessoaPorId={pessoaPorId}
                         aoMarcar={(check) => clicarCheck(etapa, card, check)}
                         aoSolicitarOS={() => setSolicitandoOS(true)}
+                        faturamento={faturamento}
                         execucao={execucaoDaObra(obra)}
                         aoEditarCard={() => setEditandoCard({ etapa, card })}
                         aoNovoCheck={() => setEditandoCheck({ card })}
@@ -1643,6 +1655,22 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
           </p>
           <footer className="formobra__acoes">
             <Button onClick={() => setSemFrota('')}>Entendi</Button>
+          </footer>
+        </div>
+      </Modal>
+
+      <Modal
+        aberto={liberacaoFaturada}
+        aoFechar={() => setLiberacaoFaturada(false)}
+        titulo="Liberado para faturamento"
+        largura={430}
+      >
+        <div className="formrot">
+          <p className="formrot__sistema" role="note">
+            {RECADO_LIBERACAO_FATURADA}
+          </p>
+          <footer className="formobra__acoes">
+            <Button onClick={() => setLiberacaoFaturada(false)}>Entendi</Button>
           </footer>
         </div>
       </Modal>

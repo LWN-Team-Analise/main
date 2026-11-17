@@ -6,17 +6,31 @@ import Confirma from '@/components/Confirma/Confirma'
 import ExemploSorteado from '@/components/ExemploSorteado/ExemploSorteado'
 import { CampoSelecao, CampoTexto } from '@/components/Campo/Campo'
 import { CampoData, CampoHora } from '@/components/CampoData/CampoData'
+import SeletorCor from '@/components/SeletorCor/SeletorCor'
+import { useAuth } from '@/context/AuthContext'
 import { useDados } from '@/context/DadosContext'
-import { CORES, SUBTITULO_MAXIMO, TITULO_MAXIMO, corPorId } from '@/domain/turnos'
+import { chaveDoCargo } from '@/domain/obras'
+import {
+  COR_DA_OBRA,
+  CORES,
+  SUBTITULO_MAXIMO,
+  TIPOS,
+  TIPO_PADRAO,
+  TITULO_MAXIMO,
+  corDoTurno,
+  tipoPorId,
+} from '@/domain/turnos'
 import * as turnosApi from '@/services/turnosService'
 import { dataBR } from '@/utils/formato'
 
+/* a cor de um turno novo: o azul (o mesmo do ponto de encontro das obras) */
 const VAZIO = {
   cronogramaId: '',
   usuarioId: '',
+  tipo: TIPO_PADRAO,
   titulo: '',
   subtitulo: '',
-  cor: CORES[0].id,
+  cor: COR_DA_OBRA,
   dataInicio: '',
   dataFim: '',
   diaInteiro: false,
@@ -29,12 +43,19 @@ const VAZIO = {
 /**
  * Criar, editar e excluir um turno.
  *
- *   Pessoa          quem trabalha — ou "Turno aberto", ainda sem ninguem;
+ *   Tipo            o turno de trabalho, ou uma ausencia: Ferias (de uma
+ *                   data a outra), Atestado medico, Folga solicitada ou
+ *                   Dia nao operacional. A ausencia e o dia inteiro, sem
+ *                   obra, e ja sugere o titulo e a cor;
+ *   Pessoa          quem trabalha — ou "Turno aberto", ainda sem ninguem
+ *                   (no dia nao operacional, "Todo o cronograma");
  *   Obra / Tarefa   opcional: o turno vem de uma tarefa da obra. Escolher
  *                   a obra poe o cliente no titulo e a proposta embaixo;
- *                   a tarefa (um check da obra) entra junto;
+ *                   a tarefa (um check da obra) entra junto — e so quem e
+ *                   do Time Tecnico ve e escolhe a tarefa;
  *   Titulo e a linha de baixo ("ADM" / "Alinhamento");
- *   Cor             so a borda do bloco leva a cor;
+ *   Cor             so a borda do bloco leva a cor: uma das 20 amostras
+ *                   ou "Outra cor" (o quadro, o HEX ou o RGB);
  *   Dias            um so, ou um trecho (a folga de 13/10 a 27/10);
  *   Horario         inicio e fim — ou o dia inteiro (sem horas).
  *
@@ -43,7 +64,11 @@ const VAZIO = {
  */
 export default function ModalTurno({ aberto, turno = null, base = null, cronogramas = [], edita, aoFechar, aoSalvo }) {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { obras, clientePorId, roteiroDaObra, pessoaPorId, concluida } = useDados()
+  /* a "Tarefa da obra" e so do Time Tecnico: os outros setores nao veem
+     o campo (a tarefa ja escolhida continua no turno, sem aparecer) */
+  const doTimeTecnico = chaveDoCargo(user) === 'tecnico'
   const [form, setForm] = useState(VAZIO)
   const [erros, setErros] = useState({})
   const [salvando, setSalvando] = useState(false)
@@ -86,6 +111,7 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
       setForm({
         cronogramaId: turno.cronogramaId ?? '',
         usuarioId: turno.usuarioId ?? '',
+        tipo: turno.tipo ?? TIPO_PADRAO,
         titulo: turno.titulo,
         subtitulo: turno.subtitulo ?? '',
         cor: turno.cor,
@@ -110,15 +136,19 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
   }, [aberto, turno, base])
 
   const cronograma = cronogramas.find((c) => c.id === form.cronogramaId)
+  const tipo = tipoPorId(form.tipo)
+  const ausencia = form.tipo !== TIPO_PADRAO
+  /* o dia nao operacional sem pessoa vale para o cronograma inteiro */
+  const semPessoa = form.tipo === 'nao_operacional' ? 'Todo o cronograma' : 'Turno aberto (sem pessoa)'
 
   const opcoesPessoa = useMemo(
     () => [
-      { valor: '', rotulo: 'Turno aberto (sem pessoa)' },
+      { valor: '', rotulo: semPessoa },
       ...(cronograma?.membros ?? [])
         .map((id) => ({ valor: id, rotulo: pessoaPorId(id)?.nome ?? 'Pessoa' }))
         .sort((a, b) => a.rotulo.localeCompare(b.rotulo, 'pt-BR')),
     ],
-    [cronograma, pessoaPorId],
+    [cronograma, pessoaPorId, semPessoa],
   )
 
   const nomeDaObra = (o) => [clientePorId(o.clienteId)?.nome, o.proposta].filter(Boolean).join(' - ') || 'Obra'
@@ -164,6 +194,31 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
     setErros((atual) => ({ ...atual, [campo]: undefined, geral: undefined }))
   }
 
+  /* Trocar o tipo: a ausencia e o dia inteiro, sem obra nem tarefa, e
+     sugere o titulo ("Férias") e a cor dela. O titulo e a cor so mudam
+     sozinhos enquanto ainda sao os sugeridos (vazio, o nome de outro tipo,
+     a cor de outro tipo): o que a pessoa escreveu ou escolheu fica */
+  const escolherTipo = (novoId) => {
+    setForm((atual) => {
+      if (atual.tipo === novoId) return atual
+      const antes = tipoPorId(atual.tipo)
+      const novo = tipoPorId(novoId)
+      const tituloSugerido = !atual.titulo.trim() || TIPOS.some((t) => t.id !== TIPO_PADRAO && t.rotulo === atual.titulo.trim())
+      const corSugerida = atual.cor === (antes.cor ?? VAZIO.cor) || TIPOS.some((t) => t.cor === atual.cor)
+      const virouAusencia = novoId !== TIPO_PADRAO
+      return {
+        ...atual,
+        tipo: novoId,
+        titulo: tituloSugerido ? (virouAusencia ? novo.rotulo : '') : atual.titulo,
+        cor: corSugerida ? (novo.cor ?? VAZIO.cor) : atual.cor,
+        diaInteiro: virouAusencia ? true : antes.id === TIPO_PADRAO ? atual.diaInteiro : false,
+        obraId: virouAusencia ? '' : atual.obraId,
+        checkId: virouAusencia ? '' : atual.checkId,
+      }
+    })
+    setErros({})
+  }
+
   /* escolher a obra preenche o titulo (o cliente) e a linha de baixo (a proposta) */
   const escolherObra = (evento) => {
     const id = evento.target.value
@@ -197,24 +252,26 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
     if (!form.titulo.trim()) novos.titulo = 'Dê um título ao turno.'
     if (!form.dataInicio) novos.dataInicio = 'Informe o dia.'
     if (form.dataFim && form.dataFim < form.dataInicio) novos.dataFim = 'O fim não pode ser antes do início.'
-    if (!form.diaInteiro && (!form.horaInicio || !form.horaFim)) novos.horaFim = 'Informe o início e o fim.'
+    if (!ausencia && !form.diaInteiro && (!form.horaInicio || !form.horaFim)) novos.horaFim = 'Informe o início e o fim.'
     setErros(novos)
     if (Object.keys(novos).length) return
 
     setSalvando(true)
     try {
+      const inteiro = ausencia || form.diaInteiro
       const campos = {
         cronogramaId: form.cronogramaId,
         usuarioId: form.usuarioId || null,
+        tipo: form.tipo,
         titulo: form.titulo.trim(),
         subtitulo: form.subtitulo.trim(),
         cor: form.cor,
         dataInicio: form.dataInicio,
         dataFim: form.dataFim || form.dataInicio,
-        horaInicio: form.diaInteiro ? null : form.horaInicio,
-        horaFim: form.diaInteiro ? null : form.horaFim,
-        obraId: form.obraId || null,
-        checkId: form.obraId ? form.checkId || null : null,
+        horaInicio: inteiro ? null : form.horaInicio,
+        horaFim: inteiro ? null : form.horaFim,
+        obraId: ausencia ? null : form.obraId || null,
+        checkId: !ausencia && form.obraId ? form.checkId || null : null,
       }
       if (turno) await turnosApi.editarTurno(turno.id, campos)
       else await turnosApi.criarTurno(campos)
@@ -315,6 +372,35 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
     >
       <form className="turnoform" onSubmit={salvar} noValidate>
         <fieldset disabled={somenteLeitura}>
+          {/* o tipo: o turno de trabalho ou uma das ausencias */}
+          <div className="campo">
+            <span className="campo__rotulo" id="turnoform-tipo">
+              Tipo
+            </span>
+            <div className="turnoform__tipos" role="radiogroup" aria-labelledby="turnoform-tipo">
+              {TIPOS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={form.tipo === t.id}
+                  className="turnoform__tipo"
+                  data-tipo={t.id}
+                  style={t.cor ? { '--turno-cor': corDoTurno(t.cor) } : undefined}
+                  onClick={() => escolherTipo(t.id)}
+                  disabled={somenteLeitura}
+                >
+                  {t.rotulo}
+                </button>
+              ))}
+            </div>
+            {form.tipo === 'nao_operacional' && (
+              <span className="turnoform__dica">
+                Sem pessoa, o dia vale para o cronograma inteiro: a coluna fica marcada em todas as linhas dele.
+              </span>
+            )}
+          </div>
+
           {cronogramas.length > 1 && (
             <CampoSelecao
               rotulo="Cronograma"
@@ -332,35 +418,40 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
             onChange={mudar('usuarioId')}
             erro={erros.usuarioId}
             opcoes={opcoesPessoa}
-            vazio="Turno aberto (sem pessoa)"
+            vazio={semPessoa}
             disabled={somenteLeitura}
           />
 
-          <div className="turnoform__dupla">
-            <CampoSelecao
-              rotulo="Obra (opcional)"
-              value={form.obraId}
-              onChange={escolherObra}
-              erro={erros.obraId}
-              opcoes={opcoesObra}
-              vazio="Nenhuma"
-              disabled={somenteLeitura}
-            />
-            <CampoSelecao
-              rotulo="Tarefa da obra (opcional)"
-              value={form.checkId}
-              onChange={escolherTarefa}
-              erro={erros.checkId}
-              opcoes={opcoesTarefa}
-              vazio={obra ? 'Nenhuma' : 'Escolha a obra antes'}
-              disabled={somenteLeitura || !obra}
-            />
-          </div>
+          {/* a ausencia nao tem obra; a tarefa da obra e so do Time Tecnico */}
+          {!ausencia && (
+            <div className={doTimeTecnico ? 'turnoform__dupla' : undefined}>
+              <CampoSelecao
+                rotulo="Obra (opcional)"
+                value={form.obraId}
+                onChange={escolherObra}
+                erro={erros.obraId}
+                opcoes={opcoesObra}
+                vazio="Nenhuma"
+                disabled={somenteLeitura}
+              />
+              {doTimeTecnico && (
+                <CampoSelecao
+                  rotulo="Tarefa da obra (opcional)"
+                  value={form.checkId}
+                  onChange={escolherTarefa}
+                  erro={erros.checkId}
+                  opcoes={opcoesTarefa}
+                  vazio={obra ? 'Nenhuma' : 'Escolha a obra antes'}
+                  disabled={somenteLeitura || !obra}
+                />
+              )}
+            </div>
+          )}
 
           <div className="turnoform__dupla">
             <CampoTexto
               rotulo="Título"
-              placeholder="Ex.: ADM"
+              placeholder={ausencia ? `Ex.: ${tipo.rotulo}` : 'Ex.: ADM'}
               value={form.titulo}
               onChange={mudar('titulo')}
               erro={erros.titulo}
@@ -376,29 +467,24 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
             />
           </div>
 
-          <div className="campo">
-            <span className="campo__rotulo">Cor</span>
-            <div className="turnoform__cores" role="radiogroup" aria-label="Cor">
-              {CORES.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={form.cor === c.id}
-                  aria-label={c.rotulo}
-                  title={c.rotulo}
-                  className="turnoform__cor"
-                  style={{ '--turno-cor': c.cor }}
-                  onClick={() => mudar('cor')(c.id)}
-                />
-              ))}
-            </div>
-          </div>
+          {/* as 20 amostras e o "Outra cor" (o quadro, o HEX e o RGB) */}
+          <SeletorCor
+            rotulo="Cor"
+            valor={form.cor}
+            cores={CORES}
+            aoMudar={(cor) => mudar('cor')(cor)}
+            desabilitado={somenteLeitura}
+          />
 
           <div className="turnoform__dupla">
-            <CampoData rotulo="Início" valor={form.dataInicio} aoMudar={mudar('dataInicio')} erro={erros.dataInicio} />
             <CampoData
-              rotulo="Fim"
+              rotulo={form.tipo === 'ferias' ? 'Férias de' : 'Início'}
+              valor={form.dataInicio}
+              aoMudar={mudar('dataInicio')}
+              erro={erros.dataInicio}
+            />
+            <CampoData
+              rotulo={form.tipo === 'ferias' ? 'Até' : 'Fim'}
               valor={form.dataFim}
               min={form.dataInicio || undefined}
               aoMudar={mudar('dataFim')}
@@ -406,14 +492,20 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
             />
           </div>
 
-          <label className="formrot__marca turnoform__inteiro">
-            <input type="checkbox" checked={form.diaInteiro} onChange={mudar('diaInteiro')} />
-            <span>
-              Dia inteiro (sem horário — ex.: <ExemploSorteado chave="dia-inteiro" />)
-            </span>
-          </label>
+          {ausencia ? (
+            <p className="turnoform__dica">
+              {tipo.rotulo} vale o dia inteiro{form.dataFim && form.dataFim !== form.dataInicio ? ', em todos os dias do período' : ''}, sem horário.
+            </p>
+          ) : (
+            <label className="formrot__marca turnoform__inteiro">
+              <input type="checkbox" checked={form.diaInteiro} onChange={mudar('diaInteiro')} />
+              <span>
+                Dia inteiro (sem horário — ex.: <ExemploSorteado chave="dia-inteiro" />)
+              </span>
+            </label>
+          )}
 
-          {!form.diaInteiro && (
+          {!ausencia && !form.diaInteiro && (
             <div className="turnoform__dupla">
               <CampoHora rotulo="Das" valor={form.horaInicio} aoMudar={mudar('horaInicio')} erro={erros.horaInicio} />
               <CampoHora rotulo="Às" valor={form.horaFim} aoMudar={mudar('horaFim')} erro={erros.horaFim} />
@@ -421,9 +513,9 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
           )}
         </fieldset>
 
-        <p className="turnoform__previa" style={{ '--turno-cor': corPorId(form.cor).cor }}>
+        <p className="turnoform__previa" data-tipo={form.tipo} style={{ '--turno-cor': corDoTurno(form.cor) }}>
           <strong>{form.titulo || 'Título'}</strong>
-          <span>{form.subtitulo || ' '}</span>
+          <span>{form.subtitulo || (ausencia ? tipo.curto : ' ')}</span>
         </p>
 
         {/* o rascunho: a equipe so ve depois do "Compartilhar com a equipe" */}

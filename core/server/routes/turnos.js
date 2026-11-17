@@ -8,7 +8,11 @@ import {
   COR_DA_OBRA,
   DIAS_MAXIMOS,
   SUBTITULO_MAXIMO,
+  TIPOS,
+  TIPO_PADRAO,
   TITULO_MAXIMO,
+  corHex,
+  corValida,
   dataValida,
   diasEntre,
   lerHora,
@@ -92,7 +96,7 @@ function trechos(dias) {
 function falhou(erro, res, onde) {
   if (erro.code === '42P01' || erro.code === '42703') {
     return res.status(503).json({
-      erro: 'O banco ainda não está atualizado para os Turnos (atualizações 31 e 32 em core/db). Rode npm run db:atualizar e suba a API de novo.',
+      erro: 'O banco ainda não está atualizado para os Turnos (atualizações 31, 32 e 58 em core/db). Rode npm run db:atualizar e suba a API de novo.',
     })
   }
   if (erro.code === '23505') return res.status(409).json({ erro: 'Já existe um cronograma com esse nome.', campo: 'nome' })
@@ -113,6 +117,8 @@ function paraTurno(l) {
     titulo: l.titulo,
     subtitulo: l.subtitulo ?? '',
     cor: l.cor,
+    /* turno, ferias, atestado, folga ou nao_operacional (atualizacao 58) */
+    tipo: l.tipo || TIPO_PADRAO,
     obraId: l.obra_id === null ? null : String(l.obra_id),
     checkId: l.check_id === null ? null : String(l.check_id),
     /* false = rascunho: so quem edita os turnos ve */
@@ -124,7 +130,9 @@ const SELECT_TURNO = `
   SELECT t.id, t.cronograma_id, t.usuario_id,
          to_char(t.data_inicio, 'YYYY-MM-DD') AS data_inicio, to_char(t.data_fim, 'YYYY-MM-DD') AS data_fim,
          to_char(t.hora_inicio, 'HH24:MI') AS hora_inicio, to_char(t.hora_fim, 'HH24:MI') AS hora_fim,
-         t.titulo, t.subtitulo, t.cor, t.obra_id, t.check_id, t.compartilhado
+         t.titulo, t.subtitulo, t.cor, t.obra_id, t.check_id, t.compartilhado,
+         -- o tipo (atualizacao 58) lido sem depender da coluna: sem ela, todo turno e de trabalho
+         coalesce(to_jsonb(t) ->> 'tipo', 'turno') AS tipo
     FROM turno t`
 
 /* ---------------- leitura ---------------- */
@@ -364,8 +372,16 @@ async function lerTurno(corpo) {
     return { erro: `A observação passa de ${SUBTITULO_MAXIMO} letras.`, campo: 'subtitulo' }
   }
 
-  const cor = texto(corpo?.cor) || CORES[0].id
-  if (!CORES.some((c) => c.id === cor)) return { erro: 'Cor desconhecida.', campo: 'cor' }
+  /* uma das amostras (o id) ou uma cor propria em #RRGGBB */
+  const corBruta = texto(corpo?.cor) || COR_DA_OBRA
+  if (!corValida(corBruta)) return { erro: 'Cor desconhecida: escolha uma amostra ou um #RRGGBB.', campo: 'cor' }
+  const cor = corHex(corBruta) ?? corBruta
+
+  /* o tipo: o turno de trabalho, ou uma ausencia (ferias, atestado, folga,
+     dia nao operacional), que e sempre o dia inteiro, sem obra nem tarefa */
+  const tipo = texto(corpo?.tipo) || TIPO_PADRAO
+  if (!TIPOS.some((t) => t.id === tipo)) return { erro: 'Tipo de turno desconhecido.', campo: 'tipo' }
+  const ausencia = tipo !== TIPO_PADRAO
 
   const dataInicio = texto(corpo?.dataInicio)
   const dataFim = texto(corpo?.dataFim) || dataInicio
@@ -376,18 +392,18 @@ async function lerTurno(corpo) {
     return { erro: 'Um turno cobre no máximo um ano.', campo: 'dataFim' }
   }
 
-  /* os dois horarios, ou nenhum (o dia inteiro) */
-  const horaInicio = texto(corpo?.horaInicio) ? lerHora(corpo.horaInicio) : null
-  const horaFim = texto(corpo?.horaFim) ? lerHora(corpo.horaFim) : null
-  if (texto(corpo?.horaInicio) && !horaInicio) return { erro: 'Horário de início inválido.', campo: 'horaInicio' }
-  if (texto(corpo?.horaFim) && !horaFim) return { erro: 'Horário de fim inválido.', campo: 'horaFim' }
+  /* os dois horarios, ou nenhum (o dia inteiro — e sempre, na ausencia) */
+  const horaInicio = !ausencia && texto(corpo?.horaInicio) ? lerHora(corpo.horaInicio) : null
+  const horaFim = !ausencia && texto(corpo?.horaFim) ? lerHora(corpo.horaFim) : null
+  if (!ausencia && texto(corpo?.horaInicio) && !horaInicio) return { erro: 'Horário de início inválido.', campo: 'horaInicio' }
+  if (!ausencia && texto(corpo?.horaFim) && !horaFim) return { erro: 'Horário de fim inválido.', campo: 'horaFim' }
   if (Boolean(horaInicio) !== Boolean(horaFim)) {
     return { erro: 'Informe o início e o fim — ou marque o dia inteiro.', campo: horaInicio ? 'horaFim' : 'horaInicio' }
   }
 
-  /* a tarefa da obra, quando o turno veio de uma */
-  const obraId = texto(corpo?.obraId) || null
-  const checkId = texto(corpo?.checkId) || null
+  /* a tarefa da obra, quando o turno veio de uma (a ausencia nao tem) */
+  const obraId = ausencia ? null : texto(corpo?.obraId) || null
+  const checkId = ausencia ? null : texto(corpo?.checkId) || null
   if (obraId) {
     if (!idValido(obraId)) return { erro: 'Obra inválida.', campo: 'obraId' }
     const { rows } = await query('SELECT id FROM obra WHERE id = $1', [obraId])
@@ -406,6 +422,7 @@ async function lerTurno(corpo) {
       titulo,
       subtitulo: subtitulo || null,
       cor,
+      tipo,
       obra_id: obraId,
       check_id: checkId,
     },
@@ -460,7 +477,7 @@ router.post('/', exigeSessao, exige(EDITAR), async (req, res) => {
 
 /* ---------------- copiar, colar e compartilhar ---------------- */
 
-const COLUNAS_DA_COPIA = 'hora_inicio, hora_fim, titulo, subtitulo, cor, obra_id, check_id'
+const COLUNAS_DA_COPIA = 'hora_inicio, hora_fim, titulo, subtitulo, cor, tipo, obra_id, check_id'
 
 /**
  * Cola os turnos copiados num DIA de uma linha (pessoa, ou os turnos

@@ -19,6 +19,7 @@ import avisosRouter from './routes/avisos.js'
 import sharepointRouter from './routes/sharepoint.js'
 import pontoRouter from './routes/ponto.js'
 import insumosRouter from './routes/insumos.js'
+import qualidadeRouter from './routes/qualidade.js'
 import almoxarifeRouter, { notificacoesDiarias } from './almoxarife/index.js'
 import cargaRouter, { cargaJunto } from './carga.js'
 import { logger } from './logger.js'
@@ -157,6 +158,8 @@ app.use('/api/sharepoint', sharepointRouter)
 app.use('/api/ponto', pontoRouter)
 /* os pedidos de insumos (atualizacao 57) */
 app.use('/api/insumos', insumosRouter)
+/* a Area da qualidade: o acompanhamento dos documentos e o correio (atualizacao 58) */
+app.use('/api/qualidade', qualidadeRouter)
 
 /* O ALMOXARIFE (o antigo lwncontrol, server/almoxarife). Os avisos do dia
    (ultimo dia da obra, certificado vencendo) nao tem clique que os

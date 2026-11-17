@@ -532,7 +532,8 @@ router.delete('/cards/:id', exigeSessao, exige('editar_cards'), async (req, res)
    Os checks do SISTEMA (tipo 'planejamento_ensaios' e
    'execucao_ensaios', atualizacao 14; 'material_gases',
    atualizacao 17; 'aprovacao_protocolos' e 'analise_faturamento',
-   atualizacao 50) sustentam um fluxo do sistema: nao se excluem, nao
+   atualizacao 50; 'liberado_faturamento' e 'faturar', atualizacao 58)
+   sustentam um fluxo do sistema: nao se excluem, nao
    mudam de nome e nao viram pergunta. Quem marca e a dica continuam
    editaveis.
    ------------------------------------------------------------ */

@@ -89,6 +89,12 @@ export const VISUALIZACAO = [
      dele, em /almoxarife. As abas de dentro dele sao as almox_* de baixo */
   { chave: 'ver_almoxarife', rotulo: 'Almoxarife', rota: '/app/almoxarife' },
   { chave: 'ver_comercial', rotulo: 'Comercial', rota: '/app/comercial' },
+  /* a Area da qualidade (atualizacao 58): o acompanhamento dos documentos
+     (protocolos, relatorios e gerais, em funil como o Comercial) e as
+     solicitacoes de correio. Mexer nos documentos e atender os envios sao
+     as alteracoes de baixo */
+  { chave: 'ver_documentos', rotulo: 'Acompanhamento dos documentos', rota: '/app/qualidade/documentos' },
+  { chave: 'ver_correio', rotulo: 'Solicitação de correio', rota: '/app/qualidade/correio' },
   { chave: 'ver_turnos', rotulo: 'Turnos', rota: '/app/turnos' },
   { chave: 'ver_avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes' },
   /* a aba Usuarios: ver a equipe (os cards, o setor, o cargo, o contato).
@@ -214,6 +220,12 @@ export const ALTERACAO = [
   { chave: 'editar_negocios', rotulo: 'Adicionar / editar negócios', dependeDe: 'ver_comercial' },
   { chave: 'excluir_negocios', rotulo: 'Excluir negócio', dependeDe: 'ver_comercial' },
   { chave: 'responder_emails', rotulo: 'Responder e-mails pelo site', dependeDe: 'ver_comercial' },
+  /* Qualidade (atualizacao 58): criar, editar, mover pelas etapas,
+     concluir e excluir documento. Quem so ve tambem comenta */
+  { chave: 'editar_documentos', rotulo: 'Adicionar / editar / mover documentos', dependeDe: 'ver_documentos' },
+  /* pedir um envio e de quem ve a aba; levar o pedido pelas colunas
+     (etiqueta, postagem com o rastreio, entrega) e desta */
+  { chave: 'gerenciar_correio', rotulo: 'Atender os envios (etiqueta, postagem e rastreio)', dependeDe: 'ver_correio' },
   /* Turnos (atualizacao 31): ver a aba e `ver_turnos`; criar e mudar
      turnos, anotacoes do dia e cronogramas e `editar_turnos` */
   { chave: 'editar_turnos', rotulo: 'Adicionar / editar turnos e cronogramas', dependeDe: 'ver_turnos' },

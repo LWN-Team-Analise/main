@@ -25,6 +25,8 @@ import RetornoOutlook from '@/pages/Login/RetornoOutlook'
 import ChatEquipe from '@/pages/Chat/ChatEquipe'
 import Dashboard from '@/pages/Diretoria/Dashboard'
 import Insumos from '@/pages/Insumos/Insumos'
+import Documentos from '@/pages/Qualidade/Documentos'
+import Correio from '@/pages/Qualidade/Correio'
 import AlmoxarifeNaArea from '@/pages/Almoxarife/AlmoxarifeNaArea'
 import ProtectedRoute from './ProtectedRoute'
 
@@ -203,6 +205,26 @@ export default function AppRoutes() {
           </Interna>
         }
       />
+      {/* a Area da qualidade (atualizacao 58): os documentos em funil, como o
+          Comercial, e os pedidos de envio pelo correio. A API confere as
+          mesmas chaves em cada chamada de /api/qualidade */}
+      <Route
+        path="/app/qualidade/documentos"
+        element={
+          <Interna permissao="ver_documentos">
+            <Documentos />
+          </Interna>
+        }
+      />
+      <Route
+        path="/app/qualidade/correio"
+        element={
+          <Interna permissao="ver_correio">
+            <Correio />
+          </Interna>
+        }
+      />
+      <Route path="/app/qualidade" element={<Mudou para="/app/qualidade/documentos" />} />
       {/* os funis de venda (os negocios do Pipedrive); a API confere a
           mesma chave em cada chamada de /api/comercial */}
       <Route

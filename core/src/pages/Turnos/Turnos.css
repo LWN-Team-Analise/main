@@ -754,6 +754,51 @@ button.turnos__celula:hover {
   font-style: italic;
 }
 
+/* a AUSENCIA (ferias, atestado, folga, dia nao operacional — atualizacao
+   58): o fundo leva um pouco da cor, com listras finas, para nao ser
+   confundida com turno de trabalho; embaixo, o que ela e */
+.turno.is-ausencia {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--turno-cor) 10%, transparent) 0 6px,
+      transparent 6px 12px
+    ),
+    color-mix(in srgb, var(--turno-cor) 8%, transparent);
+}
+
+.turno.is-ausencia:hover {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--turno-cor) 16%, transparent) 0 6px,
+      transparent 6px 12px
+    ),
+    color-mix(in srgb, var(--turno-cor) 12%, transparent);
+}
+
+.turno .turno__tipo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: color-mix(in srgb, var(--turno-cor) 70%, var(--text-strong));
+}
+
+.turno .turno__tipo svg {
+  flex: none;
+}
+
+/* o dia nao operacional do cronograma inteiro: a coluna hachurada em todas
+   as linhas, e o dia de cima tambem */
+.turnos__celula.is-parado,
+.turnos__dia.is-parado {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--text-muted) 13%, transparent) 0 5px,
+    transparent 5px 11px
+  );
+}
+
 /* o escolhido: a moldura escura por fora, como no Teams */
 .turno.is-escolhido {
   outline: 2px solid var(--text-strong);
@@ -892,25 +937,49 @@ button.turnos__celula:hover {
   gap: 12px;
 }
 
-.turnoform__cores {
+/* o tipo do turno: o de trabalho e as quatro ausencias, em pilulas */
+.turnoform__tipos {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
-.turnoform__cor {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 2px solid var(--turno-cor);
-  border-left-width: 6px;
-  border-radius: 6px;
-  background: transparent;
+.turnoform__tipo {
+  --turno-cor: var(--accent);
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-base);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
-.turnoform__cor[aria-checked='true'] {
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--turno-cor);
+.turnoform__tipo:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+.turnoform__tipo[aria-checked='true'] {
+  border-color: var(--turno-cor);
+  background: color-mix(in srgb, var(--turno-cor) 16%, transparent);
+  color: var(--text-strong);
+  box-shadow: inset 0 0 0 1px var(--turno-cor);
+}
+
+.turnoform__tipo:disabled {
+  cursor: default;
+}
+
+.turnoform__dica {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
 }
 
 .turnoform__inteiro {

@@ -296,6 +296,7 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-55.sql.txt` | o fim da area Administrativo: as permissoes `ver_ponto` (todo setor, menos a TV) e `ver_encontros` (acesso total e quem tinha o painel Administrativo), o painel Administrativo tirado dos setores, e o check **Determinar Focal Point** do sistema (`focal_point`, com a pessoa em `obra_check.escolhido_id`) |
 | `db/atualizacao-56.sql.txt` | o **local** do Ponto de encontro: `obra_horario.local` (`obra`, `empresa` ou `outro`) e `obra_horario.endereco` (o endereco escrito do `outro`); as datas que ja existiam ficam na obra |
 | `db/atualizacao-57.sql.txt` | os **pedidos de insumos** do menu por area: a tabela `insumo_pedido` (item, quantidade, observacao, situacao `pendente`/`atendido`/`recusado`, resposta e quem respondeu) e as permissoes `ver_insumos` (todo setor menos a TV) e `gerenciar_insumos` (acesso total e quem tem `revisar_despesa_geral`), dadas uma vez |
+| `db/atualizacao-58.sql.txt` | o **Faturar** espera o Administrativo (os checks `liberado_faturamento` e `faturar`, e o "Faturar após liberação do administrativo" vira so "Faturar"), `turno.tipo` (turno, ferias, atestado, folga, nao_operacional) e a **Area da qualidade**: `qualidade_documento`, `qualidade_documento_evento` e `correio_solicitacao`, com as permissoes `ver_documentos`/`editar_documentos` (Qualidade e acesso total), `ver_correio` (Qualidade, quem atende e acesso total) e `gerenciar_correio` (acesso total e quem tem `revisar_despesa_geral`), dadas uma vez |
 | `db/atualizacao-51.sql.txt` | a aba Ponto: `ponto_dia` (o Calculo Diario importado) e `ponto_assinatura` (a conferencia assinada). Tambem aposenta a 48 (a obra criada em Obras nao vira mais negocio) |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
@@ -1407,6 +1408,19 @@ so os turnos com inicio e fim.
   manda os escolhidos ou, sem escolha, todos os do periodo. Editar um turno ja
   compartilhado nao o tira da equipe.
 
+### Tipos e cores do turno (atualizacao 58)
+
+O turno tem um **tipo** (`turno.tipo`): o turno de trabalho, ou uma ausencia — Ferias
+(de uma data a outra), Atestado medico, Folga solicitada e Dia nao operacional. A
+ausencia e sempre o dia inteiro, sem obra nem tarefa, ja vem com titulo e cor
+sugeridos, aparece listrada na grade, nao conta como gente trabalhando no dia e cruzar
+com um turno da mesma pessoa e conflito. O **dia nao operacional sem pessoa** vale para
+o cronograma inteiro: a coluna do dia fica hachurada em todas as linhas dele (e no dia
+de cima). A **cor** tem 20 amostras (`CORES`, em `src/domain/turnos.js`) e o "Outra
+cor" (`components/SeletorCor`): o quadro de cor, a faixa do matiz, o HEX e o RGB; a cor
+propria vai para `turno.cor` como `#rrggbb`. A **Tarefa da obra** so aparece no pop-up
+para quem e do Time Tecnico (setor `tecnico`).
+
 ## Clientes: unidades
 
 O mesmo cliente em outro endereco e uma **unidade** dele, e nao outro cliente.
@@ -1526,6 +1540,7 @@ O menu e por **area** (`AREAS`, no `AppShell.jsx`). No alto ficam as telas solta
 | **Area admin** | Ponto da equipe (`/app/ponto/equipe`, `gerenciar_ponto`), Ponto de encontro (`ver_encontros`, `soComOutros`), Dashboard de reembolso (os Envios gerais, `revisar_despesa_geral`), Insumos (`/app/insumos/pedidos`, `gerenciar_insumos`) |
 | **Area almoxarife** | as abas do Almoxarife (`almox_*`), abertas DENTRO do Atmosfera em `/app/almoxarife/<aba>` (`AlmoxarifeNaArea.jsx`): a tela do Almoxarife num quadro, no modo area (`?embutido=area`, sem o menu e a barra de cima de la). Trocar de aba pelo menu chama o `switchTab` do quadro; trocar la dentro avisa o Atmosfera (`postMessage` `almox-aba`, em `endereco.js`) e o menu acompanha. O `/app/control` continua abrindo a tela inteira, para os links de fora |
 | **Area comercial** | Comercial (`ver_comercial`), Clientes (`ver_clientes`) |
+| **Area da qualidade** | Acompanhamento dos documentos (`/app/qualidade/documentos`, `ver_documentos`), Solicitacao de correio (`/app/qualidade/correio`, `ver_correio`) |
 | **Area tecnica** | Ponto de encontro (`ver_encontros`), Frota (`ver_frotas`), Solicitar instrumento (o pop-up do Solicitar OS, `almox_solicitacoes`) |
 | **Area da excelencia** | Avaliacoes (`ver_avaliacoes`), Usuarios (`ver_usuarios`) |
 | **Area da diretoria** | Dashboard (`/app/diretoria`, `ver_dashboard`: era a aba Dashboard da pagina inicial) |
@@ -1552,6 +1567,24 @@ atendido (com um recado opcional), recusado (com o motivo) ou o reabre. Tabela
 `insumo_pedido`; API em `server/routes/insumos.js` (`GET /api/insumos?todos=1`,
 `POST`, `PATCH /:id`, `DELETE /:id`). A 57 deu a `ver_insumos` a todo setor (menos a
 TV) e a `gerenciar_insumos` ao acesso total e a quem tem `revisar_despesa_geral`.
+
+**Area da qualidade** (atualizacao 58). Duas telas no desenho do Comercial (o mesmo
+funil em setas: `pages/Qualidade/QuadroEtapas.jsx` usa as classes `.funil` de
+`Comercial.css`); funis, etapas e situacoes em `src/domain/qualidade.js`, lidos pela
+tela e pela API (`server/routes/qualidade.js`, em `/api/qualidade`).
+
+- **Acompanhamento dos documentos**: tres funis — Protocolos (A elaborar ... Execucao
+  em campo), Relatorios (Aguardando dados de campo ... Entregue ao cliente) e
+  Documentos gerais. O cartao mostra o tipo, o codigo, a revisao, o titulo, o cliente e
+  a obra, o responsavel, o prazo (vermelho quando passa) e ha quantos dias esta na
+  etapa. Arrastar muda a etapa; o documento aberto tem Concluir, Nova revisao,
+  Cancelar (com o motivo), Reabrir e Excluir, e o historico com os comentarios (quem so
+  ve tambem comenta). Visoes: Funil, Lista e Arquivados. Mexer e `editar_documentos`.
+- **Solicitacao de correio**: pedir um envio (o que vai, para quem, o endereco — o CEP
+  preenche pelo ViaCEP e a obra traz o cadastro do cliente —, o servico e ate quando
+  sai). Quem tem `gerenciar_correio` arrasta pelas colunas Solicitada, Etiqueta gerada,
+  Postada (pede o rastreio) e Entregue. Quem pediu edita ou cancela enquanto esta
+  Solicitada. Canceladas e entregues ha mais de 30 dias vao para os Arquivados.
 
 ## O menu, o Meu painel e o fim da area Administrativo
 

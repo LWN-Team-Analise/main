@@ -14,6 +14,8 @@ import {
   CHECK_SEPARAR_OS,
   CHECK_RETIRADA_OS,
   CHECK_DEVOLUCAO_OS,
+  CHECK_FATURAR,
+  RECADO_FATURAR_TRAVADO,
   DICA_ENVIAR_OS,
   DICA_SEPARAR_OS,
   DICA_RETIRADA_OS,
@@ -86,6 +88,9 @@ export default function CardSetor({
   aoMarcar,
   /* o "Solicitar OS" aberto na propria obra (sem ela, vai ao Almoxarife) */
   aoSolicitarOS,
+  /* { liberado, faturado } da obra (estadoDoFaturamento): o "Faturar"
+     espera o "Liberado para faturamento" do Administrativo */
+  faturamento = null,
   aoEditarCard,
   aoNovoCheck,
   aoEditarCheck,
@@ -310,6 +315,10 @@ export default function CardSetor({
           const devolucaoOS = check.tipo === CHECK_DEVOLUCAO_OS
           const retiradaBloqueada = retiradaOS && !feito && ferramentasDaOS?.retirada === 'bloqueada'
           const devolucaoBloqueada = devolucaoOS && !feito && ferramentasDaOS?.devolucao === 'bloqueada'
+          /* o "Faturar" (atualizacao 58): travado para todos ate o
+             Administrativo marcar "Liberado para faturamento" */
+          const faturarBloqueado =
+            !modelo && !feito && check.tipo === CHECK_FATURAR && faturamento?.liberado === false
           const destinoNoControl =
             modelo || feito || travado ? null : destinoDoCheckNoControl(usuario, check, obra)
           /* Quem conclui check sem a informacao (`meu`, nestes checks) nao vai
@@ -317,6 +326,7 @@ export default function CardSetor({
              concluir aqui. Para os outros, segue o atalho de sempre */
           const vaiAoControl = Boolean(destinoNoControl) && !(ehCheckDaOS(check) && meu)
           const dicaDoCheck = [
+            faturarBloqueado ? RECADO_FATURAR_TRAVADO : '',
             porqueGases,
             enviarOS
               ? DICA_ENVIAR_OS
@@ -339,6 +349,7 @@ export default function CardSetor({
             (modelo || travado || (!meu && !abreSemPermissao) || (ehCheckDaOS(check) && feito && !semInformacao)) &&
             !vaiSolicitar &&
             !destinoNoControl
+          const travadoDeVez = travadoAqui || faturarBloqueado
           return (
             <Dica
               as="li"
@@ -365,10 +376,10 @@ export default function CardSetor({
                   /* os da O.S. nao sao "de outro setor": ninguem marca, so o sistema */
                   !modelo && !meu && !abreSemPermissao && !ehCheckDaOS(check) ? 'is-deoutro' : ''
                 } ${doSistema || proposta || doCarro || ehCheckDaOS(check) ? 'is-sistema' : ''} ${
-                  (retiradaBloqueada || devolucaoBloqueada) && !meu ? 'is-bloqueada' : ''
+                  ((retiradaBloqueada || devolucaoBloqueada) && !meu) || faturarBloqueado ? 'is-bloqueada' : ''
                 } ${modelo ? 'is-modelo' : ''}`.trim()}
                 onClick={() => {
-                  if (travadoAqui) return
+                  if (travadoDeVez) return
                   /* o "Solicitar OS" abre o pedido aqui mesmo, num pop-up por
                      cima da obra, e nao leva mais ao Almoxarife */
                   if (vaiSolicitar || (vaiAoControl && enviarOS && aoSolicitarOS)) {
@@ -382,7 +393,7 @@ export default function CardSetor({
                   }
                   aoMarcar(check)
                 }}
-                aria-disabled={travadoAqui || undefined}
+                aria-disabled={travadoDeVez || undefined}
                 title={
                   modelo || travado || dicaDoCheck
                     ? undefined
@@ -542,6 +553,16 @@ export default function CardSetor({
                         : destinoNoControl
                           ? 'devolver'
                           : 'aguardando devolução'}
+                  </span>
+                )}
+                {/* o Faturar: o cadeado ate o Administrativo liberar */}
+                {faturarBloqueado && (
+                  <span className="tarefa__ensaios" data-os="bloqueada">
+                    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
+                      <rect x="5" y="10.5" width="14" height="9.5" rx="2" />
+                      <path d="M8.4 10.5V7.8a3.6 3.6 0 0 1 7.2 0v2.7" />
+                    </svg>
+                    após a liberação
                   </span>
                 )}
                 {execucaoDosEnsaios && !modelo && !semInformacao && (

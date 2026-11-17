@@ -42,7 +42,13 @@ import {
   rotuloDoServico,
   tipoDoItem,
 } from '../../src/domain/itensEnsaio.js'
-import { MOTIVO_DA_TRAVA, regraDoUsuario, regraLibera } from '../../src/domain/regrasCheck.js'
+import {
+  MOTIVO_DA_TRAVA,
+  RECADO_FATURAR_TRAVADO,
+  RECADO_LIBERACAO_FATURADA,
+  regraDoUsuario,
+  regraLibera,
+} from '../../src/domain/regrasCheck.js'
 
 const router = Router()
 
@@ -2943,6 +2949,24 @@ async function checkDoSistema(obraId, tipo) {
   return rows[0] ? String(rows[0].id) : null
 }
 
+/** O check do sistema daquele tipo esta marcado nesta obra? (false quando a obra nem tem o check) */
+async function checkDoSistemaMarcado(obraId, tipo) {
+  const checkId = await checkDoSistema(obraId, tipo)
+  if (!checkId) return false
+  const { rows } = await query('SELECT 1 FROM obra_check WHERE obra_id = $1 AND check_id = $2', [obraId, checkId])
+  return Boolean(rows[0])
+}
+
+/**
+ * O "Faturar" pode ser marcado: o Administrativo ja marcou "Liberado para
+ * faturamento" — ou a obra nem tem esse check, e nao ha o que esperar. A
+ * mesma conta da tela (estadoDoFaturamento, em src/domain/obras.js).
+ */
+async function faturamentoLiberado(obraId) {
+  if (!(await checkDoSistema(obraId, 'liberado_faturamento'))) return true
+  return checkDoSistemaMarcado(obraId, 'liberado_faturamento')
+}
+
 /**
  * Mantem as duas regras dos ensaios de pe DEPOIS de qualquer mudanca:
  *
@@ -3170,6 +3194,12 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
     const resposta = req.body?.resposta
     const semInformacao = req.body?.semInformacao === true
 
+    /* o "Faturar" espera o "Liberado para faturamento" do Administrativo
+       (atualizacao 58) — para todo mundo, e tambem sem a informacao */
+    if (regra.tipo === 'faturar' && !(await faturamentoLiberado(req.params.id))) {
+      return res.status(409).json({ erro: RECADO_FATURAR_TRAVADO })
+    }
+
     /* Os checks da O.S. ("Solicitar OS" da 2a etapa; "Gestao dos
        instrumentos", "Retirada" e "Devolucao das ferramentas" da 3a;
        atualizacoes 38, 40, 42 e 43) quem marca e o LWN Control, quando a
@@ -3353,6 +3383,10 @@ router.delete('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req,
       !(semInformacao && cargoPode(await meuCargo(req.dono.sub), 'check_sem_informacao'))
     ) {
       return res.status(409).json({ erro: CHECKS_DA_OS[tipo].desmarcar })
+    }
+    /* a liberacao do faturamento nao sai com o "Faturar" marcado (atualizacao 58) */
+    if (tipo === 'liberado_faturamento' && (await checkDoSistemaMarcado(req.params.id, 'faturar'))) {
+      return res.status(409).json({ erro: RECADO_LIBERACAO_FATURADA })
     }
     /* o Prazo da execucao e o check com horario (o Ponto de encontro)
        desmarcam enquanto as etapas seguintes estao sem check. O prazo

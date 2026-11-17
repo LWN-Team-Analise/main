@@ -191,6 +191,27 @@ const Icone = {
       <path d="M4.5 20V11M10 20V5M15.5 20v-6M21 20H3" />
     </svg>
   ),
+  /* Area da qualidade: o escudo com o visto */
+  qualidade: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <path d="M12 3.2 5 6v5.4c0 4.3 3 8 7 9.4 4-1.4 7-5.1 7-9.4V6z" />
+      <path d="m8.8 12 2.3 2.3 4.2-4.4" />
+    </svg>
+  ),
+  /* Acompanhamento dos documentos: a folha com as linhas e a seta de andamento */
+  documentos: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <path d="M14 3.5H7.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3.5V8h4.5M9 12.5h6M9 16h3.5" />
+    </svg>
+  ),
+  /* Solicitacao de correio: o envelope */
+  correio: () => (
+    <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
+      <rect x="3.5" y="5.5" width="17" height="13" rx="2" />
+      <path d="m4 7 8 6 8-6" />
+    </svg>
+  ),
   /* Insumos: a caixa */
   insumos: () => (
     <svg viewBox="0 0 24 24" width="21" height="21" {...traco}>
@@ -496,6 +517,23 @@ const AREAS = [
     itens: [
       { id: 'comercial', rotulo: 'Comercial', rota: '/app/comercial', permissao: 'ver_comercial' },
       { id: 'clientes', rotulo: 'Clientes', rota: '/app/clientes', permissao: 'ver_clientes' },
+    ],
+  },
+  {
+    /* a Area da qualidade (atualizacao 58): os documentos andando pelas
+       etapas, como o Comercial, e os pedidos de envio pelo correio */
+    id: 'qualidade',
+    rotulo: 'Área da qualidade',
+    curto: 'Qualidade',
+    itens: [
+      {
+        id: 'documentos-qualidade',
+        icone: 'documentos',
+        rotulo: 'Acompanhamento dos documentos',
+        rota: '/app/qualidade/documentos',
+        permissao: 'ver_documentos',
+      },
+      { id: 'correio', icone: 'correio', rotulo: 'Solicitação de correio', rota: '/app/qualidade/correio', permissao: 'ver_correio', semTv: true },
     ],
   },
   {

@@ -7,12 +7,15 @@ import { useDados } from '@/context/DadosContext'
 import {
   SUBTITULO_MAXIMO,
   TITULO_MAXIMO,
-  corPorId,
+  corDoTurno,
   diaDaSemana,
   diasEntre,
   domingoDe,
+  ehAusencia,
   minutosDoTurno,
+  paradaDoCronograma,
   somarDias,
+  tipoPorId,
 } from '@/domain/turnos'
 import * as turnosApi from '@/services/turnosService'
 import { hojeISO } from '@/utils/formato'
@@ -416,6 +419,25 @@ const IconeExibir = () => (
   </Icone>
 )
 const IconeGrupo = () => <Icone d="M12 5v14M5 12h14" />
+/* as ausencias (atualizacao 58): o sol das ferias, a cruz do atestado, a
+   rede da folga e o "proibido" do dia nao operacional */
+const IconeAusencia = ({ tipo }) =>
+  ({
+    ferias: (
+      <Icone tamanho={12}>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" />
+      </Icone>
+    ),
+    atestado: <Icone tamanho={12} d="M9.5 4h5v5.5H20v5h-5.5V20h-5v-5.5H4v-5h5.5Z" />,
+    folga: <Icone tamanho={12} d="M3 9.5c3 4 15 4 18 0M5 9.5V7M19 9.5V7M7.5 13.5 6 19M16.5 13.5 18 19" />,
+    nao_operacional: (
+      <Icone tamanho={12}>
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="m6 6 12 12" />
+      </Icone>
+    ),
+  })[tipo] ?? null
 /* a alca de arrastar: seis pontos */
 const IconeAlca = () => (
   <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
@@ -453,7 +475,23 @@ const IconeMais = () => (
  * se e a escolhida. Sem `aoCelula` (a secao Obras, ou quem so ve) os
  * dias nao se clicam.
  */
-function Linha({ quem, linha, turnos, dias, hoje, celula, selecao, conflitos, escolhe, aoCelula, aoTurno, classe = '', atributos }) {
+function Linha({
+  quem,
+  linha,
+  turnos,
+  dias,
+  hoje,
+  celula,
+  selecao,
+  conflitos,
+  escolhe,
+  aoCelula,
+  aoTurno,
+  classe = '',
+  atributos,
+  /* os dias nao operacionais do cronograma inteiro: a celula fica hachurada */
+  parados = null,
+}) {
   const { colocados, faixas } = colocar(turnos, dias)
   return (
     <div className={`turnos__linha ${classe}`.trim()} {...atributos}>
@@ -461,7 +499,11 @@ function Linha({ quem, linha, turnos, dias, hoje, celula, selecao, conflitos, es
       <div className="turnos__faixa" style={{ gridTemplateRows: `repeat(${faixas}, minmax(64px, auto))` }}>
         {dias.map((dia, i) => {
           const escolhida = celula === `${linha}|${dia}`
-          const classe = `turnos__celula ${dia === hoje ? 'is-hoje' : ''} ${escolhida ? 'is-escolhida' : ''}`.replace(/\s+/g, ' ').trim()
+          const classe = `turnos__celula ${dia === hoje ? 'is-hoje' : ''} ${escolhida ? 'is-escolhida' : ''} ${
+            parados?.has(dia) ? 'is-parado' : ''
+          }`
+            .replace(/\s+/g, ' ')
+            .trim()
           const lugar = { gridColumn: i + 1, gridRow: `1 / span ${faixas}` }
           return aoCelula ? (
             <button
@@ -490,9 +532,13 @@ function Linha({ quem, linha, turnos, dias, hoje, celula, selecao, conflitos, es
           const rascunho = turno.compartilhado === false
           const conflito = conflitos.has(turno.id)
           const escolhido = selecao.has(turno.id)
+          /* ferias, atestado, folga e dia nao operacional (atualizacao 58) */
+          const ausencia = ehAusencia(turno)
+          const tipo = ausencia ? tipoPorId(turno.tipo) : null
           const classe = [
             'turno',
             turno.origem === 'obra' && 'is-obra',
+            ausencia && 'is-ausencia',
             rascunho && 'is-rascunho',
             escolhido && 'is-escolhido',
             conflito && 'is-conflito',
@@ -504,10 +550,12 @@ function Linha({ quem, linha, turnos, dias, hoje, celula, selecao, conflitos, es
               key={turno.id}
               type="button"
               className={classe}
-              style={{ gridColumn: `${ini + 1} / ${fim + 2}`, gridRow: faixa + 1, '--turno-cor': corPorId(turno.cor).cor }}
+              style={{ gridColumn: `${ini + 1} / ${fim + 2}`, gridRow: faixa + 1, '--turno-cor': corDoTurno(turno.cor) }}
+              data-tipo={ausencia ? turno.tipo : undefined}
               onClick={(evento) => aoTurno(turno, evento, linha)}
               aria-pressed={escolhe ? escolhido : undefined}
               title={[
+                tipo && tipo.rotulo !== turno.titulo ? tipo.rotulo : '',
                 turno.titulo,
                 turno.subtitulo,
                 varios ? `${curta(turno.dataInicio)} – ${curta(turno.dataFim)}` : '',
@@ -521,6 +569,13 @@ function Linha({ quem, linha, turnos, dias, hoje, celula, selecao, conflitos, es
               <strong>{turno.titulo}</strong>
               {linha2 && <span>{linha2}</span>}
               {hora && <em>{hora}</em>}
+              {/* a ausencia diz o que e, no lugar do horario */}
+              {tipo && (
+                <em className="turno__tipo">
+                  <IconeAusencia tipo={turno.tipo} />
+                  {tipo.curto}
+                </em>
+              )}
               {conflito && (
                 <b className="turno__conflito" aria-label="Conflito de horário">
                   !
@@ -658,9 +713,10 @@ export default function Turnos() {
 
     /* por dia: horas e pessoas, sem contar duas vezes o turno da obra
        que aparece em mais de um cronograma */
-    const porDia = Object.fromEntries(dias.map((d) => [d, { minutos: 0, pessoas: new Set() }]))
+    const porDia = Object.fromEntries(dias.map((d) => [d, { minutos: 0, pessoas: new Set(), parados: [] }]))
     turnos.forEach((t) => {
-      if (!t.usuarioId) return
+      /* ferias, atestado, folga e dia nao operacional nao sao gente trabalhando */
+      if (!t.usuarioId || ehAusencia(t)) return
       dias.forEach((d) => {
         if (d < t.dataInicio || d > t.dataFim) return
         porDia[d].minutos += minutosDoTurno(t)
@@ -673,9 +729,22 @@ export default function Turnos() {
         const lista = daLinha(c.id, id)
         return { id, turnos: lista, minutos: lista.reduce((s, t) => s + minutosNoPeriodo(t, dias), 0) }
       })
+      const abertos = daLinha(c.id, null)
+      /* o dia nao operacional sem pessoa (atualizacao 58): a coluna do dia
+         fica hachurada em todas as linhas do cronograma, e o dia de cima
+         diz qual cronograma para */
+      const parados = new Set()
+      abertos.filter(paradaDoCronograma).forEach((t) =>
+        dias.forEach((d) => {
+          if (d < t.dataInicio || d > t.dataFim) return
+          parados.add(d)
+          if (!porDia[d].parados.includes(c.nome)) porDia[d].parados.push(c.nome)
+        }),
+      )
       return {
         ...c,
-        abertos: daLinha(c.id, null),
+        abertos,
+        parados,
         pessoas,
         minutos: pessoas.reduce((s, p) => s + p.minutos, 0),
       }
@@ -1178,8 +1247,13 @@ export default function Turnos() {
                 <div className="turnos__faixa">
                   {dias.map((d) => {
                     const dia = contas.porDia[d]
+                    const parado = dia.parados.length > 0
                     return (
-                      <div key={d} className={`turnos__dia ${d === hoje ? 'is-hoje' : ''}`.trim()}>
+                      <div
+                        key={d}
+                        className={`turnos__dia ${d === hoje ? 'is-hoje' : ''} ${parado ? 'is-parado' : ''}`.replace(/\s+/g, ' ').trim()}
+                        title={parado ? `Dia não operacional: ${dia.parados.join(', ')}` : undefined}
+                      >
                         <span className="turnos__numero">{Number(d.slice(8, 10))}</span>
                         <span className="turnos__pessoas" title={`${dia.pessoas.size} pessoas`}>
                           <IconePessoas />
@@ -1341,6 +1415,7 @@ export default function Turnos() {
                             }
                             linha={`${g.id}|`}
                             turnos={g.abertos}
+                            parados={g.parados}
                             aoCelula={edita ? (dia) => clicarCelula(g.id, null, dia) : undefined}
                           />
                         )}
@@ -1390,6 +1465,7 @@ export default function Turnos() {
                               }
                               linha={`${g.id}|${p.id}`}
                               turnos={p.turnos}
+                              parados={g.parados}
                               aoCelula={edita ? (dia) => clicarCelula(g.id, p.id, dia) : undefined}
                             />
                           )
