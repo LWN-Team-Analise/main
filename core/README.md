@@ -1561,9 +1561,12 @@ Obras, o atalho do **Reembolso** (Meus reembolsos) e o Menu, que mostra uma seca
 area (`MenuCompleto`).
 
 **Insumos** (atualizacao 57). Cada pessoa pede o material de que precisa (o item, a
-quantidade e uma observacao) e acompanha a resposta; o pedido pendente pode ser
-cancelado. Quem tem `gerenciar_insumos` ve os pedidos de todos e marca cada um como
-atendido (com um recado opcional), recusado (com o motivo) ou o reabre. Tabela
+quantidade e uma observacao) e acompanha a resposta, no selo do canto de cada pedido
+(Pendente, depois Aprovado ou Reprovado); o pedido pendente pode ser cancelado, o
+respondido nao. Quem tem `gerenciar_insumos` ("Aprovar / reprovar pedidos de insumos")
+ve os pedidos de todos e aprova cada um (com um recado opcional), reprova (com o
+motivo), reabre ou exclui — excluir, em qualquer situacao, e so dele. No banco a
+situacao continua `atendido`/`recusado`; so a tela diz aprovado/reprovado. Tabela
 `insumo_pedido`; API em `server/routes/insumos.js` (`GET /api/insumos?todos=1`,
 `POST`, `PATCH /:id`, `DELETE /:id`). A 57 deu a `ver_insumos` a todo setor (menos a
 TV) e a `gerenciar_insumos` ao acesso total e a quem tem `revisar_despesa_geral`.

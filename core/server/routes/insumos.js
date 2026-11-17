@@ -13,10 +13,14 @@ import { registrarAtividade } from '../atividade.js'
      PATCH  /:id         { situacao, resposta? } — atendido, recusado (com
                          o motivo) ou de volta a pendente
                          (`gerenciar_insumos`)
-     DELETE /:id         cancela o PROPRIO pedido enquanto esta pendente
+     DELETE /:id         cancela o PROPRIO pedido enquanto esta pendente;
+                         com `gerenciar_insumos`, exclui qualquer pedido,
+                         em qualquer situacao
 
    Pedir e acompanhar e `ver_insumos` (Seu espaco > Pedir insumos);
-   atender e `gerenciar_insumos` (Area admin > Insumos).
+   aprovar e reprovar e `gerenciar_insumos` (Area admin > Insumos). No
+   banco a situacao continua 'atendido' e 'recusado'; a tela diz
+   "Aprovado" e "Reprovado".
    ============================================================ */
 
 const router = Router()
@@ -30,6 +34,8 @@ const QUANTIDADE_MAXIMA = 9999
 /* o teto de uma resposta, para a lista nao crescer sem fim */
 const LIMITE = 500
 const SITUACOES = ['pendente', 'atendido', 'recusado']
+/* como a tela chama cada resposta (o historico usa a mesma palavra) */
+const PALAVRA = { atendido: 'aprovado', recusado: 'reprovado' }
 
 const texto = (valor) => String(valor ?? '').trim()
 const idValido = (valor) => /^\d{1,15}$/.test(String(valor ?? ''))
@@ -140,7 +146,7 @@ router.patch('/:id', exigeSessao, exige(GERENCIAR), async (req, res) => {
     return res.status(400).json({ erro: `A resposta vai até ${TEXTO_MAXIMO} caracteres.`, campo: 'resposta' })
   }
   if (situacao === 'recusado' && !resposta) {
-    return res.status(400).json({ erro: 'Diga o motivo da recusa.', campo: 'resposta' })
+    return res.status(400).json({ erro: 'Diga o motivo da reprovação.', campo: 'resposta' })
   }
   try {
     /* de volta a pendente, o pedido perde a resposta e quem respondeu */
@@ -160,7 +166,7 @@ router.patch('/:id', exigeSessao, exige(GERENCIAR), async (req, res) => {
       acao: `insumos.pedido_${situacao}`,
       categoria: 'insumos',
       entidade: ['insumo_pedido', req.params.id],
-      descricao: pendente ? 'Pedido de insumo reaberto' : `Pedido de insumo ${situacao}`,
+      descricao: pendente ? 'Pedido de insumo reaberto' : `Pedido de insumo ${PALAVRA[situacao]}`,
       detalhes: { item: pedido.item, de: pedido.usuarioNome },
     })
     return res.json({ pedido })
@@ -172,21 +178,30 @@ router.patch('/:id', exigeSessao, exige(GERENCIAR), async (req, res) => {
 router.delete('/:id', exigeSessao, exige(VER), async (req, res) => {
   if (!idValido(req.params.id)) return res.status(404).json({ erro: 'Pedido não encontrado.' })
   try {
-    const { rows } = await query('SELECT usuario_id, situacao, item FROM insumo_pedido WHERE id = $1', [req.params.id])
+    const { rows } = await query(
+      `SELECT p.usuario_id, p.situacao, p.item, quem.name AS usuario_nome
+         FROM insumo_pedido p JOIN usuario quem ON quem.id = p.usuario_id
+        WHERE p.id = $1`,
+      [req.params.id],
+    )
     const pedido = rows[0]
-    if (!pedido || String(pedido.usuario_id) !== String(req.dono.sub)) {
+    /* quem aprova e reprova exclui qualquer um; os outros, so o proprio */
+    const gerencia = cargoPode(req.cargo, GERENCIAR)
+    const proprio = String(pedido?.usuario_id) === String(req.dono.sub)
+    if (!pedido || (!gerencia && !proprio)) {
       return res.status(404).json({ erro: 'Pedido não encontrado.' })
     }
-    if (pedido.situacao !== 'pendente') {
+    if (!gerencia && pedido.situacao !== 'pendente') {
       return res.status(409).json({ erro: 'Este pedido já foi respondido e não pode mais ser cancelado.' })
     }
     await query('DELETE FROM insumo_pedido WHERE id = $1', [req.params.id])
+    const cancelou = proprio && pedido.situacao === 'pendente'
     await registrarAtividade(req, {
-      acao: 'insumos.pedido_cancelado',
+      acao: cancelou ? 'insumos.pedido_cancelado' : 'insumos.pedido_excluido',
       categoria: 'insumos',
       entidade: ['insumo_pedido', req.params.id],
-      descricao: 'Pedido de insumo cancelado',
-      detalhes: { item: pedido.item },
+      descricao: cancelou ? 'Pedido de insumo cancelado' : 'Pedido de insumo excluído',
+      detalhes: { item: pedido.item, de: pedido.usuario_nome },
     })
     return res.status(204).end()
   } catch (erro) {

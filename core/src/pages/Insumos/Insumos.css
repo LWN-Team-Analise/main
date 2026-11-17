@@ -75,32 +75,47 @@
 
 .pedido {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+  flex-direction: column;
+  gap: 4px;
   padding: 14px 16px;
   border: 1px solid var(--glass-border);
+  border-left: 3px solid var(--pedido-cor);
   border-radius: var(--radius-md);
   background: var(--surface);
 }
 
-/* o pendente e o que pede acao: a borda da esquerda acende */
+/* a cor da situacao: a borda da esquerda e o selo do canto. O pendente
+   e o laranja do "Pendente" do Comercial */
 .pedido[data-situacao='pendente'] {
-  border-left: 3px solid var(--accent);
+  --pedido-cor: var(--pri-media);
+  --pedido-fundo: var(--pri-media-suave);
 }
 
-.pedido__miolo {
+.pedido[data-situacao='atendido'] {
+  --pedido-cor: var(--success);
+  --pedido-fundo: color-mix(in srgb, var(--success) 14%, transparent);
+}
+
+.pedido[data-situacao='recusado'] {
+  --pedido-cor: var(--danger);
+  --pedido-fundo: var(--danger-bg);
+}
+
+/* o item a esquerda, a situacao no canto de cima, a direita */
+.pedido__cabeca {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .pedido__item {
   display: flex;
+  flex: 1;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 10px;
+  min-width: 0;
   margin: 0;
 }
 
@@ -144,38 +159,44 @@
   font-style: italic;
 }
 
-.pedido__lado {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.pedido__acoes {
-  display: flex;
-  gap: 6px;
-}
-
 .pedido__situacao {
-  padding: 3px 10px;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 8px;
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
+  background: var(--pedido-fundo);
+  color: var(--pedido-cor);
   font-size: 0.74rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
-:root[data-theme='dark'] .pedido__situacao[data-situacao='pendente'] {
-  color: var(--grad-b);
+.pedido__situacao::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
-.pedido__situacao[data-situacao='atendido'] {
-  background: color-mix(in srgb, var(--success) 14%, transparent);
-  color: var(--success);
+/* os botoes embaixo, separados do texto por um fio */
+.pedido__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--glass-border);
 }
 
-.pedido__situacao[data-situacao='recusado'] {
+.acao.pedido__excluir {
+  color: var(--danger);
+}
+
+.acao.pedido__excluir:hover {
   background: var(--danger-bg);
   color: var(--danger);
 }
@@ -193,17 +214,4 @@
   justify-content: flex-end;
   gap: 8px;
   margin-top: 4px;
-}
-
-@media (max-width: 640px) {
-  .pedido {
-    flex-direction: column;
-  }
-
-  .pedido__lado {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    width: 100%;
-  }
 }

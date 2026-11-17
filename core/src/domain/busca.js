@@ -104,10 +104,10 @@ const ATALHOS = [
     id: 'tela-insumos-pedidos',
     grupo: 'Telas',
     titulo: 'Insumos',
-    detalhe: 'Os pedidos de material da equipe, para atender (Área admin)',
+    detalhe: 'Os pedidos de material da equipe, para aprovar ou reprovar (Área admin)',
     rota: '/app/insumos/pedidos',
     permissao: 'gerenciar_insumos',
-    termos: 'insumos pedidos da equipe atender recusar material',
+    termos: 'insumos pedidos da equipe aprovar reprovar atender recusar excluir material',
   },
   /* a Area da qualidade (atualizacao 58) */
   {

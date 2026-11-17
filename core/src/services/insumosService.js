@@ -25,7 +25,10 @@ export async function responderPedido(id, { situacao, resposta }) {
   return pedido
 }
 
-/** Cancela o proprio pedido, enquanto pendente. */
-export function cancelarPedido(id) {
+/**
+ * Apaga o pedido: o proprio, enquanto pendente (o "Cancelar pedido"), ou
+ * qualquer um, em qualquer situacao, com `gerenciar_insumos` (o "Excluir").
+ */
+export function excluirPedido(id) {
   return del(`/insumos/${encodeURIComponent(id)}`)
 }

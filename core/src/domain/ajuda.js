@@ -148,10 +148,10 @@ export const ASSUNTOS = [
     gatilhos: ['insumo', 'insumos', 'material', 'pedido', 'pedir', 'escritorio', 'limpeza'],
     resposta:
       'Em Seu espaço > Pedir insumos, use "Novo pedido": diga o que você precisa, a quantidade e, se quiser, ' +
-      'uma observação. O pedido fica na lista com a situação (pendente, atendido ou recusado) e a resposta de ' +
-      'quem atendeu; enquanto estiver pendente, dá para cancelar. Quem tem a permissão "Atender os pedidos de ' +
-      'insumos de todos" vê, em Área admin > Insumos, os pedidos da equipe e marca cada um como atendido ou ' +
-      'recusa com o motivo.',
+      'uma observação. A situação aparece no canto de cada pedido: pendente até alguém aprovar ou reprovar, e ' +
+      'depois o resultado. Enquanto estiver pendente, dá para cancelar; depois da resposta, não. Quem tem a ' +
+      'permissão "Aprovar / reprovar pedidos de insumos" vê, em Área admin > Insumos, os pedidos da equipe, ' +
+      'aprova ou reprova cada um (a reprovação pede o motivo) e é o único que pode excluir um pedido.',
   },
   {
     id: 'qualidade-documentos',

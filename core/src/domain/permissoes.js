@@ -188,9 +188,9 @@ export const ALTERACAO = [
   /* os valores pre-definidos do reembolso (almoco, janta, bonus
      apartamento...) e quais tipos sao pre-definidos */
   { chave: 'definir_valores_reembolso', rotulo: 'Editar valores pré-definidos', dependeDe: 'ver_despesas' },
-  /* a lista de TODOS os pedidos de insumos (Area admin > Insumos): marcar
-     como atendido, recusar com o motivo ou reabrir (atualizacao 57) */
-  { chave: 'gerenciar_insumos', rotulo: 'Atender os pedidos de insumos de todos', dependeDe: 'ver_insumos' },
+  /* a lista de TODOS os pedidos de insumos (Area admin > Insumos): aprovar,
+     reprovar com o motivo, reabrir e excluir (atualizacao 57) */
+  { chave: 'gerenciar_insumos', rotulo: 'Aprovar / reprovar pedidos de insumos', dependeDe: 'ver_insumos' },
   /* Frotas: ver a aba e os registros de todos os veiculos e
      `ver_frotas`; dar SAIDA e DEVOLUCAO e `registrar_frota`;
      cadastrar e editar os veiculos (e corrigir o KM atual de um

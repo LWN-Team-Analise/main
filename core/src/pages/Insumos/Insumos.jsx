@@ -4,21 +4,24 @@ import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
 import Confirma from '@/components/Confirma/Confirma'
 import { CampoArea, CampoTexto } from '@/components/Campo/Campo'
+import { useDados } from '@/context/DadosContext'
 import { dataHora } from '@/utils/formato'
-import { cancelarPedido, carregarPedidos, pedirInsumo, responderPedido } from '@/services/insumosService'
+import { carregarPedidos, excluirPedido, pedirInsumo, responderPedido } from '@/services/insumosService'
 import './Insumos.css'
 
+/* no banco a situacao continua 'atendido' e 'recusado'; a tela diz
+   aprovado e reprovado */
 const SITUACAO = {
   pendente: 'Pendente',
-  atendido: 'Atendido',
-  recusado: 'Recusado',
+  atendido: 'Aprovado',
+  recusado: 'Reprovado',
 }
 
 /* os filtros da lista de todos: os pendentes primeiro, que sao o trabalho */
 const FILTROS = [
   { id: 'pendente', rotulo: 'Pendentes' },
-  { id: 'atendido', rotulo: 'Atendidos' },
-  { id: 'recusado', rotulo: 'Recusados' },
+  { id: 'atendido', rotulo: 'Aprovados' },
+  { id: 'recusado', rotulo: 'Reprovados' },
   { id: 'todos', rotulo: 'Todos' },
 ]
 
@@ -35,14 +38,16 @@ const Mais = () => (
  *
  *   "Pedir insumos" (/app/insumos, no Seu espaco): o Novo pedido (o que
  *   precisa, quantos e uma observacao) e a lista dos proprios pedidos,
- *   com a situacao e a resposta de quem atendeu. O pendente ainda pode
- *   ser cancelado.
+ *   com a situacao no canto e a resposta de quem decidiu. O pendente
+ *   ainda pode ser cancelado; o respondido, nao.
  *
  *   "Insumos" (/app/insumos/pedidos, `equipe`, na Area admin): os pedidos
- *   de todo mundo, para quem tem `gerenciar_insumos` marcar como atendido,
- *   recusar com o motivo ou reabrir.
+ *   de todo mundo, para quem tem `gerenciar_insumos` aprovar, reprovar
+ *   com o motivo, reabrir ou excluir. Excluir e so dessa permissao.
  */
 export default function Insumos({ equipe = false }) {
+  const { pode } = useDados()
+  const podeDecidir = pode('gerenciar_insumos')
   const [pedidos, setPedidos] = useState(null)
   const [erro, setErro] = useState('')
   const [filtro, setFiltro] = useState('pendente')
@@ -50,6 +55,7 @@ export default function Insumos({ equipe = false }) {
   /* o pedido sendo respondido: { pedido, situacao } */
   const [respondendo, setRespondendo] = useState(null)
   const [cancelando, setCancelando] = useState(null)
+  const [excluindo, setExcluindo] = useState(null)
   const [aviso, setAviso] = useState('')
 
   const ler = useCallback(async () => {
@@ -98,13 +104,12 @@ export default function Insumos({ equipe = false }) {
     }
   }
 
-  const cancelar = async () => {
-    const pedido = cancelando
-    setCancelando(null)
+  /* cancelar (o proprio, pendente) e excluir (quem decide) apagam igual */
+  const apagar = async (pedido, recado) => {
     try {
-      await cancelarPedido(pedido.id)
+      await excluirPedido(pedido.id)
       setPedidos((lista) => (lista ?? []).filter((p) => p.id !== pedido.id))
-      setAviso('Pedido cancelado.')
+      setAviso(recado)
     } catch (falha) {
       setAviso(falha.message)
       ler()
@@ -119,7 +124,7 @@ export default function Insumos({ equipe = false }) {
             <h1 className="tela__titulo">{equipe ? 'Insumos' : 'Pedir insumos'}</h1>
             <p className="tela__lead">
               {equipe
-                ? 'Os pedidos de material da equipe. Marque como atendido ou recuse com o motivo.'
+                ? 'Os pedidos de material da equipe. Aprove ou reprove cada um; a reprovação pede o motivo.'
                 : 'Peça o material de que precisa e acompanhe aqui a resposta.'}
             </p>
           </div>
@@ -176,65 +181,81 @@ export default function Insumos({ equipe = false }) {
           </div>
         ) : (
           <ul className="insumos__lista">
-            {visiveis.map((p) => (
-              <li key={p.id} className="pedido" data-situacao={p.situacao}>
-                <div className="pedido__miolo">
-                  <p className="pedido__item">
-                    <strong>{p.item}</strong>
-                    <span className="pedido__qtd">
-                      {p.quantidade} {p.quantidade === 1 ? 'unidade' : 'unidades'}
+            {visiveis.map((p) => {
+              const pendente = p.situacao === 'pendente'
+              const decide = equipe && podeDecidir
+              /* o dono cancela enquanto esta pendente; respondido, so quem
+                 aprova e reprova mexe — e e o unico que exclui */
+              const podeCancelar = !equipe && pendente
+              const podeExcluir = podeDecidir && (equipe || !pendente)
+              return (
+                <li key={p.id} className="pedido" data-situacao={p.situacao}>
+                  {/* a situacao no canto de cima, a direita: Pendente ate a
+                      decisao, e depois o resultado */}
+                  <div className="pedido__cabeca">
+                    <p className="pedido__item">
+                      <strong>{p.item}</strong>
+                      <span className="pedido__qtd">
+                        {p.quantidade} {p.quantidade === 1 ? 'unidade' : 'unidades'}
+                      </span>
+                    </p>
+                    <span className="pedido__situacao" data-situacao={p.situacao}>
+                      {SITUACAO[p.situacao]}
                     </span>
-                  </p>
+                  </div>
                   <p className="pedido__meta">
                     {equipe && <span className="pedido__quem">{p.usuarioNome}</span>}
                     <span>Pedido em {dataHora(p.criadoEm)}</span>
                   </p>
                   {p.observacao && <p className="pedido__obs">{p.observacao}</p>}
-                  {p.situacao !== 'pendente' && (
+                  {!pendente && (
                     <p className="pedido__resposta">
-                      {SITUACAO[p.situacao]}
-                      {p.respondidoPorNome ? ` por ${p.respondidoPorNome}` : ''}
+                      {p.respondidoPorNome ? `Por ${p.respondidoPorNome}` : 'Respondido'}
                       {p.respondidoEm ? ` em ${dataHora(p.respondidoEm)}` : ''}
-                      {p.resposta ? `: ${p.resposta}` : ''}
+                      {p.resposta ? ` — ${p.resposta}` : ''}
                     </p>
                   )}
-                </div>
 
-                <div className="pedido__lado">
-                  <span className="pedido__situacao" data-situacao={p.situacao}>
-                    {SITUACAO[p.situacao]}
-                  </span>
-                  {equipe && p.situacao === 'pendente' && (
+                  {(decide || podeCancelar || podeExcluir) && (
                     <div className="pedido__acoes">
-                      <button
-                        type="button"
-                        className="acao acao--padrao"
-                        onClick={() => setRespondendo({ pedido: p, situacao: 'atendido' })}
-                      >
-                        Atendido
-                      </button>
-                      <button
-                        type="button"
-                        className="acao acao--fraca"
-                        onClick={() => setRespondendo({ pedido: p, situacao: 'recusado' })}
-                      >
-                        Recusar
-                      </button>
+                      {decide && pendente && (
+                        <>
+                          <button
+                            type="button"
+                            className="acao acao--padrao"
+                            onClick={() => setRespondendo({ pedido: p, situacao: 'atendido' })}
+                          >
+                            Aprovar
+                          </button>
+                          <button
+                            type="button"
+                            className="acao acao--fraca"
+                            onClick={() => setRespondendo({ pedido: p, situacao: 'recusado' })}
+                          >
+                            Reprovar
+                          </button>
+                        </>
+                      )}
+                      {decide && !pendente && (
+                        <button type="button" className="acao acao--fraca" onClick={() => reabrir(p)}>
+                          Reabrir
+                        </button>
+                      )}
+                      {podeCancelar && (
+                        <button type="button" className="acao acao--fraca" onClick={() => setCancelando(p)}>
+                          Cancelar pedido
+                        </button>
+                      )}
+                      {podeExcluir && (
+                        <button type="button" className="acao acao--fraca pedido__excluir" onClick={() => setExcluindo(p)}>
+                          Excluir
+                        </button>
+                      )}
                     </div>
                   )}
-                  {equipe && p.situacao !== 'pendente' && (
-                    <button type="button" className="acao acao--fraca" onClick={() => reabrir(p)}>
-                      Reabrir
-                    </button>
-                  )}
-                  {!equipe && p.situacao === 'pendente' && (
-                    <button type="button" className="acao acao--fraca" onClick={() => setCancelando(p)}>
-                      Cancelar pedido
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))}
+                </li>
+              )
+            })}
           </ul>
         )}
       </section>
@@ -253,17 +274,34 @@ export default function Insumos({ equipe = false }) {
         aoFechar={() => setRespondendo(null)}
         aoResponder={(pedido) => {
           trocar(pedido)
-          setAviso(`Pedido de ${pedido.usuarioNome} ${pedido.situacao === 'atendido' ? 'atendido' : 'recusado'}.`)
+          setAviso(`Pedido de ${pedido.usuarioNome} ${pedido.situacao === 'atendido' ? 'aprovado' : 'reprovado'}.`)
         }}
       />
 
       <Confirma
         aberto={Boolean(cancelando)}
         titulo="Cancelar pedido"
-        mensagem={cancelando ? `O pedido de "${cancelando.item}" sai da lista de quem atende.` : ''}
+        mensagem={cancelando ? `O pedido de "${cancelando.item}" sai da lista de quem aprova.` : ''}
         rotuloConfirmar="Cancelar pedido"
-        aoConfirmar={cancelar}
+        aoConfirmar={() => {
+          const pedido = cancelando
+          setCancelando(null)
+          apagar(pedido, 'Pedido cancelado.')
+        }}
         aoFechar={() => setCancelando(null)}
+      />
+
+      <Confirma
+        aberto={Boolean(excluindo)}
+        titulo="Excluir pedido"
+        mensagem={excluindo ? `O pedido de "${excluindo.item}" (${excluindo.usuarioNome}) é apagado de vez.` : ''}
+        rotuloConfirmar="Excluir pedido"
+        aoConfirmar={() => {
+          const pedido = excluindo
+          setExcluindo(null)
+          apagar(pedido, 'Pedido excluído.')
+        }}
+        aoFechar={() => setExcluindo(null)}
       />
     </AppShell>
   )
@@ -352,7 +390,7 @@ function ModalNovoPedido({ aberto, aoFechar, aoPedir }) {
   )
 }
 
-/** Atender (com um recado opcional) ou recusar (com o motivo). */
+/** Aprovar (com um recado opcional) ou reprovar (com o motivo). */
 function ModalResposta({ alvo, aoFechar, aoResponder }) {
   const [resposta, setResposta] = useState('')
   const [erro, setErro] = useState('')
@@ -368,7 +406,7 @@ function ModalResposta({ alvo, aoFechar, aoResponder }) {
   const enviar = async (e) => {
     e.preventDefault()
     const texto = resposta.trim()
-    if (recusa && !texto) return setErro('Diga o motivo da recusa.')
+    if (recusa && !texto) return setErro('Diga o motivo da reprovação.')
     setSalvando(true)
     try {
       const pedido = await responderPedido(alvo.pedido.id, { situacao: alvo.situacao, resposta: texto })
@@ -385,13 +423,13 @@ function ModalResposta({ alvo, aoFechar, aoResponder }) {
     <Modal
       aberto={Boolean(alvo)}
       aoFechar={aoFechar}
-      titulo={recusa ? 'Recusar pedido' : 'Pedido atendido'}
+      titulo={recusa ? 'Reprovar pedido' : 'Aprovar pedido'}
       subtitulo={alvo ? `${alvo.pedido.item} · ${alvo.pedido.usuarioNome}` : ''}
       largura={460}
     >
       <form className="insumos__form" onSubmit={enviar} noValidate>
         <CampoArea
-          rotulo={recusa ? 'Motivo da recusa' : 'Recado (opcional)'}
+          rotulo={recusa ? 'Motivo da reprovação' : 'Recado (opcional)'}
           placeholder={recusa ? 'Ex.: Já temos no almoxarife, retire lá' : 'Ex.: Deixei na sua mesa'}
           maxLength={500}
           value={resposta}
@@ -404,7 +442,7 @@ function ModalResposta({ alvo, aoFechar, aoResponder }) {
         />
         <footer className="insumos__rodape">
           <Button type="submit" loading={salvando}>
-            {recusa ? 'Recusar' : 'Marcar como atendido'}
+            {recusa ? 'Reprovar' : 'Aprovar'}
           </Button>
         </footer>
       </form>
