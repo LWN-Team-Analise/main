@@ -244,6 +244,10 @@ const paraCliente = (l) => ({
      false = o Reembolso nao aceita bonus para ele. A unidade sem resposta
      propria vale a do cliente */
   bonusApartamento: typeof l.bonus_apartamento === 'boolean' ? l.bonus_apartamento : null,
+  /* "Onde o colaborador fica?" ('hotel' ou 'airbnb') e "Fatura so depois
+     do documento digital liberado?" (atualizacao 59), do mesmo jeito */
+  hospedagem: l.hospedagem === 'hotel' || l.hospedagem === 'airbnb' ? l.hospedagem : null,
+  faturaAposDocumento: typeof l.fatura_apos_documento === 'boolean' ? l.fatura_apos_documento : null,
   criadoEm: l.criado_em,
 })
 
@@ -299,6 +303,13 @@ const COLUNAS_CLIENTE_53 = COLUNAS_CLIENTE.replace(
   ' c.servico, coalesce(c.bonus_apartamento, i.bonus_apartamento) AS bonus_apartamento,',
 )
 
+/* com a hospedagem e o faturamento apos o documento (atualizacao 59) */
+const COLUNAS_CLIENTE_59 = COLUNAS_CLIENTE_53.replace(
+  ' c.servico,',
+  ` c.servico, coalesce(c.hospedagem, i.hospedagem) AS hospedagem,
+    coalesce(c.fatura_apos_documento, i.fatura_apos_documento) AS fatura_apos_documento,`,
+)
+
 /* banco com o servico das unidades e sem o pais (sem a atualizacao 35) */
 const COLUNAS_CLIENTE_34 = COLUNAS_CLIENTE_38.replace(' c.pais,', '')
 
@@ -319,11 +330,21 @@ async function lerClientes(imagens) {
     query(
       /* os prioritarios (as unidades da LWN, atualizacao 23) primeiro, na
          ordem deles; cada unidade logo depois do cliente dela */
-      `SELECT ${COLUNAS_CLIENTE_53}${imagens ? ', i.logo, i.capa' : ''}
+      `SELECT ${COLUNAS_CLIENTE_59}${imagens ? ', i.logo, i.capa' : ''}
          FROM cliente c
          JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
         ${ORDEM_CLIENTES}`,
     )
+      .catch((erro) => {
+        /* banco sem a hospedagem e o faturamento (atualizacao 59) */
+        if (erro.code !== '42703') throw erro
+        return query(
+          `SELECT ${COLUNAS_CLIENTE_53}${imagens ? ', i.logo, i.capa' : ''}
+             FROM cliente c
+             JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
+            ${ORDEM_CLIENTES}`,
+        )
+      })
       .catch((erro) => {
         /* banco sem o bonus apartamento (atualizacao 53) */
         if (erro.code !== '42703') throw erro
@@ -1507,6 +1528,20 @@ function lerExtrasDoCliente(corpo) {
           ? corpo.bonusApartamento
           : null
         : undefined,
+    /* "Onde o colaborador fica?" e "Fatura so depois do documento?"
+       (atualizacao 59), do mesmo jeito */
+    hospedagem:
+      corpo && 'hospedagem' in corpo
+        ? ['hotel', 'airbnb'].includes(corpo.hospedagem)
+          ? corpo.hospedagem
+          : null
+        : undefined,
+    faturaAposDocumento:
+      corpo && 'faturaAposDocumento' in corpo
+        ? typeof corpo.faturaAposDocumento === 'boolean'
+          ? corpo.faturaAposDocumento
+          : null
+        : undefined,
   }
 }
 
@@ -1520,6 +1555,14 @@ async function gravarAlimentacao(clienteId, valor) {
 /* banco sem a atualizacao 53: o resto do cadastro grava, sem a resposta */
 async function gravarBonusApartamento(clienteId, valor) {
   await query('UPDATE cliente SET bonus_apartamento = $2 WHERE id = $1', [clienteId, valor]).catch((erro) => {
+    if (erro.code !== '42703') throw erro
+  })
+}
+
+/* banco sem a atualizacao 59: o resto do cadastro grava, sem a resposta.
+   `coluna` vem so daqui de dentro, nunca do corpo */
+async function gravarCampoDoCliente(clienteId, coluna, valor) {
+  await query(`UPDATE cliente SET ${coluna} = $2 WHERE id = $1`, [clienteId, valor]).catch((erro) => {
     if (erro.code !== '42703') throw erro
   })
 }
@@ -1554,6 +1597,10 @@ async function gravarExtrasDoCliente(clienteId, extras, { novo, usuarioId }) {
     })
     if (extras.ofereceAlimentacao !== undefined) await gravarAlimentacao(clienteId, extras.ofereceAlimentacao)
     if (extras.bonusApartamento !== undefined) await gravarBonusApartamento(clienteId, extras.bonusApartamento)
+    if (extras.hospedagem !== undefined) await gravarCampoDoCliente(clienteId, 'hospedagem', extras.hospedagem)
+    if (extras.faturaAposDocumento !== undefined) {
+      await gravarCampoDoCliente(clienteId, 'fatura_apos_documento', extras.faturaAposDocumento)
+    }
   } catch (erro) {
     /* banco ainda sem a atualizacao 27: o cadastro em si ja foi gravado */
     if (erro.code === '42P01' || erro.code === '42703') return

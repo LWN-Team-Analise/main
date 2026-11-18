@@ -149,6 +149,23 @@
   overflow-wrap: anywhere;
 }
 
+/* o que o cadastro do cliente diz (refeicao, hospedagem, faturamento) */
+.capa__docliente {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+}
+
+.capa__docliente span {
+  padding: 3px 10px;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0.92;
+}
+
 /* ---------------- Faixa de informacoes ---------------- */
 
 .infos {

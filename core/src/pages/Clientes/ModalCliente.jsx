@@ -61,6 +61,11 @@ const VAZIO = {
   /* "O colaborador tem direito a bônus apartamento?" (atualizacao 53):
      true, false ou null. Com o nao, o Reembolso nao aceita bonus para ele */
   bonusApartamento: null,
+  /* "Onde o colaborador fica?" ('hotel', 'airbnb' ou null) e "Fatura so
+     depois do documento digital liberado?" (true, false ou null) —
+     atualizacao 59 */
+  hospedagem: null,
+  faturaAposDocumento: null,
   /* as unidades (atualizacao 33): Einstein Anapolis, Einstein Alphaville... */
   unidades: [],
   /* a UNIDADE cadastrada ou editada sozinha: o cliente dela (o "Unidade
@@ -76,6 +81,16 @@ const UNIDADE_VAZIA = { id: null, unidade: '', pais: PAIS_PADRAO, cep: '', ender
 let proximaChave = 0
 const novaChave = () => `u${(proximaChave += 1)}`
 const emailCerto = (email) => /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)
+
+/* as respostas das perguntas do atendimento (Pergunta, la embaixo) */
+const SIM_NAO = [
+  { valor: true, rotulo: 'sim' },
+  { valor: false, rotulo: 'não' },
+]
+const HOSPEDAGEM = [
+  { valor: 'hotel', rotulo: 'hotel' },
+  { valor: 'airbnb', rotulo: 'Airbnb' },
+]
 
 /* o endereco de um cadastro (do cliente ou de uma unidade), sem o resto */
 const enderecoDe = (origem) => ({
@@ -161,6 +176,8 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
               proximoContato: cliente.proximoContato ?? '',
               ofereceAlimentacao: typeof cliente.ofereceAlimentacao === 'boolean' ? cliente.ofereceAlimentacao : null,
               bonusApartamento: typeof cliente.bonusApartamento === 'boolean' ? cliente.bonusApartamento : null,
+              hospedagem: cliente.hospedagem ?? null,
+              faturaAposDocumento: typeof cliente.faturaAposDocumento === 'boolean' ? cliente.faturaAposDocumento : null,
               pessoas: (cliente.pessoas ?? []).map((p) => ({ ...PESSOA_VAZIA, ...p })),
               matrizId: cliente.matrizId ?? '',
               unidade: cliente.unidade ?? '',
@@ -227,6 +244,8 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
       proximoContato: escolhido.proximoContato ?? '',
       ofereceAlimentacao: typeof escolhido.ofereceAlimentacao === 'boolean' ? escolhido.ofereceAlimentacao : null,
       bonusApartamento: typeof escolhido.bonusApartamento === 'boolean' ? escolhido.bonusApartamento : null,
+      hospedagem: escolhido.hospedagem ?? null,
+      faturaAposDocumento: typeof escolhido.faturaAposDocumento === 'boolean' ? escolhido.faturaAposDocumento : null,
       /* copias: as pessoas da unidade sao dela, sem mexer nas do cliente */
       pessoas: (escolhido.pessoas ?? []).map((p) => ({ ...PESSOA_VAZIA, ...p, id: null })),
     })
@@ -442,6 +461,8 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
         proximoContato: form.proximoContato || null,
         ofereceAlimentacao: form.ofereceAlimentacao,
         bonusApartamento: form.bonusApartamento,
+        hospedagem: form.hospedagem,
+        faturaAposDocumento: form.faturaAposDocumento,
       })
       aoFechar()
       return
@@ -466,6 +487,8 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
     campos.fixado = Boolean(form.fixado)
     campos.ofereceAlimentacao = form.ofereceAlimentacao
     campos.bonusApartamento = form.bonusApartamento
+    campos.hospedagem = form.hospedagem
+    campos.faturaAposDocumento = form.faturaAposDocumento
     campos.proprietarioId = form.proprietarioId || null
     campos.proximoContato = form.proximoContato || null
     /* a imagem viaja em bloco, e SO quando alguem mexeu nela: os dois
@@ -635,49 +658,39 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
           </>
         )}
 
-        {/* "Oferece alimentação?" (atualizacao 39): o sim tira o "Enviar
-            refeição" do Reembolso para as obras deste cliente; marcar de
-            novo o que ja estava marcado volta a "sem resposta" */}
-        <div className="formcli__alimentacao" role="group" aria-label="Oferece alimentação?">
-          <span className="campo__rotulo">Oferece alimentação?</span>
-          {[
-            { valor: true, rotulo: 'sim' },
-            { valor: false, rotulo: 'não' },
-          ].map((opcao) => (
-            <label key={opcao.rotulo} className="formcli__fixar">
-              <input
-                type="checkbox"
-                checked={form.ofereceAlimentacao === opcao.valor}
-                onChange={(e) =>
-                  setForm((atual) => ({ ...atual, ofereceAlimentacao: e.target.checked ? opcao.valor : null }))
-                }
-              />
-              <span>{opcao.rotulo}</span>
-            </label>
-          ))}
-        </div>
-
-        {/* "O colaborador tem direito a bônus apartamento?" (atualizacao 53):
-            o nao tira este cliente do "Enviar bônus" do Reembolso; marcar de
-            novo o que ja estava marcado volta a "sem resposta" */}
-        <div className="formcli__alimentacao" role="group" aria-label="O colaborador tem direito a bônus apartamento?">
-          <span className="campo__rotulo">O colaborador tem direito a bônus apartamento?</span>
-          {[
-            { valor: true, rotulo: 'sim' },
-            { valor: false, rotulo: 'não' },
-          ].map((opcao) => (
-            <label key={opcao.rotulo} className="formcli__fixar">
-              <input
-                type="checkbox"
-                checked={form.bonusApartamento === opcao.valor}
-                onChange={(e) =>
-                  setForm((atual) => ({ ...atual, bonusApartamento: e.target.checked ? opcao.valor : null }))
-                }
-              />
-              <span>{opcao.rotulo}</span>
-            </label>
-          ))}
-        </div>
+        {/* As perguntas do atendimento. Marcar de novo o que ja estava
+            marcado volta a "sem resposta".
+              - "Oferece alimentação?" (atualizacao 39): o sim tira o
+                "Enviar refeição" do Reembolso para as obras deste cliente;
+              - "bônus apartamento" (atualizacao 53): o nao tira este
+                cliente do "Enviar bônus" do Reembolso;
+              - "Onde o colaborador fica?" e "Fatura só depois do documento
+                digital liberado?" (atualizacao 59): informacao para o
+                Administrativo e o faturamento */}
+        <Pergunta
+          rotulo="Oferece alimentação?"
+          opcoes={SIM_NAO}
+          valor={form.ofereceAlimentacao}
+          aoMudar={(valor) => setForm((atual) => ({ ...atual, ofereceAlimentacao: valor }))}
+        />
+        <Pergunta
+          rotulo="O colaborador tem direito a bônus apartamento?"
+          opcoes={SIM_NAO}
+          valor={form.bonusApartamento}
+          aoMudar={(valor) => setForm((atual) => ({ ...atual, bonusApartamento: valor }))}
+        />
+        <Pergunta
+          rotulo="Onde o colaborador fica?"
+          opcoes={HOSPEDAGEM}
+          valor={form.hospedagem}
+          aoMudar={(valor) => setForm((atual) => ({ ...atual, hospedagem: valor }))}
+        />
+        <Pergunta
+          rotulo="Fatura só depois do documento digital liberado?"
+          opcoes={SIM_NAO}
+          valor={form.faturaAposDocumento}
+          aoMudar={(valor) => setForm((atual) => ({ ...atual, faturaAposDocumento: valor }))}
+        />
 
         {/* o endereco do cliente; com unidade ele some, e cada unidade
             tem o seu (la embaixo) */}
@@ -845,6 +858,28 @@ export default function ModalCliente({ aberto, cliente = null, resumo = null, no
         aoFechar={() => setAjustando(null)}
       />
     </Modal>
+  )
+}
+
+/**
+ * Uma pergunta de uma resposta so, em caixinhas: marcar uma desmarca a
+ * outra, e marcar de novo a que ja estava volta a "sem resposta" (null).
+ */
+function Pergunta({ rotulo, opcoes, valor, aoMudar }) {
+  return (
+    <div className="formcli__alimentacao" role="group" aria-label={rotulo}>
+      <span className="campo__rotulo">{rotulo}</span>
+      {opcoes.map((opcao) => (
+        <label key={opcao.rotulo} className="formcli__fixar">
+          <input
+            type="checkbox"
+            checked={valor === opcao.valor}
+            onChange={(e) => aoMudar(e.target.checked ? opcao.valor : null)}
+          />
+          <span>{opcao.rotulo}</span>
+        </label>
+      ))}
+    </div>
   )
 }
 

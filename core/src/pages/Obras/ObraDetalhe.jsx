@@ -256,6 +256,14 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
 
   const cliente = clientePorId(obra.clienteId)
   const nomeDaObra = tituloDaObra(obra, cliente)
+  /* o que o Comercial respondeu no cadastro do cliente (atualizacoes 39 e
+     59): a refeicao, a hospedagem e o faturamento, para quem toca a obra */
+  const doCliente = [
+    cliente?.ofereceAlimentacao === true && 'Cliente oferece alimentação',
+    cliente?.ofereceAlimentacao === false && 'Cliente não oferece alimentação',
+    cliente?.hospedagem && `Colaborador fica em ${cliente.hospedagem === 'airbnb' ? 'Airbnb' : 'hotel'}`,
+    cliente?.faturaAposDocumento === true && 'Fatura só após o documento digital liberado',
+  ].filter(Boolean)
   /* a trava vale pela ROTA (aba Concluídas) ou pela própria obra estar
      encerrada — o que vier primeiro */
   const soLeitura = somenteLeitura || concluida(obra)
@@ -652,6 +660,14 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
             <p className="capa__desc">
               {obra.descricao || <em className="capa__semdesc">sem descrição</em>}
             </p>
+
+            {doCliente.length > 0 && (
+              <p className="capa__docliente">
+                {doCliente.map((texto) => (
+                  <span key={texto}>{texto}</span>
+                ))}
+              </p>
+            )}
 
             {marcas.length > 0 && (
               <span className="capa__etiquetas">

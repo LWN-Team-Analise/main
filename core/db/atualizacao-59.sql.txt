@@ -1,0 +1,47 @@
+-- ============================================================
+--  ATUALIZACAO 59 — os pedidos da supervisora (18/11)
+--
+--  Uma atualizacao so para o dia, uma parte por assunto. Tudo aqui pode
+--  rodar de novo sem quebrar nem duplicar nada: se uma parte nova entrar
+--  depois, basta rodar o arquivo inteiro outra vez.
+--
+--  1. CLIENTE: onde o colaborador fica e o faturamento
+--     cliente.hospedagem — "Onde o colaborador fica?": 'hotel' ou
+--     'airbnb'. NULL = sem resposta (a unidade sem resposta propria vale
+--     a do cliente, como o "Oferece alimentacao?").
+--     cliente.fatura_apos_documento — "Fatura so depois do documento
+--     digital liberado?": true, false ou NULL (sem resposta).
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+-- ============================================================
+
+BEGIN;
+
+-- ---------------- 1. CLIENTE ----------------
+
+ALTER TABLE public.cliente ADD COLUMN IF NOT EXISTS hospedagem text;
+ALTER TABLE public.cliente DROP CONSTRAINT IF EXISTS cliente_hospedagem_ok;
+ALTER TABLE public.cliente ADD CONSTRAINT cliente_hospedagem_ok
+    CHECK (hospedagem IS NULL OR hospedagem IN ('hotel', 'airbnb'));
+
+COMMENT ON COLUMN public.cliente.hospedagem IS
+    'Onde o colaborador fica na obra deste cliente: hotel ou airbnb. NULL = sem resposta (a unidade vale a do cliente).';
+
+ALTER TABLE public.cliente ADD COLUMN IF NOT EXISTS fatura_apos_documento boolean;
+
+COMMENT ON COLUMN public.cliente.fatura_apos_documento IS
+    'O cliente so fatura depois do documento digital liberado? NULL = sem resposta (a unidade vale a do cliente).';
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'cliente.hospedagem' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'cliente' AND column_name = 'hospedagem') AS ok
+UNION ALL SELECT 'cliente.fatura_apos_documento',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'cliente' AND column_name = 'fatura_apos_documento');

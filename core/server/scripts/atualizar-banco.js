@@ -105,6 +105,9 @@ const ARQUIVOS = [
   /* o Faturar espera o Administrativo, os tipos dos Turnos (ferias,
      atestado, folga, dia nao operacional) e a Area da qualidade */
   'db/atualizacao-58.sql.txt',
+  /* os pedidos da supervisora de 18/11, uma parte por assunto (roda de novo
+     sem problema quando uma parte nova entra) */
+  'db/atualizacao-59.sql.txt',
 ]
 
 /**
@@ -302,6 +305,8 @@ const CONFERENCIA = [
   ['correio_solicitacao (Qualidade)', "SELECT to_regclass('public.correio_solicitacao') IS NOT NULL AS ok"],
   ['ver_documentos no acesso total', permissaoNoAcessoTotal('ver_documentos')],
   ['gerenciar_correio no acesso total', permissaoNoAcessoTotal('gerenciar_correio')],
+  ['cliente.hospedagem (hotel ou Airbnb)', col('cliente', 'hospedagem')],
+  ['cliente.fatura_apos_documento', col('cliente', 'fatura_apos_documento')],
 ]
 
 function col(tabela, coluna) {
