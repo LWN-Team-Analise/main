@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useDados } from '@/context/DadosContext'
-import { chaveDoCargo, checksExigidos, diasAte, progressoDaObra, situacaoDaObra } from '@/domain/obras'
+import { chaveDoCargo, checksExigidos, diasAte, obraCancelada, progressoDaObra, situacaoDaObra } from '@/domain/obras'
 import { hojeISO } from '@/utils/formato'
 import { Colunas, Linha, Rosca } from './graficos'
 import PainelDespesas from './PainelDespesas'
@@ -124,8 +124,10 @@ export default function Painel({ mes, passo = 'mes', secao = 'todos' }) {
   const fatiaDoCarimbo = (carimbo) =>
     passo === 'ano' ? mesDoCarimbo(carimbo) : soDia(carimbo)
 
+  /* a cancelada (atualizacao 59) tambem fecha, mas nao foi entregue: fica
+     fora das contas de obra concluida */
   const fechadas = useMemo(
-    () => obras.filter((o) => concluida(o) && noMes(o.concluidaEm)),
+    () => obras.filter((o) => concluida(o) && !obraCancelada(o) && noMes(o.concluidaEm)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [obras, concluida, mes.chave],
   )

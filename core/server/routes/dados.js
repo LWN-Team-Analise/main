@@ -18,6 +18,7 @@ import { bytesDoDataUrl, guardarAnexoDaObra, sharepointConfigurado } from '../sh
 import { notificar, pessoasDosSetores, todosAtivos } from '../push.js'
 import { IMAGEM_INVALIDA, imagemValida } from '../utils/imagem.js'
 import { proximaProposta } from '../../src/domain/proposta.js'
+import { MOTIVOS_CANCELAMENTO, motivoDoCancelamento } from '../../src/domain/obras.js'
 import {
   SERVICO_MAXIMO,
   UNIDADES_MAXIMO,
@@ -844,6 +845,9 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
           : String(o.concluida_por),
       concluidaPorNome: o.concluida_por_nome ?? null,
       conclusaoObs: o.conclusao_obs ?? '',
+      /* a obra CANCELADA (atualizacao 59): fecha como a concluida, e o
+         motivo e o que a separa. null = nao foi cancelada */
+      cancelamentoMotivo: o.cancelamento_motivo ?? null,
       checks: checksDaObra[o.id] ?? {},
       prazos: prazosDaObra[o.id] ?? { etapas: {}, checks: {} },
       ensaios: ensaiosDaObra[o.id] ?? [],
@@ -2699,6 +2703,61 @@ router.post('/obras/:id/concluir', exigeSessao, exige('editar_obras'), async (re
     return res.json({ ok: true })
   } catch (e) {
     return tratar(e, res, 'dados/obra-concluir')
+  }
+})
+
+/* ------------------------------------------------------------
+   Cancelar a obra (atualizacao 59)
+
+   So a obra ABERTA, so com o motivo (MOTIVOS_CANCELAMENTO; "Outro"
+   pede a observacao) e so quem tem `cancelar_obras`. Ela fecha como a
+   concluida — o mesmo carimbo, concluida_em, e por isso sai do quadro,
+   trava como a concluida e sai das listas do Almoxarife —, e o motivo
+   gravado e o que a marca como cancelada. Nao conta checks: cancelar e
+   justamente parar no meio.
+   ------------------------------------------------------------ */
+
+router.post('/obras/:id/cancelar', exigeSessao, exige('cancelar_obras'), async (req, res) => {
+  if (!/^\d{1,15}$/.test(String(req.params.id))) return res.status(404).json({ erro: 'Obra não encontrada.' })
+  const motivo = texto(req.body?.motivo)
+  const observacao = texto(req.body?.observacao).slice(0, 1000)
+  if (!MOTIVOS_CANCELAMENTO.some((m) => m.id === motivo)) {
+    return res.status(400).json({ erro: 'Escolha o motivo do cancelamento.', campo: 'motivo' })
+  }
+  if (motivo === 'outro' && !observacao) {
+    return res.status(400).json({ erro: 'Escreva qual foi o motivo.', campo: 'observacao' })
+  }
+
+  try {
+    const obra = await query('SELECT concluida_em FROM obra WHERE id = $1', [req.params.id])
+    if (!obra.rows[0]) return res.status(404).json({ erro: 'Obra não encontrada.' })
+    if (obra.rows[0].concluida_em) {
+      return res.status(409).json({ erro: 'Esta obra já foi encerrada e não pode mais ser cancelada.' })
+    }
+    await query(
+      `UPDATE obra
+          SET concluida_em = now(), concluida_por = $1, conclusao_obs = $2,
+              cancelamento_motivo = $3, atualizado_por = $1
+        WHERE id = $4 AND concluida_em IS NULL`,
+      [req.dono.sub, observacao || null, motivo, req.params.id],
+    )
+    await registrarAtividade(req, {
+      acao: 'obra.cancelada',
+      categoria: 'obra',
+      entidade: ['obra', req.params.id],
+      descricao: 'Obra cancelada',
+      detalhes: {
+        ...(await descreverObra(req.params.id)),
+        motivo: motivoDoCancelamento(motivo),
+        observacao: observacao || null,
+      },
+    })
+    return res.json({ ok: true })
+  } catch (e) {
+    if (e.code === '42703') {
+      return res.status(503).json({ erro: 'O banco ainda não tem o cancelamento de obra (atualização 59 em core/db).' })
+    }
+    return tratar(e, res, 'dados/obra-cancelar')
   }
 })
 

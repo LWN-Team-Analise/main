@@ -12,6 +12,15 @@
 --     cliente.fatura_apos_documento — "Fatura so depois do documento
 --     digital liberado?": true, false ou NULL (sem resposta).
 --
+--  2. CANCELAR A OBRA
+--     obra.cancelamento_motivo — por que a obra foi cancelada (a chave da
+--     lista MOTIVOS_CANCELAMENTO, em src/domain/obras.js). A obra
+--     cancelada fecha como a concluida (concluida_em, concluida_por e
+--     conclusao_obs, que guarda a observacao); o motivo preenchido e o
+--     que a marca como cancelada. NULL = nao foi cancelada.
+--     A permissao nova `cancelar_obras` vai, uma vez so, para os setores
+--     que criam obra (`criar_obras`: o Comercial e o acesso total).
+--
 --  SQL simples, sem bloco DO: roda igual no psql, no
 --  `npm run db:atualizar` e no editor de SQL do Neon.
 -- ============================================================
@@ -33,6 +42,27 @@ ALTER TABLE public.cliente ADD COLUMN IF NOT EXISTS fatura_apos_documento boolea
 COMMENT ON COLUMN public.cliente.fatura_apos_documento IS
     'O cliente so fatura depois do documento digital liberado? NULL = sem resposta (a unidade vale a do cliente).';
 
+-- ---------------- 2. CANCELAR A OBRA ----------------
+
+ALTER TABLE public.obra ADD COLUMN IF NOT EXISTS cancelamento_motivo text;
+ALTER TABLE public.obra DROP CONSTRAINT IF EXISTS obra_cancelamento_ok;
+ALTER TABLE public.obra ADD CONSTRAINT obra_cancelamento_ok
+    CHECK (cancelamento_motivo IS NULL OR (concluida_em IS NOT NULL AND char_length(cancelamento_motivo) <= 40));
+
+COMMENT ON COLUMN public.obra.cancelamento_motivo IS
+    'Por que a obra foi cancelada (chave de MOTIVOS_CANCELAMENTO). Preenchido = cancelada; ela fecha como a concluida.';
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['cancelar_obras']
+ WHERE NOT ('cancelar_obras' = ANY (permissoes))
+   AND NOT coalesce(painel_tv, false)
+   AND (acesso_total OR 'criar_obras' = ANY (permissoes))
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_59_cancelar');
+
+INSERT INTO public.configuracao (chave, valor)
+VALUES ('marco_atualizacao_59_cancelar', 'cancelar_obras distribuida a quem cria obra')
+ON CONFLICT (chave) DO NOTHING;
+
 COMMIT;
 
 -- ============================================================
@@ -44,4 +74,9 @@ SELECT 'cliente.hospedagem' AS item,
                 WHERE table_name = 'cliente' AND column_name = 'hospedagem') AS ok
 UNION ALL SELECT 'cliente.fatura_apos_documento',
        EXISTS (SELECT 1 FROM information_schema.columns
-                WHERE table_name = 'cliente' AND column_name = 'fatura_apos_documento');
+                WHERE table_name = 'cliente' AND column_name = 'fatura_apos_documento')
+UNION ALL SELECT 'obra.cancelamento_motivo',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'obra' AND column_name = 'cancelamento_motivo')
+UNION ALL SELECT 'setores com cancelar_obras: ' || count(*), count(*) > 0
+  FROM public.cargo WHERE 'cancelar_obras' = ANY (permissoes);

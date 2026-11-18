@@ -6,7 +6,7 @@ import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
 import { CampoArea } from '@/components/Campo/Campo'
 import { useDados } from '@/context/DadosContext'
-import { tituloDaObra } from '@/domain/obras'
+import { obraCancelada, tituloDaObra } from '@/domain/obras'
 import useCorDaLogo from '@/hooks/useCorDaLogo'
 import { dataBR, dataHora } from '@/utils/formato'
 
@@ -53,7 +53,9 @@ const Lixo = () => (
  * separada) abre no clique.
  */
 export default function Avaliacoes() {
-  const { obras, clientePorId, pessoaPorId } = useDados()
+  const { obras: todas, clientePorId, pessoaPorId } = useDados()
+  /* a obra cancelada (atualizacao 59) nao foi entregue: nao se avalia */
+  const obras = useMemo(() => todas.filter((o) => !obraCancelada(o)), [todas])
   const [filtro, setFiltro] = useState('sem')
   const [abrindo, setAbrindo] = useState(null)
 

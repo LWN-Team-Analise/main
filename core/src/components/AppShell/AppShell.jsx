@@ -502,13 +502,18 @@ const AREAS = [
     /* cada aba abre a tela do Almoxarife DENTRO do Atmosfera, num quadro,
        com este menu (pages/Almoxarife/AlmoxarifeNaArea.jsx). Os atalhos do
        Painel Geral (aprovar, minhas obras, solicitar) acendem o Painel */
-    itens: ALMOX_ABAS.map((aba) => ({
-      ...aba,
-      rota: `/app/almoxarife${aba.caminho}`,
-      exato: !aba.caminho,
-      ...(aba.caminho ? {} : { tambem: ['/app/almoxarife/aprovar', '/app/almoxarife/minhas-obras', '/app/almoxarife/solicitar'] }),
-      Glifo: ICONE_ALMOX[aba.id],
-    })),
+    itens: [
+      ...ALMOX_ABAS.map((aba) => ({
+        ...aba,
+        rota: `/app/almoxarife${aba.caminho}`,
+        exato: !aba.caminho,
+        ...(aba.caminho ? {} : { tambem: ['/app/almoxarife/aprovar', '/app/almoxarife/minhas-obras', '/app/almoxarife/solicitar'] }),
+        Glifo: ICONE_ALMOX[aba.id],
+      })),
+      /* as obras que o Comercial cancelou (atualizacao 59): tela do
+         Atmosfera, fora do quadro do Almoxarife */
+      { id: 'obras-canceladas', icone: 'obras', rotulo: 'Obras canceladas', rota: '/app/obras-canceladas', permissao: 'ver_almoxarife' },
+    ],
   },
   {
     id: 'comercial',

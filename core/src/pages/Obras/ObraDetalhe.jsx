@@ -37,7 +37,9 @@ import {
   ehPropostaTecnica,
   estadoDaEtapaPara,
   janelaDaRetirada,
+  motivoDoCancelamento,
   nomeDoCard,
+  obraCancelada,
   oQueOCheckPede,
   podeEditarCheck,
   podeReservarCarro,
@@ -54,6 +56,7 @@ import { textoSobre } from '@/utils/cor'
 import { dataBR, dataExtensa, dataHora, hojeISO } from '@/utils/formato'
 import ModalCard from './ModalCard'
 import ModalCheck from './ModalCheck'
+import ModalCancelarObra from './ModalCancelarObra'
 import ModalResposta from './ModalResposta'
 import ModalProposta from './ModalProposta'
 import ModalReserva from './ModalReserva'
@@ -210,6 +213,8 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   /* a exclusao da obra concluida — o "sim" que abre a caixa de
      confirmacao, que por sua vez pede o segundo */
   const [apagando, setApagando] = useState(false)
+  /* o cancelamento da obra aberta, com o motivo (atualizacao 59) */
+  const [cancelandoObra, setCancelandoObra] = useState(false)
 
   const obra = obraPorId(id)
 
@@ -661,6 +666,15 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
               {obra.descricao || <em className="capa__semdesc">sem descrição</em>}
             </p>
 
+            {obraCancelada(obra) && (
+              <p className="capa__cancelada">
+                <strong>Cancelada</strong>
+                {obra.concluidaEm ? ` em ${dataHora(obra.concluidaEm)}` : ''}
+                {obra.concluidaPorNome ? ` por ${obra.concluidaPorNome}` : ''}: {motivoDoCancelamento(obra.cancelamentoMotivo)}
+                {obra.conclusaoObs ? ` — ${obra.conclusaoObs}` : ''}
+              </p>
+            )}
+
             {doCliente.length > 0 && (
               <p className="capa__docliente">
                 {doCliente.map((texto) => (
@@ -736,6 +750,18 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                 >
                   <Icone.lixo />
                   Excluir
+                </button>
+              )}
+
+              {/* cancelar e so da obra aberta, e so com o motivo */}
+              {!soLeitura && pode('cancelar_obras') && (
+                <button
+                  type="button"
+                  className="capa__acao capa__acao--perigo"
+                  onClick={() => setCancelandoObra(true)}
+                  title="Cancelar esta obra (pede o motivo)"
+                >
+                  Cancelar obra
                 </button>
               )}
 
@@ -1808,6 +1834,18 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
         clientes={clientes}
         aoFechar={() => setEditandoObra(false)}
         aoSalvar={(campos) => atualizarObra(obra.id, campos)}
+      />
+
+      <ModalCancelarObra
+        aberto={cancelandoObra}
+        obra={obra}
+        nomeDaObra={nomeDaObra}
+        aoFechar={() => setCancelandoObra(false)}
+        aoCancelada={() => {
+          setCancelandoObra(false)
+          /* como no concluir: vai para Concluidas, ou volta ao quadro */
+          navigate(pode('ver_concluidas') ? `/app/concluidas/${obra.id}` : '/app/obras')
+        }}
       />
     </AppShell>
   )

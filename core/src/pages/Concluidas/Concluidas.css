@@ -351,6 +351,19 @@
   color: var(--text-strong);
 }
 
+/* o selo da obra cancelada (atualizacao 59), ao lado do nome */
+.fechada__cancelada {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+
 .fechada__quem span {
   font-size: 0.74rem;
   color: var(--text-faint);

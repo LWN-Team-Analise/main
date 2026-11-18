@@ -1,0 +1,114 @@
+/* ============================================================
+   OBRAS CANCELADAS — na area do Almoxarife (atualizacao 59)
+   ============================================================ */
+
+.canceladas {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  min-width: 0;
+}
+
+.canceladas .tela__lead {
+  margin-bottom: 0;
+}
+
+.canceladas__vazio {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 28px 20px;
+  border: 1px dashed var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.canceladas__vazio strong {
+  color: var(--text-strong);
+  font-size: 0.95rem;
+}
+
+.canceladas__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cancelada {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--glass-border);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.cancelada__cabeca {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.cancelada__quem {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+}
+
+.cancelada__quem strong {
+  color: var(--text-strong);
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.cancelada__quem span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.cancelada__selo {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.cancelada__motivo {
+  margin: 0;
+  color: var(--text-base);
+  font-size: 0.86rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.cancelada__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+/* a OS que ainda existe e o que pede acao do Almoxarife */
+.cancelada__os {
+  color: var(--danger);
+  font-weight: 700;
+}

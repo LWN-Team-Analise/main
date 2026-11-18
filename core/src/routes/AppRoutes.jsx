@@ -25,6 +25,7 @@ import RetornoOutlook from '@/pages/Login/RetornoOutlook'
 import ChatEquipe from '@/pages/Chat/ChatEquipe'
 import Dashboard from '@/pages/Diretoria/Dashboard'
 import Insumos from '@/pages/Insumos/Insumos'
+import ObrasCanceladas from '@/pages/Concluidas/ObrasCanceladas'
 import Documentos from '@/pages/Qualidade/Documentos'
 import Correio from '@/pages/Qualidade/Correio'
 import AlmoxarifeNaArea from '@/pages/Almoxarife/AlmoxarifeNaArea'
@@ -202,6 +203,15 @@ export default function AppRoutes() {
         element={
           <Interna permissao="gerenciar_insumos">
             <Insumos equipe />
+          </Interna>
+        }
+      />
+      {/* as obras canceladas (atualizacao 59), na area do Almoxarife */}
+      <Route
+        path="/app/obras-canceladas"
+        element={
+          <Interna permissao="ver_almoxarife">
+            <ObrasCanceladas />
           </Interna>
         }
       />

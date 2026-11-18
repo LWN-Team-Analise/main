@@ -146,6 +146,9 @@ export const ALTERACAO = [
      mexendo na obra que ja existe (anexos, etiquetas, concluir) */
   { chave: 'criar_obras', rotulo: 'Criar obra', dependeDe: 'ver_obras' },
   { chave: 'editar_obras', rotulo: 'Editar obras', dependeDe: 'ver_obras' },
+  /* cancelar a obra aberta, com o motivo (atualizacao 59): ela fecha como
+     a concluida, mas fica marcada como cancelada. A 59 deu a quem cria obra */
+  { chave: 'cancelar_obras', rotulo: 'Cancelar obra (com o motivo)', dependeDe: 'ver_obras' },
   { chave: 'excluir_concluidas', rotulo: 'Excluir obra concluída', dependeDe: 'ver_concluidas' },
   /* marca os checks de qualquer setor e nao espera a etapa anterior fechar */
   { chave: 'check_todas_etapas', rotulo: 'Check em todas as etapas', dependeDe: 'ver_obras' },

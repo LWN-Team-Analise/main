@@ -406,6 +406,12 @@ export function DadosProvider({ children }) {
     [gravar],
   )
 
+  /** Cancela a obra aberta, com o motivo (atualizacao 59). */
+  const cancelarObra = useCallback(
+    (id, campos) => gravar(() => dados.cancelarObra(id, campos)),
+    [gravar],
+  )
+
   /**
    * Marca/desmarca um check.
    *
@@ -1322,6 +1328,7 @@ export function DadosProvider({ children }) {
       atualizarObra,
       removerObra,
       concluirObra,
+      cancelarObra,
       alternarCheck,
       responderCheck,
       concluirCheck,
@@ -1452,6 +1459,7 @@ export function DadosProvider({ children }) {
       atualizarObra,
       removerObra,
       concluirObra,
+      cancelarObra,
       alternarCheck,
       responderCheck,
       concluirCheck,

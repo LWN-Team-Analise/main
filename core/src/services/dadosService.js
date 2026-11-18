@@ -152,6 +152,10 @@ export const salvarHorarios = (obraId, checkId, campos) =>
 export const concluirObra = (id, observacao) =>
   post(`/dados/obras/${id}/concluir`, { observacao })
 
+/** Cancela a obra aberta: { motivo, observacao } (atualizacao 59). */
+export const cancelarObra = (id, { motivo, observacao }) =>
+  post(`/dados/obras/${id}/cancelar`, { motivo, observacao })
+
 /* ---------------- Checks ---------------- */
 
 /* `resposta` so vai no check de pergunta: true = sim, false = nao */

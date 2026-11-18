@@ -307,6 +307,8 @@ const CONFERENCIA = [
   ['gerenciar_correio no acesso total', permissaoNoAcessoTotal('gerenciar_correio')],
   ['cliente.hospedagem (hotel ou Airbnb)', col('cliente', 'hospedagem')],
   ['cliente.fatura_apos_documento', col('cliente', 'fatura_apos_documento')],
+  ['obra.cancelamento_motivo (obra cancelada)', col('obra', 'cancelamento_motivo')],
+  ['cancelar_obras no acesso total', permissaoNoAcessoTotal('cancelar_obras')],
 ]
 
 function col(tabela, coluna) {
