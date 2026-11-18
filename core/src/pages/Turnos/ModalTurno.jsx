@@ -62,7 +62,16 @@ const VAZIO = {
  * O turno que vem do check com horario das obras (o ponto de encontro)
  * so se ve aqui: ele muda pela obra, e o botao leva ate ela.
  */
-export default function ModalTurno({ aberto, turno = null, base = null, cronogramas = [], edita, aoFechar, aoSalvo }) {
+export default function ModalTurno({
+  aberto,
+  turno = null,
+  base = null,
+  cronogramas = [],
+  edita,
+  aoFechar,
+  aoSalvo,
+  aoReservarCarro = null,
+}) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { obras, clientePorId, roteiroDaObra, pessoaPorId, concluida } = useDados()
@@ -353,6 +362,13 @@ export default function ModalTurno({ aberto, turno = null, base = null, cronogra
             <button type="button" className="formobra__cancelar" onClick={aoFechar}>
               Fechar
             </button>
+            {/* o carro da execucao muda daqui mesmo, no pop-up da obra
+                (atualizacao 59) — so para quem reserva carro */}
+            {turno.origem === 'execucao' && aoReservarCarro && (
+              <button type="button" className="formobra__cancelar" onClick={() => aoReservarCarro(turno.obraId)}>
+                {turno.veiculo ? 'Trocar carro' : 'Reservar carro'}
+              </button>
+            )}
             <Button type="button" onClick={() => navigate(`/app/obras/${turno.obraId}`)}>
               Abrir a obra
             </Button>

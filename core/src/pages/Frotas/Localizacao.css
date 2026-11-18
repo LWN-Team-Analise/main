@@ -312,6 +312,42 @@ button.calres__dia:hover {
   border-left-color: var(--line);
 }
 
+/* a obra do dia sem carro reservado (atualizacao 59): laranja, pede acao */
+.calres__reserva[data-tom='semcarro'] {
+  border-left-color: var(--pri-media);
+}
+
+.calres__semcarro {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.calres__semcarro h3 {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--text-strong);
+}
+
+/* reservar ou trocar o carro pelo calendario: abre o pop-up da obra */
+.calres__trocar {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 5px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.calres__trocar:hover {
+  background: var(--control-bg-hover);
+}
+
 .calres__carro {
   display: flex;
   align-items: center;

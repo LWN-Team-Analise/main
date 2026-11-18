@@ -4,6 +4,8 @@ import Avatar from '@/components/Avatar/Avatar'
 import Confirma from '@/components/Confirma/Confirma'
 import Seletor from '@/components/Seletor/Seletor'
 import { useDados } from '@/context/DadosContext'
+import { useAuth } from '@/context/AuthContext'
+import { podeReservarCarro } from '@/domain/obras'
 import {
   SUBTITULO_MAXIMO,
   TITULO_MAXIMO,
@@ -22,6 +24,7 @@ import { hojeISO } from '@/utils/formato'
 import ModalTurno from './ModalTurno'
 import ModalCronograma from './ModalCronograma'
 import ModalAnotacao from './ModalAnotacao'
+import ReservarCarro from '@/pages/Frotas/ReservarCarro'
 import './Turnos.css'
 
 /* ============================================================
@@ -590,9 +593,14 @@ function Linha({
 }
 
 export default function Turnos() {
-  const { pode, pessoaPorId } = useDados()
+  const { pode, pessoaPorId, equipe } = useDados()
+  const { user } = useAuth()
   const edita = pode('editar_turnos')
   const hoje = hojeISO()
+  /* o carro da execucao reservado ou trocado pelo cronograma (atualizacao
+     59): o pop-up da obra, para quem reserva carro */
+  const reservaCarro = podeReservarCarro(user, equipe.find((p) => p.souEu)?.cargoTitulo ?? user?.cargoTitulo)
+  const [reservandoObra, setReservandoObra] = useState(null)
 
   const [visao, setVisao] = useState(() => {
     const guardada = ler(CHAVE_VISAO, 'duas')
@@ -1579,7 +1587,17 @@ export default function Turnos() {
         edita={edita}
         aoFechar={() => setEditando(null)}
         aoSalvo={recarregar}
+        aoReservarCarro={
+          reservaCarro
+            ? (obraId) => {
+                setEditando(null)
+                setReservandoObra(obraId)
+              }
+            : null
+        }
       />
+
+      <ReservarCarro obraId={reservandoObra} aoFechar={() => setReservandoObra(null)} aoMudou={recarregar} />
 
       <ModalAnotacao
         aberto={Boolean(anotando)}
