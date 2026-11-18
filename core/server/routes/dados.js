@@ -19,7 +19,7 @@ import { bytesDoDataUrl, guardarAnexoDaObra, sharepointConfigurado } from '../sh
 import { notificar, pessoasDosSetores, todosAtivos } from '../push.js'
 import { IMAGEM_INVALIDA, imagemValida } from '../utils/imagem.js'
 import { proximaProposta } from '../../src/domain/proposta.js'
-import { MOTIVOS_CANCELAMENTO, motivoDoCancelamento } from '../../src/domain/obras.js'
+import { MOTIVOS_CANCELAMENTO, motivoDoCancelamento } from '../../src/domain/cancelamento.js'
 import {
   SERVICO_MAXIMO,
   UNIDADES_MAXIMO,
