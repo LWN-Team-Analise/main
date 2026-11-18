@@ -184,28 +184,37 @@ async function mapaDePessoas(token, contas) {
     if (r.outlook_email) porEmail.set(r.outlook_email, String(r.id))
   })
   const resultado = new Map()
+  const perguntar = []
   for (const conta of contas) {
     const chave = String(conta).toLowerCase()
-    if (porConta.has(chave)) {
-      resultado.set(chave, porConta.get(chave))
-      continue
+    if (porConta.has(chave)) resultado.set(chave, porConta.get(chave))
+    else if (!pessoaPorConta.has(chave)) perguntar.push(conta)
+  }
+
+  /* quem nao entrou com o Outlook: o e-mail da conta, perguntado ao Graph de
+     oito em oito (a equipe inteira na primeira vez cabe na espera da tela) */
+  const fila = [...perguntar]
+  const trabalhar = async () => {
+    while (fila.length > 0 && !semUsersReadAll) {
+      const conta = fila.shift()
+      const chave = String(conta).toLowerCase()
+      try {
+        const [u] = await lerDoGraph(token, `/users/${encodeURIComponent(conta)}?$select=mail,userPrincipalName`)
+        pessoaPorConta.set(chave, String(u?.mail || u?.userPrincipalName || '').toLowerCase() || null)
+      } catch (erro) {
+        /* sem User.Read.All: fica so o outlook_id, sem perguntar de novo a cada turno */
+        if (erro.status === 401 || erro.status === 403) semUsersReadAll = true
+        else pessoaPorConta.set(chave, null)
+      }
     }
-    if (pessoaPorConta.has(chave)) {
-      const email = pessoaPorConta.get(chave)
-      if (email && porEmail.has(email)) resultado.set(chave, porEmail.get(email))
-      continue
-    }
-    if (semUsersReadAll) continue
-    try {
-      const [u] = await lerDoGraph(token, `/users/${encodeURIComponent(conta)}?$select=mail,userPrincipalName`)
-      const email = String(u?.mail || u?.userPrincipalName || '').toLowerCase()
-      pessoaPorConta.set(chave, email || null)
-      if (email && porEmail.has(email)) resultado.set(chave, porEmail.get(email))
-    } catch (erro) {
-      /* sem User.Read.All: fica so o outlook_id, sem perguntar de novo a cada turno */
-      if (erro.status === 401 || erro.status === 403) semUsersReadAll = true
-      else pessoaPorConta.set(chave, null)
-    }
+  }
+  await Promise.all(Array.from({ length: 8 }, trabalhar))
+
+  for (const conta of contas) {
+    const chave = String(conta).toLowerCase()
+    if (resultado.has(chave)) continue
+    const email = pessoaPorConta.get(chave)
+    if (email && porEmail.has(email)) resultado.set(chave, porEmail.get(email))
   }
   return resultado
 }
