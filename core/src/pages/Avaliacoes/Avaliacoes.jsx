@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import AppShell from '@/components/AppShell/AppShell'
 import Avatar from '@/components/Avatar/Avatar'
 import Estrelas from '@/components/Estrelas/Estrelas'
@@ -6,7 +7,7 @@ import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
 import { CampoArea } from '@/components/Campo/Campo'
 import { useDados } from '@/context/DadosContext'
-import { tituloDaObra } from '@/domain/obras'
+import { obraCancelada, tituloDaObra } from '@/domain/obras'
 import useCorDaLogo from '@/hooks/useCorDaLogo'
 import { dataBR, dataHora } from '@/utils/formato'
 
@@ -53,9 +54,22 @@ const Lixo = () => (
  * separada) abre no clique.
  */
 export default function Avaliacoes() {
-  const { obras, clientePorId, pessoaPorId } = useDados()
+  const { obras: todas, clientePorId, pessoaPorId } = useDados()
+  /* a obra cancelada (atualizacao 59) nao foi entregue: nao se avalia */
+  const obras = useMemo(() => todas.filter((o) => !obraCancelada(o)), [todas])
   const [filtro, setFiltro] = useState('sem')
   const [abrindo, setAbrindo] = useState(null)
+
+  /* o FORMULARIO AUTOMATICO (atualizacao 59): o aviso no Teams da obra
+     concluida traz ?obra=ID, e o formulario daquela obra ja abre. Uma vez
+     so: fechar nao reabre. A obra chega com a carga — ate la, espera */
+  const [params, setParams] = useSearchParams()
+  const pedida = params.get('obra')
+  useEffect(() => {
+    if (!pedida || !obras.some((o) => String(o.id) === pedida)) return
+    setAbrindo(pedida)
+    setParams({}, { replace: true })
+  }, [pedida, obras, setParams])
 
   /* da obra cadastrada por ultimo ate a primeira */
   const lista = useMemo(
@@ -363,11 +377,14 @@ function ModalAvaliar({ obraId, aoFechar }) {
 
     setSalvando(true)
     try {
-      for (const linha of validas) {
+      for (const [i, linha] of validas.entries()) {
         const campos = {
           rotulo: String(linha.rotulo).trim(),
           nota: Number(linha.nota),
           descricao: linha.descricao,
+          /* o Teams avisa UMA vez por obra, com a media: so a ultima etapa
+             gravada pede o aviso (antes saia uma mensagem por etapa) */
+          avisar: i === validas.length - 1,
         }
         if (linha.id) await atualizarAvaliacao(linha.id, campos)
         else await adicionarAvaliacao(obra.id, campos)

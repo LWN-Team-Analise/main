@@ -9,6 +9,8 @@ import roteiroRouter from './routes/roteiro.js'
 import botRouter from './routes/bot.js'
 import despesasRouter from './routes/despesas.js'
 import frotasRouter from './routes/frotas.js'
+import frotaManutencaoRouter from './routes/frotaManutencao.js'
+import equipamentosRouter from './routes/equipamentos.js'
 import atividadesRouter from './routes/atividades.js'
 import pushRouter from './routes/push.js'
 import comercialRouter from './routes/comercial.js'
@@ -18,6 +20,8 @@ import agendaRouter from './routes/agenda.js'
 import avisosRouter from './routes/avisos.js'
 import sharepointRouter from './routes/sharepoint.js'
 import pontoRouter from './routes/ponto.js'
+import insumosRouter from './routes/insumos.js'
+import qualidadeRouter from './routes/qualidade.js'
 import almoxarifeRouter, { notificacoesDiarias } from './almoxarife/index.js'
 import cargaRouter, { cargaJunto } from './carga.js'
 import { logger } from './logger.js'
@@ -142,6 +146,10 @@ app.use('/api/roteiro', roteiroRouter)
 app.use('/api/bot', botRouter)
 app.use('/api/despesas', despesasRouter)
 app.use('/api/frotas', frotasRouter)
+/* os problemas relatados e as manutencoes dos carros (atualizacao 59) */
+app.use('/api/frotas', frotaManutencaoRouter)
+/* os notebooks e PCs da empresa (atualizacao 59) */
+app.use('/api/equipamentos', equipamentosRouter)
 app.use('/api/atividades', atividadesRouter)
 app.use('/api/push', pushRouter)
 app.use('/api/comercial', comercialRouter)
@@ -154,6 +162,10 @@ app.use('/api/avisos', avisosRouter)
 app.use('/api/sharepoint', sharepointRouter)
 /* a folha de ponto, a aba Ponto (atualizacao 51) */
 app.use('/api/ponto', pontoRouter)
+/* os pedidos de insumos (atualizacao 57) */
+app.use('/api/insumos', insumosRouter)
+/* a Area da qualidade: o acompanhamento dos documentos e o correio (atualizacao 58) */
+app.use('/api/qualidade', qualidadeRouter)
 
 /* O ALMOXARIFE (o antigo lwncontrol, server/almoxarife). Os avisos do dia
    (ultimo dia da obra, certificado vencendo) nao tem clique que os

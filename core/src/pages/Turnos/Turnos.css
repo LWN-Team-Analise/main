@@ -28,6 +28,59 @@
   margin: 0;
 }
 
+/* os turnos do Teams (atualizacao 59): ligado, quando foi a ultima e o "Atualizar" */
+.turnos__teams {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.turnos__teams-pingo {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #5b5fc7;
+}
+
+.turnos__teams.is-erro {
+  color: var(--danger);
+}
+
+.turnos__teams.is-erro .turnos__teams-pingo {
+  background: var(--danger);
+}
+
+.turnos__teams button {
+  padding: 3px 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-strong);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.turnos__teams button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.turnoform__teams {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, #5b5fc7 10%, transparent);
+  color: var(--text-strong);
+  font-size: 0.82rem;
+}
+
 .turnos__acoes {
   display: flex;
   flex-wrap: wrap;
@@ -325,12 +378,33 @@
 
 /* ---------------- o quadro ---------------- */
 
+/* O quadro rola DENTRO dele, nos dois sentidos, com a altura da tela: e o
+   que deixa a linha das datas presa no alto (.turnos__linha--dias) enquanto
+   as pessoas descem — ate a ultima pessoa ainda ve o dia de cada coluna.
+   Rolando so de lado, o "sticky" das datas nao tinha onde grudar (a pagina
+   e que descia) */
 .turnos__quadro {
-  overflow-x: auto;
+  overflow: auto;
+  max-height: calc(100dvh - 210px);
+  min-height: 320px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--surface);
-  overscroll-behavior-x: contain;
+  overscroll-behavior: contain;
+}
+
+/* a linha das datas: presa no alto do quadro (e o canto dela, a esquerda,
+   por cima de tudo) */
+.turnos__linha--dias {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--surface);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+.turnos__linha--dias .turnos__canto {
+  z-index: 6;
 }
 
 .turnos__grade {
@@ -733,6 +807,51 @@ button.turnos__celula:hover {
   font-style: italic;
 }
 
+/* a AUSENCIA (ferias, atestado, folga, dia nao operacional — atualizacao
+   58): o fundo leva um pouco da cor, com listras finas, para nao ser
+   confundida com turno de trabalho; embaixo, o que ela e */
+.turno.is-ausencia {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--turno-cor) 10%, transparent) 0 6px,
+      transparent 6px 12px
+    ),
+    color-mix(in srgb, var(--turno-cor) 8%, transparent);
+}
+
+.turno.is-ausencia:hover {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--turno-cor) 16%, transparent) 0 6px,
+      transparent 6px 12px
+    ),
+    color-mix(in srgb, var(--turno-cor) 12%, transparent);
+}
+
+.turno .turno__tipo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: color-mix(in srgb, var(--turno-cor) 70%, var(--text-strong));
+}
+
+.turno .turno__tipo svg {
+  flex: none;
+}
+
+/* o dia nao operacional do cronograma inteiro: a coluna hachurada em todas
+   as linhas, e o dia de cima tambem */
+.turnos__celula.is-parado,
+.turnos__dia.is-parado {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--text-muted) 13%, transparent) 0 5px,
+    transparent 5px 11px
+  );
+}
+
 /* o escolhido: a moldura escura por fora, como no Teams */
 .turno.is-escolhido {
   outline: 2px solid var(--text-strong);
@@ -871,25 +990,49 @@ button.turnos__celula:hover {
   gap: 12px;
 }
 
-.turnoform__cores {
+/* o tipo do turno: o de trabalho e as quatro ausencias, em pilulas */
+.turnoform__tipos {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
-.turnoform__cor {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 2px solid var(--turno-cor);
-  border-left-width: 6px;
-  border-radius: 6px;
-  background: transparent;
+.turnoform__tipo {
+  --turno-cor: var(--accent);
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-base);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
-.turnoform__cor[aria-checked='true'] {
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--turno-cor);
+.turnoform__tipo:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+.turnoform__tipo[aria-checked='true'] {
+  border-color: var(--turno-cor);
+  background: color-mix(in srgb, var(--turno-cor) 16%, transparent);
+  color: var(--text-strong);
+  box-shadow: inset 0 0 0 1px var(--turno-cor);
+}
+
+.turnoform__tipo:disabled {
+  cursor: default;
+}
+
+.turnoform__dica {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
 }
 
 .turnoform__inteiro {
@@ -974,6 +1117,12 @@ button.turnos__celula:hover {
   .turnos {
     --col-quem: 132px;
     --col-dia: 84px;
+  }
+
+  /* no celular os botoes de cima ocupam meia tela: a pagina desce ate o
+     quadro, e ai ele enche o espaco entre a barra de cima e a de baixo */
+  .turnos__quadro {
+    max-height: calc(100dvh - 200px);
   }
 
   .turnos__periodo {
@@ -1110,9 +1259,16 @@ button.turnos__celula:hover {
     padding: 0;
   }
 
+  /* no papel o quadro sai inteiro, sem a altura da tela nem as datas presas */
   .turnos__quadro {
     overflow: visible;
+    max-height: none;
     border-radius: 0;
+  }
+
+  .turnos__linha--dias {
+    position: static;
+    box-shadow: none;
   }
 
   .turnos__grade {

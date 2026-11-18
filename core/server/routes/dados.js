@@ -8,9 +8,11 @@ import { concluidoSemInformacao, informacaoChegou, temSemInformacao } from '../s
 import {
   avisarAnaliseDeFaturamento,
   avisarAvaliacao,
+  avisarAvaliacaoPendente,
   avisarChat,
   avisarInclusao,
   avisarObraConcluida,
+  avisarPrazoDaExecucao,
 } from '../avisosObra.js'
 import { apagarNegocioDaObra } from '../negocioDaObra.js'
 import { depoisDeMarcar, incluirNaObra } from '../membrosObra.js'
@@ -18,6 +20,7 @@ import { bytesDoDataUrl, guardarAnexoDaObra, sharepointConfigurado } from '../sh
 import { notificar, pessoasDosSetores, todosAtivos } from '../push.js'
 import { IMAGEM_INVALIDA, imagemValida } from '../utils/imagem.js'
 import { proximaProposta } from '../../src/domain/proposta.js'
+import { MOTIVOS_CANCELAMENTO, motivoDoCancelamento } from '../../src/domain/cancelamento.js'
 import {
   SERVICO_MAXIMO,
   UNIDADES_MAXIMO,
@@ -42,7 +45,13 @@ import {
   rotuloDoServico,
   tipoDoItem,
 } from '../../src/domain/itensEnsaio.js'
-import { MOTIVO_DA_TRAVA, regraDoUsuario, regraLibera } from '../../src/domain/regrasCheck.js'
+import {
+  MOTIVO_DA_TRAVA,
+  RECADO_FATURAR_TRAVADO,
+  RECADO_LIBERACAO_FATURADA,
+  regraDoUsuario,
+  regraLibera,
+} from '../../src/domain/regrasCheck.js'
 
 const router = Router()
 
@@ -238,6 +247,10 @@ const paraCliente = (l) => ({
      false = o Reembolso nao aceita bonus para ele. A unidade sem resposta
      propria vale a do cliente */
   bonusApartamento: typeof l.bonus_apartamento === 'boolean' ? l.bonus_apartamento : null,
+  /* "Onde o colaborador fica?" ('hotel' ou 'airbnb') e "Fatura so depois
+     do documento digital liberado?" (atualizacao 59), do mesmo jeito */
+  hospedagem: l.hospedagem === 'hotel' || l.hospedagem === 'airbnb' ? l.hospedagem : null,
+  faturaAposDocumento: typeof l.fatura_apos_documento === 'boolean' ? l.fatura_apos_documento : null,
   criadoEm: l.criado_em,
 })
 
@@ -293,6 +306,13 @@ const COLUNAS_CLIENTE_53 = COLUNAS_CLIENTE.replace(
   ' c.servico, coalesce(c.bonus_apartamento, i.bonus_apartamento) AS bonus_apartamento,',
 )
 
+/* com a hospedagem e o faturamento apos o documento (atualizacao 59) */
+const COLUNAS_CLIENTE_59 = COLUNAS_CLIENTE_53.replace(
+  ' c.servico,',
+  ` c.servico, coalesce(c.hospedagem, i.hospedagem) AS hospedagem,
+    coalesce(c.fatura_apos_documento, i.fatura_apos_documento) AS fatura_apos_documento,`,
+)
+
 /* banco com o servico das unidades e sem o pais (sem a atualizacao 35) */
 const COLUNAS_CLIENTE_34 = COLUNAS_CLIENTE_38.replace(' c.pais,', '')
 
@@ -313,11 +333,21 @@ async function lerClientes(imagens) {
     query(
       /* os prioritarios (as unidades da LWN, atualizacao 23) primeiro, na
          ordem deles; cada unidade logo depois do cliente dela */
-      `SELECT ${COLUNAS_CLIENTE_53}${imagens ? ', i.logo, i.capa' : ''}
+      `SELECT ${COLUNAS_CLIENTE_59}${imagens ? ', i.logo, i.capa' : ''}
          FROM cliente c
          JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
         ${ORDEM_CLIENTES}`,
     )
+      .catch((erro) => {
+        /* banco sem a hospedagem e o faturamento (atualizacao 59) */
+        if (erro.code !== '42703') throw erro
+        return query(
+          `SELECT ${COLUNAS_CLIENTE_53}${imagens ? ', i.logo, i.capa' : ''}
+             FROM cliente c
+             JOIN cliente i ON i.id = coalesce(c.matriz_id, c.id)
+            ${ORDEM_CLIENTES}`,
+        )
+      })
       .catch((erro) => {
         /* banco sem o bonus apartamento (atualizacao 53) */
         if (erro.code !== '42703') throw erro
@@ -817,6 +847,9 @@ export async function lerTudo(usuarioId, { imagens = true } = {}) {
           : String(o.concluida_por),
       concluidaPorNome: o.concluida_por_nome ?? null,
       conclusaoObs: o.conclusao_obs ?? '',
+      /* a obra CANCELADA (atualizacao 59): fecha como a concluida, e o
+         motivo e o que a separa. null = nao foi cancelada */
+      cancelamentoMotivo: o.cancelamento_motivo ?? null,
       checks: checksDaObra[o.id] ?? {},
       prazos: prazosDaObra[o.id] ?? { etapas: {}, checks: {} },
       ensaios: ensaiosDaObra[o.id] ?? [],
@@ -1501,6 +1534,20 @@ function lerExtrasDoCliente(corpo) {
           ? corpo.bonusApartamento
           : null
         : undefined,
+    /* "Onde o colaborador fica?" e "Fatura so depois do documento?"
+       (atualizacao 59), do mesmo jeito */
+    hospedagem:
+      corpo && 'hospedagem' in corpo
+        ? ['hotel', 'airbnb'].includes(corpo.hospedagem)
+          ? corpo.hospedagem
+          : null
+        : undefined,
+    faturaAposDocumento:
+      corpo && 'faturaAposDocumento' in corpo
+        ? typeof corpo.faturaAposDocumento === 'boolean'
+          ? corpo.faturaAposDocumento
+          : null
+        : undefined,
   }
 }
 
@@ -1514,6 +1561,14 @@ async function gravarAlimentacao(clienteId, valor) {
 /* banco sem a atualizacao 53: o resto do cadastro grava, sem a resposta */
 async function gravarBonusApartamento(clienteId, valor) {
   await query('UPDATE cliente SET bonus_apartamento = $2 WHERE id = $1', [clienteId, valor]).catch((erro) => {
+    if (erro.code !== '42703') throw erro
+  })
+}
+
+/* banco sem a atualizacao 59: o resto do cadastro grava, sem a resposta.
+   `coluna` vem so daqui de dentro, nunca do corpo */
+async function gravarCampoDoCliente(clienteId, coluna, valor) {
+  await query(`UPDATE cliente SET ${coluna} = $2 WHERE id = $1`, [clienteId, valor]).catch((erro) => {
     if (erro.code !== '42703') throw erro
   })
 }
@@ -1548,6 +1603,10 @@ async function gravarExtrasDoCliente(clienteId, extras, { novo, usuarioId }) {
     })
     if (extras.ofereceAlimentacao !== undefined) await gravarAlimentacao(clienteId, extras.ofereceAlimentacao)
     if (extras.bonusApartamento !== undefined) await gravarBonusApartamento(clienteId, extras.bonusApartamento)
+    if (extras.hospedagem !== undefined) await gravarCampoDoCliente(clienteId, 'hospedagem', extras.hospedagem)
+    if (extras.faturaAposDocumento !== undefined) {
+      await gravarCampoDoCliente(clienteId, 'fatura_apos_documento', extras.faturaAposDocumento)
+    }
   } catch (erro) {
     /* banco ainda sem a atualizacao 27: o cadastro em si ja foi gravado */
     if (erro.code === '42P01' || erro.code === '42703') return
@@ -2641,11 +2700,68 @@ router.post('/obras/:id/concluir', exigeSessao, exige('editar_obras'), async (re
       descricao: 'Obra concluída',
       detalhes: { ...(await descreverObra(req.params.id)), observacao: observacao || null },
     })
-    /* os parabens no Teams a quem fez parte da obra */
+    /* os parabens no Teams a quem fez parte da obra, e o pedido de
+       avaliacao a quem avalia (o formulario automatico, atualizacao 59) */
     await avisarObraConcluida(req.params.id)
+    await avisarAvaliacaoPendente(req.params.id)
     return res.json({ ok: true })
   } catch (e) {
     return tratar(e, res, 'dados/obra-concluir')
+  }
+})
+
+/* ------------------------------------------------------------
+   Cancelar a obra (atualizacao 59)
+
+   So a obra ABERTA, so com o motivo (MOTIVOS_CANCELAMENTO; "Outro"
+   pede a observacao) e so quem tem `cancelar_obras`. Ela fecha como a
+   concluida — o mesmo carimbo, concluida_em, e por isso sai do quadro,
+   trava como a concluida e sai das listas do Almoxarife —, e o motivo
+   gravado e o que a marca como cancelada. Nao conta checks: cancelar e
+   justamente parar no meio.
+   ------------------------------------------------------------ */
+
+router.post('/obras/:id/cancelar', exigeSessao, exige('cancelar_obras'), async (req, res) => {
+  if (!/^\d{1,15}$/.test(String(req.params.id))) return res.status(404).json({ erro: 'Obra não encontrada.' })
+  const motivo = texto(req.body?.motivo)
+  const observacao = texto(req.body?.observacao).slice(0, 1000)
+  if (!MOTIVOS_CANCELAMENTO.some((m) => m.id === motivo)) {
+    return res.status(400).json({ erro: 'Escolha o motivo do cancelamento.', campo: 'motivo' })
+  }
+  if (motivo === 'outro' && !observacao) {
+    return res.status(400).json({ erro: 'Escreva qual foi o motivo.', campo: 'observacao' })
+  }
+
+  try {
+    const obra = await query('SELECT concluida_em FROM obra WHERE id = $1', [req.params.id])
+    if (!obra.rows[0]) return res.status(404).json({ erro: 'Obra não encontrada.' })
+    if (obra.rows[0].concluida_em) {
+      return res.status(409).json({ erro: 'Esta obra já foi encerrada e não pode mais ser cancelada.' })
+    }
+    await query(
+      `UPDATE obra
+          SET concluida_em = now(), concluida_por = $1, conclusao_obs = $2,
+              cancelamento_motivo = $3, atualizado_por = $1
+        WHERE id = $4 AND concluida_em IS NULL`,
+      [req.dono.sub, observacao || null, motivo, req.params.id],
+    )
+    await registrarAtividade(req, {
+      acao: 'obra.cancelada',
+      categoria: 'obra',
+      entidade: ['obra', req.params.id],
+      descricao: 'Obra cancelada',
+      detalhes: {
+        ...(await descreverObra(req.params.id)),
+        motivo: motivoDoCancelamento(motivo),
+        observacao: observacao || null,
+      },
+    })
+    return res.json({ ok: true })
+  } catch (e) {
+    if (e.code === '42703') {
+      return res.status(503).json({ erro: 'O banco ainda não tem o cancelamento de obra (atualização 59 em core/db).' })
+    }
+    return tratar(e, res, 'dados/obra-cancelar')
   }
 })
 
@@ -2943,6 +3059,24 @@ async function checkDoSistema(obraId, tipo) {
   return rows[0] ? String(rows[0].id) : null
 }
 
+/** O check do sistema daquele tipo esta marcado nesta obra? (false quando a obra nem tem o check) */
+async function checkDoSistemaMarcado(obraId, tipo) {
+  const checkId = await checkDoSistema(obraId, tipo)
+  if (!checkId) return false
+  const { rows } = await query('SELECT 1 FROM obra_check WHERE obra_id = $1 AND check_id = $2', [obraId, checkId])
+  return Boolean(rows[0])
+}
+
+/**
+ * O "Faturar" pode ser marcado: o Administrativo ja marcou "Liberado para
+ * faturamento" — ou a obra nem tem esse check, e nao ha o que esperar. A
+ * mesma conta da tela (estadoDoFaturamento, em src/domain/obras.js).
+ */
+async function faturamentoLiberado(obraId) {
+  if (!(await checkDoSistema(obraId, 'liberado_faturamento'))) return true
+  return checkDoSistemaMarcado(obraId, 'liberado_faturamento')
+}
+
 /**
  * Mantem as duas regras dos ensaios de pe DEPOIS de qualquer mudanca:
  *
@@ -3170,6 +3304,12 @@ router.put('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req, re
     const resposta = req.body?.resposta
     const semInformacao = req.body?.semInformacao === true
 
+    /* o "Faturar" espera o "Liberado para faturamento" do Administrativo
+       (atualizacao 58) — para todo mundo, e tambem sem a informacao */
+    if (regra.tipo === 'faturar' && !(await faturamentoLiberado(req.params.id))) {
+      return res.status(409).json({ erro: RECADO_FATURAR_TRAVADO })
+    }
+
     /* Os checks da O.S. ("Solicitar OS" da 2a etapa; "Gestao dos
        instrumentos", "Retirada" e "Devolucao das ferramentas" da 3a;
        atualizacoes 38, 40, 42 e 43) quem marca e o LWN Control, quando a
@@ -3353,6 +3493,10 @@ router.delete('/obras/:id/checks/:checkId', exigeSessao, obraAberta, async (req,
       !(semInformacao && cargoPode(await meuCargo(req.dono.sub), 'check_sem_informacao'))
     ) {
       return res.status(409).json({ erro: CHECKS_DA_OS[tipo].desmarcar })
+    }
+    /* a liberacao do faturamento nao sai com o "Faturar" marcado (atualizacao 58) */
+    if (tipo === 'liberado_faturamento' && (await checkDoSistemaMarcado(req.params.id, 'faturar'))) {
+      return res.status(409).json({ erro: RECADO_LIBERACAO_FATURADA })
     }
     /* o Prazo da execucao e o check com horario (o Ponto de encontro)
        desmarcam enquanto as etapas seguintes estao sem check. O prazo
@@ -3571,6 +3715,16 @@ router.put('/obras/:id/execucao', exigeSessao, obraAberta, async (req, res) => {
     const erroDeDatas = conferirDatas({ ...antes, execucaoInicio: inicio, execucaoPrazo: prazo })
     if (erroDeDatas) return res.status(400).json({ erro: erroDeDatas })
 
+    /* PROLONGAR (o ultimo dia passou do prazo que ja existia) pede o motivo:
+       ele vai no aviso ao Administrativo (hospedagem) e ao Comercial
+       (aditivo) — atualizacao 59 */
+    const motivo = texto(req.body?.motivo).slice(0, 500)
+    const prazoAntes = antes.execucaoPrazo ?? null
+    const prolongou = Boolean(prazoAntes) && prazo > prazoAntes
+    if (prolongou && !motivo) {
+      return res.status(400).json({ erro: 'Diga o motivo da prorrogação: ele vai para o aditivo.', campo: 'motivo' })
+    }
+
     await query(
       `UPDATE obra
           SET execucao_inicio = $1, execucao_prazo = $2, execucao_dias = $3::date[], atualizado_por = $4
@@ -3581,14 +3735,20 @@ router.put('/obras/:id/execucao', exigeSessao, obraAberta, async (req, res) => {
       acao: 'prazo.execucao',
       categoria: 'obra',
       entidade: ['obra', req.params.id],
-      descricao: 'Período de execução definido',
+      descricao: prolongou ? 'Execução prolongada' : 'Período de execução definido',
       detalhes: {
         ...(await descreverObra(req.params.id)),
         inicio: dataLida(inicio),
         prazo_execucao: dataLida(prazo),
         ...(dias ? { dias: `${dias.length} — ${resumoDosDias(dias)}` } : {}),
+        ...(prazoAntes && prazoAntes !== prazo ? { prazo_anterior: dataLida(prazoAntes) } : {}),
+        ...(motivo ? { motivo } : {}),
       },
     })
+    if (prazoAntes && prazoAntes !== prazo) {
+      const { rows: quem } = await query('SELECT name FROM usuario WHERE id = $1', [req.dono.sub])
+      await avisarPrazoDaExecucao(req.params.id, { antes: prazoAntes, depois: prazo, motivo, quem: quem[0]?.name ?? null })
+    }
 
     /* o prazo definido fecha o check da 1a etapa — e, se ele tinha sido
        concluido sem o prazo (atualizacao 36), a informacao chegou */
@@ -5093,8 +5253,11 @@ router.post('/obras/:id/avaliacoes', exigeSessao, exige('editar_avaliacoes'), as
         nota: String(valor),
       },
     })
-    /* os membros recebem no Teams a nota geral da obra e a nova nota deles */
-    await avisarAvaliacao(req.params.id)
+    /* os membros recebem no Teams a nota geral da obra (a media) e a nova
+       nota deles. A tela grava uma nota por etapa, uma chamada cada: so a
+       ultima vem sem `avisar: false`, e sai UMA mensagem por obra, ja com a
+       media final (antes saia uma por etapa) */
+    if (req.body?.avisar !== false) await avisarAvaliacao(req.params.id)
     return res.status(201).json({ id: String(rows[0].id), avaliadaEm: rows[0].avaliado_em })
   } catch (e) {
     if (e.code === '23503') return res.status(404).json({ erro: 'Obra não encontrada.' })
@@ -5138,8 +5301,9 @@ router.patch('/avaliacoes/:id', exigeSessao, exige('editar_avaliacoes'), async (
         nota: String(Number(rows[0].nota)),
       },
     })
-    /* a nota mudou: as notas novas vao para os membros */
-    if (req.body?.nota !== undefined) await avisarAvaliacao(rows[0].obra_id)
+    /* a nota mudou: as notas novas vao para os membros — uma vez so, na
+       ultima etapa gravada (as outras vem com `avisar: false`) */
+    if (req.body?.nota !== undefined && req.body?.avisar !== false) await avisarAvaliacao(rows[0].obra_id)
     return res.json({ ok: true })
   } catch (e) {
     return tratar(e, res, 'dados/avaliacao-editar')

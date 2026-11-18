@@ -4,6 +4,7 @@ import Avatar, { PilhaAvatares } from '@/components/Avatar/Avatar'
 import Estrelas from '@/components/Estrelas/Estrelas'
 import { useDados } from '@/context/DadosContext'
 import { tituloDaObra } from '@/domain/obras'
+import { proximasComemorativas } from '@/domain/datasComemorativas'
 import useCorDaLogo from '@/hooks/useCorDaLogo'
 import ModalAvisoGeral, { ModalHistoricoAvisos, ModalLerAviso } from '@/components/AvisoGeral/ModalAvisoGeral'
 import * as agendaApi from '@/services/agendaService'
@@ -476,7 +477,22 @@ function CardAgenda() {
     return () => window.removeEventListener(agendaApi.AGENDA_MUDOU, carregar)
   }, [carregar])
 
-  const proximos = (eventos ?? []).slice(0, EVENTOS_NO_CARD)
+  /* as datas comemorativas do proximo ano (atualizacao 59) entram junto dos
+     eventos, na ordem do dia — calculadas aqui, sem banco */
+  const comemorativas = useMemo(() => {
+    const d = new Date()
+    const hoje = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return proximasComemorativas(hoje, 365)
+  }, [])
+  /* a data que a empresa ja marcou na mao (o mesmo dia e o mesmo nome) nao
+     aparece duas vezes: fica a marcada */
+  const todos = useMemo(() => {
+    if (eventos === null) return null
+    const chave = (e) => `${e.dia}|${e.titulo.trim().toLocaleLowerCase('pt-BR')}`
+    const marcadas = new Set(eventos.map(chave))
+    return [...eventos, ...comemorativas.filter((c) => !marcadas.has(chave(c)))].sort((a, b) => a.dia.localeCompare(b.dia))
+  }, [eventos, comemorativas])
+  const proximos = (todos ?? []).slice(0, EVENTOS_NO_CARD)
 
   return (
     <Cartao
@@ -485,13 +501,10 @@ function CardAgenda() {
       titulo="Agenda da Empresa"
       marca={<Glifo.calendario tamanho={150} traco={1.1} />}
       acao={
-        <Link
-          rotulo="Ver calendário"
-          aoClicar={eventos && (eventos.length > 0 || podeEditar) ? () => setLista(true) : null}
-        />
+        <Link rotulo="Ver calendário" aoClicar={todos && (todos.length > 0 || podeEditar) ? () => setLista(true) : null} />
       }
     >
-      {eventos === null ? (
+      {todos === null ? (
         <ul className="pagenda" aria-busy="true" aria-label="Carregando a agenda">
           {[0, 1, 2].map((i) => (
             <li key={i} className="pevento pevento--fantasma" />
@@ -520,7 +533,7 @@ function CardAgenda() {
 
       <ModalAgenda
         aberto={lista}
-        eventos={eventos ?? []}
+        eventos={todos ?? []}
         podeEditar={podeEditar}
         aoFechar={() => setLista(false)}
       />

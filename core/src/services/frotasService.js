@@ -99,3 +99,40 @@ export const carregarCondicoes = () => get('/frotas/condicoes')
  */
 export const carregarUso = (de, ate) =>
   get(`/frotas/uso?de=${encodeURIComponent(de)}&ate=${encodeURIComponent(ate)}`)
+
+/* ---- os problemas e as manutencoes do carro (atualizacao 59) ---- */
+
+/** Os problemas relatados (os abertos primeiro), de um carro ou de todos. */
+export async function carregarOcorrencias({ veiculo = null, abertas = false } = {}) {
+  const partes = [veiculo ? `veiculo=${encodeURIComponent(veiculo)}` : null, abertas ? 'abertas=1' : null].filter(Boolean)
+  const { ocorrencias } = await get(`/frotas/ocorrencias${partes.length ? `?${partes.join('&')}` : ''}`)
+  return ocorrencias ?? []
+}
+
+/** { veiculoId, descricao, impedeUso } -> o problema gravado. */
+export async function relatarProblema(campos) {
+  const { ocorrencia } = await post('/frotas/ocorrencias', campos)
+  return ocorrencia
+}
+
+export async function resolverProblema(id, resolucao = '') {
+  const { ocorrencia } = await patch(`/frotas/ocorrencias/${encodeURIComponent(id)}`, { resolucao })
+  return ocorrencia
+}
+
+export async function carregarManutencoes(veiculo) {
+  const { manutencoes } = await get(`/frotas/manutencoes?veiculo=${encodeURIComponent(veiculo)}`)
+  return manutencoes ?? []
+}
+
+/** { veiculoId, data, descricao, custo, oficina?, km?, ocorrenciaId? } -> a manutencao gravada. */
+export async function lancarManutencao(campos) {
+  const { manutencao } = await post('/frotas/manutencoes', campos)
+  return manutencao
+}
+
+export const apagarManutencao = (id) => del(`/frotas/manutencoes/${encodeURIComponent(id)}`)
+
+/** O custo e os reparos por carro e por mes, de `de` a `ate` ('AAAA-MM-DD'). */
+export const carregarResumoManutencao = (de, ate) =>
+  get(`/frotas/manutencoes/resumo?de=${encodeURIComponent(de)}&ate=${encodeURIComponent(ate)}`)

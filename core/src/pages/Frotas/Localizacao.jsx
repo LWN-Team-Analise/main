@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AppShell from '@/components/AppShell/AppShell'
+import { useAuth } from '@/context/AuthContext'
+import { useDados } from '@/context/DadosContext'
+import { diasDaExecucao, podeReservarCarro, resumoDosDias, tituloDaObra } from '@/domain/obras'
 import { carregarLocalizacao } from '@/services/frotasService'
 import { dataBR, hojeISO } from '@/utils/formato'
 import { IconeVoltar } from './icones'
+import ReservarCarro, { temReservaNoRoteiro } from './ReservarCarro'
 import './Localizacao.css'
 
 /**
@@ -88,6 +92,13 @@ export default function Localizacao() {
   const [dia, setDia] = useState(hojeLocal)
   const [dados, setDados] = useState(null)
   const [erro, setErro] = useState('')
+  /* reservar ou trocar o carro de uma obra pelo calendario (atualizacao
+     59): o pop-up da obra (ReservarCarro). `versao` rele o mes depois */
+  const { user } = useAuth()
+  const { obras, clientePorId, roteiroDaObra, equipe } = useDados()
+  const [reservando, setReservando] = useState(null)
+  const [versao, setVersao] = useState(0)
+  const podeReservar = podeReservarCarro(user, equipe.find((p) => p.souEu)?.cargoTitulo ?? user?.cargoTitulo)
 
   useEffect(() => {
     let vivo = true
@@ -99,7 +110,7 @@ export default function Localizacao() {
     return () => {
       vivo = false
     }
-  }, [mes])
+  }, [mes, versao])
 
   const hoje = dados?.hoje ?? hojeLocal
   const reservas = useMemo(() => dados?.reservas ?? [], [dados])
@@ -137,6 +148,18 @@ export default function Localizacao() {
 
   const contagem = doDia.reduce((n, c) => ({ ...n, [c.tom]: (n[c.tom] ?? 0) + 1 }), {})
   const passado = dia < hoje
+
+  /* as obras abertas com execucao no dia escolhido e SEM carro reservado:
+     e daqui que o carro se acrescenta pelo calendario */
+  const semCarro = useMemo(
+    () =>
+      passado
+        ? []
+        : obras.filter(
+            (o) => !o.reserva?.veiculoId && diasDaExecucao(o).includes(dia) && temReservaNoRoteiro(o, roteiroDaObra),
+          ),
+    [obras, dia, passado, roteiroDaObra],
+  )
   const [ano, numero] = mes.split('-').map(Number)
   /* trocar de mes leva o dia escolhido junto: hoje, se for o mes de hoje,
      senao o dia 1 */
@@ -298,6 +321,11 @@ export default function Localizacao() {
                           {reserva.de === reserva.ate ? dataBR(reserva.de) : `${dataBR(reserva.de)} a ${dataBR(reserva.ate)}`}
                           {passado ? ' · período passou sem retirada registrada' : ' · a retirar'}
                         </span>
+                        {podeReservar && !passado && !reserva.concluida && (
+                          <button type="button" className="calres__trocar" onClick={() => setReservando(reserva.obraId)}>
+                            Trocar carro
+                          </button>
+                        )}
                       </>
                     )}
 
@@ -310,9 +338,35 @@ export default function Localizacao() {
                 ))}
               </ul>
             )}
+
+            {/* as obras do dia ainda sem carro: reservar daqui mesmo */}
+            {semCarro.length > 0 && (
+              <div className="calres__semcarro">
+                <h3>Obras sem carro neste dia</h3>
+                <ul className="calres__lista">
+                  {semCarro.map((o) => (
+                    <li key={o.id} className="calres__reserva vidro" data-tom="semcarro">
+                      <Link to={linkDaObra(o.id)} className="calres__obra">
+                        {tituloDaObra(o, clientePorId(o.clienteId))}
+                      </Link>
+                      <span className="calres__situacao">Execução: {resumoDosDias(diasDaExecucao(o))}</span>
+                      {podeReservar ? (
+                        <button type="button" className="calres__trocar" onClick={() => setReservando(o.id)}>
+                          Reservar carro
+                        </button>
+                      ) : (
+                        <span className="calres__situacao">A reserva é do supervisor.</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
         )}
       </section>
+
+      <ReservarCarro obraId={reservando} aoFechar={() => setReservando(null)} aoMudou={() => setVersao((v) => v + 1)} />
     </AppShell>
   )
 }

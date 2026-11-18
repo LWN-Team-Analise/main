@@ -130,14 +130,70 @@ export const ASSUNTOS = [
   },
   {
     id: 'meu-painel',
-    titulo: 'Meu painel e o menu completo',
-    gatilhos: ['meu painel', 'painel', 'hamburguer', 'menu completo', 'menu', 'mais', 'solicitar'],
+    titulo: 'O menu por área e o Meu painel',
+    gatilhos: ['meu painel', 'painel', 'hamburguer', 'menu completo', 'menu', 'mais', 'solicitar', 'area', 'seu espaco'],
     resposta:
-      'Se o seu setor tem o painel do Almoxarife, ele aparece como "Meu painel" no menu da sua foto, logo ' +
-      'acima de Configurações. O painel de cada setor é escolhido por quem tem acesso total, na tela do setor. ' +
-      'No computador, o "Mais" no alto do menu mostra o nome de cada aba (no Almoxarife também), e o ' +
-      'Almoxarife abre ao lado as abas dele; no celular, o Menu da barra de baixo abre o sistema inteiro. ' +
-      'O Solicitar abre direto a solicitação de OS do Almoxarife.',
+      'O menu é por área. No alto ficam Página inicial, Obras e Turnos; depois vem "Seu espaço" (Meu ponto, ' +
+      'Meus reembolsos e Pedir insumos) e as áreas: admin, almoxarife, comercial, da qualidade, técnica, da excelência e da ' +
+      'diretoria. Cada área só aparece se você tem ao menos uma tela dela: a área organiza, quem decide o que ' +
+      'você vê continua sendo a permissão do seu setor. No computador, clicar na área abre as telas dela ao ' +
+      'lado; com o "Mais" no alto do menu, elas aparecem embaixo do nome da área, que abre e fecha. No ' +
+      'celular, o Menu da barra de baixo mostra uma seção por área. O "Solicitar instrumento" da Área técnica ' +
+      'abre direto a solicitação de OS do Almoxarife. Se o seu setor tem o painel do Almoxarife, ele aparece ' +
+      'como "Meu painel" no menu da sua foto, logo acima de Configurações.',
+  },
+  {
+    id: 'insumos',
+    titulo: 'Pedir insumos',
+    gatilhos: ['insumo', 'insumos', 'material', 'pedido', 'pedir', 'escritorio', 'limpeza'],
+    resposta:
+      'Em Seu espaço > Pedir insumos, use "Novo pedido": diga o que você precisa, a quantidade e, se quiser, ' +
+      'uma observação. A situação aparece no canto de cada pedido: pendente até alguém aprovar ou reprovar, e ' +
+      'depois o resultado. Enquanto estiver pendente, dá para cancelar; depois da resposta, não. Quem tem a ' +
+      'permissão "Aprovar / reprovar pedidos de insumos" vê, em Área admin > Insumos, os pedidos da equipe, ' +
+      'aprova ou reprova cada um (a reprovação pede o motivo) e é o único que pode excluir um pedido.',
+  },
+  {
+    id: 'qualidade-documentos',
+    titulo: 'Acompanhamento dos documentos',
+    gatilhos: ['documento', 'documentos', 'protocolo', 'relatorio', 'certificado', 'laudo', 'revisao', 'qualidade'],
+    resposta:
+      'Em Área da qualidade > Acompanhamento dos documentos, cada documento é um cartão que anda pelas etapas, ' +
+      'como no Comercial. São três funis: Protocolos, Relatórios e Documentos gerais. Arraste o cartão para ' +
+      'mudar a etapa, ou abra o documento: lá ficam os dados (tipo, código, revisão, obra, responsável, prazo e ' +
+      'prioridade), o histórico e os comentários, e os botões Concluir, Nova revisão e Cancelar. O prazo fica ' +
+      'vermelho quando passa. Criar e mover pede a permissão "Adicionar / editar / mover documentos"; quem só ' +
+      'vê também comenta.',
+  },
+  {
+    id: 'qualidade-correio',
+    titulo: 'Solicitação de correio',
+    gatilhos: ['correio', 'correios', 'envio', 'enviar', 'sedex', 'pac', 'rastreio', 'etiqueta', 'pasta fisica'],
+    resposta:
+      'Em Área da qualidade > Solicitação de correio, use "Solicitar envio": o que vai, para quem e o endereço ' +
+      '(o CEP preenche o resto; escolher a obra traz o endereço do cliente), o serviço e até quando precisa sair. ' +
+      'Quem tem "Atender os envios" leva o pedido pelas colunas — Etiqueta gerada, Postada (com o código de ' +
+      'rastreio) e Entregue. Enquanto ninguém pegou, quem pediu ainda edita ou cancela.',
+  },
+  {
+    id: 'faturar',
+    titulo: 'O Faturar e o Liberado para faturamento',
+    gatilhos: ['faturar', 'faturamento', 'liberado', 'fatura', 'nota fiscal'],
+    resposta:
+      'Na 5ª etapa, o "Faturar" do Comercial fica com o cadeado ("após a liberação") até o Administrativo ' +
+      'marcar "Liberado para faturamento". Depois que o Faturar foi marcado, a liberação só se desmarca com o ' +
+      'Faturar desmarcado antes.',
+  },
+  {
+    id: 'turnos-ausencias',
+    titulo: 'Férias, atestado, folga e dia não operacional nos Turnos',
+    gatilhos: ['ferias', 'atestado', 'folga', 'nao operacional', 'ausencia', 'cor do turno', 'hex', 'rgb'],
+    resposta:
+      'No turno novo, escolha o Tipo: Turno, Férias (de uma data a outra), Atestado médico, Folga solicitada ou ' +
+      'Dia não operacional. Os quatro últimos valem o dia inteiro, sem obra, e já vêm com título e cor (dá para ' +
+      'mudar). O dia não operacional sem pessoa vale para o cronograma inteiro: a coluna fica hachurada. A cor ' +
+      'tem 20 amostras e, em "Outra cor", o quadro de cor, o HEX e o RGB. A tarefa da obra só aparece para quem ' +
+      'é do Time Técnico.',
   },
   {
     id: 'emergencia',
@@ -195,13 +251,13 @@ export const ASSUNTOS = [
     titulo: 'Despesas, refeições e bônus',
     gatilhos: ['despesa', 'reembolso', 'gasto', 'recibo', 'comprovante', 'refeicao', 'almoco', 'janta', 'bonus', 'vale'],
     resposta:
-      'Na aba Reembolso, escolha Enviar despesa, Enviar refeição ou Enviar bônus. O cliente é obrigatório. ' +
+      'Em Seu espaço > Meus reembolsos, escolha Enviar despesa, Enviar refeição ou Enviar bônus. O cliente é obrigatório. ' +
       'Combustível e outros precisam do comprovante (imagem, PDF, ZIP ou documento); a refeição e o bônus ' +
       'apartamento têm valor pré-definido. A refeição vai para o cliente que não oferece alimentação, e o ' +
       'bônus, para o cliente em que o colaborador tem direito ao bônus apartamento. O que você enviou fica em ' +
       '"Meus envios", por mês (dia a dia) ou por ano (mês a mês), com os totais e o filtro por tipo. Quem ' +
-      'tem a permissão "Revisar despesa geral" vê, no botão Envios gerais do Reembolso, quanto cada pessoa ' +
-      'enviou, com o filtro por tipo e por período.',
+      'tem a permissão "Revisar despesa geral" vê, no Dashboard de reembolso da Área admin (ou no botão ' +
+      'Envios gerais do Reembolso), quanto cada pessoa enviou, com o filtro por tipo e por período.',
   },
   {
     id: 'frotas',
@@ -235,7 +291,7 @@ export const ASSUNTOS = [
       'Almoxarife escolhe alguém do Almoxarife, o Time Técnico alguém do Time Técnico): escolhida a pessoa, o ' +
       'check fica marcado com o nome dela, e dá para trocar ou desmarcar. O check "Solicitar OS" abre a ' +
       'solicitação de OS do Almoxarife num pop-up, sem sair da obra; ele é marcado quando o supervisor ' +
-      'aprovar a OS. O "Solicitar" do menu abre o mesmo pop-up, sem sair da tela em que você está.',
+      'aprovar a OS. O "Solicitar instrumento" da Área técnica abre o mesmo pop-up, sem sair da tela em que você está.',
   },
   {
     id: 'ponto-de-encontro',
@@ -246,18 +302,19 @@ export const ASSUNTOS = [
       'cima, escolha o local: no local da obra (o endereço do cliente), na empresa (LWN) ou em outro lugar, ' +
       'com o endereço escrito. "Salvar e marcar" grava e marca o check. Para desmarcar o Ponto de encontro ou ' +
       'o "Prazo da execução" (pelo período de execução), as etapas seguintes não podem ter check marcado. A ' +
-      'aba Ponto de encontro do menu mostra os próximos e, depois de uma linha, os que já aconteceram.',
+      'tela Ponto de encontro (nas áreas técnica e admin) mostra os próximos e, depois de uma linha, os que já aconteceram.',
   },
   {
     id: 'ponto',
     titulo: 'Folha de ponto',
     gatilhos: ['ponto', 'folha de ponto', 'espelho', 'marcacao', 'marcacoes', 'hora extra', 'assinar folha', 'assinatura'],
     resposta:
-      'Na aba Ponto, cada um vê a própria folha de ponto, do mês ou de datas escolhidas, no desenho do espelho do ' +
-      'sistema de ponto. Para assinar a conferência, clique na área acima de "Assinatura Funcionário", marque as ' +
-      'duas confirmações e assine: o seu nome completo fica impresso ali. O Exportar baixa a folha em PDF e em ' +
-      'Excel. Quem tem a permissão "Ver a folha de ponto de todos e importar" (em Usuários) escolhe a pessoa e ' +
-      'importa o Cálculo Diário (.csv), mas não assina a folha de outra pessoa. Em Assinaturas vê quem assinou ' +
-      'e quem falta, e o "Enviar aviso" manda no Teams o pedido para a pessoa assinar.',
+      'Em Seu espaço > Meu ponto, cada um vê a própria folha de ponto, do mês ou de datas escolhidas, no desenho ' +
+      'do espelho do sistema de ponto. Para assinar a conferência, clique na área acima de "Assinatura ' +
+      'Funcionário", marque as duas confirmações e assine: o seu nome completo fica impresso ali. O Exportar ' +
+      'baixa a folha em PDF e em Excel. Quem tem a permissão "Ver a folha de ponto de todos e importar" abre o ' +
+      'Ponto da equipe, na Área admin: escolhe a pessoa e importa o Cálculo Diário (.csv), mas não assina a ' +
+      'folha de outra pessoa. Em Assinaturas vê quem assinou e quem falta, e o "Enviar aviso" manda no Teams o ' +
+      'pedido para a pessoa assinar.',
   },
 ]

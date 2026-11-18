@@ -1,0 +1,182 @@
+/* ============================================================
+   As listas do Dashboard (atualizacao 59): as avaliacoes e as pessoas
+   da Excelencia, e o ranking e os motivos do Comercial
+   ============================================================ */
+
+.excdash__obras,
+.excdash__pessoas,
+.excdash__ranking {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.excdash__obras li {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.excdash__obras li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.excdash__linha {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.excdash__linha strong {
+  color: var(--text-strong);
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}
+
+.excdash__nota {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-strong);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.excdash__motivo {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.excdash__pessoas li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.excdash__pessoas span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.excdash__pessoas strong {
+  color: var(--text-strong);
+  font-size: 0.86rem;
+}
+
+.excdash__pessoas em {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-style: normal;
+}
+
+/* o ranking: a posicao, o nome, a barra e os numeros */
+.excdash__ranking li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.excdash__posicao {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.excdash__nome {
+  color: var(--text-strong);
+  font-size: 0.84rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.excdash__numeros {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.excdash__barra {
+  grid-column: 2 / -1;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--barra, var(--accent)) 16%, transparent);
+  overflow: hidden;
+}
+
+.excdash__barra i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--barra, var(--accent));
+}
+
+/* o comparativo das despesas com o ano anterior: o gasto que sobe e o
+   ruim (vermelho), o que cai e o bom (verde) */
+.despcomp {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.despcomp li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding-left: 10px;
+  border-left: 3px solid var(--cor, var(--text-strong));
+}
+
+.despcomp__rotulo {
+  color: var(--text-strong);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.despcomp__valores {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  color: var(--text-strong);
+  font-size: 0.82rem;
+}
+
+.despcomp__valores em {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-style: normal;
+}
+
+.despcomp__pct {
+  min-width: 64px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.despcomp__pct[data-tom='subiu'] {
+  color: var(--danger);
+}
+
+.despcomp__pct[data-tom='caiu'] {
+  color: var(--success);
+}

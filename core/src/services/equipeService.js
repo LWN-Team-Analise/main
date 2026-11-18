@@ -8,7 +8,7 @@
  * administrador.
  */
 
-import { del, get, patch, post } from './api'
+import { del, get, patch, post, put } from './api'
 
 /* ---------------- Cargos ---------------- */
 
@@ -24,6 +24,12 @@ export async function criarCargo(campos) {
 
 export async function editarCargo(id, campos) {
   const { cargo } = await patch(`/equipe/cargos/${id}`, campos)
+  return cargo
+}
+
+/** O lugar do time no organograma: { diretorId, liderId } (atualizacao 59). */
+export async function editarOrganograma(id, campos) {
+  const { cargo } = await put(`/equipe/cargos/${id}/organograma`, campos)
   return cargo
 }
 

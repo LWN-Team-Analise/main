@@ -60,6 +60,13 @@ export function regraLibera(regra, etapaOrdem, check) {
   return !ids.some((id) => (regra.exceto ?? []).includes(id))
 }
 
+/* O "Faturar" do Comercial espera o "Liberado para faturamento" do
+   Administrativo (atualizacao 58; estadoDoFaturamento, em obras.js) */
+export const RECADO_FATURAR_TRAVADO =
+  'O "Faturar" só libera depois que o Administrativo marcar "Liberado para faturamento".'
+export const RECADO_LIBERACAO_FATURADA =
+  'O Comercial já marcou "Faturar". Para desmarcar a liberação, o "Faturar" precisa ser desmarcado antes.'
+
 /** O que dizer quando o check nao abre — a chave vem de `travaDoCheck`. */
 export const MOTIVO_DA_TRAVA = {
   membro: 'Você não participa desta obra. Para marcar os checks dela, é preciso ser incluído em Membros e aceitar.',

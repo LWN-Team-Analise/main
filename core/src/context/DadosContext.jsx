@@ -238,6 +238,12 @@ export function DadosProvider({ children }) {
     [gravar],
   )
 
+  /** O setor no organograma: a que setor responde e quem lidera (atualizacao 59). */
+  const atualizarOrganograma = useCallback(
+    (id, campos) => gravar(() => equipeApi.editarOrganograma(id, campos)),
+    [gravar],
+  )
+
   const removerCargo = useCallback((id) => gravar(() => equipeApi.apagarCargo(id)), [gravar])
 
   const cargoPorChave = useCallback(
@@ -403,6 +409,12 @@ export function DadosProvider({ children }) {
    */
   const concluirObra = useCallback(
     (id, observacao) => gravar(() => dados.concluirObra(id, observacao)),
+    [gravar],
+  )
+
+  /** Cancela a obra aberta, com o motivo (atualizacao 59). */
+  const cancelarObra = useCallback(
+    (id, campos) => gravar(() => dados.cancelarObra(id, campos)),
     [gravar],
   )
 
@@ -1293,6 +1305,7 @@ export function DadosProvider({ children }) {
 
       adicionarCargo,
       atualizarCargo,
+      atualizarOrganograma,
       removerCargo,
       cargoPorChave,
       corDoCargo,
@@ -1322,6 +1335,7 @@ export function DadosProvider({ children }) {
       atualizarObra,
       removerObra,
       concluirObra,
+      cancelarObra,
       alternarCheck,
       responderCheck,
       concluirCheck,
@@ -1428,6 +1442,7 @@ export function DadosProvider({ children }) {
       pode,
       adicionarCargo,
       atualizarCargo,
+      atualizarOrganograma,
       removerCargo,
       cargoPorChave,
       corDoCargo,
@@ -1452,6 +1467,7 @@ export function DadosProvider({ children }) {
       atualizarObra,
       removerObra,
       concluirObra,
+      cancelarObra,
       alternarCheck,
       responderCheck,
       concluirCheck,

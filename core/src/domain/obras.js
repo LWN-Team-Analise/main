@@ -17,7 +17,14 @@
 
 import { podeFazer } from './permissoes'
 import { resumoDasLinhas } from './itensEnsaio'
-import { MOTIVO_DA_TRAVA, lerRegrasCheck, regraDoUsuario, regraLibera } from './regrasCheck'
+import {
+  MOTIVO_DA_TRAVA,
+  RECADO_FATURAR_TRAVADO,
+  RECADO_LIBERACAO_FATURADA,
+  lerRegrasCheck,
+  regraDoUsuario,
+  regraLibera,
+} from './regrasCheck'
 
 export const PRIORIDADES = [
   { id: 'baixa', rotulo: 'Baixa' },
@@ -314,6 +321,10 @@ export function prazoFinalDaObra(roteiro, obra) {
 export function obraFechada(obra) {
   return Boolean(obra?.concluidaEm)
 }
+
+/* a obra CANCELADA (atualizacao 59): os motivos moram em cancelamento.js,
+   que a API tambem importa */
+export { MOTIVOS_CANCELAMENTO, motivoDoCancelamento, obraCancelada } from './cancelamento'
 
 /**
  * A obra esta pronta para ser concluida?
@@ -617,13 +628,18 @@ export function estadoDasFerramentasDaOS(obra) {
   }
 }
 
-/** O endereco da aba do LWN Control com a OS da obra em destaque (e, com `acao`, ja aberta nela). */
+/**
+ * O endereco da aba do LWN Control com a OS da obra em destaque (e, com
+ * `acao`, ja aberta nela). Abre a aba DENTRO do Atmosfera, na Area
+ * almoxarife (pages/Almoxarife/AlmoxarifeNaArea.jsx), que leva o "?" junto
+ * para o quadro.
+ */
 export const enderecoDaAbaDaOS = (aba, os, acao) => {
   const busca = new URLSearchParams()
   if (os) busca.set('os', os.id)
   if (os && acao) busca.set('acao', acao)
   const texto = busca.toString()
-  return `/core/app/control/${aba}${texto ? `?${texto}` : ''}`
+  return `/core/app/almoxarife/${aba}${texto ? `?${texto}` : ''}`
 }
 
 /**
@@ -717,6 +733,38 @@ export function aplicarRegraDoFaturamento(roteiro, obra) {
       .filter((card) => !(card.checks.length > 0 && card.checks.every(ehAnaliseDeFaturamento)))
       .map((card) => ({ ...card, checks: card.checks.filter((k) => !ehAnaliseDeFaturamento(k)) })),
   }))
+}
+
+/* ------------------------------------------------------------
+   O "Faturar" (5a etapa, Comercial) espera o Administrativo
+
+   O Comercial so marca "Faturar" depois que o Administrativo marca
+   "Liberado para faturamento" (atualizacao 58). Antes disso ele aparece
+   travado, com o cadeado, e ninguem marca — nem o acesso total, nem quem
+   conclui check sem a informacao. Do outro lado, a liberacao nao se
+   desmarca enquanto o "Faturar" estiver marcado. A obra cujo roteiro nao
+   tem o check do Administrativo nao tem trava. O servidor confere igual
+   (server/routes/dados.js, faturarTravado).
+   ------------------------------------------------------------ */
+export const CHECK_LIBERADO_FATURAMENTO = 'liberado_faturamento'
+export const CHECK_FATURAR = 'faturar'
+/* os recados moram em regrasCheck.js, que o servidor tambem le */
+export { RECADO_FATURAR_TRAVADO, RECADO_LIBERACAO_FATURADA }
+
+/**
+ * Em que pe esta o faturamento da obra:
+ *   liberado  o Administrativo ja liberou (true tambem quando o roteiro
+ *             nao tem o check dele: ai nao ha o que esperar);
+ *   faturado  o Comercial ja marcou "Faturar".
+ */
+export function estadoDoFaturamento(roteiro, obra) {
+  const checks = (roteiro ?? []).flatMap((e) => (e.cards ?? []).flatMap((c) => c.checks ?? []))
+  const marcado = (check) => Boolean(obra?.checks?.[check.id])
+  const liberacoes = checks.filter((k) => k.tipo === CHECK_LIBERADO_FATURAMENTO)
+  return {
+    liberado: liberacoes.length === 0 || liberacoes.some(marcado),
+    faturado: checks.some((k) => k.tipo === CHECK_FATURAR && marcado(k)),
+  }
 }
 
 /**

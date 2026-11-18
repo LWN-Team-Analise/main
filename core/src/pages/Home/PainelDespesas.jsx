@@ -4,6 +4,8 @@ import * as despesasApi from '@/services/despesasService'
 import { reais } from '@/utils/formato'
 import { Colunas, Linha, Rosca } from './graficos'
 import Tile from './Tile'
+/* o comparativo com o ano anterior usa as listas do painel da Excelencia */
+import './PainelExcelencia.css'
 
 /* ============================================================
    DESPESAS no Dashboard
@@ -31,12 +33,27 @@ const COR = {
   bonus: 'var(--gr-bonus)',
 }
 
-/* os tipos que ficam fora do grafico "por tipo" da categoria: o bonus de
-   viagem sai, e o "Bonus por tipo" mostra so o de apartamento. Os totais
-   do bonus (o quadrinho e a divisao por categoria) continuam com tudo */
-const FORA_DO_POR_TIPO = new Set(['bonus_viagem'])
+/* o grafico "por tipo" vai so para despesa e refeicao: o "Bonus por tipo"
+   saiu do Dashboard a pedido da diretoria (18/11). Os totais do bonus (o
+   quadrinho, a divisao por categoria e o comparativo) continuam */
+const COM_POR_TIPO = CHAVES_CATEGORIA.filter((c) => c !== 'bonus')
 
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`
+
+/** '2026-11-30' -> '2025-11-30' (o 29/02 vira 28/02 no ano que nao tem). */
+function anoAntes(dia) {
+  const [a, m, d] = dia.split('-')
+  return `${Number(a) - 1}-${m}-${m === '02' && d === '29' ? '28' : d}`
+}
+
+/** A variacao de um ano para o outro, em %: null sem base para comparar. */
+function variacao(atual, antes) {
+  if (!antes) return null
+  return Math.round(((atual - antes) / antes) * 100)
+}
+
+/** '+12%', '−8%', '0%' — com o sinal certo, sem o hifen. */
+const comSinal = (pct) => (pct > 0 ? `+${pct}%` : pct < 0 ? `−${Math.abs(pct)}%` : '0%')
 
 /** R$ 1.234,56 -> "1,2 mil": o que cabe em cima de uma coluna estreita. */
 function reaisCurto(valor) {
@@ -65,6 +82,10 @@ export default function PainelDespesas({ fatias, passo, rotuloDaFatia }) {
   const de = periodo?.de
   const ate = periodo?.ate
 
+  /* o mesmo periodo um ano antes: o comparativo de crescimento e queda
+     (atualizacao 59). Se falhar, o resto do painel continua */
+  const [anterior, setAnterior] = useState(null)
+
   useEffect(() => {
     if (!de) return undefined
     let vivo = true
@@ -77,10 +98,25 @@ export default function PainelDespesas({ fatias, passo, rotuloDaFatia }) {
         setErro(e.message)
         setLinhas([])
       })
+    setAnterior(null)
+    despesasApi
+      .carregarPainel({ de: anoAntes(de), ate: anoAntes(ate) })
+      .then((resposta) => vivo && setAnterior(resposta))
+      .catch(() => vivo && setAnterior([]))
     return () => {
       vivo = false
     }
   }, [de, ate])
+
+  /* os totais do ano anterior, por categoria e no geral */
+  const antes = useMemo(() => {
+    if (!anterior) return null
+    const porCategoria = Object.fromEntries(CHAVES_CATEGORIA.map((c) => [c, 0]))
+    anterior.forEach((l) => {
+      if (l.categoria in porCategoria) porCategoria[l.categoria] += l.total
+    })
+    return { porCategoria, total: CHAVES_CATEGORIA.reduce((s, c) => s + porCategoria[c], 0) }
+  }, [anterior])
 
   const contas = useMemo(() => {
     if (!linhas) return null
@@ -122,7 +158,7 @@ export default function PainelDespesas({ fatias, passo, rotuloDaFatia }) {
       tipos: Object.fromEntries(
         CHAVES_CATEGORIA.map((c) => [
           c,
-          CATEGORIAS[c].tipos.filter((t) => !FORA_DO_POR_TIPO.has(t.chave)).map((t) => {
+          CATEGORIAS[c].tipos.map((t) => {
             const valor = Math.round((porTipo[t.chave] ?? 0) * 100) / 100
             return {
               chave: t.chave,
@@ -156,7 +192,12 @@ export default function PainelDespesas({ fatias, passo, rotuloDaFatia }) {
             <Tile
               rotulo={`Total ${quando}`}
               valor={reais(contas.total)}
-              nota={plural(contas.quantidade, 'envio', 'envios')}
+              nota={
+                antes && variacao(contas.total, antes.total) !== null
+                  ? `${plural(contas.quantidade, 'envio', 'envios')} · ${comSinal(variacao(contas.total, antes.total))} sobre ${anoAntes(de).slice(0, 4)}`
+                  : plural(contas.quantidade, 'envio', 'envios')
+              }
+              tom={antes && antes.total ? (contas.total > antes.total ? 'ruim' : contas.total < antes.total ? 'bom' : undefined) : undefined}
             />
             {CHAVES_CATEGORIA.map((c) => (
               <Tile
@@ -219,7 +260,53 @@ export default function PainelDespesas({ fatias, passo, rotuloDaFatia }) {
                 </div>
               </section>
 
-              {CHAVES_CATEGORIA.map((c) => (
+              {/* o comparativo com o mesmo periodo do ano anterior (atualizacao 59) */}
+              <section className="cartao cartao--terco vidro">
+                <header className="cartao__topo">
+                  <div>
+                    <h2 className="cartao__titulo">Comparado a {anoAntes(de).slice(0, 4)}</h2>
+                    <p className="cartao__sub">O mesmo período, um ano antes</p>
+                  </div>
+                </header>
+                <div className="cartao__corpo">
+                  {!antes ? (
+                    <p className="cartao__vazio">Carregando o ano anterior...</p>
+                  ) : (
+                    <ul className="despcomp">
+                      {[
+                        { chave: 'total', rotulo: 'Total', atual: contas.total, antes: antes.total },
+                        ...CHAVES_CATEGORIA.map((c) => ({
+                          chave: c,
+                          rotulo: CATEGORIAS[c].plural,
+                          atual: contas.porCategoria[c].total,
+                          antes: antes.porCategoria[c],
+                          cor: COR[c],
+                        })),
+                      ].map((linha) => {
+                        const pct = variacao(linha.atual, linha.antes)
+                        return (
+                          <li key={linha.chave} style={linha.cor ? { '--cor': linha.cor } : undefined}>
+                            <span className="despcomp__rotulo">{linha.rotulo}</span>
+                            <span className="despcomp__valores">
+                              {reais(linha.atual)}
+                              <em>antes {reais(linha.antes)}</em>
+                            </span>
+                            <span
+                              className="despcomp__pct"
+                              data-tom={pct === null ? undefined : pct > 0 ? 'subiu' : pct < 0 ? 'caiu' : undefined}
+                              title={pct === null ? 'Sem gasto no ano anterior para comparar' : undefined}
+                            >
+                              {pct === null ? '—' : `${pct > 0 ? '▲' : pct < 0 ? '▼' : ''} ${comSinal(pct)}`}
+                            </span>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </div>
+              </section>
+
+              {COM_POR_TIPO.map((c) => (
                 <section key={c} className="cartao cartao--terco vidro">
                   <header className="cartao__topo">
                     <div>

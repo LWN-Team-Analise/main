@@ -119,6 +119,9 @@ const paraCargo = (linha) => ({
   painelDisponivel: linha.painel !== undefined,
   painel: CHAVES_PAINEL.includes(linha.painel) ? linha.painel : null,
   painelExclusivo: CHAVES_PAINEL.includes(linha.painel) && linha.painel_exclusivo === true,
+  /* o ORGANOGRAMA (atualizacao 59): quem fica no topo do time. null = o
+     cargo de cada um decide (ou o banco ainda sem a coluna) */
+  liderId: linha.lider_id ? String(linha.lider_id) : null,
 })
 
 /* ------------------------------------------------------------
@@ -181,6 +184,42 @@ router.post('/cargos', exigeSessao, exige('editar_cargo'), async (req, res) => {
       return res.status(409).json({ erro: 'Já existe um cargo com esse nome.' })
     }
     return tratar(erro, res, 'equipe/cargos-criar')
+  }
+})
+
+/**
+ * PUT /api/equipe/cargos/:id/organograma — { liderId } (atualizacao 59).
+ *
+ * Quem fica no topo do time no organograma (null = o cargo de cada um
+ * decide). Todos os times respondem a diretoria, entao nao ha o que mais
+ * escolher. Quem mexe e `editar_organograma`.
+ */
+router.put('/cargos/:id/organograma', exigeSessao, exige('editar_organograma'), async (req, res) => {
+  const id = String(req.params.id)
+  const idOuNulo = (valor) => (/^\d{1,15}$/.test(String(valor ?? '')) ? String(valor) : null)
+  const liderId = idOuNulo(req.body?.liderId)
+  if (!/^\d{1,15}$/.test(id)) return res.status(404).json({ erro: 'Setor não encontrado.' })
+
+  try {
+    if (liderId) {
+      const { rows } = await query('SELECT 1 FROM usuario WHERE id = $1 AND ativo', [liderId])
+      if (!rows[0]) return res.status(400).json({ erro: 'A pessoa escolhida não está mais na equipe.', campo: 'liderId' })
+    }
+    const { rows } = await query('UPDATE cargo SET lider_id = $2 WHERE id = $1 RETURNING *', [id, liderId])
+    if (!rows[0]) return res.status(404).json({ erro: 'Setor não encontrado.' })
+    await registrarAtividade(req, {
+      acao: 'setor.organograma',
+      categoria: 'equipe',
+      entidade: ['cargo', id],
+      descricao: 'Organograma atualizado',
+      detalhes: { setor: rows[0].nome, lider_id: liderId },
+    })
+    return res.json({ cargo: paraCargo(rows[0]) })
+  } catch (erro) {
+    if (erro.code === '42703') {
+      return res.status(503).json({ erro: 'O banco ainda não tem o organograma (atualização 59 em core/db).' })
+    }
+    return tratar(erro, res, 'equipe/organograma')
   }
 })
 

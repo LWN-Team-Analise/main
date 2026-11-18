@@ -149,6 +149,34 @@
   overflow-wrap: anywhere;
 }
 
+/* a obra cancelada: quando, quem e o motivo, logo embaixo da descricao */
+.capa__cancelada {
+  display: inline-block;
+  margin: 10px 0 0;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(229, 72, 77, 0.22);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+/* o que o cadastro do cliente diz (refeicao, hospedagem, faturamento) */
+.capa__docliente {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+}
+
+.capa__docliente span {
+  padding: 3px 10px;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0.92;
+}
+
 /* ---------------- Faixa de informacoes ---------------- */
 
 .infos {
@@ -877,6 +905,23 @@
   margin: 0;
   font-size: 0.86rem;
   color: var(--text-strong);
+}
+
+/* o cancelamento da obra (ModalCancelarObra): o que acontece e o erro */
+.formobs__aviso {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.formobs__erro {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.84rem;
 }
 
 /* ---------------- Responsivo ---------------- */

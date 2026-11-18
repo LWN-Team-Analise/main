@@ -1,0 +1,344 @@
+-- ============================================================
+--  ATUALIZACAO 59 — os pedidos da supervisora (18/11)
+--
+--  Uma atualizacao so para o dia, uma parte por assunto. Tudo aqui pode
+--  rodar de novo sem quebrar nem duplicar nada: se uma parte nova entrar
+--  depois, basta rodar o arquivo inteiro outra vez.
+--
+--  1. CLIENTE: onde o colaborador fica e o faturamento
+--     cliente.hospedagem — "Onde o colaborador fica?": 'hotel' ou
+--     'airbnb'. NULL = sem resposta (a unidade sem resposta propria vale
+--     a do cliente, como o "Oferece alimentacao?").
+--     cliente.fatura_apos_documento — "Fatura so depois do documento
+--     digital liberado?": true, false ou NULL (sem resposta).
+--
+--  2. CANCELAR A OBRA
+--     obra.cancelamento_motivo — por que a obra foi cancelada (a chave da
+--     lista MOTIVOS_CANCELAMENTO, em src/domain/obras.js). A obra
+--     cancelada fecha como a concluida (concluida_em, concluida_por e
+--     conclusao_obs, que guarda a observacao); o motivo preenchido e o
+--     que a marca como cancelada. NULL = nao foi cancelada.
+--     A permissao nova `cancelar_obras` vai, uma vez so, para os setores
+--     que criam obra (`criar_obras`: o Comercial e o acesso total).
+--
+--  3. OS AVISOS DO PRAZO DA EXECUCAO (no Teams)
+--     Prolongar a execucao (o ultimo dia passa do prazo que ja existia)
+--     pede o motivo. Sao duas chaves de AVISO, nao de acesso: vale so o
+--     setor que tem a chave marcada (o acesso total nao entra sozinho).
+--       aviso_prazo_obra    obra prolongada, encurtada ou com a execucao
+--                           concluida antes do prazo: a hospedagem. Vai,
+--                           uma vez so, para quem revisa as despesas de
+--                           todos (`revisar_despesa_geral`: o Administrativo)
+--       aviso_aditivo_obra  obra prolongada, com o motivo: o aditivo. Vai,
+--                           uma vez so, para quem edita negocio
+--                           (`editar_negocios`: o Comercial)
+--     As duas dependem de `ver_obras`: so entram no setor que ve Obras.
+--     Nao e coluna nova: e so a lista de permissoes do setor.
+--
+--  4. FROTAS: OS PROBLEMAS E AS MANUTENCOES DO CARRO
+--     veiculo_ocorrencia — o problema relatado (descricao, se impede o
+--     uso, quem e quando; resolvido_em/por e a resolucao quando conserta).
+--     veiculo_manutencao — o que foi feito no carro e quanto custou
+--     (data, descricao, oficina, custo, KM e, se conserta um problema
+--     relatado, a ocorrencia).
+--     Permissoes (dependem de `ver_frotas`):
+--       manutencao_frota      lancar o custo e resolver o problema. Vai,
+--                             uma vez so, para quem edita veiculo, quem
+--                             revisa as despesas de todos e o acesso total
+--       aviso_problema_frota  recebe no Teams o problema relatado (so a
+--                             chave marcada conta). Vai, uma vez so, para
+--                             quem revisa as despesas de todos (o
+--                             Administrativo); a lideranca tecnica e
+--                             marcada na tela do setor
+--
+--  5. NOTEBOOKS E PCS (Area da excelencia)
+--     equipamento_ti — cada equipamento de informatica: tipo (notebook,
+--     desktop, monitor, outro), marca, modelo, patrimonio (unico quando
+--     preenchido), numero de serie, configuracao (processador, memoria,
+--     armazenamento, sistema), com quem esta (responsavel), onde (local),
+--     a situacao (em uso, disponivel, em manutencao, baixado), a compra, a
+--     garantia e uma observacao.
+--     Permissoes: ver_equipamentos (a aba "Notebooks e PCs") e
+--     editar_equipamentos. Vao, uma vez so, para o acesso total; os outros
+--     setores (a Excelencia) sao marcados na tela de cada um.
+--
+--  6. O ORGANOGRAMA (a folha da diretoria: os diretores em cima e todos os
+--     times abaixo deles, cada pessoa no nivel do cargo)
+--     cargo.lider_id — quem fica no topo do time (NULL = o cargo de cada um
+--                      decide a ordem).
+--     Todos os times respondem ao setor Diretor, na ordem da folha (em
+--     src/domain/organograma.js): as versoes de antes (cargo.superior_id,
+--     o setor respondendo a outro setor, e cargo.diretor_id, o time
+--     respondendo a uma pessoa) nao serviram para o desenho e saem. Quem ve a equipe
+--     (`ver_usuarios`) ve o organograma; a permissao nova
+--     `editar_organograma` vai, uma vez so, para o acesso total e para os
+--     setores que veem a equipe e editam setor (`editar_cargo`) ou revisam
+--     as despesas de todos (o Administrativo).
+--
+--  7. O TIPO DO EVENTO DA AGENDA (pagina inicial)
+--     agenda_evento.tipo — evento da empresa, reuniao, treinamento,
+--     confraternizacao, data comemorativa, feriado nacional, estadual ou
+--     municipal, ponto facultativo, aniversario ou outro (a lista e
+--     TIPOS_EVENTO, em src/domain/agenda.js; a API confere). Os eventos
+--     que ja existiam ficam como evento.
+--
+--  8. OS TURNOS DO TEAMS (server/turnosTeams.js)
+--     O app Turnos do Teams alimenta a aba Turnos sozinho.
+--     turno.teams_id          — o id do turno, da folga ou do turno aberto
+--                               no Teams ("turno:...", "folga:...",
+--                               "aberto:..."). NULL = feito no site. Unico:
+--                               e por ele que a sincronizacao acha o turno.
+--     turno.teams_alterado_em — quando ele mudou no Teams pela ultima vez
+--                               (o que nao mudou nao e regravado).
+--     cronograma.teams_grupo_id — o grupo do Teams daquele cronograma.
+--
+--  SQL simples, sem bloco DO: roda igual no psql, no
+--  `npm run db:atualizar` e no editor de SQL do Neon.
+-- ============================================================
+
+BEGIN;
+
+-- ---------------- 1. CLIENTE ----------------
+
+ALTER TABLE public.cliente ADD COLUMN IF NOT EXISTS hospedagem text;
+ALTER TABLE public.cliente DROP CONSTRAINT IF EXISTS cliente_hospedagem_ok;
+ALTER TABLE public.cliente ADD CONSTRAINT cliente_hospedagem_ok
+    CHECK (hospedagem IS NULL OR hospedagem IN ('hotel', 'airbnb'));
+
+COMMENT ON COLUMN public.cliente.hospedagem IS
+    'Onde o colaborador fica na obra deste cliente: hotel ou airbnb. NULL = sem resposta (a unidade vale a do cliente).';
+
+ALTER TABLE public.cliente ADD COLUMN IF NOT EXISTS fatura_apos_documento boolean;
+
+COMMENT ON COLUMN public.cliente.fatura_apos_documento IS
+    'O cliente so fatura depois do documento digital liberado? NULL = sem resposta (a unidade vale a do cliente).';
+
+-- ---------------- 2. CANCELAR A OBRA ----------------
+
+ALTER TABLE public.obra ADD COLUMN IF NOT EXISTS cancelamento_motivo text;
+ALTER TABLE public.obra DROP CONSTRAINT IF EXISTS obra_cancelamento_ok;
+ALTER TABLE public.obra ADD CONSTRAINT obra_cancelamento_ok
+    CHECK (cancelamento_motivo IS NULL OR (concluida_em IS NOT NULL AND char_length(cancelamento_motivo) <= 40));
+
+COMMENT ON COLUMN public.obra.cancelamento_motivo IS
+    'Por que a obra foi cancelada (chave de MOTIVOS_CANCELAMENTO). Preenchido = cancelada; ela fecha como a concluida.';
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['cancelar_obras']
+ WHERE NOT ('cancelar_obras' = ANY (permissoes))
+   AND NOT coalesce(painel_tv, false)
+   AND (acesso_total OR 'criar_obras' = ANY (permissoes))
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_59_cancelar');
+
+INSERT INTO public.configuracao (chave, valor)
+VALUES ('marco_atualizacao_59_cancelar', 'cancelar_obras distribuida a quem cria obra')
+ON CONFLICT (chave) DO NOTHING;
+
+-- ---------------- 3. OS AVISOS DO PRAZO DA EXECUCAO ----------------
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['aviso_prazo_obra']
+ WHERE NOT ('aviso_prazo_obra' = ANY (permissoes))
+   AND NOT coalesce(painel_tv, false) AND NOT acesso_total
+   AND 'ver_obras' = ANY (permissoes) AND 'revisar_despesa_geral' = ANY (permissoes)
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_59_avisos');
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['aviso_aditivo_obra']
+ WHERE NOT ('aviso_aditivo_obra' = ANY (permissoes))
+   AND NOT coalesce(painel_tv, false) AND NOT acesso_total
+   AND 'ver_obras' = ANY (permissoes) AND 'editar_negocios' = ANY (permissoes)
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_59_avisos');
+
+INSERT INTO public.configuracao (chave, valor)
+VALUES ('marco_atualizacao_59_avisos', 'aviso_prazo_obra e aviso_aditivo_obra distribuidas')
+ON CONFLICT (chave) DO NOTHING;
+
+-- ---------------- 4. FROTAS: PROBLEMAS E MANUTENCOES ----------------
+
+CREATE TABLE IF NOT EXISTS public.veiculo_ocorrencia (
+    id             bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    veiculo_id     bigint      NOT NULL REFERENCES public.veiculo (id) ON DELETE CASCADE,
+    descricao      text        NOT NULL,
+    impede_uso     boolean     NOT NULL DEFAULT false,
+    relatado_por   bigint      REFERENCES public.usuario (id) ON DELETE SET NULL,
+    relatado_em    timestamptz NOT NULL DEFAULT now(),
+    resolvido_em   timestamptz,
+    resolvido_por  bigint      REFERENCES public.usuario (id) ON DELETE SET NULL,
+    resolucao      text,
+
+    CONSTRAINT veiculo_ocorrencia_descricao_ok CHECK (char_length(btrim(descricao)) BETWEEN 1 AND 1000),
+    CONSTRAINT veiculo_ocorrencia_resolucao_ok CHECK (resolucao IS NULL OR char_length(resolucao) <= 500)
+);
+
+CREATE INDEX IF NOT EXISTS veiculo_ocorrencia_do_veiculo ON public.veiculo_ocorrencia (veiculo_id, relatado_em DESC);
+CREATE INDEX IF NOT EXISTS veiculo_ocorrencia_abertas ON public.veiculo_ocorrencia (relatado_em) WHERE resolvido_em IS NULL;
+
+COMMENT ON TABLE public.veiculo_ocorrencia IS
+    'Problema relatado no carro (aba Frotas). Aberto ate alguem com manutencao_frota resolver.';
+
+CREATE TABLE IF NOT EXISTS public.veiculo_manutencao (
+    id              bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    veiculo_id      bigint        NOT NULL REFERENCES public.veiculo (id) ON DELETE CASCADE,
+    data            date          NOT NULL,
+    descricao       text          NOT NULL,
+    oficina         text,
+    custo           numeric(12,2) NOT NULL,
+    km              integer,
+    ocorrencia_id   bigint        REFERENCES public.veiculo_ocorrencia (id) ON DELETE SET NULL,
+    registrado_por  bigint        REFERENCES public.usuario (id) ON DELETE SET NULL,
+    criado_em       timestamptz   NOT NULL DEFAULT now(),
+
+    CONSTRAINT veiculo_manutencao_descricao_ok CHECK (char_length(btrim(descricao)) BETWEEN 1 AND 500),
+    CONSTRAINT veiculo_manutencao_oficina_ok CHECK (oficina IS NULL OR char_length(oficina) <= 120),
+    CONSTRAINT veiculo_manutencao_custo_ok CHECK (custo >= 0 AND custo <= 9999999),
+    CONSTRAINT veiculo_manutencao_km_ok CHECK (km IS NULL OR km BETWEEN 0 AND 9999999)
+);
+
+CREATE INDEX IF NOT EXISTS veiculo_manutencao_do_veiculo ON public.veiculo_manutencao (veiculo_id, data DESC);
+CREATE INDEX IF NOT EXISTS veiculo_manutencao_por_data ON public.veiculo_manutencao (data);
+
+COMMENT ON TABLE public.veiculo_manutencao IS
+    'Manutencao feita no carro e quanto custou (aba Frotas; dashboard da diretoria).';
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['manutencao_frota']
+ WHERE NOT ('manutencao_frota' = ANY (permissoes))
+   AND NOT coalesce(painel_tv, false)
+   AND (acesso_total
+        OR ('ver_frotas' = ANY (permissoes)
+            AND ('editar_veiculos' = ANY (permissoes) OR 'revisar_despesa_geral' = ANY (permissoes))))
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_59_frota');
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['aviso_problema_frota']
+ WHERE NOT ('aviso_problema_frota' = ANY (permissoes))
+   AND NOT coalesce(painel_tv, false) AND NOT acesso_total
+   AND 'ver_frotas' = ANY (permissoes) AND 'revisar_despesa_geral' = ANY (permissoes)
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_59_frota');
+
+INSERT INTO public.configuracao (chave, valor)
+VALUES ('marco_atualizacao_59_frota', 'manutencao_frota e aviso_problema_frota distribuidas')
+ON CONFLICT (chave) DO NOTHING;
+
+-- ---------------- 5. NOTEBOOKS E PCS ----------------
+
+CREATE TABLE IF NOT EXISTS public.equipamento_ti (
+    id              bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    tipo            text        NOT NULL,
+    situacao        text        NOT NULL DEFAULT 'em_uso',
+    marca           text,
+    modelo          text,
+    patrimonio      text,
+    numero_serie    text,
+    processador     text,
+    memoria         text,
+    armazenamento   text,
+    sistema         text,
+    responsavel_id  bigint      REFERENCES public.usuario (id) ON DELETE SET NULL,
+    local           text,
+    aquisicao       date,
+    garantia_ate    date,
+    observacao      text,
+    criado_em       timestamptz NOT NULL DEFAULT now(),
+    atualizado_em   timestamptz NOT NULL DEFAULT now(),
+    atualizado_por  bigint      REFERENCES public.usuario (id) ON DELETE SET NULL,
+
+    CONSTRAINT equipamento_ti_tipo_ok CHECK (tipo IN ('notebook', 'desktop', 'monitor', 'outro')),
+    CONSTRAINT equipamento_ti_situacao_ok CHECK (situacao IN ('em_uso', 'disponivel', 'manutencao', 'baixado')),
+    CONSTRAINT equipamento_ti_tamanhos_ok CHECK (
+        coalesce(char_length(marca), 0) <= 60 AND coalesce(char_length(modelo), 0) <= 80
+        AND coalesce(char_length(patrimonio), 0) <= 40 AND coalesce(char_length(numero_serie), 0) <= 80
+        AND coalesce(char_length(processador), 0) <= 80 AND coalesce(char_length(memoria), 0) <= 40
+        AND coalesce(char_length(armazenamento), 0) <= 60 AND coalesce(char_length(sistema), 0) <= 60
+        AND coalesce(char_length(local), 0) <= 80 AND coalesce(char_length(observacao), 0) <= 500)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS equipamento_ti_patrimonio_uk
+    ON public.equipamento_ti (lower(patrimonio)) WHERE patrimonio IS NOT NULL;
+CREATE INDEX IF NOT EXISTS equipamento_ti_responsavel ON public.equipamento_ti (responsavel_id);
+
+COMMENT ON TABLE public.equipamento_ti IS
+    'Notebooks, PCs e monitores da empresa: com quem esta, onde e em que situacao (Area da excelencia).';
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['ver_equipamentos', 'editar_equipamentos']
+ WHERE acesso_total AND NOT ('ver_equipamentos' = ANY (permissoes))
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_59_equipamentos');
+
+INSERT INTO public.configuracao (chave, valor)
+VALUES ('marco_atualizacao_59_equipamentos', 'ver_equipamentos e editar_equipamentos no acesso total')
+ON CONFLICT (chave) DO NOTHING;
+
+-- ---------------- 6. O ORGANOGRAMA ----------------
+
+ALTER TABLE public.cargo ADD COLUMN IF NOT EXISTS lider_id bigint REFERENCES public.usuario (id) ON DELETE SET NULL;
+ALTER TABLE public.cargo DROP CONSTRAINT IF EXISTS cargo_superior_ok;
+ALTER TABLE public.cargo DROP COLUMN IF EXISTS superior_id;
+ALTER TABLE public.cargo DROP COLUMN IF EXISTS diretor_id;
+
+COMMENT ON COLUMN public.cargo.lider_id IS 'Organograma: quem fica no topo do time. NULL = o cargo de cada um decide.';
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['editar_organograma']
+ WHERE NOT ('editar_organograma' = ANY (permissoes))
+   AND NOT coalesce(painel_tv, false)
+   AND (acesso_total
+        OR ('ver_usuarios' = ANY (permissoes)
+            AND ('editar_cargo' = ANY (permissoes) OR 'revisar_despesa_geral' = ANY (permissoes))))
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_59_organograma');
+
+INSERT INTO public.configuracao (chave, valor)
+VALUES ('marco_atualizacao_59_organograma', 'editar_organograma distribuida')
+ON CONFLICT (chave) DO NOTHING;
+
+-- ---------------- 7. O TIPO DO EVENTO DA AGENDA ----------------
+
+ALTER TABLE public.agenda_evento ADD COLUMN IF NOT EXISTS tipo text NOT NULL DEFAULT 'evento';
+
+COMMENT ON COLUMN public.agenda_evento.tipo IS
+    'O que e o evento: evento, reuniao, treinamento, confraternizacao, comemorativa, feriado_nacional, feriado_estadual, feriado_municipal, ponto_facultativo, aniversario ou outro.';
+
+-- ---------------- 8. OS TURNOS DO TEAMS ----------------
+
+ALTER TABLE public.turno ADD COLUMN IF NOT EXISTS teams_id text;
+ALTER TABLE public.turno ADD COLUMN IF NOT EXISTS teams_alterado_em timestamptz;
+CREATE UNIQUE INDEX IF NOT EXISTS turno_teams_id_idx ON public.turno (teams_id);
+ALTER TABLE public.cronograma ADD COLUMN IF NOT EXISTS teams_grupo_id text;
+CREATE UNIQUE INDEX IF NOT EXISTS cronograma_teams_grupo_idx ON public.cronograma (teams_grupo_id);
+
+COMMENT ON COLUMN public.turno.teams_id IS
+    'O turno veio do Turnos do Teams: turno:<id>, folga:<id> ou aberto:<id>. NULL = feito no site.';
+COMMENT ON COLUMN public.turno.teams_alterado_em IS 'Quando o turno mudou no Teams pela ultima vez.';
+COMMENT ON COLUMN public.cronograma.teams_grupo_id IS 'O grupo do Turnos do Teams deste cronograma. NULL = feito no site.';
+
+COMMIT;
+
+-- ============================================================
+--  CONFERENCIA — deve devolver "t" em todas as linhas
+-- ============================================================
+
+SELECT 'cliente.hospedagem' AS item,
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'cliente' AND column_name = 'hospedagem') AS ok
+UNION ALL SELECT 'cliente.fatura_apos_documento',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'cliente' AND column_name = 'fatura_apos_documento')
+UNION ALL SELECT 'obra.cancelamento_motivo',
+       EXISTS (SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'obra' AND column_name = 'cancelamento_motivo')
+UNION ALL SELECT 'setores com cancelar_obras: ' || count(*), count(*) > 0
+  FROM public.cargo WHERE 'cancelar_obras' = ANY (permissoes)
+UNION ALL SELECT 'avisos do prazo distribuidos',
+       EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_59_avisos')
+UNION ALL SELECT 'veiculo_ocorrencia', to_regclass('public.veiculo_ocorrencia') IS NOT NULL
+UNION ALL SELECT 'veiculo_manutencao', to_regclass('public.veiculo_manutencao') IS NOT NULL
+UNION ALL SELECT 'equipamento_ti', to_regclass('public.equipamento_ti') IS NOT NULL
+UNION ALL SELECT 'cargo.lider_id (organograma)',
+       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cargo' AND column_name = 'lider_id')
+UNION ALL SELECT 'agenda_evento.tipo (tipo do evento)',
+       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'agenda_evento' AND column_name = 'tipo')
+UNION ALL SELECT 'turno.teams_id (turnos do Teams)',
+       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'turno' AND column_name = 'teams_id')
+UNION ALL SELECT 'cronograma.teams_grupo_id (turnos do Teams)',
+       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cronograma' AND column_name = 'teams_grupo_id');

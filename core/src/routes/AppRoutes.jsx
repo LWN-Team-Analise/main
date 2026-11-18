@@ -23,6 +23,14 @@ import Turnos from '@/pages/Turnos/Turnos'
 import Registros from '@/pages/Frotas/Registros'
 import RetornoOutlook from '@/pages/Login/RetornoOutlook'
 import ChatEquipe from '@/pages/Chat/ChatEquipe'
+import Dashboard from '@/pages/Diretoria/Dashboard'
+import Insumos from '@/pages/Insumos/Insumos'
+import ObrasCanceladas from '@/pages/Concluidas/ObrasCanceladas'
+import Equipamentos from '@/pages/Equipamentos/Equipamentos'
+import Organograma from '@/pages/Usuarios/Organograma'
+import Documentos from '@/pages/Qualidade/Documentos'
+import Correio from '@/pages/Qualidade/Correio'
+import AlmoxarifeNaArea from '@/pages/Almoxarife/AlmoxarifeNaArea'
 import ProtectedRoute from './ProtectedRoute'
 
 /* O LWN Control (o Almoxarife) e a tela do lwncontrol (public/almoxarife),
@@ -143,6 +151,16 @@ export default function AppRoutes() {
           </Interna>
         }
       />
+      {/* a mesma tela com o seletor de pessoa, as Assinaturas e o Importar:
+          o "Ponto da equipe" da Area admin */}
+      <Route
+        path="/app/ponto/equipe"
+        element={
+          <Interna permissao="gerenciar_ponto">
+            <Ponto equipe />
+          </Interna>
+        }
+      />
       {/* os horarios dos checks com horario das obras (o ponto de encontro) */}
       <Route
         path="/app/encontros"
@@ -161,6 +179,83 @@ export default function AppRoutes() {
       <Route path="/app/administrativo/encontros" element={<Mudou para="/app/encontros" />} />
       <Route path="/app/administrativo/frotas" element={<Mudou para="/app/frotas/atualizacoes" />} />
       <Route path="/app/administrativo/turnos" element={<Mudou para="/app/turnos" />} />
+      {/* o Dashboard da Area da diretoria (era a aba Dashboard da pagina
+          inicial): os numeros da empresa e a exportacao para o Power BI */}
+      <Route
+        path="/app/diretoria"
+        element={
+          <Interna permissao="ver_dashboard">
+            <Dashboard />
+          </Interna>
+        }
+      />
+      {/* os pedidos de insumos (atualizacao 57): cada um pede e acompanha os
+          seus; os de todos, para atender, sao de `gerenciar_insumos` (a API
+          confere as duas em cada chamada de /api/insumos) */}
+      <Route
+        path="/app/insumos"
+        element={
+          <Interna permissao="ver_insumos">
+            <Insumos />
+          </Interna>
+        }
+      />
+      <Route
+        path="/app/insumos/pedidos"
+        element={
+          <Interna permissao="gerenciar_insumos">
+            <Insumos equipe />
+          </Interna>
+        }
+      />
+      {/* o organograma (atualizacao 59): quem ve a equipe ve; editar e
+          `editar_organograma` */}
+      <Route
+        path="/app/organograma"
+        element={
+          <Interna permissao="ver_usuarios">
+            <Organograma />
+          </Interna>
+        }
+      />
+      {/* os notebooks e PCs (atualizacao 59), na Area da excelencia */}
+      <Route
+        path="/app/equipamentos"
+        element={
+          <Interna permissao="ver_equipamentos">
+            <Equipamentos />
+          </Interna>
+        }
+      />
+      {/* as obras canceladas (atualizacao 59), na area do Almoxarife */}
+      <Route
+        path="/app/obras-canceladas"
+        element={
+          <Interna permissao="ver_almoxarife">
+            <ObrasCanceladas />
+          </Interna>
+        }
+      />
+      {/* a Area da qualidade (atualizacao 58): os documentos em funil, como o
+          Comercial, e os pedidos de envio pelo correio. A API confere as
+          mesmas chaves em cada chamada de /api/qualidade */}
+      <Route
+        path="/app/qualidade/documentos"
+        element={
+          <Interna permissao="ver_documentos">
+            <Documentos />
+          </Interna>
+        }
+      />
+      <Route
+        path="/app/qualidade/correio"
+        element={
+          <Interna permissao="ver_correio">
+            <Correio />
+          </Interna>
+        }
+      />
+      <Route path="/app/qualidade" element={<Mudou para="/app/qualidade/documentos" />} />
       {/* os funis de venda (os negocios do Pipedrive); a API confere a
           mesma chave em cada chamada de /api/comercial */}
       <Route
@@ -289,8 +384,18 @@ export default function AppRoutes() {
           </Interna>
         }
       />
-      {/* o endereco antigo */}
-      <Route path="/app/almoxarife" element={<Navigate to="/app/control" replace />} />
+      {/* A Area almoxarife do menu por area: a tela do Almoxarife num quadro,
+          DENTRO do Atmosfera, com o menu daqui (AlmoxarifeNaArea). O
+          /app/control continua abrindo a tela dele inteira, para os links de
+          fora (os avisos do Teams, os e-mails) */}
+      <Route
+        path="/app/almoxarife/*"
+        element={
+          <Interna permissao="ver_almoxarife">
+            <AlmoxarifeNaArea />
+          </Interna>
+        }
+      />
       {/* Configuracoes nao tem trava: e onde todo mundo cuida da propria conta */}
       <Route
         path="/app/configuracoes"

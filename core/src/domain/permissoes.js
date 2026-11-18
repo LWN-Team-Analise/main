@@ -80,13 +80,25 @@ export const VISUALIZACAO = [
   { chave: 'ver_encontros', rotulo: 'Ponto de encontro', rota: '/app/encontros' },
   { chave: 'ver_concluidas', rotulo: 'Concluídas', rota: '/app/concluidas' },
   { chave: 'ver_despesas', rotulo: 'Reembolso', rota: '/app/despesas' },
+  /* os pedidos de insumos (atualizacao 57): cada um pede o material que
+     precisa e acompanha os seus (Seu espaco > Pedir insumos). Atender os de
+     todos e `gerenciar_insumos`, embaixo */
+  { chave: 'ver_insumos', rotulo: 'Insumos', rota: '/app/insumos' },
   { chave: 'ver_frotas', rotulo: 'Frotas', rota: '/app/frotas' },
   /* o Almoxarife (o antigo lwncontrol, atualizacao 38): a aba abre a tela
      dele, em /almoxarife. As abas de dentro dele sao as almox_* de baixo */
-  { chave: 'ver_almoxarife', rotulo: 'Almoxarife', rota: '/app/control' },
+  { chave: 'ver_almoxarife', rotulo: 'Almoxarife', rota: '/app/almoxarife' },
   { chave: 'ver_comercial', rotulo: 'Comercial', rota: '/app/comercial' },
+  /* a Area da qualidade (atualizacao 58): o acompanhamento dos documentos
+     (protocolos, relatorios e gerais, em funil como o Comercial) e as
+     solicitacoes de correio. Mexer nos documentos e atender os envios sao
+     as alteracoes de baixo */
+  { chave: 'ver_documentos', rotulo: 'Acompanhamento dos documentos', rota: '/app/qualidade/documentos' },
+  { chave: 'ver_correio', rotulo: 'Solicitação de correio', rota: '/app/qualidade/correio' },
   { chave: 'ver_turnos', rotulo: 'Turnos', rota: '/app/turnos' },
   { chave: 'ver_avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes' },
+  /* os notebooks e PCs da empresa, na Area da excelencia (atualizacao 59) */
+  { chave: 'ver_equipamentos', rotulo: 'Notebooks e PCs', rota: '/app/equipamentos' },
   /* a aba Usuarios: ver a equipe (os cards, o setor, o cargo, o contato).
      Cadastrar, editar e excluir continuam nas alteracoes de baixo */
   { chave: 'ver_usuarios', rotulo: 'Usuários', rota: '/app/usuarios' },
@@ -120,6 +132,9 @@ export const ALTERACAO = [
   { chave: 'editar_cpf', rotulo: 'Incluir / editar / excluir CPF', dependeDe: 'ver_usuarios' },
   /* o "!" nos cards de Usuarios: quem ainda nao trocou a senha padrao */
   { chave: 'ver_senha_padrao', rotulo: 'Ver quem não alterou a senha padrão', dependeDe: 'ver_usuarios' },
+  /* o ORGANOGRAMA (atualizacao 59): quem ve a equipe ve o organograma; esta
+     muda a que setor cada um responde e quem lidera */
+  { chave: 'editar_organograma', rotulo: 'Atualizar o organograma', dependeDe: 'ver_usuarios' },
   /* o Ponto (`ver_ponto`): cada um ve e assina a propria folha. Com esta,
      aparece o seletor de pessoa (ver a folha de qualquer um, com CPF e PIS,
      como no espelho), o Importar do Calculo Diario e o Excel da empresa
@@ -128,6 +143,7 @@ export const ALTERACAO = [
      atualizacao 55 */
   { chave: 'gerenciar_ponto', rotulo: 'Ver a folha de ponto de todos e importar', dependeDe: 'ver_ponto' },
   { chave: 'editar_avaliacoes', rotulo: 'Adicionar / editar avaliações', dependeDe: 'ver_avaliacoes' },
+  { chave: 'editar_equipamentos', rotulo: 'Adicionar / editar notebooks e PCs', dependeDe: 'ver_equipamentos' },
   { chave: 'editar_clientes', rotulo: 'Adicionar / editar clientes', dependeDe: 'ver_clientes' },
   /* a planilha do Excel com o cadastro inteiro (Clientes > Exportar) */
   { chave: 'exportar_clientes', rotulo: 'Exportar clientes (Excel)', dependeDe: 'ver_clientes' },
@@ -136,6 +152,19 @@ export const ALTERACAO = [
      mexendo na obra que ja existe (anexos, etiquetas, concluir) */
   { chave: 'criar_obras', rotulo: 'Criar obra', dependeDe: 'ver_obras' },
   { chave: 'editar_obras', rotulo: 'Editar obras', dependeDe: 'ver_obras' },
+  /* cancelar a obra aberta, com o motivo (atualizacao 59): ela fecha como
+     a concluida, mas fica marcada como cancelada. A 59 deu a quem cria obra */
+  { chave: 'cancelar_obras', rotulo: 'Cancelar obra (com o motivo)', dependeDe: 'ver_obras' },
+  /* os avisos do prazo da EXECUCAO no Teams (atualizacao 59). Sao aviso, e
+     nao acesso: vale so o setor que tem a chave marcada — o acesso total nao
+     entra sozinho. A 59 deu o primeiro ao Administrativo (quem revisa as
+     despesas de todos) e o segundo ao Comercial (quem edita negocio) */
+  {
+    chave: 'aviso_prazo_obra',
+    rotulo: 'Receber no Teams: obra prolongada ou terminada antes do prazo (hospedagem)',
+    dependeDe: 'ver_obras',
+  },
+  { chave: 'aviso_aditivo_obra', rotulo: 'Receber no Teams: obra prolongada e o motivo (aditivo)', dependeDe: 'ver_obras' },
   { chave: 'excluir_concluidas', rotulo: 'Excluir obra concluída', dependeDe: 'ver_concluidas' },
   /* marca os checks de qualquer setor e nao espera a etapa anterior fechar */
   { chave: 'check_todas_etapas', rotulo: 'Check em todas as etapas', dependeDe: 'ver_obras' },
@@ -178,6 +207,9 @@ export const ALTERACAO = [
   /* os valores pre-definidos do reembolso (almoco, janta, bonus
      apartamento...) e quais tipos sao pre-definidos */
   { chave: 'definir_valores_reembolso', rotulo: 'Editar valores pré-definidos', dependeDe: 'ver_despesas' },
+  /* a lista de TODOS os pedidos de insumos (Area admin > Insumos): aprovar,
+     reprovar com o motivo, reabrir e excluir (atualizacao 57) */
+  { chave: 'gerenciar_insumos', rotulo: 'Aprovar / reprovar pedidos de insumos', dependeDe: 'ver_insumos' },
   /* Frotas: ver a aba e os registros de todos os veiculos e
      `ver_frotas`; dar SAIDA e DEVOLUCAO e `registrar_frota`;
      cadastrar e editar os veiculos (e corrigir o KM atual de um
@@ -194,6 +226,12 @@ export const ALTERACAO = [
      metade (atualizacao 39). E aviso, e nao acesso: vale so para o setor
      que tem a chave marcada — o acesso total nao entra sozinho */
   { chave: 'alerta_combustivel_frota', rotulo: 'Receber alerta no Teams: devolução com menos de 50% de combustível', dependeDe: 'ver_frotas' },
+  /* os PROBLEMAS e as MANUTENCOES do carro (atualizacao 59). Relatar um
+     problema e de quem ve a Frota; resolver e lancar o custo da manutencao
+     e desta. A de aviso e como a do combustivel: so a chave marcada conta
+     (o Administrativo e a lideranca tecnica) */
+  { chave: 'manutencao_frota', rotulo: 'Lançar manutenção (custo) e resolver problema do carro', dependeDe: 'ver_frotas' },
+  { chave: 'aviso_problema_frota', rotulo: 'Receber no Teams: problema relatado no carro', dependeDe: 'ver_frotas' },
   /* Almoxarife (atualizacao 38): as abas e os poderes de dentro dele, os
      mesmos do lwncontrol. A chave do lwncontrol e o que vem depois de
      "almox_" — e assim que a view almox.usuarios entrega para a tela
@@ -207,6 +245,12 @@ export const ALTERACAO = [
   { chave: 'editar_negocios', rotulo: 'Adicionar / editar negócios', dependeDe: 'ver_comercial' },
   { chave: 'excluir_negocios', rotulo: 'Excluir negócio', dependeDe: 'ver_comercial' },
   { chave: 'responder_emails', rotulo: 'Responder e-mails pelo site', dependeDe: 'ver_comercial' },
+  /* Qualidade (atualizacao 58): criar, editar, mover pelas etapas,
+     concluir e excluir documento. Quem so ve tambem comenta */
+  { chave: 'editar_documentos', rotulo: 'Adicionar / editar / mover documentos', dependeDe: 'ver_documentos' },
+  /* pedir um envio e de quem ve a aba; levar o pedido pelas colunas
+     (etiqueta, postagem com o rastreio, entrega) e desta */
+  { chave: 'gerenciar_correio', rotulo: 'Atender os envios (etiqueta, postagem e rastreio)', dependeDe: 'ver_correio' },
   /* Turnos (atualizacao 31): ver a aba e `ver_turnos`; criar e mudar
      turnos, anotacoes do dia e cronogramas e `editar_turnos` */
   { chave: 'editar_turnos', rotulo: 'Adicionar / editar turnos e cronogramas', dependeDe: 'ver_turnos' },
@@ -375,7 +419,7 @@ export function dependentes(chaveVisualizacao) {
    painel de um setor que ve a aba (`exige`).
    ------------------------------------------------------------ */
 export const PAINEIS = [
-  { chave: 'almoxarife', rotulo: 'Almoxarife', rota: '/app/control', exige: 'ver_almoxarife' },
+  { chave: 'almoxarife', rotulo: 'Almoxarife', rota: '/app/almoxarife', exige: 'ver_almoxarife' },
 ]
 
 export const CHAVES_PAINEL = PAINEIS.map((p) => p.chave)

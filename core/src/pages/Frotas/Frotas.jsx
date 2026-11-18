@@ -9,6 +9,7 @@ import { finalDaPlaca, horaCurta, horarioDe } from '@/domain/rodizio'
 import useHoraAgora from '@/hooks/useHoraAgora'
 import ModalRegistro from './ModalRegistro'
 import ModalVeiculo from './ModalVeiculo'
+import ModalCarro from './ModalCarro'
 import PainelRodizio from './PainelRodizio'
 import PainelCondicoes from './PainelCondicoes'
 import PainelReservas from './PainelReservas'
@@ -49,7 +50,9 @@ function rodizioAgora(veiculo, rodizio, agora) {
 }
 
 /** O cartao de um veiculo: nome, placa, se esta em uso e com quem. */
-function CartaoVeiculo({ veiculo, editavel, aoEditar, rodizio, agora }) {
+function CartaoVeiculo({ veiculo, editavel, aoEditar, rodizio, agora, problemas = [], aoAbrirCarro }) {
+  /* os problemas relatados que ainda nao foram resolvidos (atualizacao 59) */
+  const impede = problemas.some((p) => p.impedeUso)
   const { ultimo } = veiculo
   /* no horario do rodizio: na garagem ele nao aparece como disponivel */
   const horario = rodizioAgora(veiculo, rodizio, agora)
@@ -137,13 +140,25 @@ function CartaoVeiculo({ veiculo, editavel, aoEditar, rodizio, agora }) {
         </p>
       )}
 
+      {problemas.length > 0 && (
+        <p className="veiculo__problema" data-grave={impede ? 'sim' : undefined} title={problemas.map((p) => p.descricao).join('\n')}>
+          {problemas.length === 1 ? 'Problema relatado' : `${problemas.length} problemas relatados`}
+          {impede ? ' · não pode ser usado' : ''}: {problemas[0].descricao}
+        </p>
+      )}
+
       <footer className="veiculo__rodape">
         <span>
           KM atual <strong>{kmLegivel(veiculo.kmAtual)}</strong>
         </span>
-        <Link to={`/app/frotas/registros?veiculo=${veiculo.id}`} className="veiculo__link">
-          {veiculo.registros} {veiculo.registros === 1 ? 'registro' : 'registros'}
-        </Link>
+        <span className="veiculo__links">
+          <button type="button" className="veiculo__link veiculo__botao" onClick={() => aoAbrirCarro(veiculo)}>
+            Problemas e manutenção
+          </button>
+          <Link to={`/app/frotas/registros?veiculo=${veiculo.id}`} className="veiculo__link">
+            {veiculo.registros} {veiculo.registros === 1 ? 'registro' : 'registros'}
+          </Link>
+        </span>
       </footer>
     </li>
   )
@@ -173,9 +188,22 @@ export default function Frotas() {
   const [recado, setRecado] = useState(null)
   const [rodizio, setRodizio] = useState(null)
   const [condicoes, setCondicoes] = useState(null)
+  /* os problemas ainda abertos de cada carro e o carro aberto no pop-up
+     de problemas e manutencao (atualizacao 59) */
+  const [problemas, setProblemas] = useState([])
+  const [vendoCarro, setVendoCarro] = useState(null)
   const agora = useHoraAgora()
 
+  const lerProblemas = useCallback(() => {
+    frotasApi
+      .carregarOcorrencias({ abertas: true })
+      .then(setProblemas)
+      .catch(() => setProblemas([]))
+  }, [])
+  const problemasDo = (veiculo) => problemas.filter((p) => p.veiculoId === String(veiculo.id))
+
   const carregar = useCallback(async () => {
+    lerProblemas()
     /* o rodizio vem a parte: se ele falhar, a frota continua de pe */
     frotasApi
       .carregarRodizio()
@@ -199,7 +227,7 @@ export default function Frotas() {
     } finally {
       setCarregando(false)
     }
-  }, [])
+  }, [lerProblemas])
 
   useEffect(() => {
     carregar()
@@ -330,7 +358,16 @@ export default function Frotas() {
 
           <ul className="frotas__grade">
             {ativos.map((v) => (
-              <CartaoVeiculo key={v.id} veiculo={v} editavel={edita} aoEditar={setEditando} rodizio={rodizio} agora={agora} />
+              <CartaoVeiculo
+                key={v.id}
+                veiculo={v}
+                editavel={edita}
+                aoEditar={setEditando}
+                rodizio={rodizio}
+                agora={agora}
+                problemas={problemasDo(v)}
+                aoAbrirCarro={setVendoCarro}
+              />
             ))}
           </ul>
 
@@ -341,7 +378,16 @@ export default function Frotas() {
               </summary>
               <ul className="frotas__grade">
                 {inativos.map((v) => (
-                  <CartaoVeiculo key={v.id} veiculo={v} editavel={edita} aoEditar={setEditando} rodizio={rodizio} agora={agora} />
+                  <CartaoVeiculo
+                    key={v.id}
+                    veiculo={v}
+                    editavel={edita}
+                    aoEditar={setEditando}
+                    rodizio={rodizio}
+                    agora={agora}
+                    problemas={problemasDo(v)}
+                    aoAbrirCarro={setVendoCarro}
+                  />
                 ))}
               </ul>
             </details>
@@ -369,6 +415,7 @@ export default function Frotas() {
         aoFechar={() => setEditando(null)}
         aoSalvo={salvo}
       />
+      <ModalCarro veiculo={vendoCarro} aoFechar={() => setVendoCarro(null)} aoMudou={lerProblemas} />
     </AppShell>
   )
 }

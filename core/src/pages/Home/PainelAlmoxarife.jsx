@@ -12,9 +12,10 @@ import Tile from './Tile'
    Almoxarife e veio para ca, com as mesmas contas, no periodo das setas
    do topo — o mes dia a dia, ou o ano mes a mes:
 
-     os numeros    as O.S. do periodo, as baias em campo agora, a
+     os numeros    as O.S. do periodo (concluidas e canceladas) e a
                    despesa com ferramentas novas, com calibracao e com
-                   manutencao, e as obras fora de Sao Paulo;
+                   manutencao (as baias em campo e as obras fora de SP
+                   sairam a pedido da diretoria, 18/11);
      as linhas     O.S. no periodo e as tres despesas;
      as colunas    os responsaveis que mais foram a campo e os ativos
                    mais pedidos;
@@ -138,7 +139,6 @@ function Almoxarife({ fatias, passo, rotuloDaFatia }) {
       return [...mapa.entries()].sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0]), 'pt-BR'))
     }
 
-    const fora = os.filter((o) => o.uf && o.uf !== 'SP')
     const semIsentas = isentas()
     const faixas = Object.fromEntries(FAIXAS.map((f) => [f.chave, 0]))
     dados.calibracao.forEach((c) => {
@@ -187,8 +187,6 @@ function Almoxarife({ fatias, passo, rotuloDaFatia }) {
         })),
       concluidas: os.filter((o) => o.status === 'concluida').length,
       canceladas: os.filter((o) => o.status === 'cancelada').length,
-      fora: fora.length,
-      ufs: contar(fora, (o) => o.uf),
       faixas,
       totalFaixas: Object.values(faixas).reduce((s, n) => s + n, 0),
     }
@@ -214,7 +212,6 @@ function Almoxarife({ fatias, passo, rotuloDaFatia }) {
               nota={`${plural(contas.concluidas, 'concluída', 'concluídas')} · ${plural(contas.canceladas, 'cancelada', 'canceladas')}`}
               cor={COR.os}
             />
-            <Tile rotulo="Baias em campo" valor={String(dados.baiasEmCampo)} nota="agora" />
             {DESPESAS.map(({ chave, rotulo }) => (
               <Tile
                 key={chave}
@@ -224,15 +221,6 @@ function Almoxarife({ fatias, passo, rotuloDaFatia }) {
                 cor={COR[chave]}
               />
             ))}
-            <Tile
-              rotulo="Obras fora de SP"
-              valor={contas.os.length ? `${Math.round((contas.fora / contas.os.length) * 100)}%` : '—'}
-              nota={
-                contas.ufs.length
-                  ? contas.ufs.map(([uf, n]) => `${uf} ${n}`).join(' · ')
-                  : `${plural(contas.fora, 'OS', 'OS')} em outros estados`
-              }
-            />
           </div>
 
           <div className="dash__grade">

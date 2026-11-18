@@ -27,16 +27,31 @@
        /core/app/control (core/src/routes/AppRoutes.jsx) ja pode sair */
     try { sessionStorage.removeItem('lwn-control-recarga'); } catch (e) { /* segue */ }
 
-    /* Duas classes no <html> ANTES da tela desenhar (sem piscar):
-         embutido   aberta dentro da obra, no pop-up do check "Solicitar OS"
-                    (?embutido=1, core/src/pages/Obras/ModalSolicitarOS.jsx):
-                    sem o menu, sem a barra de cima e sem o "Voltar";
-         menu-largo o "Mais" do menu ligado, a mesma escolha do resto do
-                    sistema ('customers.menu-largo', o AppShell do main). */
+    /* As classes no <html> ANTES da tela desenhar (sem piscar):
+         embutido      aberta dentro da obra, no pop-up do check "Solicitar OS"
+                       (?embutido=1, core/src/pages/Obras/ModalSolicitarOS.jsx):
+                       sem o menu, sem a barra de cima e sem o "Voltar";
+         embutido-area o Almoxarife inteiro dentro do Atmosfera, na Area
+                       almoxarife do menu por area (?embutido=area,
+                       core/src/pages/Almoxarife/AlmoxarifeNaArea.jsx): sem o
+                       menu e a barra de cima daqui, que sao os do Atmosfera;
+         menu-largo    o "Mais" do menu ligado, a mesma escolha do resto do
+                       sistema ('customers.menu-largo', o AppShell do main). */
+    var modoEmbutido = '';
     try {
-        if (new URLSearchParams(location.search).get('embutido') === '1') document.documentElement.classList.add('embutido');
+        modoEmbutido = new URLSearchParams(location.search).get('embutido') || '';
+        if (modoEmbutido === '1') document.documentElement.classList.add('embutido');
+        if (modoEmbutido === 'area') document.documentElement.classList.add('embutido-area');
         if (localStorage.getItem('customers.menu-largo') === 'sim') document.documentElement.classList.add('menu-largo');
     } catch (e) { /* sem storage: o menu de sempre */ }
+
+    /* dentro do Atmosfera (o quadro da Area almoxarife), o login e o inicio
+       abrem na janela de cima, e nao dentro do quadro */
+    function irPara(endereco) {
+        var alvo = window;
+        try { if (modoEmbutido === 'area' && window.top && window.top !== window) alvo = window.top; } catch (e) { alvo = window; }
+        alvo.location.replace(endereco);
+    }
 
     /* quem estava logado quando o site passou a usar cookie ainda tem o
        token no localStorage: troca uma vez e tira de la */
@@ -54,7 +69,7 @@
 
     function irParaOLogin() {
         try { localStorage.removeItem(SESSAO_DO_MAIN); sessionStorage.removeItem('lwn_user'); } catch (e) { /* segue */ }
-        location.replace(LOGIN);
+        irPara(LOGIN);
     }
 
     var buscar = window.fetch.bind(window);
@@ -77,7 +92,7 @@
     try { pedido.send(null); } catch (e) { /* a rede caiu: segue com o que ja estava */ }
     if (pedido.status === 401) { irParaOLogin(); return; }
     /* o setor nao tem a aba Almoxarife */
-    if (pedido.status === 403) { location.replace(INICIO); return; }
+    if (pedido.status === 403) { irPara(INICIO); return; }
     if (pedido.status === 200) {
         try { sessionStorage.setItem('lwn_user', pedido.responseText); } catch (e) { /* segue */ }
     } else {
@@ -109,7 +124,7 @@
                 '<div class="am-modal__corpo"><div class="confirma">' +
                     '<p class="confirma__texto" data-falha="motivo"></p>' +
                     '<footer class="confirma__acoes">' +
-                        '<a class="formobra__cancelar" href="' + INICIO + '">Voltar ao Atmosfera</a>' +
+                        '<a class="formobra__cancelar" href="' + INICIO + '" target="_top">Voltar ao Atmosfera</a>' +
                         '<button type="button" class="confirma__ok confirma__ok--acao" data-falha="de-novo">Tentar de novo</button>' +
                     '</footer>' +
                 '</div></div>' +

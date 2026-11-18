@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import AppShell from '@/components/AppShell/AppShell'
 import { useTheme } from '@/context/ThemeContext'
 import { corAdaptada, textoSobre } from '@/utils/cor'
@@ -216,6 +216,10 @@ export default function Usuarios() {
           </p>
 
           <div className="usuarios__acoes">
+            {/* o organograma (atualizacao 59): a equipe vista pelos setores */}
+            <Link to="/app/organograma" className="acao acao--fraca">
+              Organograma
+            </Link>
             {podeCargos && (
               <button
                 type="button"

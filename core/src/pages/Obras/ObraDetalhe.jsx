@@ -23,6 +23,9 @@ import {
   CHECK_TIPO_ENSAIO,
   CHECK_FOCAL_POINT,
   CHECK_ENVIAR_OS,
+  CHECK_LIBERADO_FATURAMENTO,
+  RECADO_LIBERACAO_FATURADA,
+  estadoDoFaturamento,
   checkAbrePopup,
   checkDoPrazoDaExecucao,
   corDoSetorDoCard,
@@ -34,7 +37,9 @@ import {
   ehPropostaTecnica,
   estadoDaEtapaPara,
   janelaDaRetirada,
+  motivoDoCancelamento,
   nomeDoCard,
+  obraCancelada,
   oQueOCheckPede,
   podeEditarCheck,
   podeReservarCarro,
@@ -51,6 +56,7 @@ import { textoSobre } from '@/utils/cor'
 import { dataBR, dataExtensa, dataHora, hojeISO } from '@/utils/formato'
 import ModalCard from './ModalCard'
 import ModalCheck from './ModalCheck'
+import ModalCancelarObra from './ModalCancelarObra'
 import ModalResposta from './ModalResposta'
 import ModalProposta from './ModalProposta'
 import ModalReserva from './ModalReserva'
@@ -191,6 +197,8 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   const [reservando, setReservando] = useState(null)
   const [retirada, setRetirada] = useState(null)
   const [semFrota, setSemFrota] = useState('')
+  /* a liberacao do faturamento nao sai com o "Faturar" marcado (atualizacao 58) */
+  const [liberacaoFaturada, setLiberacaoFaturada] = useState(false)
 
   /* pop-ups da obra */
   const [chat, setChat] = useState(false)
@@ -205,6 +213,8 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   /* a exclusao da obra concluida — o "sim" que abre a caixa de
      confirmacao, que por sua vez pede o segundo */
   const [apagando, setApagando] = useState(false)
+  /* o cancelamento da obra aberta, com o motivo (atualizacao 59) */
+  const [cancelandoObra, setCancelandoObra] = useState(false)
 
   const obra = obraPorId(id)
 
@@ -251,12 +261,22 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
 
   const cliente = clientePorId(obra.clienteId)
   const nomeDaObra = tituloDaObra(obra, cliente)
+  /* o que o Comercial respondeu no cadastro do cliente (atualizacoes 39 e
+     59): a refeicao, a hospedagem e o faturamento, para quem toca a obra */
+  const doCliente = [
+    cliente?.ofereceAlimentacao === true && 'Cliente oferece alimentação',
+    cliente?.ofereceAlimentacao === false && 'Cliente não oferece alimentação',
+    cliente?.hospedagem && `Colaborador fica em ${cliente.hospedagem === 'airbnb' ? 'Airbnb' : 'hotel'}`,
+    cliente?.faturaAposDocumento === true && 'Fatura só após o documento digital liberado',
+  ].filter(Boolean)
   /* a trava vale pela ROTA (aba Concluídas) ou pela própria obra estar
      encerrada — o que vier primeiro */
   const soLeitura = somenteLeitura || concluida(obra)
   /* o roteiro que ESTA obra enxerga: o que foi criado depois dela nao
      entra, e o que saiu depois dela continua aqui */
   const roteiro = roteiroDaObra(obra)
+  /* o "Faturar" do Comercial espera o "Liberado para faturamento" do Administrativo */
+  const faturamento = estadoDoFaturamento(roteiro, obra)
 
   /**
    * Marcar um check, e — quando for o caso — anunciar o fechamento.
@@ -325,6 +345,10 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
   }
 
   const abrirCheck = (etapa, card, check) => {
+    if (check.tipo === CHECK_LIBERADO_FATURAMENTO && obra.checks?.[check.id] && faturamento.faturado) {
+      setLiberacaoFaturada(true)
+      return
+    }
     /* os checks da O.S. se preenchem no LWN Control */
     if (ehCheckDaOS(check)) {
       const destino = destinoDoCheckNoControl(user, check, obra)
@@ -642,6 +666,23 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
               {obra.descricao || <em className="capa__semdesc">sem descrição</em>}
             </p>
 
+            {obraCancelada(obra) && (
+              <p className="capa__cancelada">
+                <strong>Cancelada</strong>
+                {obra.concluidaEm ? ` em ${dataHora(obra.concluidaEm)}` : ''}
+                {obra.concluidaPorNome ? ` por ${obra.concluidaPorNome}` : ''}: {motivoDoCancelamento(obra.cancelamentoMotivo)}
+                {obra.conclusaoObs ? ` — ${obra.conclusaoObs}` : ''}
+              </p>
+            )}
+
+            {doCliente.length > 0 && (
+              <p className="capa__docliente">
+                {doCliente.map((texto) => (
+                  <span key={texto}>{texto}</span>
+                ))}
+              </p>
+            )}
+
             {marcas.length > 0 && (
               <span className="capa__etiquetas">
                 {marcas.map((e) => (
@@ -709,6 +750,18 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                 >
                   <Icone.lixo />
                   Excluir
+                </button>
+              )}
+
+              {/* cancelar e so da obra aberta, e so com o motivo */}
+              {!soLeitura && pode('cancelar_obras') && (
+                <button
+                  type="button"
+                  className="capa__acao capa__acao--perigo"
+                  onClick={() => setCancelandoObra(true)}
+                  title="Cancelar esta obra (pede o motivo)"
+                >
+                  Cancelar obra
                 </button>
               )}
 
@@ -1076,6 +1129,7 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
                         pessoaPorId={pessoaPorId}
                         aoMarcar={(check) => clicarCheck(etapa, card, check)}
                         aoSolicitarOS={() => setSolicitandoOS(true)}
+                        faturamento={faturamento}
                         execucao={execucaoDaObra(obra)}
                         aoEditarCard={() => setEditandoCard({ etapa, card })}
                         aoNovoCheck={() => setEditandoCheck({ card })}
@@ -1647,6 +1701,22 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
         </div>
       </Modal>
 
+      <Modal
+        aberto={liberacaoFaturada}
+        aoFechar={() => setLiberacaoFaturada(false)}
+        titulo="Liberado para faturamento"
+        largura={430}
+      >
+        <div className="formrot">
+          <p className="formrot__sistema" role="note">
+            {RECADO_LIBERACAO_FATURADA}
+          </p>
+          <footer className="formobra__acoes">
+            <Button onClick={() => setLiberacaoFaturada(false)}>Entendi</Button>
+          </footer>
+        </div>
+      </Modal>
+
       <ModalPrazo
         aberto={Boolean(prazoAlvo)}
         alvo={prazoAlvo}
@@ -1764,6 +1834,18 @@ export default function ObraDetalhe({ somenteLeitura = false, voltarPara = '/app
         clientes={clientes}
         aoFechar={() => setEditandoObra(false)}
         aoSalvar={(campos) => atualizarObra(obra.id, campos)}
+      />
+
+      <ModalCancelarObra
+        aberto={cancelandoObra}
+        obra={obra}
+        nomeDaObra={nomeDaObra}
+        aoFechar={() => setCancelandoObra(false)}
+        aoCancelada={() => {
+          setCancelandoObra(false)
+          /* como no concluir: vai para Concluidas, ou volta ao quadro */
+          navigate(pode('ver_concluidas') ? `/app/concluidas/${obra.id}` : '/app/obras')
+        }}
       />
     </AppShell>
   )

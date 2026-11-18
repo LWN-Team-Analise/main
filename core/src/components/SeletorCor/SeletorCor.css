@@ -1,0 +1,233 @@
+/* ---------------- o seletor de cor (as amostras e o "Outra cor") ---------------- */
+
+.seletorcor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* dez por linha: as vinte amostras em duas fileiras, e o "Outra cor" embaixo */
+.seletorcor__amostras {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 28px));
+  gap: 8px;
+  align-items: center;
+}
+
+.seletorcor__amostra {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--cor);
+  border-left-width: 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--cor) 12%, transparent);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.seletorcor__amostra:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.seletorcor__amostra[aria-checked='true'] {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--cor);
+}
+
+.seletorcor__amostra:disabled,
+.seletorcor__outra:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.seletorcor__outra {
+  grid-column: 1 / -1;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px 0 6px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-base);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.seletorcor__outra:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+.seletorcor__outra[aria-checked='true'] {
+  border-color: var(--cor);
+  box-shadow: 0 0 0 1px var(--cor);
+}
+
+/* o arco-iris; com uma cor propria escolhida, a propria cor */
+.seletorcor__arco {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: conic-gradient(#e53935, #fdd835, #43a047, #00acc1, #1e88e5, #8e24aa, #e53935);
+}
+
+.seletorcor__outra[aria-checked='true'] .seletorcor__arco {
+  background: var(--cor);
+  box-shadow: inset 0 0 0 2px var(--surface);
+}
+
+/* ---------------- o painel da cor livre ---------------- */
+
+.seletorcor__painel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--control-bg);
+}
+
+.seletorcor__visual {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* o quadro: o matiz por baixo, o branco da esquerda e o preto de baixo por cima */
+.seletorcor__quadro {
+  position: relative;
+  height: 150px;
+  border-radius: 8px;
+  background:
+    linear-gradient(to top, #000, transparent),
+    linear-gradient(to right, #fff, transparent),
+    var(--matiz);
+  cursor: crosshair;
+  touch-action: none;
+  outline-offset: 2px;
+}
+
+.seletorcor__alvo {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 45%), 0 1px 4px rgb(0 0 0 / 35%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* a faixa do matiz */
+.seletorcor__matiz {
+  width: 100%;
+  height: 14px;
+  margin: 0;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  appearance: none;
+  cursor: pointer;
+}
+
+.seletorcor__matiz::-webkit-slider-thumb {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 45%), 0 1px 4px rgb(0 0 0 / 35%);
+  appearance: none;
+}
+
+.seletorcor__matiz::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 45%);
+}
+
+/* a previa, o HEX e o R G B lado a lado */
+.seletorcor__campos {
+  display: grid;
+  grid-template-columns: 36px minmax(90px, 1.6fr) repeat(3, minmax(48px, 1fr));
+  gap: 8px;
+  align-items: end;
+}
+
+.seletorcor__previa {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--cor);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%);
+}
+
+.seletorcor__campo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.seletorcor__campo span {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.seletorcor__campo input {
+  width: 100%;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.seletorcor__campo--hex input {
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.seletorcor__campo input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.seletorcor__campo input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+@media (max-width: 520px) {
+  .seletorcor__amostras {
+    grid-template-columns: repeat(auto-fill, minmax(28px, 1fr));
+  }
+
+  /* no celular: o HEX numa linha, o R G B na de baixo (a cor ja aparece
+     no quadro e na amostra do "Outra cor") */
+  .seletorcor__campos {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .seletorcor__previa {
+    display: none;
+  }
+
+  .seletorcor__campo--hex {
+    grid-column: 1 / -1;
+  }
+}

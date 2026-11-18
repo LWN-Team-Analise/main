@@ -4,7 +4,7 @@ import AppShell from '@/components/AppShell/AppShell'
 import Avatar from '@/components/Avatar/Avatar'
 import Modal from '@/components/Modal/Modal'
 import { useDados } from '@/context/DadosContext'
-import { tituloDaObra } from '@/domain/obras'
+import { motivoDoCancelamento, obraCancelada, tituloDaObra } from '@/domain/obras'
 import { dataBR, dataHora } from '@/utils/formato'
 import './Concluidas.css'
 
@@ -266,8 +266,16 @@ export default function Concluidas() {
                                   quadrado
                                 />
                                 <span className="fechada__quem">
-                                  {/* "1042/2026 - Acme", igual ao card do quadro */}
-                                  <strong>{tituloDaObra(obra, cliente)}</strong>
+                                  {/* "1042/2026 - Acme", igual ao card do quadro; a
+                                      cancelada (atualizacao 59) leva o selo */}
+                                  <strong>
+                                    {tituloDaObra(obra, cliente)}
+                                    {obraCancelada(obra) && (
+                                      <em className="fechada__cancelada" title={motivoDoCancelamento(obra.cancelamentoMotivo)}>
+                                        Cancelada
+                                      </em>
+                                    )}
+                                  </strong>
                                   <span>
                                     {obra.descricao || (
                                       <em className="fechada__semdesc">sem descrição</em>

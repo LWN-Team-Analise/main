@@ -610,6 +610,52 @@
   color: #ffffff;
 }
 
+/* a data comemorativa (atualizacao 59): o bloco do dia tracejado, para
+   nao ser confundida com um evento marcado pela empresa */
+.pevento[data-comemorativa='sim']:not([data-hoje='sim']) .pevento__data {
+  border-style: dashed;
+}
+
+/* o feriado (atualizacao 59): o mes do bloco do dia em vermelho */
+.pevento[data-tom='feriado']:not([data-hoje='sim']) .pevento__data span {
+  color: var(--danger);
+}
+
+/* a etiqueta do tipo do evento: feriado vermelho, ponto facultativo ambar,
+   data comemorativa roxo e o que a empresa marca azul */
+.pevento__tipo {
+  --tom: var(--panorama-azul);
+  display: inline-block;
+  flex: none;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--tom) 13%, transparent);
+  color: var(--tom);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.pevento__tipo[data-tom='feriado'] {
+  --tom: var(--danger);
+}
+
+.pevento__tipo[data-tom='facultativo'] {
+  --tom: #c27a12;
+}
+
+.pevento__tipo[data-tom='comemorativa'] {
+  --tom: #8b5cf6;
+}
+
+.pevento__quando {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 /* a linha do tempo: um pingo por evento e o traco que liga ao proximo */
 .pevento__pingo {
   position: relative;
@@ -672,8 +718,9 @@
 
 .pevento__detalhe {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px 8px;
   font-size: 0.78rem;
   color: var(--text-muted);
 }

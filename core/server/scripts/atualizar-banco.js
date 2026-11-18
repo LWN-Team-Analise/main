@@ -100,6 +100,14 @@ const ARQUIVOS = [
   'db/atualizacao-55.sql.txt',
   /* o local do Ponto de encontro (na obra, na LWN ou em outro endereco) */
   'db/atualizacao-56.sql.txt',
+  /* os pedidos de insumos do menu por area (ver_insumos, gerenciar_insumos) */
+  'db/atualizacao-57.sql.txt',
+  /* o Faturar espera o Administrativo, os tipos dos Turnos (ferias,
+     atestado, folga, dia nao operacional) e a Area da qualidade */
+  'db/atualizacao-58.sql.txt',
+  /* os pedidos da supervisora de 18/11, uma parte por assunto (roda de novo
+     sem problema quando uma parte nova entra) */
+  'db/atualizacao-59.sql.txt',
 ]
 
 /**
@@ -289,6 +297,32 @@ const CONFERENCIA = [
   ['ver_encontros no acesso total', permissaoNoAcessoTotal('ver_encontros')],
   ['obra_check.escolhido_id (Focal Point)', col('obra_check', 'escolhido_id')],
   ['obra_horario.local (Ponto de encontro)', col('obra_horario', 'local')],
+  ['insumo_pedido (Insumos)', "SELECT to_regclass('public.insumo_pedido') IS NOT NULL AS ok"],
+  ['ver_insumos no acesso total', permissaoNoAcessoTotal('ver_insumos')],
+  ['gerenciar_insumos no acesso total', permissaoNoAcessoTotal('gerenciar_insumos')],
+  ['turno.tipo (ferias, atestado, folga...)', col('turno', 'tipo')],
+  ['qualidade_documento (Qualidade)', "SELECT to_regclass('public.qualidade_documento') IS NOT NULL AS ok"],
+  ['correio_solicitacao (Qualidade)', "SELECT to_regclass('public.correio_solicitacao') IS NOT NULL AS ok"],
+  ['ver_documentos no acesso total', permissaoNoAcessoTotal('ver_documentos')],
+  ['gerenciar_correio no acesso total', permissaoNoAcessoTotal('gerenciar_correio')],
+  ['cliente.hospedagem (hotel ou Airbnb)', col('cliente', 'hospedagem')],
+  ['cliente.fatura_apos_documento', col('cliente', 'fatura_apos_documento')],
+  ['obra.cancelamento_motivo (obra cancelada)', col('obra', 'cancelamento_motivo')],
+  ['cancelar_obras no acesso total', permissaoNoAcessoTotal('cancelar_obras')],
+  [
+    'avisos do prazo da execucao distribuidos',
+    "SELECT EXISTS (SELECT 1 FROM configuracao WHERE chave = 'marco_atualizacao_59_avisos') AS ok",
+  ],
+  ['veiculo_ocorrencia (problema do carro)', "SELECT to_regclass('public.veiculo_ocorrencia') IS NOT NULL AS ok"],
+  ['veiculo_manutencao (custo da manutencao)', "SELECT to_regclass('public.veiculo_manutencao') IS NOT NULL AS ok"],
+  ['manutencao_frota no acesso total', permissaoNoAcessoTotal('manutencao_frota')],
+  ['equipamento_ti (notebooks e PCs)', "SELECT to_regclass('public.equipamento_ti') IS NOT NULL AS ok"],
+  ['ver_equipamentos no acesso total', permissaoNoAcessoTotal('ver_equipamentos')],
+  ['cargo.lider_id (organograma)', col('cargo', 'lider_id')],
+  ['editar_organograma no acesso total', permissaoNoAcessoTotal('editar_organograma')],
+  ['agenda_evento.tipo (tipo do evento)', col('agenda_evento', 'tipo')],
+  ['turno.teams_id (turnos do Teams)', col('turno', 'teams_id')],
+  ['cronograma.teams_grupo_id (turnos do Teams)', col('cronograma', 'teams_grupo_id')],
 ]
 
 function col(tabela, coluna) {

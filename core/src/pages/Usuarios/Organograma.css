@@ -1,0 +1,439 @@
+/* ============================================================
+   ORGANOGRAMA (atualizacao 59) — a folha da diretoria: uma A4 deitada,
+   branca, com o titulo, a logo, os diretores ligados por uma linha e
+   todos os times abaixo deles, em colunas arredondadas com a cor do setor.
+   A folha e papel: fica clara tambem no modo escuro (e e assim que sai
+   no "Exportar")
+   ============================================================ */
+
+.organograma {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.organograma__topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+
+.organograma__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.organograma__acoes .btn {
+  width: auto;
+}
+
+.organograma__erro {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.84rem;
+}
+
+.organograma .tela__lead {
+  margin-bottom: 0;
+}
+
+.organograma__vazio {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+/* ---- o zoom: −, a porcentagem, + e Ajustar ---- */
+
+.orgzoom {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+}
+
+.orgzoom button {
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-strong);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.orgzoom button:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+}
+
+.orgzoom button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.orgzoom span {
+  min-width: 44px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.orgzoom .orgzoom__ajustar {
+  font-size: 0.8rem;
+}
+
+/* ---- a caixa que rola (com zoom) e a folha ---- */
+
+.orgcaixa {
+  width: 100%;
+  overflow: auto;
+  padding: 4px 0 16px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.orgfolha {
+  /* papel: as cores de sempre, claras, em qualquer tema */
+  --text-strong: #1d2433;
+  --text-muted: #5b6474;
+  --surface: #ffffff;
+  color-scheme: light;
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: 0 18px 40px -26px rgba(15, 30, 60, 0.55), 0 0 0 1px rgba(15, 30, 60, 0.08);
+}
+
+.orgfolha__ondas {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 62%;
+  pointer-events: none;
+}
+
+.orgfolha__titulo {
+  position: absolute;
+  top: 3.4%;
+  left: 3%;
+  z-index: 1;
+  margin: 0;
+  color: #1b3f8b;
+  font-size: calc(var(--w) * 0.034);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.orgfolha__area {
+  position: absolute;
+  top: 3%;
+  right: 2.5%;
+  bottom: 3%;
+  left: 2.5%;
+}
+
+.orgmapa {
+  --fio: #9aa3b2;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: max-content;
+  transform-origin: 0 0;
+}
+
+.orgmapa__logo {
+  display: block;
+  width: auto;
+  height: 54px;
+  object-fit: contain;
+}
+
+/* ---- os fios ----
+   .orgelo  o traco vertical que desce do meio de um bloco ao de baixo
+   .orgfio  a barra de uma linha (do primeiro ao ultimo) com o pino de
+            cada um; --cima liga a linha a de cima, --baixo a de baixo */
+
+.orgelo {
+  display: block;
+  flex: none;
+  width: 2px;
+  height: 16px;
+  margin: 0 auto;
+  background: var(--fio);
+}
+
+.orglinha {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* o respiro entre os itens e padding (e nao gap): assim a barra do fio
+   atravessa o respiro e liga um item ao outro sem falha */
+.orglinha > li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 var(--respiro, 0px);
+}
+
+.orglinha > li > .orgfio {
+  margin: 0 calc(-1 * var(--respiro, 0px));
+}
+
+.orglinha--diretores {
+  --respiro: 40px;
+}
+
+.orglinha--times {
+  --respiro: 7px;
+}
+
+.orgtime__nivel .orglinha {
+  --respiro: 3px;
+}
+
+.orgfio {
+  position: relative;
+  display: block;
+  flex: none;
+  align-self: stretch;
+  height: 14px;
+}
+
+.orgfio::before,
+.orgfio::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+}
+
+.orgfio::before {
+  left: 0;
+}
+
+.orgfio::after {
+  left: 50%;
+  margin-left: -1px;
+  border-left: 2px solid var(--fio);
+}
+
+.orgfio--cima::before,
+.orgfio--cima::after {
+  border-top: 2px solid var(--fio);
+}
+
+.orgfio--baixo::before,
+.orgfio--baixo::after {
+  border-bottom: 2px solid var(--fio);
+}
+
+/* a barra para no primeiro e no ultimo da linha */
+.orglinha > li:first-child > .orgfio::before,
+.orglinha > li:last-child > .orgfio::after {
+  border-top: 0;
+  border-bottom: 0;
+}
+
+/* ---- a pessoa: a foto no anel do nivel, o cargo e o nome ---- */
+
+.orgp {
+  --anel: #d69a2d;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 98px;
+  text-align: center;
+}
+
+.orgp[data-faixa='diretoria'] {
+  --anel: #2563c9;
+}
+
+.orgp[data-faixa='gestao'] {
+  --anel: #2e8b57;
+}
+
+.orgp[data-faixa='supervisao'] {
+  --anel: #9b2c3a;
+}
+
+.orgp[data-faixa='apoio'] {
+  --anel: #3a9ad9;
+}
+
+.orgp__foto {
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+  padding: 3px;
+  border: 3px solid var(--anel);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 6px 14px -10px rgba(0, 0, 0, 0.5);
+}
+
+.orgp__cargo {
+  color: var(--text-strong);
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.orgp__nome {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.orgp[data-destaque='sim'] {
+  width: 140px;
+}
+
+.orgp[data-destaque='sim'] .orgp__cargo {
+  font-size: 0.74rem;
+}
+
+.orgp[data-destaque='sim'] .orgp__nome {
+  font-size: 0.8rem;
+}
+
+/* o lugar do diretor que ainda nao foi definido */
+.orgp--vago .orgp__foto {
+  width: 60px;
+  height: 60px;
+  border: 2px dashed var(--fio);
+  color: var(--text-muted);
+  font-size: 1.3rem;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.orgp--vago .orgp__cargo {
+  color: var(--text-muted);
+}
+
+/* ---- o time: a coluna arredondada com a cor do setor ---- */
+
+.orgtime {
+  --fio-time: color-mix(in srgb, var(--cor) 60%, transparent);
+}
+
+.orgtime__corpo {
+  --fio: var(--fio-time);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 150px;
+  padding: 18px 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--cor) 26%, transparent);
+  border-radius: 34px;
+  background: color-mix(in srgb, var(--cor) 12%, var(--surface));
+}
+
+.orgtime__nivel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.orgtime__vazio {
+  margin: 8px 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.orgtime__rodape {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  margin-top: 16px;
+}
+
+.orgtime__nome {
+  color: var(--cor);
+  font-size: 1.12rem;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.orgtime__editar {
+  padding: 3px 12px;
+  border: 1px solid color-mix(in srgb, var(--cor) 40%, transparent);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-strong);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.orgtime__editar:hover {
+  background: var(--control-bg-hover);
+}
+
+/* ---- o "Editar" do time ---- */
+
+.orgform {
+  display: grid;
+  gap: 14px;
+}
+
+.orgform__erro {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.84rem;
+}
+
+.orgform__rodape {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* impresso: so a folha */
+@media print {
+  .organograma__topo {
+    display: none;
+  }
+
+  .orgcaixa {
+    overflow: visible;
+  }
+
+  .orgfolha {
+    box-shadow: none;
+  }
+}

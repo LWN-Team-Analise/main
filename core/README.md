@@ -295,6 +295,8 @@ O schema esta em **quatro arquivos, nesta ordem**:
 | `db/atualizacao-54.sql.txt` | o check **Tipo de ensaio** no card do Comercial da 1a etapa (`tipo_ensaio`, `obra.tipos_ensaio`; so nas obras criadas depois), a retirada do carro na vespera (`obra_reserva_veiculo.liberada_por` e `liberada_em`) e as permissoes `ordenar_turnos` (Admin e quem editava turnos) e `conceder_carro` (Admin), dadas uma vez |
 | `db/atualizacao-55.sql.txt` | o fim da area Administrativo: as permissoes `ver_ponto` (todo setor, menos a TV) e `ver_encontros` (acesso total e quem tinha o painel Administrativo), o painel Administrativo tirado dos setores, e o check **Determinar Focal Point** do sistema (`focal_point`, com a pessoa em `obra_check.escolhido_id`) |
 | `db/atualizacao-56.sql.txt` | o **local** do Ponto de encontro: `obra_horario.local` (`obra`, `empresa` ou `outro`) e `obra_horario.endereco` (o endereco escrito do `outro`); as datas que ja existiam ficam na obra |
+| `db/atualizacao-57.sql.txt` | os **pedidos de insumos** do menu por area: a tabela `insumo_pedido` (item, quantidade, observacao, situacao `pendente`/`atendido`/`recusado`, resposta e quem respondeu) e as permissoes `ver_insumos` (todo setor menos a TV) e `gerenciar_insumos` (acesso total e quem tem `revisar_despesa_geral`), dadas uma vez |
+| `db/atualizacao-58.sql.txt` | o **Faturar** espera o Administrativo (os checks `liberado_faturamento` e `faturar`, e o "Faturar após liberação do administrativo" vira so "Faturar"), `turno.tipo` (turno, ferias, atestado, folga, nao_operacional) e a **Area da qualidade**: `qualidade_documento`, `qualidade_documento_evento` e `correio_solicitacao`, com as permissoes `ver_documentos`/`editar_documentos` (Qualidade e acesso total), `ver_correio` (Qualidade, quem atende e acesso total) e `gerenciar_correio` (acesso total e quem tem `revisar_despesa_geral`), dadas uma vez |
 | `db/atualizacao-51.sql.txt` | a aba Ponto: `ponto_dia` (o Calculo Diario importado) e `ponto_assinatura` (a conferencia assinada). Tambem aposenta a 48 (a obra criada em Obras nao vira mais negocio) |
 | `db/ensaios-lwn.sql.txt`    | o catalogo de ensaios da LWN (HVAC e Gases); roda de novo sem duplicar |
 
@@ -1355,6 +1357,56 @@ linha dos dias (pessoas e horas de cada dia), as **Anotacoes do dia** e os **cro
 Cronograma Anapolis, e os que forem criados no "Adicionar cronograma". Cada cronograma
 abre e fecha e tem os "Turnos abertos" (sem pessoa) e uma linha por pessoa.
 
+### Os turnos do Teams (sincronizados sozinhos)
+
+O que a empresa lanca no app **Turnos** do Teams aparece sozinho aqui
+(`server/turnosTeams.js`, atualizacao 59, parte 8): turno novo entra, turno
+mudado muda e turno apagado sai. E so do Teams para o site: o turno que veio de
+la abre so para leitura (o pop-up avisa "mude por la"), nao se exclui nem entra
+no "Copiar agenda" (a API recusa com 409); copiar e colar continua valendo, e a
+copia vira turno do site.
+
+- **Quando**: ao abrir a aba e a cada minuto com ela aberta, o
+  `GET /api/turnos` sincroniza o periodo da tela (o mesmo periodo vai ao
+  Teams no maximo a cada 3 minutos, e a tela nao espera mais de 9 s). Ao lado do
+  titulo aparece "Teams · atualizado as 14:31" e, para quem tem `editar_turnos`,
+  o **Atualizar** (`POST /api/turnos/teams/sincronizar`). O cron da Vercel
+  (`/api/turnos/teams/cron`, com o `CRON_SECRET`) passa uma vez por dia nas
+  proximas oito semanas.
+- **O que vira o que**: grupo do Teams = cronograma (o de mesmo nome e
+  aproveitado na primeira vez; as pessoas do grupo entram nele); turno
+  compartilhado = turno (hora, titulo ou a atividade, observacao e a cor do
+  tema); folga = ausencia do dia inteiro, pelo nome do motivo (ferias,
+  atestado, folga ou dia nao operacional); turno aberto = turno aberto. O
+  rascunho do Teams (ainda nao compartilhado) nao vem.
+- **As copias feitas a mao.** Antes da integracao, os turnos do Teams eram
+  lancados aqui a mao. O turno do site igual a um do Teams (mesma pessoa, mesmo
+  dia, mesmo horario) passa a ser o do Teams — fica a linha que ja existia, com a
+  obra ligada se tiver — e a copia de varios dias que o Teams cobre dia a dia com
+  o mesmo horario sai (so a sem obra, so no periodo conferido). Assim ninguem
+  fica com dois turnos iguais no dia. O turno da noite (22:00 as 07:00) fica no
+  dia em que comeca, e os grupos apagados do Teams (sem nome) nao viram
+  cronograma: o turno deles vai para o cronograma da pessoa.
+- **Conflitos**: o ponto de encontro da obra e o comeco do dia de trabalho, entao
+  so conta como conflito contra uma ausencia (folga, ferias, atestado) ou contra
+  outro ponto de encontro — nao contra o turno de trabalho do dia.
+- **A pessoa** e achada pela conta Microsoft: `usuario.outlook_id` (quem ja
+  entrou com o Outlook) ou, com a permissao `User.Read.All`, pelo e-mail. O
+  turno de quem nao esta no site fica de fora.
+
+Para ligar:
+
+1. No Entra ID, no aplicativo do e-mail (`GRAPH_CLIENT_ID`): Permissoes de API
+   > Adicionar > Microsoft Graph > **Permissoes de aplicativo** >
+   `Schedule.Read.All` (e `User.Read.All`, para achar pelo e-mail) >
+   **Conceder consentimento do administrador**.
+2. Na Vercel, a variavel `TEAMS_TURNOS_EQUIPE` com o id do time do Teams onde
+   estao os turnos (no Teams: "..." do time > Obter link para o time; o id e o
+   `groupId=` do link). Se a Microsoft pedir o cabecalho `MS-APP-ACTS-AS`, a
+   `TEAMS_TURNOS_COMO` com o id de um dono do time.
+3. Rodar a atualizacao 59 (parte 8: `turno.teams_id` e
+   `cronograma.teams_grupo_id`) e fazer o deploy.
+
 **A ordem das pessoas** e a que quem tem `editar_turnos` escolher: cada linha
 tem uma alca (os seis pontos ao lado da foto) para arrastar a pessoa para
 cima ou para baixo dentro do cronograma — com o mouse ou o dedo, ou com as
@@ -1405,6 +1457,19 @@ so os turnos com inicio e fim.
   so quem edita o ve. "Compartilhar com a equipe" (`POST /api/turnos/compartilhar`)
   manda os escolhidos ou, sem escolha, todos os do periodo. Editar um turno ja
   compartilhado nao o tira da equipe.
+
+### Tipos e cores do turno (atualizacao 58)
+
+O turno tem um **tipo** (`turno.tipo`): o turno de trabalho, ou uma ausencia — Ferias
+(de uma data a outra), Atestado medico, Folga solicitada e Dia nao operacional. A
+ausencia e sempre o dia inteiro, sem obra nem tarefa, ja vem com titulo e cor
+sugeridos, aparece listrada na grade, nao conta como gente trabalhando no dia e cruzar
+com um turno da mesma pessoa e conflito. O **dia nao operacional sem pessoa** vale para
+o cronograma inteiro: a coluna do dia fica hachurada em todas as linhas dele (e no dia
+de cima). A **cor** tem 20 amostras (`CORES`, em `src/domain/turnos.js`) e o "Outra
+cor" (`components/SeletorCor`): o quadro de cor, a faixa do matiz, o HEX e o RGB; a cor
+propria vai para `turno.cor` como `#rrggbb`. A **Tarefa da obra** so aparece no pop-up
+para quem e do Time Tecnico (setor `tecnico`).
 
 ## Clientes: unidades
 
@@ -1514,10 +1579,71 @@ ou a API fora do ar: o estado e a cidade viram campo livre.
 - Nas listas de escolha, digitar as primeiras letras pula para a opcao ("par"
   acha o Paraguai), como no `<select>` do navegador.
 
+## O menu por area
+
+O menu e por **area** (`AREAS`, no `AppShell.jsx`). No alto ficam as telas soltas —
+**Pagina inicial**, **Obras** e **Turnos** — e, depois, uma linha por area:
+
+| Area | Telas (cada uma com a permissao dela) |
+| ---- | ------------------------------------- |
+| **Seu espaco** | Meu ponto (`/app/ponto`, `ver_ponto`), Meus reembolsos (`/app/despesas`, `ver_despesas`), Pedir insumos (`/app/insumos`, `ver_insumos`) |
+| **Area admin** | Ponto da equipe (`/app/ponto/equipe`, `gerenciar_ponto`), Ponto de encontro (`ver_encontros`, `soComOutros`), Dashboard de reembolso (os Envios gerais, `revisar_despesa_geral`), Insumos (`/app/insumos/pedidos`, `gerenciar_insumos`) |
+| **Area almoxarife** | as abas do Almoxarife (`almox_*`), abertas DENTRO do Atmosfera em `/app/almoxarife/<aba>` (`AlmoxarifeNaArea.jsx`): a tela do Almoxarife num quadro, no modo area (`?embutido=area`, sem o menu e a barra de cima de la). Trocar de aba pelo menu chama o `switchTab` do quadro; trocar la dentro avisa o Atmosfera (`postMessage` `almox-aba`, em `endereco.js`) e o menu acompanha. O `/app/control` continua abrindo a tela inteira, para os links de fora |
+| **Area comercial** | Comercial (`ver_comercial`), Clientes (`ver_clientes`) |
+| **Area da qualidade** | Acompanhamento dos documentos (`/app/qualidade/documentos`, `ver_documentos`), Solicitacao de correio (`/app/qualidade/correio`, `ver_correio`) |
+| **Area tecnica** | Ponto de encontro (`ver_encontros`), Frota (`ver_frotas`), Solicitar instrumento (o pop-up do Solicitar OS, `almox_solicitacoes`) |
+| **Area da excelencia** | Avaliacoes (`ver_avaliacoes`), Usuarios (`ver_usuarios`) |
+| **Area da diretoria** | Dashboard (`/app/diretoria`, `ver_dashboard`: era a aba Dashboard da pagina inicial) |
+
+A area e a **prateleira**, e nao o acesso: cada tela continua com a permissao dela, e
+a area so aparece para quem tem ao menos uma tela liberada la dentro
+(`areasVisiveis`). O Ponto de encontro da Area admin e `soComOutros`: sozinho ele nao
+abre a area (quem so ve os encontros os ve na Area tecnica). O Ponto se divide em duas
+telas: **Meu ponto** e so a propria folha; o seletor de pessoa, as Assinaturas e o
+Importar ficam no **Ponto da equipe** (`<Ponto equipe />`).
+
+No **menu de sempre**, o clique na area abre ao lado o painel com as telas dela
+(`SubmenuArea`); no **menu largo** (o "Mais"), a area vira um titulo que abre e fecha,
+com as telas embaixo (`.rail__sub`), e as areas abertas ficam guardadas no aparelho
+(`customers.menu-areas`). O item aceso e a area da tela aberta — no menu largo, com a
+area aberta, a propria tela. No **celular**, a barra de baixo fica com Pagina inicial,
+Obras, o atalho do **Reembolso** (Meus reembolsos) e o Menu, que mostra uma secao por
+area (`MenuCompleto`).
+
+**Insumos** (atualizacao 57). Cada pessoa pede o material de que precisa (o item, a
+quantidade e uma observacao) e acompanha a resposta, no selo do canto de cada pedido
+(Pendente, depois Aprovado ou Reprovado); o pedido pendente pode ser cancelado, o
+respondido nao. Quem tem `gerenciar_insumos` ("Aprovar / reprovar pedidos de insumos")
+ve os pedidos de todos e aprova cada um (com um recado opcional), reprova (com o
+motivo), reabre ou exclui — excluir, em qualquer situacao, e so dele. No banco a
+situacao continua `atendido`/`recusado`; so a tela diz aprovado/reprovado. Tabela
+`insumo_pedido`; API em `server/routes/insumos.js` (`GET /api/insumos?todos=1`,
+`POST`, `PATCH /:id`, `DELETE /:id`). A 57 deu a `ver_insumos` a todo setor (menos a
+TV) e a `gerenciar_insumos` ao acesso total e a quem tem `revisar_despesa_geral`.
+
+**Area da qualidade** (atualizacao 58). Duas telas no desenho do Comercial (o mesmo
+funil em setas: `pages/Qualidade/QuadroEtapas.jsx` usa as classes `.funil` de
+`Comercial.css`); funis, etapas e situacoes em `src/domain/qualidade.js`, lidos pela
+tela e pela API (`server/routes/qualidade.js`, em `/api/qualidade`).
+
+- **Acompanhamento dos documentos**: tres funis — Protocolos (A elaborar ... Execucao
+  em campo), Relatorios (Aguardando dados de campo ... Entregue ao cliente) e
+  Documentos gerais. O cartao mostra o tipo, o codigo, a revisao, o titulo, o cliente e
+  a obra, o responsavel, o prazo (vermelho quando passa) e ha quantos dias esta na
+  etapa. Arrastar muda a etapa; o documento aberto tem Concluir, Nova revisao,
+  Cancelar (com o motivo), Reabrir e Excluir, e o historico com os comentarios (quem so
+  ve tambem comenta). Visoes: Funil, Lista e Arquivados. Mexer e `editar_documentos`.
+- **Solicitacao de correio**: pedir um envio (o que vai, para quem, o endereco — o CEP
+  preenche pelo ViaCEP e a obra traz o cadastro do cliente —, o servico e ate quando
+  sai). Quem tem `gerenciar_correio` arrasta pelas colunas Solicitada, Etiqueta gerada,
+  Postada (pede o rastreio) e Entregue. Quem pediu edita ou cancela enquanto esta
+  Solicitada. Canceladas e entregues ha mais de 30 dias vao para os Arquivados.
+
 ## O menu, o Meu painel e o fim da area Administrativo
 
 A area **Administrativo** saiu (atualizacao 55), e cada tela dela voltou para o lugar
-de sempre, com a trava de permissao de cada uma:
+de sempre, com a trava de permissao de cada uma (no menu por area, mais acima, elas
+ficaram no Seu espaco e nas areas admin e tecnica):
 
 | Tela | Onde fica | Permissao |
 | ---- | --------- | --------- |
@@ -1553,9 +1679,8 @@ ve **Meu painel** no menu da foto, logo acima de Configuracoes, e ele abre
 **Mais**: ela alarga a barra, com o nome de cada aba ao lado do icone, e a pagina se
 ajusta a largura nova — nada fica atras de veu. A barra de sempre continua igual com o
 menu encolhido (o **Menos** volta), e a escolha fica guardada no aparelho
-(`customers.menu-largo`). No menu largo, o **Almoxarife** ganha a setinha: o clique abre
-ao lado o cartao com as abas dele (`SubmenuArea`, no AppShell), cada uma pela permissao
-`almox_*`; o titulo do cartao leva ao inicio do Almoxarife.
+(`customers.menu-largo`). No menu largo, cada **area** ganha a setinha e abre, embaixo
+dela, as telas que tem (ver "O menu por area").
 
 O **Almoxarife tem o mesmo Mais**, no alto da barra dele (`#almox-mais` em
 `public/almoxarife/almoxarife.html`; `montarMais` em `menu-main.js`). A escolha e a
@@ -1565,11 +1690,11 @@ lateral do celular do Almoxarife, que saiu do AppShell, mora em
 `scripts/almoxarife-menulado.css`).
 
 **O menu completo (o hamburguer).** No celular, o Menu da barra de baixo abre o
-sistema inteiro dividido em **Atmosfera** (as abas de sempre) e **Almoxarife** (as abas
-dele, cada uma pela permissao `almox_*`, com o link que abre a aba direto em
-`/core/app/control/...`). So aparece o que a permissao de visualizacao da pessoa abre
-(`MenuCompleto`, no AppShell). O **Solicitar** do Atmosfera (na barra e no menu
-completo, `almox_solicitacoes`) nao leva mais ao Almoxarife: abre o "Solicitar OS" num
+sistema inteiro dividido em **Atmosfera** (as telas soltas do alto) e uma secao por
+**area** (as abas do Almoxarife com o link que abre a aba direto em
+`/core/app/control/...`). So aparece o que a permissao da pessoa abre
+(`MenuCompleto`, no AppShell). O **Solicitar instrumento** da Area tecnica
+(`almox_solicitacoes`) nao leva ao Almoxarife: abre o "Solicitar OS" num
 pop-up por cima da tela em que a pessoa esta (`ModalSolicitarOS` sem obra, em
 `/core/app/control/solicitar?embutido=1`), e la dentro ela escolhe o cliente e a obra.
 

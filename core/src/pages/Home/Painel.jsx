@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useDados } from '@/context/DadosContext'
-import { chaveDoCargo, checksExigidos, diasAte, progressoDaObra, situacaoDaObra } from '@/domain/obras'
+import { chaveDoCargo, checksExigidos, diasAte, obraCancelada, progressoDaObra, situacaoDaObra } from '@/domain/obras'
 import { hojeISO } from '@/utils/formato'
-import { Colunas, Linha, Rosca } from './graficos'
+import { Linha, Rosca } from './graficos'
 import PainelDespesas from './PainelDespesas'
 import PainelFrota from './PainelFrota'
 import PainelComercial from './PainelComercial'
+import PainelExcelencia from './PainelExcelencia'
 import PainelAlmoxarife from './PainelAlmoxarife'
 import Tile from './Tile'
 import {
@@ -124,8 +125,10 @@ export default function Painel({ mes, passo = 'mes', secao = 'todos' }) {
   const fatiaDoCarimbo = (carimbo) =>
     passo === 'ano' ? mesDoCarimbo(carimbo) : soDia(carimbo)
 
+  /* a cancelada (atualizacao 59) tambem fecha, mas nao foi entregue: fica
+     fora das contas de obra concluida */
   const fechadas = useMemo(
-    () => obras.filter((o) => concluida(o) && noMes(o.concluidaEm)),
+    () => obras.filter((o) => concluida(o) && !obraCancelada(o) && noMes(o.concluidaEm)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [obras, concluida, mes.chave],
   )
@@ -764,40 +767,8 @@ export function PainelVista({
               </div>
             </section>
 
-            <section className="cartao vidro">
-              <header className="cartao__topo">
-                <div>
-                  <h2 className="cartao__titulo">Tempo médio de obra em campo</h2>
-                  <p className="cartao__sub">
-                    {etapaCampo
-                      ? `Da abertura ao fechamento da etapa ${
-                          etapaCampo.descricao || etapaCampo.nome
-                        }, pelo ${passo === 'ano' ? 'mês' : 'dia'} em que a obra saiu de campo.`
-                      : 'Quanto tempo a obra passa na etapa de execução.'}
-                  </p>
-                </div>
-                {campo.total > 0 && (
-                  <span className="cartao__selo" title="Obras que saíram de campo no período">
-                    {campo.total}
-                  </span>
-                )}
-              </header>
-
-              <div className="cartao__corpo">
-                {!etapaCampo ? (
-                  <p className="cartao__vazio">
-                    O roteiro não tem uma etapa de execução (campo) — não há o que medir.
-                  </p>
-                ) : campo.total === 0 ? (
-                  <p className="cartao__vazio">
-                    Nenhuma obra saiu de campo {passo === 'ano' ? 'neste ano' : 'neste mês'}.
-                  </p>
-                ) : (
-                  <Colunas itens={campo.itens} unidade="dias" referencia={campo.media} />
-                )}
-              </div>
-            </section>
-
+            {/* o "Tempo medio de obra em campo" saiu do Dashboard a pedido da
+                diretoria (18/11); a conta continua no Power BI */}
           </div>
         </>
       )}
@@ -813,6 +784,10 @@ export function PainelVista({
       {comercial && ve('comercial') && (
         <PainelComercial fatias={fatias} passo={passo} rotuloDaFatia={rotuloDaFatia} />
       )}
+
+      {/* as avaliacoes das obras (atualizacao 59): o painel some sozinho para
+          quem nao ve Avaliacoes */}
+      {ve('excelencia') && <PainelExcelencia fatias={fatias} passo={passo} />}
     </div>
   )
 }
