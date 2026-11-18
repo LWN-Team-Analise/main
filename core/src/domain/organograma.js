@@ -1,9 +1,9 @@
 /* ============================================================
    ORGANOGRAMA (atualizacao 59) — a montagem do desenho, sem React
 
-   O desenho e o da diretoria: a logo em cima, os DIRETORES ligados por
-   uma linha e, abaixo de cada um, os TIMES dele (cada setor uma coluna
-   com a cor dele). Dentro do time, as pessoas descem por NIVEL, uma
+   O desenho e o da folha da diretoria: o titulo e a logo em cima, os
+   DIRETORES ligados por uma linha e, abaixo deles, todos os TIMES (cada
+   setor uma coluna com a cor dele), na ordem da folha. Dentro do time, as pessoas descem por NIVEL, uma
    linha por nivel:
 
      diretor  >  gestor / gerente / coordenador  >  supervisor / lider
@@ -11,9 +11,9 @@
        >  trainee  >  auxiliar (o 2 acima do 1)  >  estagiario
 
    O nivel sai do CARGO de cada pessoa (Usuarios), entao quem entra, sai
-   ou e promovido muda o desenho sozinho. O que e so do organograma fica
-   no setor: o diretor a quem o time responde (`diretorId`) e quem fica
-   no topo do time (`liderId`), pelo "Editar" de cada time.
+   ou e promovido muda o desenho sozinho. Todos os times respondem ao setor
+   da diretoria, na ORDEM_DOS_TIMES. O que e so do organograma fica no
+   setor: quem fica no topo do time (`liderId`), pelo "Editar" de cada um.
    ============================================================ */
 
 /** Quantas pessoas cabem numa linha antes de quebrar em outra. */
@@ -91,59 +91,59 @@ export function linhasDoTime(pessoas, liderId) {
   return linhas
 }
 
+/*
+ * A ordem dos times no desenho, da esquerda para a direita, como na folha
+ * da diretoria. Cada setor cai no primeiro trecho que o nome dele tiver
+ * (sem acento e sem caixa); o que nao casar com nenhum vem depois, na
+ * ordem dos setores.
+ */
+export const ORDEM_DOS_TIMES = [
+  ['einstein', 'parque'],
+  ['tecnic'],
+  ['anapolis'],
+  ['qualidade'],
+  ['comercial'],
+  ['excelencia'],
+  ['administrativ', 'adm'],
+  ['almox'],
+]
+
+/** A posicao do setor na ORDEM_DOS_TIMES (os de fora vem depois). */
+export function posicaoDoTime(setor) {
+  const nome = semAcento(`${setor.nome} ${setor.chave ?? ''}`)
+  const i = ORDEM_DOS_TIMES.findIndex((trechos) => trechos.some((t) => nome.includes(t)))
+  return i < 0 ? ORDEM_DOS_TIMES.length : i
+}
+
 /**
- * O desenho inteiro: [{ diretor, times: [{ setor, linhas }] }].
+ * O desenho inteiro: { diretores, times: [{ setor, linhas }] }.
  *
- * `diretor` null e o grupo dos times ainda sem diretor (vai por ultimo).
- * Diretor e quem esta no setor da diretoria ou foi marcado como diretor
- * de algum time; ele aparece so em cima, nunca repetido dentro de um time.
- * Os diretores seguem a ordem dos setores (o do primeiro time primeiro).
+ * Todos os times respondem ao setor da DIRETORIA: as pessoas dele vao para
+ * cima, ligadas por uma linha, e os times ficam todos embaixo, na
+ * ORDEM_DOS_TIMES. Diretor aparece so em cima, nunca repetido num time.
  */
 export function montarOrganograma(setores, equipe) {
   const ativos = equipe.filter((p) => p.ativo !== false)
   const pessoaPorId = new Map(ativos.map((p) => [String(p.id), p]))
-  const visiveis = setores
-    .filter((s) => !s.painelTv)
-    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0) || a.nome.localeCompare(b.nome, 'pt-BR'))
+  const visiveis = setores.filter((s) => !s.painelTv)
   const diretoria = new Set(visiveis.filter(ehDiretoria).map((s) => s.chave))
-  const times = visiveis.filter((s) => !diretoria.has(s.chave))
+  const diretores = ativos.filter((p) => diretoria.has(p.cargo)).sort(porNome)
+  const ehDiretor = new Set(diretores.map((p) => String(p.id)))
 
-  const diretores = new Map()
-  ativos.filter((p) => diretoria.has(p.cargo)).forEach((p) => diretores.set(String(p.id), p))
-  times.forEach((s) => {
-    const marcado = s.diretorId ? pessoaPorId.get(String(s.diretorId)) : null
-    if (marcado) diretores.set(String(marcado.id), marcado)
-  })
+  const times = visiveis
+    .filter((s) => !diretoria.has(s.chave))
+    .sort(
+      (a, b) =>
+        posicaoDoTime(a) - posicaoDoTime(b) ||
+        (a.ordem ?? 0) - (b.ordem ?? 0) ||
+        a.nome.localeCompare(b.nome, 'pt-BR'),
+    )
+    .map((setor) => {
+      const lider = setor.liderId ? pessoaPorId.get(String(setor.liderId)) : null
+      const pessoas = ativos.filter((p) => p.cargo === setor.chave && !ehDiretor.has(String(p.id)))
+      if (lider && !ehDiretor.has(String(lider.id)) && !pessoas.includes(lider)) pessoas.push(lider)
+      return { setor, linhas: linhasDoTime(pessoas, lider?.id) }
+    })
 
-  const montarTime = (setor) => {
-    const lider = setor.liderId ? pessoaPorId.get(String(setor.liderId)) : null
-    const pessoas = ativos.filter((p) => p.cargo === setor.chave && !diretores.has(String(p.id)))
-    if (lider && !diretores.has(String(lider.id)) && !pessoas.includes(lider)) pessoas.push(lider)
-    return { setor, linhas: linhasDoTime(pessoas, lider?.id) }
-  }
-
-  const grupos = new Map([...diretores.keys()].map((id) => [id, []]))
-  const semDiretor = []
-  times.forEach((setor) => {
-    const id = setor.diretorId ? String(setor.diretorId) : null
-    if (id && grupos.has(id)) grupos.get(id).push(montarTime(setor))
-    else semDiretor.push(montarTime(setor))
-  })
-
-  /* o diretor com time vem na ordem do primeiro time dele; sem time, depois, por nome */
-  const ordemDoTime = new Map(times.map((s, i) => [s.id, i]))
-  const primeiro = (lista) => (lista.length ? Math.min(...lista.map((t) => ordemDoTime.get(t.setor.id))) : Infinity)
-  const resultado = [...grupos.entries()]
-    .map(([id, lista]) => ({ diretor: diretores.get(id), times: lista }))
-    .sort((a, b) => primeiro(a.times) - primeiro(b.times) || porNome(a.diretor, b.diretor))
-  if (semDiretor.length > 0) resultado.push({ diretor: null, times: semDiretor })
-  return resultado
-}
-
-/** Para o "Responde a": os diretores primeiro, depois o resto da equipe. */
-export function candidatosADiretor(setores, equipe) {
-  const diretoria = new Set(setores.filter(ehDiretoria).map((s) => s.chave))
-  const ehDiretor = (p) => diretoria.has(p.cargo) || nivelDoCargo(p.cargoTitulo) === 0
-  const ativos = equipe.filter((p) => p.ativo !== false).sort(porNome)
-  return [...ativos.filter(ehDiretor), ...ativos.filter((p) => !ehDiretor(p))]
+  return { diretores, times }
 }

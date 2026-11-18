@@ -28,6 +28,59 @@
   margin: 0;
 }
 
+/* os turnos do Teams (atualizacao 59): ligado, quando foi a ultima e o "Atualizar" */
+.turnos__teams {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.turnos__teams-pingo {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #5b5fc7;
+}
+
+.turnos__teams.is-erro {
+  color: var(--danger);
+}
+
+.turnos__teams.is-erro .turnos__teams-pingo {
+  background: var(--danger);
+}
+
+.turnos__teams button {
+  padding: 3px 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-strong);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.turnos__teams button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.turnoform__teams {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, #5b5fc7 10%, transparent);
+  color: var(--text-strong);
+  font-size: 0.82rem;
+}
+
 .turnos__acoes {
   display: flex;
   flex-wrap: wrap;

@@ -1357,6 +1357,45 @@ linha dos dias (pessoas e horas de cada dia), as **Anotacoes do dia** e os **cro
 Cronograma Anapolis, e os que forem criados no "Adicionar cronograma". Cada cronograma
 abre e fecha e tem os "Turnos abertos" (sem pessoa) e uma linha por pessoa.
 
+### Os turnos do Teams (sincronizados sozinhos)
+
+O que a empresa lanca no app **Turnos** do Teams aparece sozinho aqui
+(`server/turnosTeams.js`, atualizacao 59, parte 8): turno novo entra, turno
+mudado muda e turno apagado sai. E so do Teams para o site: o turno que veio de
+la abre so para leitura (o pop-up avisa "mude por la"), nao se exclui nem entra
+no "Copiar agenda" (a API recusa com 409); copiar e colar continua valendo, e a
+copia vira turno do site.
+
+- **Quando**: ao abrir a aba e a cada minuto com ela aberta, o
+  `GET /api/turnos` sincroniza o periodo da tela (o mesmo periodo vai ao
+  Teams no maximo a cada 3 minutos, e a tela nao espera mais de 9 s). Ao lado do
+  titulo aparece "Teams · atualizado as 14:31" e, para quem tem `editar_turnos`,
+  o **Atualizar** (`POST /api/turnos/teams/sincronizar`). O cron da Vercel
+  (`/api/turnos/teams/cron`, com o `CRON_SECRET`) passa uma vez por dia nas
+  proximas oito semanas.
+- **O que vira o que**: grupo do Teams = cronograma (o de mesmo nome e
+  aproveitado na primeira vez; as pessoas do grupo entram nele); turno
+  compartilhado = turno (hora, titulo ou a atividade, observacao e a cor do
+  tema); folga = ausencia do dia inteiro, pelo nome do motivo (ferias,
+  atestado, folga ou dia nao operacional); turno aberto = turno aberto. O
+  rascunho do Teams (ainda nao compartilhado) nao vem.
+- **A pessoa** e achada pela conta Microsoft: `usuario.outlook_id` (quem ja
+  entrou com o Outlook) ou, com a permissao `User.Read.All`, pelo e-mail. O
+  turno de quem nao esta no site fica de fora.
+
+Para ligar:
+
+1. No Entra ID, no aplicativo do e-mail (`GRAPH_CLIENT_ID`): Permissoes de API
+   > Adicionar > Microsoft Graph > **Permissoes de aplicativo** >
+   `Schedule.Read.All` (e `User.Read.All`, para achar pelo e-mail) >
+   **Conceder consentimento do administrador**.
+2. Na Vercel, a variavel `TEAMS_TURNOS_EQUIPE` com o id do time do Teams onde
+   estao os turnos (no Teams: "..." do time > Obter link para o time; o id e o
+   `groupId=` do link). Se a Microsoft pedir o cabecalho `MS-APP-ACTS-AS`, a
+   `TEAMS_TURNOS_COMO` com o id de um dono do time.
+3. Rodar a atualizacao 59 (parte 8: `turno.teams_id` e
+   `cronograma.teams_grupo_id`) e fazer o deploy.
+
 **A ordem das pessoas** e a que quem tem `editar_turnos` escolher: cada linha
 tem uma alca (os seis pontos ao lado da foto) para arrastar a pessoa para
 cima ou para baixo dentro do cronograma — com o mouse ou o dedo, ou com as

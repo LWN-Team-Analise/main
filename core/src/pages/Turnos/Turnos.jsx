@@ -637,8 +637,10 @@ export default function Turnos() {
   const de = dias[0]
   const ate = dias.at(-1)
 
-  const recarregar = useCallback(async () => {
-    setCarregando(true)
+  /* silencioso = a releitura de minuto em minuto (os turnos do Teams): sem o "carregando" */
+  const recarregar = useCallback(async (opcoes) => {
+    const silencioso = opcoes?.silencioso === true
+    if (!silencioso) setCarregando(true)
     try {
       const novos = await turnosApi.carregar(de, ate)
       setDados(novos)
@@ -647,15 +649,42 @@ export default function Turnos() {
       const existem = new Set([...(novos.turnos ?? []), ...(novos.obras ?? [])].map((t) => t.id))
       setSelecao((atual) => (Array.from(atual).every((id) => existem.has(id)) ? atual : new Set(Array.from(atual).filter((id) => existem.has(id)))))
     } catch (e) {
-      setErro(e.message)
+      if (!silencioso) setErro(e.message)
     } finally {
-      setCarregando(false)
+      if (!silencioso) setCarregando(false)
     }
   }, [de, ate])
 
   useEffect(() => {
     recarregar()
   }, [recarregar])
+
+  /* OS TURNOS DO TEAMS (atualizacao 59): com a integracao ligada, a aba le
+     de novo a cada minuto enquanto esta na tela — e a leitura que traz o
+     que mudou no Teams. "Atualizar" forca na hora */
+  const teamsLigado = Boolean(dados?.teams?.configurada)
+  const [sincronizando, setSincronizando] = useState(false)
+  useEffect(() => {
+    if (!teamsLigado) return undefined
+    const relogio = setInterval(() => {
+      if (document.visibilityState === 'visible') recarregar({ silencioso: true })
+    }, 60000)
+    return () => clearInterval(relogio)
+  }, [teamsLigado, recarregar])
+
+  const atualizarDoTeams = async () => {
+    setSincronizando(true)
+    try {
+      const r = await turnosApi.sincronizarTeams({ de, ate })
+      await recarregar({ silencioso: true })
+      const mudou = (r.resumo?.gravados ?? 0) + (r.resumo?.removidos ?? 0)
+      setAviso(mudou > 0 ? `Teams: ${plural(mudou, 'turno atualizado', 'turnos atualizados')}` : 'Teams: nada mudou')
+    } catch (e) {
+      setErro(e.message)
+    } finally {
+      setSincronizando(false)
+    }
+  }
 
   /* o dia escolhido nao atravessa a troca de periodo; os copiados sim
      (copiar nesta semana e colar na outra e o uso comum) */
@@ -1038,6 +1067,22 @@ export default function Turnos() {
         {/* 1a barra: o titulo e o que mexe na agenda inteira */}
         <header className="turnos__topo">
           <h1 className="tela__titulo">Turnos</h1>
+          {teamsLigado && (
+            <span
+              className={`turnos__teams ${dados.teams.erro ? 'is-erro' : ''}`.trim()}
+              title={dados.teams.erro || 'O que muda no Turnos do Teams chega aqui sozinho'}
+            >
+              <span className="turnos__teams-pingo" aria-hidden="true" />
+              {dados.teams.erro
+                ? 'Teams: não sincronizou'
+                : `Teams · ${dados.teams.ultima ? `atualizado às ${new Date(dados.teams.ultima).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : 'ligado'}`}
+              {edita && (
+                <button type="button" onClick={atualizarDoTeams} disabled={sincronizando}>
+                  {sincronizando ? 'Atualizando...' : 'Atualizar'}
+                </button>
+              )}
+            </span>
+          )}
           <span className="turnos__espaco" />
           {edita && (
             <div className="turnos__acoes">

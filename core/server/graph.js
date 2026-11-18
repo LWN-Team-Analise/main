@@ -44,6 +44,14 @@ export function configurado() {
   return Boolean(INQUILINO && CLIENTE && SEGREDO && CAIXA)
 }
 
+/**
+ * O aplicativo tem as credenciais (sem exigir a caixa de e-mail): e o que
+ * a sincronizacao dos Turnos do Teams (turnosTeams.js) precisa.
+ */
+export function aplicativoConfigurado() {
+  return Boolean(INQUILINO && CLIENTE && SEGREDO)
+}
+
 /** O remetente configurado — o email.js usa nos recados de erro. */
 export function caixaDeSaida() {
   return CAIXA
@@ -52,6 +60,11 @@ export function caixaDeSaida() {
 /* O token vale cerca de uma hora. Guardar evita uma ida ao Entra ID a
    cada e-mail; a folga de 60s cobre o relogio fora de sincronia. */
 let guardado = { token: null, vence: 0 }
+
+/** O token do aplicativo (credenciais de cliente), guardado ate vencer. */
+export async function tokenDoAplicativo() {
+  return pegarToken()
+}
 
 async function pegarToken() {
   const agora = Date.now()

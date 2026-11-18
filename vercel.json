@@ -5,7 +5,8 @@
   "outputDirectory": "dist",
   "regions": ["gru1"],
   "crons": [
-    { "path": "/api/almox/notificacoes/diarias", "schedule": "0 11 * * *" }
+    { "path": "/api/almox/notificacoes/diarias", "schedule": "0 11 * * *" },
+    { "path": "/api/turnos/teams/cron", "schedule": "0 9 * * *" }
   ],
   "functions": {
     "api/index.js": {

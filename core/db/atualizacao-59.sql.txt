@@ -62,14 +62,14 @@
 --     editar_equipamentos. Vao, uma vez so, para o acesso total; os outros
 --     setores (a Excelencia) sao marcados na tela de cada um.
 --
---  6. O ORGANOGRAMA (no desenho da diretoria: os diretores em cima e,
---     abaixo de cada um, os times dele, cada pessoa no nivel do cargo)
---     cargo.diretor_id — a PESSOA a quem o time responde, o diretor da
---                        linha de cima (NULL = sem diretor definido).
---     cargo.lider_id   — quem fica no topo do time (NULL = o cargo de cada
---                        um decide a ordem).
---     A primeira versao (o setor respondendo a outro SETOR, cargo.
---     superior_id) nao serviu para o desenho e sai. Quem ve a equipe
+--  6. O ORGANOGRAMA (a folha da diretoria: os diretores em cima e todos os
+--     times abaixo deles, cada pessoa no nivel do cargo)
+--     cargo.lider_id — quem fica no topo do time (NULL = o cargo de cada um
+--                      decide a ordem).
+--     Todos os times respondem ao setor Diretor, na ordem da folha (em
+--     src/domain/organograma.js): as versoes de antes (cargo.superior_id,
+--     o setor respondendo a outro setor, e cargo.diretor_id, o time
+--     respondendo a uma pessoa) nao serviram para o desenho e saem. Quem ve a equipe
 --     (`ver_usuarios`) ve o organograma; a permissao nova
 --     `editar_organograma` vai, uma vez so, para o acesso total e para os
 --     setores que veem a equipe e editam setor (`editar_cargo`) ou revisam
@@ -81,6 +81,16 @@
 --     municipal, ponto facultativo, aniversario ou outro (a lista e
 --     TIPOS_EVENTO, em src/domain/agenda.js; a API confere). Os eventos
 --     que ja existiam ficam como evento.
+--
+--  8. OS TURNOS DO TEAMS (server/turnosTeams.js)
+--     O app Turnos do Teams alimenta a aba Turnos sozinho.
+--     turno.teams_id          — o id do turno, da folga ou do turno aberto
+--                               no Teams ("turno:...", "folga:...",
+--                               "aberto:..."). NULL = feito no site. Unico:
+--                               e por ele que a sincronizacao acha o turno.
+--     turno.teams_alterado_em — quando ele mudou no Teams pela ultima vez
+--                               (o que nao mudou nao e regravado).
+--     cronograma.teams_grupo_id — o grupo do Teams daquele cronograma.
 --
 --  SQL simples, sem bloco DO: roda igual no psql, no
 --  `npm run db:atualizar` e no editor de SQL do Neon.
@@ -262,12 +272,11 @@ ON CONFLICT (chave) DO NOTHING;
 
 -- ---------------- 6. O ORGANOGRAMA ----------------
 
-ALTER TABLE public.cargo ADD COLUMN IF NOT EXISTS diretor_id bigint REFERENCES public.usuario (id) ON DELETE SET NULL;
 ALTER TABLE public.cargo ADD COLUMN IF NOT EXISTS lider_id bigint REFERENCES public.usuario (id) ON DELETE SET NULL;
 ALTER TABLE public.cargo DROP CONSTRAINT IF EXISTS cargo_superior_ok;
 ALTER TABLE public.cargo DROP COLUMN IF EXISTS superior_id;
+ALTER TABLE public.cargo DROP COLUMN IF EXISTS diretor_id;
 
-COMMENT ON COLUMN public.cargo.diretor_id IS 'Organograma: a pessoa (o diretor) a quem o time responde. NULL = sem diretor definido.';
 COMMENT ON COLUMN public.cargo.lider_id IS 'Organograma: quem fica no topo do time. NULL = o cargo de cada um decide.';
 
 UPDATE public.cargo
@@ -289,6 +298,19 @@ ALTER TABLE public.agenda_evento ADD COLUMN IF NOT EXISTS tipo text NOT NULL DEF
 
 COMMENT ON COLUMN public.agenda_evento.tipo IS
     'O que e o evento: evento, reuniao, treinamento, confraternizacao, comemorativa, feriado_nacional, feriado_estadual, feriado_municipal, ponto_facultativo, aniversario ou outro.';
+
+-- ---------------- 8. OS TURNOS DO TEAMS ----------------
+
+ALTER TABLE public.turno ADD COLUMN IF NOT EXISTS teams_id text;
+ALTER TABLE public.turno ADD COLUMN IF NOT EXISTS teams_alterado_em timestamptz;
+CREATE UNIQUE INDEX IF NOT EXISTS turno_teams_id_idx ON public.turno (teams_id);
+ALTER TABLE public.cronograma ADD COLUMN IF NOT EXISTS teams_grupo_id text;
+CREATE UNIQUE INDEX IF NOT EXISTS cronograma_teams_grupo_idx ON public.cronograma (teams_grupo_id);
+
+COMMENT ON COLUMN public.turno.teams_id IS
+    'O turno veio do Turnos do Teams: turno:<id>, folga:<id> ou aberto:<id>. NULL = feito no site.';
+COMMENT ON COLUMN public.turno.teams_alterado_em IS 'Quando o turno mudou no Teams pela ultima vez.';
+COMMENT ON COLUMN public.cronograma.teams_grupo_id IS 'O grupo do Turnos do Teams deste cronograma. NULL = feito no site.';
 
 COMMIT;
 
@@ -312,9 +334,11 @@ UNION ALL SELECT 'avisos do prazo distribuidos',
 UNION ALL SELECT 'veiculo_ocorrencia', to_regclass('public.veiculo_ocorrencia') IS NOT NULL
 UNION ALL SELECT 'veiculo_manutencao', to_regclass('public.veiculo_manutencao') IS NOT NULL
 UNION ALL SELECT 'equipamento_ti', to_regclass('public.equipamento_ti') IS NOT NULL
-UNION ALL SELECT 'cargo.diretor_id (organograma)',
-       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cargo' AND column_name = 'diretor_id')
 UNION ALL SELECT 'cargo.lider_id (organograma)',
        EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cargo' AND column_name = 'lider_id')
 UNION ALL SELECT 'agenda_evento.tipo (tipo do evento)',
-       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'agenda_evento' AND column_name = 'tipo');
+       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'agenda_evento' AND column_name = 'tipo')
+UNION ALL SELECT 'turno.teams_id (turnos do Teams)',
+       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'turno' AND column_name = 'teams_id')
+UNION ALL SELECT 'cronograma.teams_grupo_id (turnos do Teams)',
+       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cronograma' AND column_name = 'teams_grupo_id');

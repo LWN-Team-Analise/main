@@ -119,10 +119,8 @@ const paraCargo = (linha) => ({
   painelDisponivel: linha.painel !== undefined,
   painel: CHAVES_PAINEL.includes(linha.painel) ? linha.painel : null,
   painelExclusivo: CHAVES_PAINEL.includes(linha.painel) && linha.painel_exclusivo === true,
-  /* o ORGANOGRAMA (atualizacao 59): a pessoa a quem o time responde (o
-     diretor) e quem fica no topo dele. null = sem diretor / sem lider (ou o
-     banco ainda sem a coluna) */
-  diretorId: linha.diretor_id ? String(linha.diretor_id) : null,
+  /* o ORGANOGRAMA (atualizacao 59): quem fica no topo do time. null = o
+     cargo de cada um decide (ou o banco ainda sem a coluna) */
   liderId: linha.lider_id ? String(linha.lider_id) : null,
 })
 
@@ -190,43 +188,31 @@ router.post('/cargos', exigeSessao, exige('editar_cargo'), async (req, res) => {
 })
 
 /**
- * PUT /api/equipe/cargos/:id/organograma — { diretorId, liderId } (atualizacao 59).
+ * PUT /api/equipe/cargos/:id/organograma — { liderId } (atualizacao 59).
  *
- * O lugar do time no organograma: a PESSOA a quem ele responde (o diretor,
- * na linha de cima; null = sem diretor definido) e quem fica no topo do
- * time (null = o cargo de cada um decide). Quem mexe e `editar_organograma`.
+ * Quem fica no topo do time no organograma (null = o cargo de cada um
+ * decide). Todos os times respondem a diretoria, entao nao ha o que mais
+ * escolher. Quem mexe e `editar_organograma`.
  */
 router.put('/cargos/:id/organograma', exigeSessao, exige('editar_organograma'), async (req, res) => {
   const id = String(req.params.id)
   const idOuNulo = (valor) => (/^\d{1,15}$/.test(String(valor ?? '')) ? String(valor) : null)
-  const diretorId = idOuNulo(req.body?.diretorId)
   const liderId = idOuNulo(req.body?.liderId)
   if (!/^\d{1,15}$/.test(id)) return res.status(404).json({ erro: 'Setor não encontrado.' })
 
   try {
-    const ativos = [diretorId, liderId].filter(Boolean)
-    if (ativos.length > 0) {
-      const { rows } = await query('SELECT id FROM usuario WHERE id = ANY($1::bigint[]) AND ativo', [ativos])
-      const achados = new Set(rows.map((r) => String(r.id)))
-      if (diretorId && !achados.has(diretorId)) {
-        return res.status(400).json({ erro: 'O diretor escolhido não está mais na equipe.', campo: 'diretorId' })
-      }
-      if (liderId && !achados.has(liderId)) {
-        return res.status(400).json({ erro: 'A pessoa escolhida não está mais na equipe.', campo: 'liderId' })
-      }
+    if (liderId) {
+      const { rows } = await query('SELECT 1 FROM usuario WHERE id = $1 AND ativo', [liderId])
+      if (!rows[0]) return res.status(400).json({ erro: 'A pessoa escolhida não está mais na equipe.', campo: 'liderId' })
     }
-    const { rows } = await query('UPDATE cargo SET diretor_id = $2, lider_id = $3 WHERE id = $1 RETURNING *', [
-      id,
-      diretorId,
-      liderId,
-    ])
+    const { rows } = await query('UPDATE cargo SET lider_id = $2 WHERE id = $1 RETURNING *', [id, liderId])
     if (!rows[0]) return res.status(404).json({ erro: 'Setor não encontrado.' })
     await registrarAtividade(req, {
       acao: 'setor.organograma',
       categoria: 'equipe',
       entidade: ['cargo', id],
       descricao: 'Organograma atualizado',
-      detalhes: { setor: rows[0].nome, diretor_id: diretorId, lider_id: liderId },
+      detalhes: { setor: rows[0].nome, lider_id: liderId },
     })
     return res.json({ cargo: paraCargo(rows[0]) })
   } catch (erro) {

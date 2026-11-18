@@ -36,5 +36,8 @@ export const colarTurnos = (campos) => post('/turnos/colar', campos)
 /** O "Copiar agenda": os turnos do periodo anterior vem para { de, ate } -> { copiados, ids } */
 export const copiarAgenda = (periodo) => post('/turnos/copiar-agenda', periodo)
 
+/** O "Atualizar do Teams" (atualizacao 59): traz agora os turnos do Teams de { de, ate }. */
+export const sincronizarTeams = (periodo) => post('/turnos/teams/sincronizar', periodo)
+
 /** { ids } compartilha os escolhidos; { de, ate } todos os do periodo -> { compartilhados } */
 export const compartilhar = (campos) => post('/turnos/compartilhar', campos)

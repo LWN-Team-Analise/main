@@ -87,7 +87,9 @@ export default function ModalTurno({
 
   /* ponto de encontro, execucao ou prazo: vem da obra e muda por la */
   const daObra = ['obra', 'execucao', 'prazo'].includes(turno?.origem)
-  const somenteLeitura = !edita || daObra
+  /* o que veio do Turnos do Teams (atualizacao 59) muda la, nao aqui */
+  const doTeams = turno?.origem === 'teams'
+  const somenteLeitura = !edita || daObra || doTeams
 
   /* com o turno aberto, o Delete (ou Backspace) fora dos campos de texto
      pede a exclusao, como na grade; com a confirmacao aberta, o Enter
@@ -541,6 +543,12 @@ export default function ModalTurno({
             {turno
               ? 'Ainda não compartilhado com a equipe. Escolha o card na grade e clique em "Compartilhar com a equipe".'
               : 'O turno novo chega sem compartilhar: a equipe só vê depois do "Compartilhar com a equipe".'}
+          </p>
+        )}
+
+        {doTeams && (
+          <p className="turnoform__teams">
+            Este turno vem do Turnos do Teams: mude por lá, e a mudança chega aqui sozinha.
           </p>
         )}
 
