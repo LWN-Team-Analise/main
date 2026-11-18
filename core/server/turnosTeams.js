@@ -155,14 +155,20 @@ function tipoDoMotivo(nome) {
 
 const corte = (texto, maximo) => String(texto ?? '').trim().slice(0, maximo)
 
-/** As horas do turno: o fim a meia-noite do dia seguinte vira 23:59 do mesmo dia. */
+/**
+ * As horas do turno. O turno de menos de 24 h fica no dia em que comeca,
+ * mesmo o da noite (22:00 as 07:00): e a regra da aba, em que o fim antes
+ * do inicio e o turno que passa da meia-noite. Gravado como dois dias, ele
+ * valeria 22:00 as 07:00 nos dois e esbarraria no turno da noite seguinte.
+ */
 function periodoDoTurno(inicio, fim) {
   const a = local(inicio)
   const b = local(fim)
-  if (b.hora === '00:00' && b.dia > a.dia) {
-    return { data_inicio: a.dia, data_fim: somarDias(b.dia, -1), hora_inicio: a.hora, hora_fim: '23:59' }
+  if (new Date(fim) - new Date(inicio) < 24 * 3600 * 1000) {
+    return { data_inicio: a.dia, data_fim: a.dia, hora_inicio: a.hora, hora_fim: b.hora }
   }
-  return { data_inicio: a.dia, data_fim: b.dia < a.dia ? a.dia : b.dia, hora_inicio: a.hora, hora_fim: b.hora }
+  const ultimo = local(fim, 1).dia
+  return { data_inicio: a.dia, data_fim: ultimo < a.dia ? a.dia : ultimo, hora_inicio: a.hora, hora_fim: b.hora }
 }
 
 /* ---------------- as pessoas ---------------- */
@@ -224,16 +230,18 @@ async function mapaDePessoas(token, contas) {
 async function cronogramasDosGrupos(cliente, grupos) {
   const { rows } = await cliente.query('SELECT id, nome, ordem, teams_grupo_id FROM cronograma')
   const porGrupo = new Map(rows.filter((r) => r.teams_grupo_id).map((r) => [r.teams_grupo_id, String(r.id)]))
-  const porNome = new Map(rows.filter((r) => !r.teams_grupo_id).map((r) => [r.nome.trim().toLowerCase(), r]))
+  /* "CRONOGRAMA LWN" no Teams e o "Cronograma LWN" do site; "Anápolis" e "Anapolis" tambem */
+  const chaveDoNome = (nome) => semAcento(nome).trim().replace(/s+/g, ' ')
+  const porNome = new Map(rows.filter((r) => !r.teams_grupo_id).map((r) => [chaveDoNome(r.nome), r]))
   let ordem = Math.max(0, ...rows.map((r) => r.ordem ?? 0))
   for (const grupo of grupos) {
     if (porGrupo.has(grupo.id)) continue
     const nome = corte(grupo.nome, 60) || 'Teams'
-    const mesmoNome = porNome.get(nome.toLowerCase())
+    const mesmoNome = porNome.get(chaveDoNome(nome))
     if (mesmoNome) {
       await cliente.query('UPDATE cronograma SET teams_grupo_id = $2 WHERE id = $1', [mesmoNome.id, grupo.id])
       porGrupo.set(grupo.id, String(mesmoNome.id))
-      porNome.delete(nome.toLowerCase())
+      porNome.delete(chaveDoNome(nome))
       continue
     }
     ordem += 1
@@ -277,7 +285,7 @@ export async function sincronizar(de, ate) {
       return null
     }
   }
-  const [grupos, turnos, folgas, motivos, abertos] = await Promise.all([
+  const [todosOsGrupos, turnos, folgas, motivos, abertos] = await Promise.all([
     lerDoGraph(token, `${base}/schedulingGroups`),
     lerDoGraph(token, `${base}/shifts?${filtro('sharedShift', dia0)}`),
     opcional('folgas', lerDoGraph(token, `${base}/timesOff?${filtro('sharedTimeOff', folga0)}`)),
@@ -285,6 +293,8 @@ export async function sincronizar(de, ate) {
     opcional('turnos abertos', lerDoGraph(token, `${base}/openShifts?${filtro('sharedOpenShift', dia0)}`)),
   ])
 
+  /* o Teams guarda os grupos apagados (sem nome e sem ninguem): so os ativos viram cronograma */
+  const grupos = todosOsGrupos.filter((g) => g.isActive !== false && String(g.displayName ?? '').trim())
   const nomeDoMotivo = new Map((motivos ?? []).map((m) => [m.id, m.displayName]))
   const contas = new Set()
   grupos.forEach((g) => (g.userIds ?? []).forEach((id) => contas.add(id)))
@@ -295,7 +305,8 @@ export async function sincronizar(de, ate) {
 
   const linhas = []
   let semPessoa = 0
-  const grupoDe = (id) => (id && grupos.some((g) => g.id === id) ? id : SEM_GRUPO)
+  /* o turno de um grupo apagado no Teams vai para o cronograma da pessoa */
+  const ativo = (id) => Boolean(id) && grupos.some((g) => g.id === id)
 
   for (const t of turnos) {
     const s = t.sharedShift
@@ -308,7 +319,8 @@ export async function sincronizar(de, ate) {
     const atividade = (s.activities ?? []).find((a) => a.displayName)?.displayName
     linhas.push({
       teams_id: `turno:${t.id}`,
-      grupo: grupoDe(t.schedulingGroupId),
+      grupo: ativo(t.schedulingGroupId) ? t.schedulingGroupId : SEM_GRUPO,
+      grupoDaPessoa: !ativo(t.schedulingGroupId),
       usuario_id: usuario,
       ...periodoDoTurno(s.startDateTime, s.endDateTime),
       titulo: corte(s.displayName || atividade || 'Turno', TITULO_MAXIMO),
@@ -353,7 +365,7 @@ export async function sincronizar(de, ate) {
     if (!s?.startDateTime || !s?.endDateTime) continue
     linhas.push({
       teams_id: `aberto:${a.id}`,
-      grupo: grupoDe(a.schedulingGroupId),
+      grupo: ativo(a.schedulingGroupId) ? a.schedulingGroupId : SEM_GRUPO,
       usuario_id: null,
       ...periodoDoTurno(s.startDateTime, s.endDateTime),
       titulo: corte(s.displayName || 'Turno aberto', TITULO_MAXIMO),
@@ -416,6 +428,47 @@ export async function sincronizar(de, ate) {
       )
     }
 
+    /* AS COPIAS FEITAS A MAO. Antes da integracao, os turnos do Teams eram
+       lancados aqui a mao; com eles chegando sozinhos, cada pessoa ficava com
+       dois turnos iguais no dia (e todo mundo em conflito). O turno do site
+       igual a um do Teams (mesma pessoa, mesmo dia, mesmo horario) passa a
+       SER o do Teams — fica a linha que ja existia (com a obra ligada, se
+       tiver), e a que a sincronizacao tinha criado sai. */
+    let adotados = 0
+    if (registros.length > 0) {
+      const { rows: pares } = await cliente.query(
+        `WITH entrada AS (
+           SELECT * FROM jsonb_to_recordset($1::jsonb) AS r(
+                  teams_id text, usuario_id bigint, data_inicio date, data_fim date, hora_inicio time, hora_fim time)
+            WHERE usuario_id IS NOT NULL
+         ), par AS (
+           SELECT DISTINCT ON (e.teams_id) e.teams_id, m.id AS manual_id
+             FROM entrada e
+             JOIN turno m ON m.teams_id IS NULL
+                         AND m.usuario_id = e.usuario_id
+                         AND m.data_inicio = e.data_inicio
+                         AND m.data_fim BETWEEN e.data_fim AND e.data_fim + 1
+                         AND m.hora_inicio IS NOT DISTINCT FROM e.hora_inicio
+                         AND m.hora_fim IS NOT DISTINCT FROM e.hora_fim
+            ORDER BY e.teams_id, m.id
+         )
+         SELECT DISTINCT ON (manual_id) teams_id, manual_id FROM par ORDER BY manual_id, teams_id`,
+        [JSON.stringify(registros)],
+      )
+      if (pares.length > 0) {
+        /* primeiro sai a linha que a sincronizacao tinha criado, depois a do site
+           vira a do Teams (o teams_id e unico) */
+        await cliente.query('DELETE FROM turno WHERE teams_id = ANY($1::text[])', [pares.map((p) => p.teams_id)])
+        const { rowCount } = await cliente.query(
+          `UPDATE turno m SET teams_id = p.teams_id, teams_alterado_em = NULL
+             FROM unnest($1::bigint[], $2::text[]) AS p(manual_id, teams_id)
+            WHERE m.id = p.manual_id`,
+          [pares.map((p) => p.manual_id), pares.map((p) => p.teams_id)],
+        )
+        adotados = rowCount
+      }
+    }
+
     let gravados = 0
     if (registros.length > 0) {
       const { rowCount } = await cliente.query(
@@ -458,7 +511,27 @@ export async function sincronizar(de, ate) {
     if (folgas) removidos += await apagar('folga:', folga0)
     if (abertos) removidos += await apagar('aberto:', dia0)
 
-    return { gravados, removidos, semPessoa }
+    /* a copia a mao de varios dias (ex.: 18 a 22, das 08:00 as 17:00) que o
+       Teams cobre dia a dia com o mesmo horario tambem e repetida: sai. So a
+       sem obra ligada, e so dentro do periodo conferido */
+    const { rowCount: repetidos } = await cliente.query(
+      `DELETE FROM turno m
+        WHERE m.teams_id IS NULL AND m.usuario_id IS NOT NULL AND m.obra_id IS NULL
+          AND m.data_inicio >= $1 AND m.data_fim <= $2
+          AND EXISTS (SELECT 1 FROM turno t WHERE t.teams_id IS NOT NULL AND t.usuario_id = m.usuario_id)
+          AND NOT EXISTS (
+                SELECT 1 FROM generate_series(m.data_inicio, m.data_fim, interval '1 day') AS d(dia)
+                 WHERE NOT EXISTS (
+                         SELECT 1 FROM turno t
+                          WHERE t.teams_id IS NOT NULL
+                            AND t.usuario_id = m.usuario_id
+                            AND d.dia::date BETWEEN t.data_inicio AND t.data_fim
+                            AND t.hora_inicio IS NOT DISTINCT FROM m.hora_inicio
+                            AND t.hora_fim IS NOT DISTINCT FROM m.hora_fim))`,
+      [dia0, dia1],
+    )
+
+    return { gravados, removidos, semPessoa, adotados, repetidos }
   })
 
   return { configurada: true, ...resumo, recebidos: linhas.length + semPessoa, avisos }

@@ -1379,6 +1379,17 @@ copia vira turno do site.
   tema); folga = ausencia do dia inteiro, pelo nome do motivo (ferias,
   atestado, folga ou dia nao operacional); turno aberto = turno aberto. O
   rascunho do Teams (ainda nao compartilhado) nao vem.
+- **As copias feitas a mao.** Antes da integracao, os turnos do Teams eram
+  lancados aqui a mao. O turno do site igual a um do Teams (mesma pessoa, mesmo
+  dia, mesmo horario) passa a ser o do Teams — fica a linha que ja existia, com a
+  obra ligada se tiver — e a copia de varios dias que o Teams cobre dia a dia com
+  o mesmo horario sai (so a sem obra, so no periodo conferido). Assim ninguem
+  fica com dois turnos iguais no dia. O turno da noite (22:00 as 07:00) fica no
+  dia em que comeca, e os grupos apagados do Teams (sem nome) nao viram
+  cronograma: o turno deles vai para o cronograma da pessoa.
+- **Conflitos**: o ponto de encontro da obra e o comeco do dia de trabalho, entao
+  so conta como conflito contra uma ausencia (folga, ferias, atestado) ou contra
+  outro ponto de encontro — nao contra o turno de trabalho do dia.
 - **A pessoa** e achada pela conta Microsoft: `usuario.outlook_id` (quem ja
   entrou com o Outlook) ou, com a permissao `User.Read.All`, pelo e-mail. O
   turno de quem nao esta no site fica de fora.

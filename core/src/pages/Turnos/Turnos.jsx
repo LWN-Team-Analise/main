@@ -261,8 +261,8 @@ function ocupa(turno) {
 /**
  * Os CONFLITOS, como no Teams: a mesma pessoa, no mesmo dia, com dois
  * turnos que se cruzam no horario — ou uma folga (dia inteiro) com
- * qualquer outro. Vale entre cronogramas e com o ponto de encontro das
- * obras.
+ * qualquer outro. Vale entre cronogramas. O ponto de encontro das obras
+ * so entra contra a ausencia ou contra outro ponto de encontro.
  */
 function acharConflitos(turnos, dias) {
   const doDia = new Map()
@@ -280,6 +280,12 @@ function acharConflitos(turnos, dias) {
   doDia.forEach((daPessoa, chave) => {
     for (let i = 0; i < daPessoa.length; i += 1) {
       for (let j = i + 1; j < daPessoa.length; j += 1) {
+        /* o ponto de encontro da obra e o comeco do dia de trabalho: com o turno
+           de trabalho (o do Teams cobre o dia inteiro) ele combina; so briga com
+           a ausencia (folga, ferias, atestado) — ou com outro ponto de encontro */
+        const encontroA = daPessoa[i].origem === 'obra'
+        const encontroB = daPessoa[j].origem === 'obra'
+        if (encontroA !== encontroB && !ehAusencia(encontroA ? daPessoa[j] : daPessoa[i])) continue
         const [a1, a2] = ocupa(daPessoa[i])
         const [b1, b2] = ocupa(daPessoa[j])
         if (a1 < b2 && b1 < a2) {
