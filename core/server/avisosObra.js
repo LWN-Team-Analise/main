@@ -94,7 +94,7 @@ async function roteiroDaObra(obraId) {
   const { rows } = await query(
     `SELECT et.id AS etapa_id, et.ordem AS etapa_ordem, et.nome AS etapa_nome,
             kd.id AS card_id, kd.titulo AS card_titulo,
-            ec.id AS check_id, ec.titulo AS check_titulo,
+            ec.id AS check_id, ec.titulo AS check_titulo, ec.tipo AS check_tipo,
             m.feito_em, m.feito_por,
             coalesce((SELECT array_agg(c.chave ORDER BY kc.ordem)
                         FROM etapa_check_cargo kc JOIN cargo c ON c.id = kc.cargo_id
@@ -145,6 +145,7 @@ async function roteiroDaObra(obraId) {
     }
     etapa.cards.get(l.card_id).checks.push({
       titulo: l.check_titulo,
+      tipo: l.check_tipo ?? null,
       /* o dono proprio do check manda; sem ele, o do card */
       setores: l.setores_check.length > 0 ? l.setores_check : l.setores_card,
       conta: l.conta === true,
@@ -261,9 +262,101 @@ export async function avisarEtapasConcluidas(obraId) {
           rotuloLink: 'Abrir a obra',
         }
       })
+
+      /* a etapa de EXECUCAO (a do check "Execução de ensaios") fechou antes
+         do ultimo dia previsto: o Administrativo ajusta a hospedagem */
+      const ehExecucao = etapa.cards.some((card) => card.checks.some((k) => k.tipo === 'execucao_ensaios'))
+      if (ehExecucao) await avisarExecucaoAntesDoPrazo(obraId, obra)
     }
   } catch (erro) {
     logger.error('avisos/etapa', erro.message)
+  }
+}
+
+/* ------------------------------------------------------------
+   O prazo da execucao (atualizacao 59)
+
+   Quem recebe e o setor com a chave marcada (so ela conta — o acesso
+   total nao entra sozinho):
+     aviso_prazo_obra    obra prolongada, encurtada ou com a execucao
+                         concluida antes do prazo: a hospedagem (hotel)
+     aviso_aditivo_obra  obra prolongada, com o motivo: o aditivo
+   ------------------------------------------------------------ */
+
+/** Os ids de quem esta num setor com a chave de aviso marcada. */
+async function quemRecebe(chave) {
+  const { rows } = await query(
+    `SELECT u.id FROM usuario u JOIN cargo c ON c.id = u.cargo_id
+      WHERE coalesce(u.ativo, true) AND $1 = ANY (c.permissoes)`,
+    [chave],
+  )
+  return rows.map((l) => String(l.id))
+}
+
+/** '2026-11-24' -> '24/11' */
+const diaCurto = (iso) => `${String(iso).slice(8, 10)}/${String(iso).slice(5, 7)}`
+
+/** Hoje em Sao Paulo, 'AAAA-MM-DD' (o servidor roda em UTC). */
+const hojeEmSaoPaulo = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
+
+/**
+ * O ultimo dia da execucao mudou (PUT /obras/:id/execucao): `antes` e
+ * `depois` sao os prazos ('AAAA-MM-DD'). Prolongar pede o motivo (a API
+ * recusa sem ele) e vai para os dois avisos; encurtar vai so para a
+ * hospedagem. Nunca derruba a gravacao.
+ */
+export async function avisarPrazoDaExecucao(obraId, { antes, depois, motivo, quem }) {
+  try {
+    if (!antes || !depois || antes === depois) return
+    const obra = await nomeDaObra(obraId)
+    const prolongou = depois > antes
+    const dias = Math.round((Date.parse(depois) - Date.parse(antes)) / 86400000)
+    const mudanca = prolongou
+      ? `A execução da obra **${obra}** foi **prolongada**: o último dia passou de ${diaCurto(antes)} para ${diaCurto(depois)} (+${dias} ${dias === 1 ? 'dia' : 'dias'}).`
+      : `A execução da obra **${obra}** agora termina **antes**: o último dia passou de ${diaCurto(antes)} para ${diaCurto(depois)}.`
+    const linhas = (fim) => [mudanca, motivo ? `Motivo: ${motivo}` : null, quem ? `Alterado por ${quem}.` : null, fim]
+
+    await mandarNoTeams(await quemRecebe('aviso_prazo_obra'), {
+      titulo: prolongou ? 'Obra prolongada: confira a hospedagem' : 'Obra termina antes: ajuste a hospedagem',
+      linhas: linhas(
+        prolongou
+          ? 'A equipe tem direito a hotel nos dias a mais: confira a hospedagem.'
+          : 'Ajuste a hospedagem para o novo último dia.',
+      ),
+      link: linkDaObra(obraId),
+      rotuloLink: 'Abrir a obra',
+    })
+    if (prolongou) {
+      await mandarNoTeams(await quemRecebe('aviso_aditivo_obra'), {
+        titulo: 'Obra prolongada: avalie o aditivo',
+        linhas: linhas('Avalie com o cliente a geração do aditivo.'),
+        link: linkDaObra(obraId),
+        rotuloLink: 'Abrir a obra',
+      })
+    }
+  } catch (erro) {
+    logger.error('avisos/prazo-execucao', erro.message)
+  }
+}
+
+/** A etapa de execucao fechou antes do ultimo dia previsto. */
+async function avisarExecucaoAntesDoPrazo(obraId, obra) {
+  try {
+    const { rows } = await query("SELECT to_char(execucao_prazo, 'YYYY-MM-DD') AS prazo FROM obra WHERE id = $1", [obraId])
+    const prazo = rows[0]?.prazo
+    const hoje = hojeEmSaoPaulo()
+    if (!prazo || hoje >= prazo) return
+    await mandarNoTeams(await quemRecebe('aviso_prazo_obra'), {
+      titulo: 'Execução concluída antes do prazo',
+      linhas: [
+        `A execução da obra **${obra}** foi concluída hoje (${diaCurto(hoje)}), antes do último dia previsto (${diaCurto(prazo)}).`,
+        'Ajuste a hospedagem: a equipe não precisa mais dos dias que sobraram.',
+      ],
+      link: linkDaObra(obraId),
+      rotuloLink: 'Abrir a obra',
+    })
+  } catch (erro) {
+    logger.error('avisos/execucao-antes', erro.message)
   }
 }
 

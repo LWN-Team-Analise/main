@@ -21,6 +21,20 @@
 --     A permissao nova `cancelar_obras` vai, uma vez so, para os setores
 --     que criam obra (`criar_obras`: o Comercial e o acesso total).
 --
+--  3. OS AVISOS DO PRAZO DA EXECUCAO (no Teams)
+--     Prolongar a execucao (o ultimo dia passa do prazo que ja existia)
+--     pede o motivo. Sao duas chaves de AVISO, nao de acesso: vale so o
+--     setor que tem a chave marcada (o acesso total nao entra sozinho).
+--       aviso_prazo_obra    obra prolongada, encurtada ou com a execucao
+--                           concluida antes do prazo: a hospedagem. Vai,
+--                           uma vez so, para quem revisa as despesas de
+--                           todos (`revisar_despesa_geral`: o Administrativo)
+--       aviso_aditivo_obra  obra prolongada, com o motivo: o aditivo. Vai,
+--                           uma vez so, para quem edita negocio
+--                           (`editar_negocios`: o Comercial)
+--     As duas dependem de `ver_obras`: so entram no setor que ve Obras.
+--     Nao e coluna nova: e so a lista de permissoes do setor.
+--
 --  SQL simples, sem bloco DO: roda igual no psql, no
 --  `npm run db:atualizar` e no editor de SQL do Neon.
 -- ============================================================
@@ -63,6 +77,26 @@ INSERT INTO public.configuracao (chave, valor)
 VALUES ('marco_atualizacao_59_cancelar', 'cancelar_obras distribuida a quem cria obra')
 ON CONFLICT (chave) DO NOTHING;
 
+-- ---------------- 3. OS AVISOS DO PRAZO DA EXECUCAO ----------------
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['aviso_prazo_obra']
+ WHERE NOT ('aviso_prazo_obra' = ANY (permissoes))
+   AND NOT coalesce(painel_tv, false) AND NOT acesso_total
+   AND 'ver_obras' = ANY (permissoes) AND 'revisar_despesa_geral' = ANY (permissoes)
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_59_avisos');
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['aviso_aditivo_obra']
+ WHERE NOT ('aviso_aditivo_obra' = ANY (permissoes))
+   AND NOT coalesce(painel_tv, false) AND NOT acesso_total
+   AND 'ver_obras' = ANY (permissoes) AND 'editar_negocios' = ANY (permissoes)
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_59_avisos');
+
+INSERT INTO public.configuracao (chave, valor)
+VALUES ('marco_atualizacao_59_avisos', 'aviso_prazo_obra e aviso_aditivo_obra distribuidas')
+ON CONFLICT (chave) DO NOTHING;
+
 COMMIT;
 
 -- ============================================================
@@ -79,4 +113,6 @@ UNION ALL SELECT 'obra.cancelamento_motivo',
        EXISTS (SELECT 1 FROM information_schema.columns
                 WHERE table_name = 'obra' AND column_name = 'cancelamento_motivo')
 UNION ALL SELECT 'setores com cancelar_obras: ' || count(*), count(*) > 0
-  FROM public.cargo WHERE 'cancelar_obras' = ANY (permissoes);
+  FROM public.cargo WHERE 'cancelar_obras' = ANY (permissoes)
+UNION ALL SELECT 'avisos do prazo distribuidos',
+       EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_59_avisos');

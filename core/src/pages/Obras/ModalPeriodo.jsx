@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
 import CalendarioDias, { diaDaSemana } from '@/components/CalendarioDias/CalendarioDias'
+import { CampoArea } from '@/components/Campo/Campo'
 import { useDados } from '@/context/DadosContext'
 import { diasDaExecucao, etapaSeguinteComCheck, recadoEtapaSeguinte, resumoDosDias } from '@/domain/obras'
 import { dataBR, hojeISO } from '@/utils/formato'
@@ -52,6 +53,14 @@ export default function ModalPeriodo({ aberto, obra, checkDoPrazo = null, podeDe
   const [abertura, setAbertura] = useState(0)
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
+  /* PROLONGAR (o ultimo dia passa do prazo que ja existia) pede o motivo:
+     ele vai no Teams ao Administrativo (hospedagem) e ao Comercial
+     (aditivo). Encurtar so avisa o Administrativo (atualizacao 59) */
+  const [motivo, setMotivo] = useState('')
+  const prazoAntes = obra?.execucaoPrazo ?? null
+  const ultimo = dias.at(-1) ?? null
+  const prolonga = Boolean(prazoAntes && ultimo && ultimo > prazoAntes)
+  const encurta = Boolean(prazoAntes && ultimo && ultimo < prazoAntes)
 
   /* do inicio da obra em diante. Nao ha teto: a obra nao tem mais prazo
      final escolhido (o dela e o dia do ultimo check) */
@@ -63,6 +72,7 @@ export default function ModalPeriodo({ aberto, obra, checkDoPrazo = null, podeDe
        calendario nao daria para desmarcar */
     setDias(diasDaExecucao(obra).filter((d) => !min || d >= min))
     setErro('')
+    setMotivo('')
     setAbertura((n) => n + 1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aberto, obra?.id])
@@ -90,9 +100,13 @@ export default function ModalPeriodo({ aberto, obra, checkDoPrazo = null, podeDe
       setErro('Marque ao menos um dia de execução.')
       return
     }
+    if (prolonga && !motivo.trim()) {
+      setErro('Diga o motivo da prorrogação: ele vai para o aditivo.')
+      return
+    }
     setSalvando(true)
     try {
-      await definirExecucao(obra.id, { dias })
+      await definirExecucao(obra.id, { dias, ...(prolonga ? { motivo: motivo.trim() } : {}) })
       aoFechar()
     } catch (e) {
       setErro(e.message)
@@ -157,6 +171,27 @@ export default function ModalPeriodo({ aberto, obra, checkDoPrazo = null, podeDe
             {dias.length > 1 && ` · prazo da execução ${dataBR(dias.at(-1))}`}
           </span>
         </div>
+
+        {prolonga && (
+          <CampoArea
+            rotulo={`Motivo da prorrogação (de ${dataBR(prazoAntes)} para ${dataBR(ultimo)})`}
+            dica="Vai no Teams para o Administrativo (hospedagem) e o Comercial (aditivo)."
+            linhas={2}
+            maxLength={500}
+            placeholder="Ex.: o cliente pediu mais duas salas"
+            value={motivo}
+            onChange={(e) => {
+              setMotivo(e.target.value)
+              setErro('')
+            }}
+          />
+        )}
+        {encurta && (
+          <p className="formrot__dica">
+            O último dia fica antes do prazo de {dataBR(prazoAntes)}: o Administrativo recebe um aviso para ajustar a
+            hospedagem.
+          </p>
+        )}
 
         {erro && (
           <p className="formrot__erro" role="alert">

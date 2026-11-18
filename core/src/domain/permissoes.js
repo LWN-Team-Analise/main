@@ -149,6 +149,16 @@ export const ALTERACAO = [
   /* cancelar a obra aberta, com o motivo (atualizacao 59): ela fecha como
      a concluida, mas fica marcada como cancelada. A 59 deu a quem cria obra */
   { chave: 'cancelar_obras', rotulo: 'Cancelar obra (com o motivo)', dependeDe: 'ver_obras' },
+  /* os avisos do prazo da EXECUCAO no Teams (atualizacao 59). Sao aviso, e
+     nao acesso: vale so o setor que tem a chave marcada — o acesso total nao
+     entra sozinho. A 59 deu o primeiro ao Administrativo (quem revisa as
+     despesas de todos) e o segundo ao Comercial (quem edita negocio) */
+  {
+    chave: 'aviso_prazo_obra',
+    rotulo: 'Receber no Teams: obra prolongada ou terminada antes do prazo (hospedagem)',
+    dependeDe: 'ver_obras',
+  },
+  { chave: 'aviso_aditivo_obra', rotulo: 'Receber no Teams: obra prolongada e o motivo (aditivo)', dependeDe: 'ver_obras' },
   { chave: 'excluir_concluidas', rotulo: 'Excluir obra concluída', dependeDe: 'ver_concluidas' },
   /* marca os checks de qualquer setor e nao espera a etapa anterior fechar */
   { chave: 'check_todas_etapas', rotulo: 'Check em todas as etapas', dependeDe: 'ver_obras' },

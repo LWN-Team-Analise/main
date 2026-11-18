@@ -11,6 +11,7 @@ import {
   avisarChat,
   avisarInclusao,
   avisarObraConcluida,
+  avisarPrazoDaExecucao,
 } from '../avisosObra.js'
 import { apagarNegocioDaObra } from '../negocioDaObra.js'
 import { depoisDeMarcar, incluirNaObra } from '../membrosObra.js'
@@ -3711,6 +3712,16 @@ router.put('/obras/:id/execucao', exigeSessao, obraAberta, async (req, res) => {
     const erroDeDatas = conferirDatas({ ...antes, execucaoInicio: inicio, execucaoPrazo: prazo })
     if (erroDeDatas) return res.status(400).json({ erro: erroDeDatas })
 
+    /* PROLONGAR (o ultimo dia passou do prazo que ja existia) pede o motivo:
+       ele vai no aviso ao Administrativo (hospedagem) e ao Comercial
+       (aditivo) — atualizacao 59 */
+    const motivo = texto(req.body?.motivo).slice(0, 500)
+    const prazoAntes = antes.execucaoPrazo ?? null
+    const prolongou = Boolean(prazoAntes) && prazo > prazoAntes
+    if (prolongou && !motivo) {
+      return res.status(400).json({ erro: 'Diga o motivo da prorrogação: ele vai para o aditivo.', campo: 'motivo' })
+    }
+
     await query(
       `UPDATE obra
           SET execucao_inicio = $1, execucao_prazo = $2, execucao_dias = $3::date[], atualizado_por = $4
@@ -3721,14 +3732,20 @@ router.put('/obras/:id/execucao', exigeSessao, obraAberta, async (req, res) => {
       acao: 'prazo.execucao',
       categoria: 'obra',
       entidade: ['obra', req.params.id],
-      descricao: 'Período de execução definido',
+      descricao: prolongou ? 'Execução prolongada' : 'Período de execução definido',
       detalhes: {
         ...(await descreverObra(req.params.id)),
         inicio: dataLida(inicio),
         prazo_execucao: dataLida(prazo),
         ...(dias ? { dias: `${dias.length} — ${resumoDosDias(dias)}` } : {}),
+        ...(prazoAntes && prazoAntes !== prazo ? { prazo_anterior: dataLida(prazoAntes) } : {}),
+        ...(motivo ? { motivo } : {}),
       },
     })
+    if (prazoAntes && prazoAntes !== prazo) {
+      const { rows: quem } = await query('SELECT name FROM usuario WHERE id = $1', [req.dono.sub])
+      await avisarPrazoDaExecucao(req.params.id, { antes: prazoAntes, depois: prazo, motivo, quem: quem[0]?.name ?? null })
+    }
 
     /* o prazo definido fecha o check da 1a etapa — e, se ele tinha sido
        concluido sem o prazo (atualizacao 36), a informacao chegou */

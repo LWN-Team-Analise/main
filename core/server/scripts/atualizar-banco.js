@@ -309,6 +309,10 @@ const CONFERENCIA = [
   ['cliente.fatura_apos_documento', col('cliente', 'fatura_apos_documento')],
   ['obra.cancelamento_motivo (obra cancelada)', col('obra', 'cancelamento_motivo')],
   ['cancelar_obras no acesso total', permissaoNoAcessoTotal('cancelar_obras')],
+  [
+    'avisos do prazo da execucao distribuidos',
+    "SELECT EXISTS (SELECT 1 FROM configuracao WHERE chave = 'marco_atualizacao_59_avisos') AS ok",
+  ],
 ]
 
 function col(tabela, coluna) {
