@@ -313,6 +313,9 @@ const CONFERENCIA = [
     'avisos do prazo da execucao distribuidos',
     "SELECT EXISTS (SELECT 1 FROM configuracao WHERE chave = 'marco_atualizacao_59_avisos') AS ok",
   ],
+  ['veiculo_ocorrencia (problema do carro)', "SELECT to_regclass('public.veiculo_ocorrencia') IS NOT NULL AS ok"],
+  ['veiculo_manutencao (custo da manutencao)', "SELECT to_regclass('public.veiculo_manutencao') IS NOT NULL AS ok"],
+  ['manutencao_frota no acesso total', permissaoNoAcessoTotal('manutencao_frota')],
 ]
 
 function col(tabela, coluna) {

@@ -344,6 +344,205 @@
   text-underline-offset: 2px;
 }
 
+/* ---------------- Problemas e manutencao (atualizacao 59) ---------------- */
+
+.veiculo__links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 12px;
+}
+
+.veiculo__botao {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* o problema relatado e ainda aberto: laranja; o que impede o uso, vermelho */
+.veiculo__problema {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--pri-media-suave);
+  color: var(--pri-media);
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.veiculo__problema[data-grave='sim'] {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.carro {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.carro__abas {
+  display: flex;
+  gap: 8px;
+}
+
+.carro__conta {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.carro__form {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+}
+
+.carro__form--grade {
+  grid-template-columns: 1fr 1fr;
+}
+
+.carro__form--grade > .campo--largo,
+.carro__form--grade > .carro__rodape,
+.carro__form--grade > .carro__erro {
+  grid-column: 1 / -1;
+}
+
+.carro__marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  color: var(--text-base);
+}
+
+.carro__rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.carro__erro {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.84rem;
+}
+
+.carro__vazio {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.carro__total {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.carro__total strong {
+  color: var(--text-strong);
+}
+
+.carro__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carro__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+}
+
+.carro__item[data-aberta='sim'] {
+  border-left: 3px solid var(--pri-media);
+}
+
+.carro__linha {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.carro__linha strong {
+  color: var(--text-strong);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+.carro__selo {
+  flex: none;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--pri-media-suave);
+  color: var(--pri-media);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.carro__selo[data-tom='grave'] {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.carro__selo[data-tom='ok'] {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
+}
+
+.carro__custo {
+  flex: none;
+  color: var(--text-strong);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.carro__meta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.carro__acoes {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.acao.carro__apagar {
+  color: var(--danger);
+}
+
+@media (max-width: 560px) {
+  .carro__form--grade {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---------------- O que falta no cadastro ----------------
 
    O "!" pisca no lugar da informacao que falta. Quem prefere menos

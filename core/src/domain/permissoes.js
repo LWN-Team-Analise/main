@@ -220,6 +220,12 @@ export const ALTERACAO = [
      metade (atualizacao 39). E aviso, e nao acesso: vale so para o setor
      que tem a chave marcada — o acesso total nao entra sozinho */
   { chave: 'alerta_combustivel_frota', rotulo: 'Receber alerta no Teams: devolução com menos de 50% de combustível', dependeDe: 'ver_frotas' },
+  /* os PROBLEMAS e as MANUTENCOES do carro (atualizacao 59). Relatar um
+     problema e de quem ve a Frota; resolver e lancar o custo da manutencao
+     e desta. A de aviso e como a do combustivel: so a chave marcada conta
+     (o Administrativo e a lideranca tecnica) */
+  { chave: 'manutencao_frota', rotulo: 'Lançar manutenção (custo) e resolver problema do carro', dependeDe: 'ver_frotas' },
+  { chave: 'aviso_problema_frota', rotulo: 'Receber no Teams: problema relatado no carro', dependeDe: 'ver_frotas' },
   /* Almoxarife (atualizacao 38): as abas e os poderes de dentro dele, os
      mesmos do lwncontrol. A chave do lwncontrol e o que vem depois de
      "almox_" — e assim que a view almox.usuarios entrega para a tela
