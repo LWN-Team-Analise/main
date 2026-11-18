@@ -99,6 +99,7 @@ export default function Dashboard() {
                 { valor: 'frotas', rotulo: 'Frotas' },
                 ...(pode('ver_almoxarife') && pode('almox_relatorios') ? [{ valor: 'almoxarife', rotulo: 'Almoxarife' }] : []),
                 ...(pode('ver_comercial') ? [{ valor: 'comercial', rotulo: 'Comercial' }] : []),
+                ...(pode('ver_avaliacoes') ? [{ valor: 'excelencia', rotulo: 'Excelência' }] : []),
               ]}
             />
           </div>

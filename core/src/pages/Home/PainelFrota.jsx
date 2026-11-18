@@ -57,7 +57,121 @@ function janela(fatias, passo) {
 /* a frota e de quem tem a aba Frotas: sem ela, a secao nem aparece */
 export default function PainelFrota(props) {
   const { pode } = useDados()
-  return pode('ver_frotas') ? <UsoDaFrota {...props} /> : null
+  return pode('ver_frotas') ? (
+    <>
+      <UsoDaFrota {...props} />
+      <ManutencaoDaFrota {...props} />
+    </>
+  ) : null
+}
+
+const reais = (n) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+const reaisCurto = (n) => (n >= 1000 ? `${String(Math.round(n / 100) / 10).replace('.', ',')} mil` : String(Math.round(n)))
+const COR_CUSTO = 'var(--gr-c4)'
+
+/**
+ * O CUSTO DE MANUTENCAO da frota (atualizacao 59), na mesma janela do uso
+ * (os 12 meses ate o mes escolhido, ou o ano): o total, o carro com mais
+ * reparos, o custo por mes e o custo por carro. Vem das manutencoes
+ * lancadas em Frotas > Problemas e manutencao.
+ */
+function ManutencaoDaFrota({ fatias, passo }) {
+  const [resumo, setResumo] = useState(null)
+  const periodo = janela(fatias, passo)
+  const de = periodo ? `${periodo.de}-01` : null
+  const ate = periodo
+    ? (() => {
+        const [a, m] = periodo.ate.split('-').map(Number)
+        return `${periodo.ate}-${String(new Date(a, m, 0).getDate()).padStart(2, '0')}`
+      })()
+    : null
+
+  useEffect(() => {
+    if (!de) return undefined
+    let vivo = true
+    frotasApi
+      .carregarResumoManutencao(de, ate)
+      .then((r) => vivo && setResumo(r))
+      .catch(() => vivo && setResumo({ carros: [], meses: [] }))
+    return () => {
+      vivo = false
+    }
+  }, [de, ate])
+
+  if (!resumo) return null
+  const total = resumo.carros.reduce((s, c) => s + c.custo, 0)
+  const reparos = resumo.carros.reduce((s, c) => s + c.reparos, 0)
+  const campeao = resumo.carros[0] ?? null
+  const quando = periodo ? `de ${rotuloDoMes(periodo.de)} a ${rotuloDoMes(periodo.ate)}` : ''
+
+  return (
+    <section className="dash__secao" aria-label="Manutenção da frota">
+      <h2 className="dash__titulo">Manutenção da frota</h2>
+      {reparos === 0 ? (
+        <p className="cartao__vazio dash__aviso">Nenhuma manutenção lançada {quando}.</p>
+      ) : (
+        <>
+          <div className="dash__tiles">
+            <Tile rotulo="Custo de manutenção" valor={reais(total)} nota={`${plural(reparos, 'reparo', 'reparos')} · ${quando}`} cor={COR_CUSTO} />
+            <Tile
+              rotulo="Carro com mais reparos"
+              valor={campeao.nome}
+              nota={`${plural(campeao.reparos, 'reparo', 'reparos')} · ${reais(campeao.custo)}`}
+              tom="ruim"
+            />
+            <Tile rotulo="Custo médio por reparo" valor={reais(total / reparos)} nota="o que cada manutenção custou, em média" />
+          </div>
+          <div className="dash__grade">
+            <section className="cartao cartao--largo vidro">
+              <header className="cartao__topo">
+                <div>
+                  <h2 className="cartao__titulo">Custo de manutenção por mês</h2>
+                  <p className="cartao__sub">A frota inteira, {quando}</p>
+                </div>
+              </header>
+              <div className="cartao__corpo">
+                <Colunas
+                  itens={resumo.meses.map((m) => ({
+                    chave: m.mes,
+                    rotulo: rotuloDoMes(m.mes),
+                    valor: Math.round(m.custo * 100) / 100,
+                    texto: `${reais(m.custo)} · ${plural(m.reparos, 'reparo', 'reparos')}`,
+                    textoCurto: reaisCurto(m.custo),
+                    cor: COR_CUSTO,
+                  }))}
+                  eixo="R$"
+                  alturaTotal={240}
+                />
+              </div>
+            </section>
+            <section className="cartao cartao--estreito vidro">
+              <header className="cartao__topo">
+                <div>
+                  <h2 className="cartao__titulo">Reparos por carro</h2>
+                  <p className="cartao__sub">Do que mais teve reparos para o que menos teve</p>
+                </div>
+              </header>
+              <div className="cartao__corpo">
+                <Colunas
+                  itens={resumo.carros.slice(0, PESSOAS).map((c) => ({
+                    chave: c.id,
+                    rotulo: c.nome,
+                    titulo: `${c.nome}${c.placa ? ` · ${c.placa}` : ''}`,
+                    valor: c.reparos,
+                    texto: `${plural(c.reparos, 'reparo', 'reparos')} · ${reais(c.custo)}`,
+                    textoCurto: String(c.reparos),
+                    cor: COR_CUSTO,
+                  }))}
+                  eixo="reparos"
+                  alturaTotal={240}
+                />
+              </div>
+            </section>
+          </div>
+        </>
+      )}
+    </section>
+  )
 }
 
 function UsoDaFrota({ fatias, passo }) {

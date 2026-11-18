@@ -3,6 +3,8 @@ import { FUNIS, somaPorMoeda, valorCurto } from '@/domain/comercial'
 import * as comercial from '@/services/comercialService'
 import { Colunas, Linha, Rosca } from './graficos'
 import Tile from './Tile'
+/* o ranking e os motivos usam as listas do painel da Excelencia */
+import './PainelExcelencia.css'
 
 /* ============================================================
    COMERCIAL no Painel
@@ -10,13 +12,17 @@ import Tile from './Tile'
    Os negocios da aba Comercial, no periodo das setas do topo — o mes
    dia a dia, ou o ano mes a mes, igual aos outros graficos:
 
-     os quatro numeros   os em aberto agora; os ganhos e os perdidos
-                         no periodo; a taxa de ganho (ganhos sobre os
-                         fechados no periodo);
+     os numeros          em negociacao (os em aberto agora); vendidos
+                         (ganhos) e cancelados (perdidos) no periodo,
+                         com a taxa de ganho; o ticket medio e o cliente
+                         com o maior pagamento (atualizacao 59);
      a linha             ganhos e perdidos ao longo do periodo, pela
                          data em que foram fechados;
      a rosca             os em aberto, por funil;
-     as colunas          o valor em aberto, por funil.
+     as colunas          o valor em aberto, por funil;
+     o ranking           os 10 clientes mais recorrentes (mais negocios
+                         vendidos no periodo) e os motivos de
+                         desistencia dos cancelados (atualizacao 59).
 
    Valor so soma REAIS: negocio em dolar ou euro aparece a parte na
    nota ("+ US$ 5.000"), e fica fora das colunas — somar moedas
@@ -102,10 +108,36 @@ export default function PainelComercial({ fatias, passo, rotuloDaFatia }) {
       return { funil: f, quantidade: doFunil.length, valor }
     })
 
+    /* o ticket medio e os clientes: so o vendido em reais entra no valor */
+    const vendidoEmReais = emReais(ganhos)
+    const somaVendida = vendidoEmReais.reduce((s, n) => s + Number(n.valor || 0), 0)
+    const porCliente = new Map()
+    ganhos.forEach((n) => {
+      const chave = n.clienteId ?? `nome:${(n.organizacao || '').trim().toLowerCase()}`
+      const atual = porCliente.get(chave) ?? { chave, nome: n.organizacao || 'Sem cliente', vendas: 0, valor: 0 }
+      atual.vendas += 1
+      if ((n.moeda ?? 'BRL') === 'BRL') atual.valor += Number(n.valor || 0)
+      porCliente.set(chave, atual)
+    })
+    const clientes = [...porCliente.values()]
+    /* os motivos de desistencia: o mesmo texto, com outra caixa, e um so */
+    const porMotivo = new Map()
+    perdidos.forEach((n) => {
+      const texto = (n.motivoPerda || '').trim()
+      const chave = texto.toLowerCase() || '—'
+      const atual = porMotivo.get(chave) ?? { chave, rotulo: texto || 'Sem motivo informado', quantidade: 0 }
+      atual.quantidade += 1
+      porMotivo.set(chave, atual)
+    })
+
     return {
       abertos,
       ganhos,
       perdidos,
+      ticket: vendidoEmReais.length ? somaVendida / vendidoEmReais.length : null,
+      maiorPagamento: [...clientes].sort((a, b) => b.valor - a.valor)[0] ?? null,
+      recorrentes: [...clientes].sort((a, b) => b.vendas - a.vendas || b.valor - a.valor).slice(0, 10),
+      motivos: [...porMotivo.values()].sort((a, b) => b.quantidade - a.quantidade),
       taxa: ganhos.length + perdidos.length ? Math.round((ganhos.length / (ganhos.length + perdidos.length)) * 100) : null,
       series: [
         { chave: 'ganho', rotulo: 'Ganhos', cor: 'var(--gr-bom)', pontos: porFatia(ganhos), texto: (v) => plural(v, 'negócio', 'negócios') },
@@ -131,30 +163,35 @@ export default function PainelComercial({ fatias, passo, rotuloDaFatia }) {
         <>
           <div className="dash__tiles">
             <Tile
-              rotulo="Em aberto"
+              rotulo="Em negociação"
               valor={String(contas.abertos.length)}
               nota={contas.abertos.length ? somaPorMoeda(contas.abertos) : 'nenhum negócio aberto'}
             />
             <Tile
-              rotulo={`Ganhos ${quando}`}
+              rotulo={`Vendidos ${quando}`}
               valor={String(contas.ganhos.length)}
               cor="var(--gr-bom)"
-              nota={contas.ganhos.length ? somaPorMoeda(contas.ganhos) : 'nenhum fechado ainda'}
+              nota={
+                contas.ganhos.length
+                  ? `${somaPorMoeda(contas.ganhos)}${contas.taxa === null ? '' : ` · ${contas.taxa}% de ganho`}`
+                  : 'nenhum vendido ainda'
+              }
             />
             <Tile
-              rotulo={`Perdidos ${quando}`}
+              rotulo={`Cancelados ${quando}`}
               valor={String(contas.perdidos.length)}
               cor="var(--gr-ruim)"
-              nota={contas.perdidos.length ? somaPorMoeda(contas.perdidos) : 'nenhum perdido'}
+              nota={contas.perdidos.length ? somaPorMoeda(contas.perdidos) : 'nenhum cancelado'}
             />
             <Tile
-              rotulo="Taxa de ganho"
-              valor={contas.taxa === null ? '—' : `${contas.taxa}%`}
-              nota={
-                contas.taxa === null
-                  ? `nenhum negócio fechado ${quando}`
-                  : `${plural(contas.ganhos.length + contas.perdidos.length, 'fechado', 'fechados')} ${quando}`
-              }
+              rotulo="Ticket médio"
+              valor={contas.ticket === null ? '—' : valorCurto(contas.ticket)}
+              nota={contas.ticket === null ? `nenhuma venda em reais ${quando}` : `dos vendidos em reais ${quando}`}
+            />
+            <Tile
+              rotulo="Cliente com maior pagamento"
+              valor={contas.maiorPagamento?.valor ? contas.maiorPagamento.nome : '—'}
+              nota={contas.maiorPagamento?.valor ? `${valorCurto(contas.maiorPagamento.valor)} vendidos ${quando}` : `nenhuma venda ${quando}`}
             />
           </div>
 
@@ -228,6 +265,70 @@ export default function PainelComercial({ fatias, passo, rotuloDaFatia }) {
                     eixo="R$"
                     alturaTotal={240}
                   />
+                )}
+              </div>
+            </section>
+
+            <section className="cartao cartao--metade vidro">
+              <header className="cartao__topo">
+                <div>
+                  <h2 className="cartao__titulo">Clientes mais recorrentes</h2>
+                  <p className="cartao__sub">Os 10 com mais negócios vendidos {quando}</p>
+                </div>
+              </header>
+              <div className="cartao__corpo">
+                {contas.recorrentes.length === 0 ? (
+                  <p className="cartao__vazio">Nenhum negócio vendido {quando}.</p>
+                ) : (
+                  <ol className="excdash__ranking">
+                    {contas.recorrentes.map((c, i) => (
+                      <li key={c.chave} style={{ '--barra': 'var(--gr-bom)' }}>
+                        <span className="excdash__posicao">{i + 1}º</span>
+                        <span className="excdash__nome" title={c.nome}>
+                          {c.nome}
+                        </span>
+                        <span className="excdash__numeros">
+                          {plural(c.vendas, 'venda', 'vendas')}
+                          {c.valor ? ` · ${valorCurto(c.valor)}` : ''}
+                        </span>
+                        <span className="excdash__barra" aria-hidden="true">
+                          <i style={{ width: `${Math.round((c.vendas / contas.recorrentes[0].vendas) * 100)}%` }} />
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            </section>
+
+            <section className="cartao cartao--metade vidro">
+              <header className="cartao__topo">
+                <div>
+                  <h2 className="cartao__titulo">Motivos de desistência</h2>
+                  <p className="cartao__sub">Dos negócios cancelados {quando}</p>
+                </div>
+              </header>
+              <div className="cartao__corpo">
+                {contas.motivos.length === 0 ? (
+                  <p className="cartao__vazio">Nenhum negócio cancelado {quando}.</p>
+                ) : (
+                  <ol className="excdash__ranking">
+                    {contas.motivos.map((m, i) => (
+                      <li key={m.chave} style={{ '--barra': 'var(--gr-ruim)' }}>
+                        <span className="excdash__posicao">{i + 1}º</span>
+                        <span className="excdash__nome" title={m.rotulo}>
+                          {m.rotulo}
+                        </span>
+                        <span className="excdash__numeros">
+                          {plural(m.quantidade, 'negócio', 'negócios')} ·{' '}
+                          {Math.round((m.quantidade / contas.perdidos.length) * 100)}%
+                        </span>
+                        <span className="excdash__barra" aria-hidden="true">
+                          <i style={{ width: `${Math.round((m.quantidade / contas.motivos[0].quantidade) * 100)}%` }} />
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
                 )}
               </div>
             </section>
