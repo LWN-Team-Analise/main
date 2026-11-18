@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import Modal from '@/components/Modal/Modal'
 import Button from '@/components/Button/Button'
 import Confirma from '@/components/Confirma/Confirma'
-import { CampoTexto } from '@/components/Campo/Campo'
+import { CampoSelecao, CampoTexto } from '@/components/Campo/Campo'
 import { CampoData, CampoHora } from '@/components/CampoData/CampoData'
 import * as agendaApi from '@/services/agendaService'
+import { TIPO_PADRAO, TIPOS_EVENTO, tipoDoEvento } from '@/domain/agenda'
 /* o formulario tambem abre pelo "Marcar evento" do +, em qualquer aba */
 import './Panorama.css'
 
@@ -14,9 +15,11 @@ import './Panorama.css'
    ModalAgenda — o "Ver calendario" do card: todos os eventos de hoje
                  em diante, separados por mes. Quem tem `publicar_agenda`
                  ve o "Novo evento" e, em cada linha, editar e excluir.
-   ModalEvento — o formulario: titulo, dia, hora e local. So o titulo
-                 e o dia sao obrigatorios; evento sem hora e "dia
-                 inteiro".
+   ModalEvento — o formulario: tipo, titulo, dia, hora e local. So o
+                 titulo e o dia sao obrigatorios; evento sem hora e "dia
+                 inteiro". O tipo (atualizacao 59) diz se e reuniao, data
+                 comemorativa, feriado nacional... e vira a etiqueta da
+                 linha; sem escolha, e "Evento da empresa".
 
    A API confere a permissao de novo antes de gravar (server/routes/
    agenda.js): esconder o botao e conveniencia, nao trava.
@@ -80,12 +83,18 @@ const horaCurta = (hora) => (hora ? hora.replace(':', 'h') : '')
  */
 export function Evento({ evento, children }) {
   const ehHoje = evento.dia === hojeLocal()
-  /* a data comemorativa (atualizacao 59) nao tem hora nem local: diz o que e */
-  const detalhe = evento.comemorativa
-    ? 'Data comemorativa'
-    : [horaCurta(evento.hora), evento.local].filter(Boolean).join(' – ')
+  const tipo = tipoDoEvento(evento)
+  /* a etiqueta do tipo (atualizacao 59): o "Evento da empresa", que e o
+     padrao, nao precisa dizer; a data do calendario sempre diz */
+  const etiqueta = evento.comemorativa || tipo.valor !== TIPO_PADRAO ? tipo : null
+  const detalhe = [horaCurta(evento.hora), evento.local].filter(Boolean).join(' – ')
   return (
-    <li className="pevento" data-hoje={ehHoje ? 'sim' : undefined} data-comemorativa={evento.comemorativa ? 'sim' : undefined}>
+    <li
+      className="pevento"
+      data-hoje={ehHoje ? 'sim' : undefined}
+      data-comemorativa={evento.comemorativa ? 'sim' : undefined}
+      data-tom={tipo.tom}
+    >
       <span className="pevento__data" aria-hidden="true">
         <strong>{evento.dia.slice(8, 10)}</strong>
         <span>{MESES_CURTOS[Number(evento.dia.slice(5, 7)) - 1]}</span>
@@ -97,9 +106,19 @@ export function Evento({ evento, children }) {
           {ehHoje && <span className="pevento__hoje">Hoje</span>}
         </strong>
         <span className="pevento__detalhe">
-          {evento.hora ? <Relogio /> : evento.local ? <Local /> : null}
           <span className="sr-only">{`${evento.dia.slice(8, 10)}/${evento.dia.slice(5, 7)} `}</span>
-          {detalhe || 'Dia inteiro'}
+          {etiqueta && (
+            <span className="pevento__tipo" data-tom={etiqueta.tom}>
+              {etiqueta.rotulo}
+            </span>
+          )}
+          {/* a data do calendario nao tem hora nem local: a etiqueta basta */}
+          {!evento.comemorativa && (
+            <span className="pevento__quando">
+              {evento.hora ? <Relogio /> : evento.local ? <Local /> : null}
+              {detalhe || 'Dia inteiro'}
+            </span>
+          )}
         </span>
       </span>
       {children}
@@ -227,13 +246,14 @@ export function ModalAgenda({ aberto, eventos, podeEditar, aoFechar }) {
 export function ModalEvento({ evento, nivel = 0, aoFechar }) {
   const aberto = Boolean(evento)
   const novo = aberto && !evento.id
-  const [campos, setCampos] = useState({ titulo: '', dia: '', hora: '', local: '' })
+  const [campos, setCampos] = useState({ tipo: TIPO_PADRAO, titulo: '', dia: '', hora: '', local: '' })
   const [erro, setErro] = useState({})
   const [salvando, setSalvando] = useState(false)
 
   useEffect(() => {
     if (!evento) return
     setCampos({
+      tipo: tipoDoEvento(evento).valor,
       titulo: evento.titulo ?? '',
       dia: evento.dia ?? '',
       hora: evento.hora ?? '',
@@ -276,6 +296,14 @@ export function ModalEvento({ evento, nivel = 0, aoFechar }) {
       nivel={nivel}
     >
       <form className="pform" onSubmit={salvar} noValidate>
+        <CampoSelecao
+          rotulo="Tipo"
+          opcoes={TIPOS_EVENTO.map(({ valor, rotulo }) => ({ valor, rotulo }))}
+          value={campos.tipo}
+          onChange={(e) => mudar('tipo', e.target.value)}
+          erro={erro.tipo}
+        />
+
         <CampoTexto
           rotulo="Título"
           placeholder="Ex.: Reunião Geral"

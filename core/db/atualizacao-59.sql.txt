@@ -62,14 +62,25 @@
 --     editar_equipamentos. Vao, uma vez so, para o acesso total; os outros
 --     setores (a Excelencia) sao marcados na tela de cada um.
 --
---  6. O ORGANOGRAMA
---     cargo.superior_id — a que setor este responde (NULL = topo).
---     cargo.lider_id    — quem lidera o setor (NULL = sem lider).
---     A API nao deixa o organograma fechar em circulo. Quem ve a equipe
+--  6. O ORGANOGRAMA (no desenho da diretoria: os diretores em cima e,
+--     abaixo de cada um, os times dele, cada pessoa no nivel do cargo)
+--     cargo.diretor_id — a PESSOA a quem o time responde, o diretor da
+--                        linha de cima (NULL = sem diretor definido).
+--     cargo.lider_id   — quem fica no topo do time (NULL = o cargo de cada
+--                        um decide a ordem).
+--     A primeira versao (o setor respondendo a outro SETOR, cargo.
+--     superior_id) nao serviu para o desenho e sai. Quem ve a equipe
 --     (`ver_usuarios`) ve o organograma; a permissao nova
 --     `editar_organograma` vai, uma vez so, para o acesso total e para os
 --     setores que veem a equipe e editam setor (`editar_cargo`) ou revisam
 --     as despesas de todos (o Administrativo).
+--
+--  7. O TIPO DO EVENTO DA AGENDA (pagina inicial)
+--     agenda_evento.tipo — evento da empresa, reuniao, treinamento,
+--     confraternizacao, data comemorativa, feriado nacional, estadual ou
+--     municipal, ponto facultativo, aniversario ou outro (a lista e
+--     TIPOS_EVENTO, em src/domain/agenda.js; a API confere). Os eventos
+--     que ja existiam ficam como evento.
 --
 --  SQL simples, sem bloco DO: roda igual no psql, no
 --  `npm run db:atualizar` e no editor de SQL do Neon.
@@ -251,13 +262,13 @@ ON CONFLICT (chave) DO NOTHING;
 
 -- ---------------- 6. O ORGANOGRAMA ----------------
 
-ALTER TABLE public.cargo ADD COLUMN IF NOT EXISTS superior_id bigint REFERENCES public.cargo (id) ON DELETE SET NULL;
+ALTER TABLE public.cargo ADD COLUMN IF NOT EXISTS diretor_id bigint REFERENCES public.usuario (id) ON DELETE SET NULL;
 ALTER TABLE public.cargo ADD COLUMN IF NOT EXISTS lider_id bigint REFERENCES public.usuario (id) ON DELETE SET NULL;
 ALTER TABLE public.cargo DROP CONSTRAINT IF EXISTS cargo_superior_ok;
-ALTER TABLE public.cargo ADD CONSTRAINT cargo_superior_ok CHECK (superior_id IS NULL OR superior_id <> id);
+ALTER TABLE public.cargo DROP COLUMN IF EXISTS superior_id;
 
-COMMENT ON COLUMN public.cargo.superior_id IS 'Organograma: a que setor este responde. NULL = topo.';
-COMMENT ON COLUMN public.cargo.lider_id IS 'Organograma: quem lidera o setor. NULL = sem lider.';
+COMMENT ON COLUMN public.cargo.diretor_id IS 'Organograma: a pessoa (o diretor) a quem o time responde. NULL = sem diretor definido.';
+COMMENT ON COLUMN public.cargo.lider_id IS 'Organograma: quem fica no topo do time. NULL = o cargo de cada um decide.';
 
 UPDATE public.cargo
    SET permissoes = permissoes || ARRAY['editar_organograma']
@@ -271,6 +282,13 @@ UPDATE public.cargo
 INSERT INTO public.configuracao (chave, valor)
 VALUES ('marco_atualizacao_59_organograma', 'editar_organograma distribuida')
 ON CONFLICT (chave) DO NOTHING;
+
+-- ---------------- 7. O TIPO DO EVENTO DA AGENDA ----------------
+
+ALTER TABLE public.agenda_evento ADD COLUMN IF NOT EXISTS tipo text NOT NULL DEFAULT 'evento';
+
+COMMENT ON COLUMN public.agenda_evento.tipo IS
+    'O que e o evento: evento, reuniao, treinamento, confraternizacao, comemorativa, feriado_nacional, feriado_estadual, feriado_municipal, ponto_facultativo, aniversario ou outro.';
 
 COMMIT;
 
@@ -294,7 +312,9 @@ UNION ALL SELECT 'avisos do prazo distribuidos',
 UNION ALL SELECT 'veiculo_ocorrencia', to_regclass('public.veiculo_ocorrencia') IS NOT NULL
 UNION ALL SELECT 'veiculo_manutencao', to_regclass('public.veiculo_manutencao') IS NOT NULL
 UNION ALL SELECT 'equipamento_ti', to_regclass('public.equipamento_ti') IS NOT NULL
-UNION ALL SELECT 'cargo.superior_id (organograma)',
-       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cargo' AND column_name = 'superior_id')
+UNION ALL SELECT 'cargo.diretor_id (organograma)',
+       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cargo' AND column_name = 'diretor_id')
 UNION ALL SELECT 'cargo.lider_id (organograma)',
-       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cargo' AND column_name = 'lider_id');
+       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cargo' AND column_name = 'lider_id')
+UNION ALL SELECT 'agenda_evento.tipo (tipo do evento)',
+       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'agenda_evento' AND column_name = 'tipo');

@@ -27,7 +27,7 @@ export async function editarCargo(id, campos) {
   return cargo
 }
 
-/** O lugar do setor no organograma: { superiorId, liderId } (atualizacao 59). */
+/** O lugar do time no organograma: { diretorId, liderId } (atualizacao 59). */
 export async function editarOrganograma(id, campos) {
   const { cargo } = await put(`/equipe/cargos/${id}/organograma`, campos)
   return cargo

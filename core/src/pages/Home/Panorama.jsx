@@ -484,10 +484,14 @@ function CardAgenda() {
     const hoje = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     return proximasComemorativas(hoje, 365)
   }, [])
-  const todos = useMemo(
-    () => (eventos === null ? null : [...eventos, ...comemorativas].sort((a, b) => a.dia.localeCompare(b.dia))),
-    [eventos, comemorativas],
-  )
+  /* a data que a empresa ja marcou na mao (o mesmo dia e o mesmo nome) nao
+     aparece duas vezes: fica a marcada */
+  const todos = useMemo(() => {
+    if (eventos === null) return null
+    const chave = (e) => `${e.dia}|${e.titulo.trim().toLocaleLowerCase('pt-BR')}`
+    const marcadas = new Set(eventos.map(chave))
+    return [...eventos, ...comemorativas.filter((c) => !marcadas.has(chave(c)))].sort((a, b) => a.dia.localeCompare(b.dia))
+  }, [eventos, comemorativas])
   const proximos = (todos ?? []).slice(0, EVENTOS_NO_CARD)
 
   return (

@@ -8,28 +8,35 @@
    ninguem edita nem exclui — sao do calendario, nao da empresa.
    ============================================================ */
 
-/* as de dia fixo: 'MM-DD' e o nome */
+/* o TIPO de cada uma (src/domain/agenda.js): o feriado nacional (Leis
+   662/1949, 6.802/1980 e 14.759/2023), o ponto facultativo e o resto, data
+   comemorativa */
+const FERIADO = 'feriado_nacional'
+const FACULTATIVO = 'ponto_facultativo'
+const DATA = 'comemorativa'
+
+/* as de dia fixo: 'MM-DD', o tipo e o nome */
 const FIXAS = [
-  ['01-01', 'Confraternização Universal (Ano-Novo)'],
-  ['01-20', 'Dia do Farmacêutico'],
-  ['03-08', 'Dia Internacional da Mulher'],
-  ['03-15', 'Dia do Consumidor'],
-  ['04-07', 'Dia Mundial da Saúde'],
-  ['04-21', 'Tiradentes'],
-  ['05-01', 'Dia do Trabalho'],
-  ['05-12', 'Dia da Enfermagem'],
-  ['06-05', 'Dia Mundial do Meio Ambiente'],
-  ['06-12', 'Dia dos Namorados'],
-  ['07-27', 'Dia Nacional de Prevenção de Acidentes do Trabalho'],
-  ['09-07', 'Independência do Brasil'],
-  ['10-12', 'Nossa Senhora Aparecida e Dia das Crianças'],
-  ['10-18', 'Dia do Médico'],
-  ['11-02', 'Finados'],
-  ['11-15', 'Proclamação da República'],
-  ['11-20', 'Dia da Consciência Negra'],
-  ['12-11', 'Dia do Engenheiro'],
-  ['12-25', 'Natal'],
-  ['12-31', 'Véspera de Ano-Novo'],
+  ['01-01', FERIADO, 'Confraternização Universal (Ano-Novo)'],
+  ['01-20', DATA, 'Dia do Farmacêutico'],
+  ['03-08', DATA, 'Dia Internacional da Mulher'],
+  ['03-15', DATA, 'Dia do Consumidor'],
+  ['04-07', DATA, 'Dia Mundial da Saúde'],
+  ['04-21', FERIADO, 'Tiradentes'],
+  ['05-01', FERIADO, 'Dia do Trabalho'],
+  ['05-12', DATA, 'Dia da Enfermagem'],
+  ['06-05', DATA, 'Dia Mundial do Meio Ambiente'],
+  ['06-12', DATA, 'Dia dos Namorados'],
+  ['07-27', DATA, 'Dia Nacional de Prevenção de Acidentes do Trabalho'],
+  ['09-07', FERIADO, 'Independência do Brasil'],
+  ['10-12', FERIADO, 'Nossa Senhora Aparecida e Dia das Crianças'],
+  ['10-18', DATA, 'Dia do Médico'],
+  ['11-02', FERIADO, 'Finados'],
+  ['11-15', FERIADO, 'Proclamação da República'],
+  ['11-20', FERIADO, 'Dia da Consciência Negra'],
+  ['12-11', DATA, 'Dia do Engenheiro'],
+  ['12-25', FERIADO, 'Natal'],
+  ['12-31', DATA, 'Véspera de Ano-Novo'],
 ]
 
 const dois = (n) => String(n).padStart(2, '0')
@@ -73,20 +80,20 @@ function ultimaSextaDeNovembro(ano) {
   return iso(ano, 11, ultimo.getUTCDate() - volta)
 }
 
-/** As datas comemorativas de um ano: [{ id, dia, titulo, comemorativa: true }], em ordem. */
+/** As datas comemorativas de um ano: [{ id, dia, tipo, titulo, comemorativa: true }], em ordem. */
 export function datasComemorativas(ano) {
   const domingoDePascoa = pascoa(ano)
   const moveis = [
-    [somar(domingoDePascoa, -47), 'Carnaval'],
-    [somar(domingoDePascoa, -2), 'Sexta-feira Santa'],
-    [domingoDePascoa, 'Páscoa'],
-    [enesimo(ano, 5, 0, 2), 'Dia das Mães'],
-    [somar(domingoDePascoa, 60), 'Corpus Christi'],
-    [enesimo(ano, 8, 0, 2), 'Dia dos Pais'],
-    [ultimaSextaDeNovembro(ano), 'Black Friday'],
+    [somar(domingoDePascoa, -47), FACULTATIVO, 'Carnaval'],
+    [somar(domingoDePascoa, -2), FERIADO, 'Sexta-feira Santa'],
+    [domingoDePascoa, DATA, 'Páscoa'],
+    [enesimo(ano, 5, 0, 2), DATA, 'Dia das Mães'],
+    [somar(domingoDePascoa, 60), FACULTATIVO, 'Corpus Christi'],
+    [enesimo(ano, 8, 0, 2), DATA, 'Dia dos Pais'],
+    [ultimaSextaDeNovembro(ano), DATA, 'Black Friday'],
   ]
-  return [...FIXAS.map(([mmdd, titulo]) => [`${ano}-${mmdd}`, titulo]), ...moveis]
-    .map(([dia, titulo]) => ({ id: `comemorativa-${dia}-${titulo}`, dia, titulo, comemorativa: true }))
+  return [...FIXAS.map(([mmdd, tipo, titulo]) => [`${ano}-${mmdd}`, tipo, titulo]), ...moveis]
+    .map(([dia, tipo, titulo]) => ({ id: `comemorativa-${dia}-${titulo}`, dia, tipo, titulo, comemorativa: true }))
     .sort((x, y) => x.dia.localeCompare(y.dia))
 }
 
