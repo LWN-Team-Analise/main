@@ -26,6 +26,7 @@ import ChatEquipe from '@/pages/Chat/ChatEquipe'
 import Dashboard from '@/pages/Diretoria/Dashboard'
 import Insumos from '@/pages/Insumos/Insumos'
 import ObrasCanceladas from '@/pages/Concluidas/ObrasCanceladas'
+import Equipamentos from '@/pages/Equipamentos/Equipamentos'
 import Documentos from '@/pages/Qualidade/Documentos'
 import Correio from '@/pages/Qualidade/Correio'
 import AlmoxarifeNaArea from '@/pages/Almoxarife/AlmoxarifeNaArea'
@@ -203,6 +204,15 @@ export default function AppRoutes() {
         element={
           <Interna permissao="gerenciar_insumos">
             <Insumos equipe />
+          </Interna>
+        }
+      />
+      {/* os notebooks e PCs (atualizacao 59), na Area da excelencia */}
+      <Route
+        path="/app/equipamentos"
+        element={
+          <Interna permissao="ver_equipamentos">
+            <Equipamentos />
           </Interna>
         }
       />

@@ -97,6 +97,8 @@ export const VISUALIZACAO = [
   { chave: 'ver_correio', rotulo: 'Solicitação de correio', rota: '/app/qualidade/correio' },
   { chave: 'ver_turnos', rotulo: 'Turnos', rota: '/app/turnos' },
   { chave: 'ver_avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes' },
+  /* os notebooks e PCs da empresa, na Area da excelencia (atualizacao 59) */
+  { chave: 'ver_equipamentos', rotulo: 'Notebooks e PCs', rota: '/app/equipamentos' },
   /* a aba Usuarios: ver a equipe (os cards, o setor, o cargo, o contato).
      Cadastrar, editar e excluir continuam nas alteracoes de baixo */
   { chave: 'ver_usuarios', rotulo: 'Usuários', rota: '/app/usuarios' },
@@ -138,6 +140,7 @@ export const ALTERACAO = [
      atualizacao 55 */
   { chave: 'gerenciar_ponto', rotulo: 'Ver a folha de ponto de todos e importar', dependeDe: 'ver_ponto' },
   { chave: 'editar_avaliacoes', rotulo: 'Adicionar / editar avaliações', dependeDe: 'ver_avaliacoes' },
+  { chave: 'editar_equipamentos', rotulo: 'Adicionar / editar notebooks e PCs', dependeDe: 'ver_equipamentos' },
   { chave: 'editar_clientes', rotulo: 'Adicionar / editar clientes', dependeDe: 'ver_clientes' },
   /* a planilha do Excel com o cadastro inteiro (Clientes > Exportar) */
   { chave: 'exportar_clientes', rotulo: 'Exportar clientes (Excel)', dependeDe: 'ver_clientes' },

@@ -10,6 +10,7 @@ import botRouter from './routes/bot.js'
 import despesasRouter from './routes/despesas.js'
 import frotasRouter from './routes/frotas.js'
 import frotaManutencaoRouter from './routes/frotaManutencao.js'
+import equipamentosRouter from './routes/equipamentos.js'
 import atividadesRouter from './routes/atividades.js'
 import pushRouter from './routes/push.js'
 import comercialRouter from './routes/comercial.js'
@@ -147,6 +148,8 @@ app.use('/api/despesas', despesasRouter)
 app.use('/api/frotas', frotasRouter)
 /* os problemas relatados e as manutencoes dos carros (atualizacao 59) */
 app.use('/api/frotas', frotaManutencaoRouter)
+/* os notebooks e PCs da empresa (atualizacao 59) */
+app.use('/api/equipamentos', equipamentosRouter)
 app.use('/api/atividades', atividadesRouter)
 app.use('/api/push', pushRouter)
 app.use('/api/comercial', comercialRouter)

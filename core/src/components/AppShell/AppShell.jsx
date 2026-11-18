@@ -560,6 +560,8 @@ const AREAS = [
     itens: [
       { id: 'avaliacoes', rotulo: 'Avaliações', rota: '/app/avaliacoes', permissao: 'ver_avaliacoes' },
       { id: 'usuarios', rotulo: 'Usuários', rota: '/app/usuarios', permissao: 'ver_usuarios' },
+      /* os notebooks e PCs da empresa (atualizacao 59) */
+      { id: 'equipamentos', icone: 'painel', rotulo: 'Notebooks e PCs', rota: '/app/equipamentos', permissao: 'ver_equipamentos' },
     ],
   },
   {

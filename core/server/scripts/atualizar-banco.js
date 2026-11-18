@@ -316,6 +316,8 @@ const CONFERENCIA = [
   ['veiculo_ocorrencia (problema do carro)', "SELECT to_regclass('public.veiculo_ocorrencia') IS NOT NULL AS ok"],
   ['veiculo_manutencao (custo da manutencao)', "SELECT to_regclass('public.veiculo_manutencao') IS NOT NULL AS ok"],
   ['manutencao_frota no acesso total', permissaoNoAcessoTotal('manutencao_frota')],
+  ['equipamento_ti (notebooks e PCs)', "SELECT to_regclass('public.equipamento_ti') IS NOT NULL AS ok"],
+  ['ver_equipamentos no acesso total', permissaoNoAcessoTotal('ver_equipamentos')],
 ]
 
 function col(tabela, coluna) {

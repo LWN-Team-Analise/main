@@ -100,6 +100,16 @@ const ATALHOS = [
     permissao: 'ver_insumos',
     termos: 'insumos insumo pedir material pedido materiais escritorio limpeza luva compra',
   },
+  /* os notebooks e PCs (atualizacao 59) */
+  {
+    id: 'tela-equipamentos',
+    grupo: 'Telas',
+    titulo: 'Notebooks e PCs',
+    detalhe: 'Os equipamentos de informática da empresa e com quem está cada um (Área da excelência)',
+    rota: '/app/equipamentos',
+    permissao: 'ver_equipamentos',
+    termos: 'notebook notebooks pc pcs computador computadores desktop monitor equipamento patrimonio informatica ti',
+  },
   {
     id: 'tela-insumos-pedidos',
     grupo: 'Telas',
