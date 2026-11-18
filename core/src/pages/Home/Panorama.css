@@ -610,6 +610,16 @@
   color: #ffffff;
 }
 
+/* a data comemorativa (atualizacao 59): o bloco do dia tracejado, para
+   nao ser confundida com um evento marcado pela empresa */
+.pevento[data-comemorativa='sim']:not([data-hoje='sim']) .pevento__data {
+  border-style: dashed;
+}
+
+.pevento[data-comemorativa='sim'] .pevento__detalhe {
+  font-style: italic;
+}
+
 /* a linha do tempo: um pingo por evento e o traco que liga ao proximo */
 .pevento__pingo {
   position: relative;

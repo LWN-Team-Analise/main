@@ -401,6 +401,39 @@ export async function avisarObraConcluida(obraId) {
   }
 }
 
+/**
+ * O FORMULARIO DE AVALIACAO AUTOMATICO (atualizacao 59): a obra concluida
+ * (a cancelada nao passa por aqui) pede a avaliacao a quem avalia — o
+ * setor com `editar_avaliacoes` e o acesso total. O link abre a tela de
+ * Avaliacoes com o formulario daquela obra ja aberto (?obra=ID).
+ */
+export async function avisarAvaliacaoPendente(obraId) {
+  try {
+    const { rows } = await query(
+      `SELECT u.id FROM usuario u JOIN cargo c ON c.id = u.cargo_id
+        WHERE coalesce(u.ativo, true)
+          AND NOT coalesce((to_jsonb(c) ->> 'painel_tv')::boolean, false)
+          AND (c.acesso_total OR 'editar_avaliacoes' = ANY (c.permissoes))`,
+    )
+    if (!rows.length) return
+    const obra = await nomeDaObra(obraId)
+    await mandarNoTeams(
+      rows.map((l) => String(l.id)),
+      {
+        titulo: 'Obra concluída: avalie',
+        linhas: [
+          `A obra **${obra}** foi concluída.`,
+          'O formulário de avaliação já está pronto: dê a nota de cada etapa e o motivo.',
+        ],
+        link: linkDoSite(`/core/app/avaliacoes?obra=${obraId}`),
+        rotuloLink: 'Avaliar a obra',
+      },
+    )
+  } catch (erro) {
+    logger.error('avisos/avaliacao-pendente', erro.message)
+  }
+}
+
 /** Mensagem nova no chat da obra: so o aviso, sem o texto, para os membros (menos quem escreveu). */
 export async function avisarChat(obraId, autorId) {
   try {

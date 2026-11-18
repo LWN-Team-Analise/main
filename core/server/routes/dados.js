@@ -8,6 +8,7 @@ import { concluidoSemInformacao, informacaoChegou, temSemInformacao } from '../s
 import {
   avisarAnaliseDeFaturamento,
   avisarAvaliacao,
+  avisarAvaliacaoPendente,
   avisarChat,
   avisarInclusao,
   avisarObraConcluida,
@@ -2699,8 +2700,10 @@ router.post('/obras/:id/concluir', exigeSessao, exige('editar_obras'), async (re
       descricao: 'Obra concluída',
       detalhes: { ...(await descreverObra(req.params.id)), observacao: observacao || null },
     })
-    /* os parabens no Teams a quem fez parte da obra */
+    /* os parabens no Teams a quem fez parte da obra, e o pedido de
+       avaliacao a quem avalia (o formulario automatico, atualizacao 59) */
     await avisarObraConcluida(req.params.id)
+    await avisarAvaliacaoPendente(req.params.id)
     return res.json({ ok: true })
   } catch (e) {
     return tratar(e, res, 'dados/obra-concluir')

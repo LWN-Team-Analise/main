@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import AppShell from '@/components/AppShell/AppShell'
 import Avatar from '@/components/Avatar/Avatar'
 import Estrelas from '@/components/Estrelas/Estrelas'
@@ -58,6 +59,17 @@ export default function Avaliacoes() {
   const obras = useMemo(() => todas.filter((o) => !obraCancelada(o)), [todas])
   const [filtro, setFiltro] = useState('sem')
   const [abrindo, setAbrindo] = useState(null)
+
+  /* o FORMULARIO AUTOMATICO (atualizacao 59): o aviso no Teams da obra
+     concluida traz ?obra=ID, e o formulario daquela obra ja abre. Uma vez
+     so: fechar nao reabre. A obra chega com a carga — ate la, espera */
+  const [params, setParams] = useSearchParams()
+  const pedida = params.get('obra')
+  useEffect(() => {
+    if (!pedida || !obras.some((o) => String(o.id) === pedida)) return
+    setAbrindo(pedida)
+    setParams({}, { replace: true })
+  }, [pedida, obras, setParams])
 
   /* da obra cadastrada por ultimo ate a primeira */
   const lista = useMemo(

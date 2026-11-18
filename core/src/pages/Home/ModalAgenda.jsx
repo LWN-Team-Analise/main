@@ -80,9 +80,12 @@ const horaCurta = (hora) => (hora ? hora.replace(':', 'h') : '')
  */
 export function Evento({ evento, children }) {
   const ehHoje = evento.dia === hojeLocal()
-  const detalhe = [horaCurta(evento.hora), evento.local].filter(Boolean).join(' – ')
+  /* a data comemorativa (atualizacao 59) nao tem hora nem local: diz o que e */
+  const detalhe = evento.comemorativa
+    ? 'Data comemorativa'
+    : [horaCurta(evento.hora), evento.local].filter(Boolean).join(' – ')
   return (
-    <li className="pevento" data-hoje={ehHoje ? 'sim' : undefined}>
+    <li className="pevento" data-hoje={ehHoje ? 'sim' : undefined} data-comemorativa={evento.comemorativa ? 'sim' : undefined}>
       <span className="pevento__data" aria-hidden="true">
         <strong>{evento.dia.slice(8, 10)}</strong>
         <span>{MESES_CURTOS[Number(evento.dia.slice(5, 7)) - 1]}</span>
@@ -171,7 +174,8 @@ export function ModalAgenda({ aberto, eventos, podeEditar, aoFechar }) {
                 <ul className="pagenda pagenda--lista">
                   {grupo.eventos.map((evento) => (
                     <Evento key={evento.id} evento={evento}>
-                      {podeEditar && (
+                      {/* a data comemorativa e do calendario: ninguem edita */}
+                      {podeEditar && !evento.comemorativa && (
                         <span className="pevento__acoes">
                           <button
                             type="button"
