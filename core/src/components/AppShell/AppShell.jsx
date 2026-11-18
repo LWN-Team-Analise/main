@@ -490,6 +490,8 @@ const AREAS = [
         permissao: 'revisar_despesa_geral',
       },
       { id: 'insumos', icone: 'insumos', rotulo: 'Insumos', rota: '/app/insumos/pedidos', permissao: 'gerenciar_insumos' },
+      /* o organograma (atualizacao 59): os setores, quem lidera e quem esta */
+      { id: 'organograma', icone: 'usuarios', rotulo: 'Organograma', rota: '/app/organograma', permissao: 'ver_usuarios' },
     ],
   },
   {

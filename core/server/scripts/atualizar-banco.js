@@ -318,6 +318,9 @@ const CONFERENCIA = [
   ['manutencao_frota no acesso total', permissaoNoAcessoTotal('manutencao_frota')],
   ['equipamento_ti (notebooks e PCs)', "SELECT to_regclass('public.equipamento_ti') IS NOT NULL AS ok"],
   ['ver_equipamentos no acesso total', permissaoNoAcessoTotal('ver_equipamentos')],
+  ['cargo.superior_id (organograma)', col('cargo', 'superior_id')],
+  ['cargo.lider_id (organograma)', col('cargo', 'lider_id')],
+  ['editar_organograma no acesso total', permissaoNoAcessoTotal('editar_organograma')],
 ]
 
 function col(tabela, coluna) {

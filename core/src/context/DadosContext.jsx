@@ -238,6 +238,12 @@ export function DadosProvider({ children }) {
     [gravar],
   )
 
+  /** O setor no organograma: a que setor responde e quem lidera (atualizacao 59). */
+  const atualizarOrganograma = useCallback(
+    (id, campos) => gravar(() => equipeApi.editarOrganograma(id, campos)),
+    [gravar],
+  )
+
   const removerCargo = useCallback((id) => gravar(() => equipeApi.apagarCargo(id)), [gravar])
 
   const cargoPorChave = useCallback(
@@ -1299,6 +1305,7 @@ export function DadosProvider({ children }) {
 
       adicionarCargo,
       atualizarCargo,
+      atualizarOrganograma,
       removerCargo,
       cargoPorChave,
       corDoCargo,
@@ -1435,6 +1442,7 @@ export function DadosProvider({ children }) {
       pode,
       adicionarCargo,
       atualizarCargo,
+      atualizarOrganograma,
       removerCargo,
       cargoPorChave,
       corDoCargo,

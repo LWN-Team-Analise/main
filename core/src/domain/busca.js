@@ -100,6 +100,16 @@ const ATALHOS = [
     permissao: 'ver_insumos',
     termos: 'insumos insumo pedir material pedido materiais escritorio limpeza luva compra',
   },
+  /* o organograma (atualizacao 59) */
+  {
+    id: 'tela-organograma',
+    grupo: 'Telas',
+    titulo: 'Organograma',
+    detalhe: 'Os setores, quem lidera cada um e quem está neles (Área admin)',
+    rota: '/app/organograma',
+    permissao: 'ver_usuarios',
+    termos: 'organograma hierarquia setores lider lideranca equipe estrutura',
+  },
   /* os notebooks e PCs (atualizacao 59) */
   {
     id: 'tela-equipamentos',

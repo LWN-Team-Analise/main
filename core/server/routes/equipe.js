@@ -119,6 +119,10 @@ const paraCargo = (linha) => ({
   painelDisponivel: linha.painel !== undefined,
   painel: CHAVES_PAINEL.includes(linha.painel) ? linha.painel : null,
   painelExclusivo: CHAVES_PAINEL.includes(linha.painel) && linha.painel_exclusivo === true,
+  /* o ORGANOGRAMA (atualizacao 59): a que setor este responde e quem o
+     lidera. null = topo / sem lider (ou o banco ainda sem a coluna) */
+  superiorId: linha.superior_id ? String(linha.superior_id) : null,
+  liderId: linha.lider_id ? String(linha.lider_id) : null,
 })
 
 /* ------------------------------------------------------------
@@ -181,6 +185,61 @@ router.post('/cargos', exigeSessao, exige('editar_cargo'), async (req, res) => {
       return res.status(409).json({ erro: 'Já existe um cargo com esse nome.' })
     }
     return tratar(erro, res, 'equipe/cargos-criar')
+  }
+})
+
+/**
+ * PUT /api/equipe/cargos/:id/organograma — { superiorId, liderId } (atualizacao 59).
+ *
+ * O lugar do setor no organograma: a que setor ele responde (null = topo)
+ * e quem o lidera (null = sem lider). Quem mexe e `editar_organograma`. O
+ * setor nao responde a ele mesmo nem a um que esta abaixo dele (seria um
+ * circulo, e o organograma nao teria topo).
+ */
+router.put('/cargos/:id/organograma', exigeSessao, exige('editar_organograma'), async (req, res) => {
+  const id = String(req.params.id)
+  const idOuNulo = (valor) => (/^\d{1,15}$/.test(String(valor ?? '')) ? String(valor) : null)
+  const superiorId = idOuNulo(req.body?.superiorId)
+  const liderId = idOuNulo(req.body?.liderId)
+  if (!/^\d{1,15}$/.test(id)) return res.status(404).json({ erro: 'Setor não encontrado.' })
+  if (superiorId === id) return res.status(400).json({ erro: 'O setor não pode responder a ele mesmo.', campo: 'superiorId' })
+
+  try {
+    const { rows: setores } = await query('SELECT id, nome, superior_id FROM cargo')
+    const porId = new Map(setores.map((s) => [String(s.id), s]))
+    if (!porId.has(id)) return res.status(404).json({ erro: 'Setor não encontrado.' })
+    if (superiorId) {
+      if (!porId.has(superiorId)) return res.status(400).json({ erro: 'O setor de cima não existe mais.', campo: 'superiorId' })
+      /* subindo a partir do novo superior, nao pode dar no proprio setor */
+      for (let atual = superiorId, passos = 0; atual && passos < setores.length; passos += 1) {
+        if (atual === id) {
+          return res.status(400).json({ erro: 'Esse setor está abaixo deste: o organograma ficaria em círculo.', campo: 'superiorId' })
+        }
+        atual = porId.get(atual)?.superior_id ? String(porId.get(atual).superior_id) : null
+      }
+    }
+    if (liderId) {
+      const { rows } = await query('SELECT 1 FROM usuario WHERE id = $1 AND ativo', [liderId])
+      if (!rows[0]) return res.status(400).json({ erro: 'A pessoa escolhida não está mais na equipe.', campo: 'liderId' })
+    }
+    const { rows } = await query('UPDATE cargo SET superior_id = $2, lider_id = $3 WHERE id = $1 RETURNING *', [
+      id,
+      superiorId,
+      liderId,
+    ])
+    await registrarAtividade(req, {
+      acao: 'setor.organograma',
+      categoria: 'equipe',
+      entidade: ['cargo', id],
+      descricao: 'Organograma atualizado',
+      detalhes: { setor: rows[0].nome, responde_a: superiorId ? porId.get(superiorId)?.nome : 'topo' },
+    })
+    return res.json({ cargo: paraCargo(rows[0]) })
+  } catch (erro) {
+    if (erro.code === '42703') {
+      return res.status(503).json({ erro: 'O banco ainda não tem o organograma (atualização 59 em core/db).' })
+    }
+    return tratar(erro, res, 'equipe/organograma')
   }
 })
 

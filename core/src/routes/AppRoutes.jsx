@@ -27,6 +27,7 @@ import Dashboard from '@/pages/Diretoria/Dashboard'
 import Insumos from '@/pages/Insumos/Insumos'
 import ObrasCanceladas from '@/pages/Concluidas/ObrasCanceladas'
 import Equipamentos from '@/pages/Equipamentos/Equipamentos'
+import Organograma from '@/pages/Usuarios/Organograma'
 import Documentos from '@/pages/Qualidade/Documentos'
 import Correio from '@/pages/Qualidade/Correio'
 import AlmoxarifeNaArea from '@/pages/Almoxarife/AlmoxarifeNaArea'
@@ -204,6 +205,16 @@ export default function AppRoutes() {
         element={
           <Interna permissao="gerenciar_insumos">
             <Insumos equipe />
+          </Interna>
+        }
+      />
+      {/* o organograma (atualizacao 59): quem ve a equipe ve; editar e
+          `editar_organograma` */}
+      <Route
+        path="/app/organograma"
+        element={
+          <Interna permissao="ver_usuarios">
+            <Organograma />
           </Interna>
         }
       />

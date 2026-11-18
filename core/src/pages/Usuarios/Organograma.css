@@ -1,0 +1,190 @@
+/* ============================================================
+   ORGANOGRAMA (atualizacao 59) — a arvore vertical dos setores
+   ============================================================ */
+
+.organograma {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  min-width: 0;
+}
+
+.organograma .tela__lead {
+  margin-bottom: 0;
+}
+
+.organograma__vazio {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+/* ---- a arvore: cada nivel um passo a direita, ligado pelos fios ---- */
+
+.orgarvore,
+.orgarvore__filhos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.orgarvore__filhos {
+  position: relative;
+  margin-left: 22px;
+  padding-left: 22px;
+}
+
+/* o fio vertical que desce do setor de cima */
+.orgarvore__filhos::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 28px;
+  left: 0;
+  border-left: 2px solid var(--line);
+}
+
+.orgno {
+  position: relative;
+  padding-top: 10px;
+}
+
+/* o fio horizontal ate o cartao */
+.orgarvore__filhos > .orgno::before {
+  content: '';
+  position: absolute;
+  top: 38px;
+  left: -22px;
+  width: 22px;
+  border-top: 2px solid var(--line);
+}
+
+.orgno__cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 460px;
+  padding: 12px 14px;
+  border: 1px solid var(--glass-border);
+  border-left: 4px solid var(--cor);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.orgno__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.orgno__nome {
+  color: var(--text-strong);
+  font-size: 0.95rem;
+}
+
+.orgno__editar {
+  padding: 3px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: var(--control-bg);
+  color: var(--text-strong);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.orgno__editar:hover {
+  background: var(--control-bg-hover);
+}
+
+.orgno__lider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.orgno__lider span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.orgno__lider strong {
+  color: var(--text-strong);
+  font-size: 0.86rem;
+}
+
+.orgno__lider em,
+.orgno__semlider,
+.orgno__vazio {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.orgno__vazio {
+  margin: 0;
+}
+
+.orgno__membros summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.orgno__membros ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.orgno__membros li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  color: var(--text-strong);
+  font-size: 0.82rem;
+}
+
+.orgno__membros li em {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.orgform {
+  display: grid;
+  gap: 14px;
+}
+
+.orgform__erro {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.84rem;
+}
+
+.orgform__rodape {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 520px) {
+  .orgarvore__filhos {
+    margin-left: 10px;
+    padding-left: 14px;
+  }
+
+  .orgarvore__filhos > .orgno::before {
+    left: -14px;
+    width: 14px;
+  }
+}

@@ -132,6 +132,9 @@ export const ALTERACAO = [
   { chave: 'editar_cpf', rotulo: 'Incluir / editar / excluir CPF', dependeDe: 'ver_usuarios' },
   /* o "!" nos cards de Usuarios: quem ainda nao trocou a senha padrao */
   { chave: 'ver_senha_padrao', rotulo: 'Ver quem não alterou a senha padrão', dependeDe: 'ver_usuarios' },
+  /* o ORGANOGRAMA (atualizacao 59): quem ve a equipe ve o organograma; esta
+     muda a que setor cada um responde e quem lidera */
+  { chave: 'editar_organograma', rotulo: 'Atualizar o organograma', dependeDe: 'ver_usuarios' },
   /* o Ponto (`ver_ponto`): cada um ve e assina a propria folha. Com esta,
      aparece o seletor de pessoa (ver a folha de qualquer um, com CPF e PIS,
      como no espelho), o Importar do Calculo Diario e o Excel da empresa

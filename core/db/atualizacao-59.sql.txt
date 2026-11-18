@@ -62,6 +62,15 @@
 --     editar_equipamentos. Vao, uma vez so, para o acesso total; os outros
 --     setores (a Excelencia) sao marcados na tela de cada um.
 --
+--  6. O ORGANOGRAMA
+--     cargo.superior_id — a que setor este responde (NULL = topo).
+--     cargo.lider_id    — quem lidera o setor (NULL = sem lider).
+--     A API nao deixa o organograma fechar em circulo. Quem ve a equipe
+--     (`ver_usuarios`) ve o organograma; a permissao nova
+--     `editar_organograma` vai, uma vez so, para o acesso total e para os
+--     setores que veem a equipe e editam setor (`editar_cargo`) ou revisam
+--     as despesas de todos (o Administrativo).
+--
 --  SQL simples, sem bloco DO: roda igual no psql, no
 --  `npm run db:atualizar` e no editor de SQL do Neon.
 -- ============================================================
@@ -240,6 +249,29 @@ INSERT INTO public.configuracao (chave, valor)
 VALUES ('marco_atualizacao_59_equipamentos', 'ver_equipamentos e editar_equipamentos no acesso total')
 ON CONFLICT (chave) DO NOTHING;
 
+-- ---------------- 6. O ORGANOGRAMA ----------------
+
+ALTER TABLE public.cargo ADD COLUMN IF NOT EXISTS superior_id bigint REFERENCES public.cargo (id) ON DELETE SET NULL;
+ALTER TABLE public.cargo ADD COLUMN IF NOT EXISTS lider_id bigint REFERENCES public.usuario (id) ON DELETE SET NULL;
+ALTER TABLE public.cargo DROP CONSTRAINT IF EXISTS cargo_superior_ok;
+ALTER TABLE public.cargo ADD CONSTRAINT cargo_superior_ok CHECK (superior_id IS NULL OR superior_id <> id);
+
+COMMENT ON COLUMN public.cargo.superior_id IS 'Organograma: a que setor este responde. NULL = topo.';
+COMMENT ON COLUMN public.cargo.lider_id IS 'Organograma: quem lidera o setor. NULL = sem lider.';
+
+UPDATE public.cargo
+   SET permissoes = permissoes || ARRAY['editar_organograma']
+ WHERE NOT ('editar_organograma' = ANY (permissoes))
+   AND NOT coalesce(painel_tv, false)
+   AND (acesso_total
+        OR ('ver_usuarios' = ANY (permissoes)
+            AND ('editar_cargo' = ANY (permissoes) OR 'revisar_despesa_geral' = ANY (permissoes))))
+   AND NOT EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_59_organograma');
+
+INSERT INTO public.configuracao (chave, valor)
+VALUES ('marco_atualizacao_59_organograma', 'editar_organograma distribuida')
+ON CONFLICT (chave) DO NOTHING;
+
 COMMIT;
 
 -- ============================================================
@@ -261,4 +293,8 @@ UNION ALL SELECT 'avisos do prazo distribuidos',
        EXISTS (SELECT 1 FROM public.configuracao WHERE chave = 'marco_atualizacao_59_avisos')
 UNION ALL SELECT 'veiculo_ocorrencia', to_regclass('public.veiculo_ocorrencia') IS NOT NULL
 UNION ALL SELECT 'veiculo_manutencao', to_regclass('public.veiculo_manutencao') IS NOT NULL
-UNION ALL SELECT 'equipamento_ti', to_regclass('public.equipamento_ti') IS NOT NULL;
+UNION ALL SELECT 'equipamento_ti', to_regclass('public.equipamento_ti') IS NOT NULL
+UNION ALL SELECT 'cargo.superior_id (organograma)',
+       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cargo' AND column_name = 'superior_id')
+UNION ALL SELECT 'cargo.lider_id (organograma)',
+       EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cargo' AND column_name = 'lider_id');
